@@ -168,6 +168,32 @@ const AthleteProfile = () => {
 
   useEffect(() => { load(); }, [id]);
 
+  const openProgramAssign = async () => {
+    setProgOpen(true);
+    if (progTemplates.length === 0 && user) {
+      const { data } = await supabase
+        .from("program_templates")
+        .select("id, name, goal")
+        .eq("trainer_id", user.id)
+        .order("created_at", { ascending: false });
+      setProgTemplates((data as any) ?? []);
+    }
+  };
+
+  const assignProgram = async (templateId: string) => {
+    if (!user || !id) return;
+    setProgAssigning(templateId);
+    const { error } = await supabase.rpc("assign_program_to_athlete", {
+      p_template_id: templateId,
+      p_athlete_id: id,
+    });
+    setProgAssigning(null);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Program dodeljen vežbaču");
+    setProgOpen(false);
+    load();
+  };
+
   const openAssign = async () => {
     setAssignOpen(true);
     if (templates.length === 0 && user) {
