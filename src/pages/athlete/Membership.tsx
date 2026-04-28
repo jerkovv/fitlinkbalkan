@@ -41,6 +41,7 @@ type Purchase = {
   payment_method: "cash" | "bank";
   status: "pending" | "rejected";
   requested_at: string;
+  payment_marked_at: string | null;
 };
 
 const fmtDate = (iso: string | null) => {
@@ -218,7 +219,7 @@ const Membership = () => {
           .order("price_rsd", { ascending: true }),
         supabase
           .from("membership_purchases")
-          .select("id, package_name, sessions_count, duration_days, price_rsd, payment_method, status, requested_at")
+          .select("id, package_name, sessions_count, duration_days, price_rsd, payment_method, status, requested_at, payment_marked_at")
           .eq("athlete_id", user.id)
           .in("status", ["pending", "rejected"])
           .order("requested_at", { ascending: false })
@@ -270,6 +271,14 @@ const Membership = () => {
     const { error } = await supabase.rpc("cancel_membership_purchase", { p_purchase_id: id });
     if (error) return toast.error(error.message);
     toast.success("Zahtev otkazan");
+    load();
+  };
+
+  const markPaid = async (id: string) => {
+    if (!window.confirm("Potvrđuješ da si izvršio uplatu? Trener će dobiti notifikaciju.")) return;
+    const { error } = await supabase.rpc("mark_membership_paid", { p_purchase_id: id });
+    if (error) return toast.error(error.message);
+    toast.success("Trener je obavešten o uplati");
     load();
   };
 
@@ -385,32 +394,49 @@ const Membership = () => {
                 </div>
                 <div className="space-y-2">
                   {recent.map((p) => (
-                    <Card key={p.id} className="p-4 flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-2xl bg-surface-2 text-muted-foreground flex items-center justify-center">
+                    <Card key={p.id} className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-2xl bg-surface-2 text-muted-foreground flex items-center justify-center">
+                          {p.status === "pending" ? (
+                            <Clock className="h-[18px] w-[18px]" />
+                          ) : (
+                            <X className="h-[18px] w-[18px]" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[14px] font-semibold tracking-tight truncate">
+                            {p.package_name}
+                          </div>
+                          <div className="text-[12px] text-muted-foreground">
+                            {p.price_rsd.toLocaleString("sr-RS")} RSD ·{" "}
+                            {p.payment_method === "cash" ? "Keš" : "Račun"}
+                            {p.payment_marked_at ? " · uplata označena" : ""}
+                          </div>
+                        </div>
                         {p.status === "pending" ? (
-                          <Clock className="h-[18px] w-[18px]" />
+                          <button
+                            onClick={() => cancelRequest(p.id)}
+                            className="text-[11px] font-semibold text-destructive"
+                          >
+                            Otkaži
+                          </button>
                         ) : (
-                          <X className="h-[18px] w-[18px]" />
+                          <Chip tone="warning">Odbijen</Chip>
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[14px] font-semibold tracking-tight truncate">
-                          {p.package_name}
-                        </div>
-                        <div className="text-[12px] text-muted-foreground">
-                          {p.price_rsd.toLocaleString("sr-RS")} RSD ·{" "}
-                          {p.payment_method === "cash" ? "Keš" : "Račun"}
-                        </div>
-                      </div>
-                      {p.status === "pending" ? (
-                        <button
-                          onClick={() => cancelRequest(p.id)}
-                          className="text-[11px] font-semibold text-destructive"
+                      {p.status === "pending" && p.payment_method === "bank" && !p.payment_marked_at && (
+                        <Button
+                          onClick={() => markPaid(p.id)}
+                          variant="outline"
+                          className="w-full mt-3 h-9 text-[12.5px] font-semibold"
                         >
-                          Otkaži
-                        </button>
-                      ) : (
-                        <Chip tone="warning">Odbijen</Chip>
+                          Označi kao plaćeno
+                        </Button>
+                      )}
+                      {p.status === "pending" && p.payment_marked_at && (
+                        <div className="mt-3 text-[11.5px] text-muted-foreground text-center">
+                          Čeka se potvrda trenera…
+                        </div>
                       )}
                     </Card>
                   ))}
