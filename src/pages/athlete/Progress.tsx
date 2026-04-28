@@ -163,6 +163,31 @@ const Progress = () => {
       }
       setStreak(s);
 
+      // Server-side streak (precizniji — uzastopni DANI)
+      const { data: streakData } = await supabase.rpc("get_athlete_streak", { p_athlete_id: user.id } as any);
+      const sd = (streakData as any[])?.[0];
+      if (sd) {
+        setStreakDays(sd.current_streak_days ?? 0);
+        setLongestDays(sd.longest_streak_days ?? 0);
+        setTotalWorkouts(sd.total_workouts ?? 0);
+      }
+
+      // Top 5 PR-ova (po e1rm, najsvežiji prvo za remi)
+      const { data: prData } = await supabase
+        .from("personal_records")
+        .select("id, exercise_id, best_weight_kg, best_weight_reps, best_e1rm_kg, best_e1rm_at, exercises(name)")
+        .eq("athlete_id", user.id)
+        .order("best_e1rm_kg", { ascending: false, nullsFirst: false })
+        .limit(8);
+      setPrs(((prData as any[]) ?? []).map((p) => ({
+        id: p.id,
+        exercise_name: p.exercises?.name ?? "Vežba",
+        best_weight_kg: p.best_weight_kg,
+        best_weight_reps: p.best_weight_reps,
+        best_e1rm_kg: p.best_e1rm_kg,
+        best_e1rm_at: p.best_e1rm_at,
+      })));
+
       setLoading(false);
     };
     load();
