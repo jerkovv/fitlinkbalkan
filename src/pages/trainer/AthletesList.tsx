@@ -129,6 +129,16 @@ const AthletesList = () => {
       .maybeSingle();
     setInviteCode((tr as any)?.invite_code ?? null);
 
+    // Pending email pozivnice (poslate, čekamo prihvatanje)
+    const { data: inv } = await supabase
+      .from("invites")
+      .select("id, email, full_name, code, sent_at, expires_at")
+      .eq("trainer_id", user.id)
+      .eq("status", "pending")
+      .not("email", "is", null)
+      .order("sent_at", { ascending: false });
+    setPending(((inv ?? []) as any[]) as PendingInvite[]);
+
     setLoading(false);
   };
 
