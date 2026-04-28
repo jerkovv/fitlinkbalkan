@@ -134,14 +134,6 @@ const Dashboard = () => {
     return () => { alive = false; };
   }, [user, todayISO]);
 
-  const copyInvite = async () => {
-    if (!inviteCode) return;
-    await navigator.clipboard.writeText(inviteCode);
-    setCopied(true);
-    toast.success("Invite kod kopiran");
-    setTimeout(() => setCopied(false), 1500);
-  };
-
   const todayLabel = `${today.getDate()}. ${monthNames[today.getMonth()]}`;
 
   return (
