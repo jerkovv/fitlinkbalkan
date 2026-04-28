@@ -99,6 +99,7 @@ const App = () => (
             <Route path="/vezbac/ishrana" element={athlete(<AthleteNutrition />)} />
             <Route path="/vezbac/notifikacije" element={athlete(<AthleteNotifications />)} />
             <Route path="/vezbac/profil" element={athlete(<AthleteProfile />)} />
+            <Route path="/vezbac/chat" element={athlete(<AthleteChat />)} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
