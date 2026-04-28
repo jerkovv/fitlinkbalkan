@@ -221,6 +221,43 @@ const AthletesList = () => {
     }
   };
 
+  const resendInvite = async (inv: PendingInvite) => {
+    if (!inv.email) return;
+    setResendingId(inv.id);
+    try {
+      // Otkazi stari invite
+      await supabase.from("invites").update({ status: "cancelled" }).eq("id", inv.id);
+
+      // Pošalji novi sa istim podacima
+      const { data, error } = await supabase.functions.invoke("send-invite", {
+        body: { full_name: inv.full_name ?? inv.email, email: inv.email },
+      });
+
+      if (error) {
+        let serverMsg: string | null = null;
+        const ctx: any = (error as any).context;
+        if (ctx && typeof ctx.json === "function") {
+          try {
+            const j = await ctx.json();
+            serverMsg = j?.error ?? null;
+          } catch { /* ignore */ }
+        }
+        throw new Error(serverMsg || error.message || "Greška pri slanju");
+      }
+      if ((data as any)?.error) throw new Error((data as any).error);
+
+      toast.success(`Pozivnica ponovo poslata na ${inv.email}`);
+      await load();
+    } catch (e: any) {
+      toast.error(e.message ?? "Greška pri ponovnom slanju");
+      // Vrati stari invite na pending da se ne izgubi
+      await supabase.from("invites").update({ status: "pending" }).eq("id", inv.id);
+      await load();
+    } finally {
+      setResendingId(null);
+    }
+  };
+
   return (
     <>
       <PhoneShell hasBottomNav title="Vežbači" eyebrow={`${rows.length} ukupno`}>
