@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Loader2, Save, Users, Dumbbell, Apple, X, Plus, Landmark, Eye, Ban,
+  Loader2, Save, Users, Dumbbell, Apple, X, Plus, Landmark, Eye, Ban, Globe, Copy, ExternalLink,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -51,6 +51,12 @@ const Profile = () => {
   // privacy
   const [showAttendees, setShowAttendees] = useState(false);
   const [cancelCutoff, setCancelCutoff] = useState<number>(0);
+
+  // public landing
+  const [publicSlug, setPublicSlug] = useState("");
+  const [publicEnabled, setPublicEnabled] = useState(true);
+  const [headline, setHeadline] = useState("");
+  const [slugError, setSlugError] = useState<string | null>(null);
 
   // read-only stats
   const [stats, setStats] = useState({
@@ -100,6 +106,9 @@ const Profile = () => {
       setBankPurpose(t.bank_purpose ?? "");
       setShowAttendees(!!t.show_attendees_to_athletes);
       setCancelCutoff(typeof t.cancel_cutoff_hours === "number" ? t.cancel_cutoff_hours : 0);
+      setPublicSlug(t.public_slug ?? "");
+      setPublicEnabled(t.public_enabled !== false);
+      setHeadline(t.headline ?? "");
       
 
       setStats({
@@ -125,8 +134,25 @@ const Profile = () => {
     setSpecialties(specialties.filter((x) => x !== s));
   };
 
+  const validateSlug = (s: string): string | null => {
+    if (!s) return null; // null je OK (sakriva landing)
+    if (!/^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/.test(s)) {
+      return "Slug: 3-40 znakova, mala slova, brojevi, crtice. Bez razmaka.";
+    }
+    return null;
+  };
+
   const handleSave = async () => {
     if (!user) return;
+
+    const slugClean = publicSlug.trim().toLowerCase();
+    const slugErr = validateSlug(slugClean);
+    setSlugError(slugErr);
+    if (slugErr) {
+      toast.error(slugErr);
+      return;
+    }
+
     setSaving(true);
     try {
       const { error: pErr } = await supabase
@@ -158,9 +184,17 @@ const Profile = () => {
           bank_purpose: bankPurpose.trim() || null,
           show_attendees_to_athletes: showAttendees,
           cancel_cutoff_hours: cancelCutoff,
+          public_slug: slugClean || null,
+          public_enabled: publicEnabled,
+          headline: headline.trim() || null,
         } as any)
         .eq("id", user.id);
-      if (tErr) throw tErr;
+      if (tErr) {
+        if ((tErr.message || "").toLowerCase().includes("uniq_trainers_public_slug")) {
+          throw new Error("Taj slug je već zauzet, izaberi drugi.");
+        }
+        throw tErr;
+      }
 
       toast.success("Profil sačuvan");
     } catch (e: any) {
@@ -371,6 +405,94 @@ const Profile = () => {
                   ))}
                 </div>
               </div>
+            </Card>
+
+            {/* Public landing */}
+            <Card className="p-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-primary" />
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Javna stranica
+                </div>
+              </div>
+              <p className="text-[12.5px] text-muted-foreground -mt-2">
+                Lični sajt sa tvojim paketima i bio-om — podeli na Instagramu ili WhatsApp-u.
+              </p>
+
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14px] font-semibold tracking-tight">Vidljivo javnosti</div>
+                  <div className="text-[12px] text-muted-foreground mt-0.5">
+                    Ako isključiš, niko ne može otvoriti tvoj /t/ link.
+                  </div>
+                </div>
+                <Switch checked={publicEnabled} onCheckedChange={setPublicEnabled} />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="slug">Tvoj slug</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-[13px] text-muted-foreground tnum shrink-0">
+                    {window.location.host}/t/
+                  </span>
+                  <Input
+                    id="slug"
+                    value={publicSlug}
+                    onChange={(e) => {
+                      const v = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+                      setPublicSlug(v);
+                      setSlugError(validateSlug(v));
+                    }}
+                    placeholder="dejan-pt"
+                    className="lowercase"
+                  />
+                </div>
+                {slugError && (
+                  <div className="text-[11.5px] text-destructive">{slugError}</div>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="headline">Slogan / headline</Label>
+                <Input
+                  id="headline"
+                  value={headline}
+                  onChange={(e) => setHeadline(e.target.value)}
+                  placeholder="Personal trener — snaga i mršavljenje za zauzete ljude"
+                  maxLength={140}
+                />
+                <div className="text-[11px] text-muted-foreground text-right tnum">
+                  {headline.length}/140
+                </div>
+              </div>
+
+              {publicSlug && publicEnabled && !slugError && (
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={async () => {
+                      const url = `${window.location.origin}/t/${publicSlug.trim().toLowerCase()}`;
+                      try {
+                        await navigator.clipboard.writeText(url);
+                        toast.success("Link kopiran");
+                      } catch {
+                        toast.error("Ne mogu da kopiram");
+                      }
+                    }}
+                  >
+                    <Copy className="h-4 w-4 mr-2" /> Kopiraj link
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => window.open(`/t/${publicSlug.trim().toLowerCase()}`, "_blank")}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </Card>
 
             {/* Privatnost grupnih termina */}

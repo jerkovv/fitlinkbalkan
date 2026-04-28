@@ -11,6 +11,7 @@ import NotFound from "./pages/NotFound.tsx";
 import Auth from "./pages/Auth.tsx";
 import Invite from "./pages/Invite.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
+import TrainerPublic from "./pages/TrainerPublic.tsx";
 
 import TrainerOnboarding from "./pages/trainer/Onboarding.tsx";
 import TrainerDashboard from "./pages/trainer/Dashboard.tsx";
@@ -60,6 +61,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/invite/:code" element={<Invite />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/t/:slug" element={<TrainerPublic />} />
 
             {/* Trener — protected */}
             <Route path="/trener/onboarding" element={trainer(<TrainerOnboarding />)} />

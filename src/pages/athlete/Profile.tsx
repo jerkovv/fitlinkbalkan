@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, Save, UserRound, Phone, Mail } from "lucide-react";
+import { Loader2, Save, UserRound, Phone, Mail, Gift, Copy, Share2 } from "lucide-react";
 import { toast } from "sonner";
 
 type Goal = "lose_weight" | "gain_muscle" | "endurance" | "mobility" | "general";
@@ -32,6 +32,7 @@ const Profile = () => {
   const [gender, setGender] = useState<Gender | "">("");
   const [notes, setNotes] = useState("");
   const [trainer, setTrainer] = useState<{ name: string; phone: string | null; email: string | null } | null>(null);
+  const [trainerInviteCode, setTrainerInviteCode] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -54,13 +55,13 @@ const Profile = () => {
 
       // Fetch trener
       if (a.trainer_id) {
-        const { data: tr } = await supabase
-          .from("profiles")
-          .select("full_name, phone")
-          .eq("id", a.trainer_id)
-          .maybeSingle();
+        const [{ data: tr }, { data: trRow }] = await Promise.all([
+          supabase.from("profiles").select("full_name, phone").eq("id", a.trainer_id).maybeSingle(),
+          supabase.from("trainers").select("invite_code").eq("id", a.trainer_id).maybeSingle(),
+        ]);
         const t: any = tr;
         if (t) setTrainer({ name: t.full_name ?? "Trener", phone: t.phone, email: null });
+        setTrainerInviteCode((trRow as any)?.invite_code ?? null);
       }
 
       setLoading(false);
@@ -159,6 +160,60 @@ const Profile = () => {
                       )}
                     </div>
                   </div>
+                </div>
+              </Card>
+            )}
+
+            {/* Pozovi prijatelja (referral) */}
+            {trainerInviteCode && user && (
+              <Card className="p-5 bg-gradient-brand-soft border-0 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-9 w-9 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shrink-0">
+                    <Gift className="h-4 w-4" strokeWidth={2.4} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-display text-[16px] font-bold tracking-tight">
+                      Treniraj sa prijateljem
+                    </div>
+                    <div className="text-[12px] text-muted-foreground">
+                      Pozovi nekoga svog na trening kod istog trenera.
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={async () => {
+                      const url = `${window.location.origin}/invite/${trainerInviteCode}?ref=${user.id}`;
+                      try {
+                        await navigator.clipboard.writeText(url);
+                        toast.success("Link kopiran — pošalji prijatelju");
+                      } catch {
+                        toast.error("Ne mogu da kopiram");
+                      }
+                    }}
+                  >
+                    <Copy className="h-4 w-4 mr-2" /> Kopiraj link
+                  </Button>
+                  {typeof navigator !== "undefined" && "share" in navigator && (
+                    <Button
+                      type="button"
+                      onClick={async () => {
+                        const url = `${window.location.origin}/invite/${trainerInviteCode}?ref=${user.id}`;
+                        try {
+                          await (navigator as any).share({
+                            title: "Pridruži mi se na treningu",
+                            text: `Treniram kod ${trainer?.name ?? "odličnog trenera"}. Probaj i ti:`,
+                            url,
+                          });
+                        } catch { /* user canceled */ }
+                      }}
+                    >
+                      <Share2 className="h-4 w-4 mr-2" /> Podeli
+                    </Button>
+                  )}
                 </div>
               </Card>
             )}

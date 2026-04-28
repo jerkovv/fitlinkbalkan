@@ -43,6 +43,7 @@ const Dashboard = () => {
   const [pendingPayments, setPendingPayments] = useState(0);
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [atRisk, setAtRisk] = useState<{ athlete_id: string; full_name: string | null; days_inactive: number }[]>([]);
+  const [referrers, setReferrers] = useState<{ referrer_id: string; referrer_name: string | null; referred_count: number; referred_active: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -133,6 +134,10 @@ const Dashboard = () => {
       // At-risk vežbači (nisu trenirali 4+ dana, imaju aktivan program)
       const { data: risk } = await supabase.rpc("get_at_risk_athletes", { p_days: 4 } as any);
       if (alive) setAtRisk(((risk as any[]) ?? []).slice(0, 5));
+
+      // Referral statistika — ko je doveo druge
+      const { data: refs } = await supabase.rpc("get_my_referral_stats" as any);
+      if (alive) setReferrers(((refs as any[]) ?? []).slice(0, 3));
 
       setLoading(false);
     })();
@@ -253,6 +258,38 @@ const Dashboard = () => {
                 </li>
               ))}
             </ul>
+          </section>
+        )}
+
+        {/* Top referreri — ko ti dovodi vežbače */}
+        {referrers.length > 0 && (
+          <section>
+            <SectionTitle>Tvoji ambasadori 💜</SectionTitle>
+            <Card className="divide-y divide-hairline">
+              {referrers.map((r) => (
+                <Link
+                  key={r.referrer_id}
+                  to={`/trener/vezbaci/${r.referrer_id}`}
+                  className="p-4 flex items-center gap-3 hover:bg-surface-2 transition"
+                >
+                  <Avatar
+                    initials={(r.referrer_name ?? "??").slice(0, 2).toUpperCase()}
+                    tone="brand"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-[14.5px] truncate">
+                      {r.referrer_name ?? "Bez imena"}
+                    </div>
+                    <div className="text-[12px] text-muted-foreground">
+                      Doveo {r.referred_count}{" "}
+                      {r.referred_count === 1 ? "vežbača" : "vežbača"}
+                      {r.referred_active > 0 && ` · ${r.referred_active} aktivnih`}
+                    </div>
+                  </div>
+                  <Chip tone="success">+{r.referred_count}</Chip>
+                </Link>
+              ))}
+            </Card>
           </section>
         )}
 

@@ -10,6 +10,17 @@ import { Dumbbell, Loader2, CheckCircle2 } from "lucide-react";
 const Invite = () => {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
+  // Referral: ?ref=<athleteId>  ili  ?source=public
+  const params = new URLSearchParams(window.location.search);
+  const referredBy = params.get("ref");
+  const sourceParam = params.get("source"); // npr. "public"
+  const signupSource = referredBy
+    ? "referral"
+    : sourceParam === "public"
+    ? "public_landing"
+    : code
+    ? "invite_link"
+    : "invite_email";
 
   const [checking, setChecking] = useState(true);
   const [valid, setValid] = useState(false);
@@ -115,12 +126,18 @@ const Invite = () => {
         id: sessionUserId,
         trainer_id: trainerId,
         goal: "general",
+        referred_by_athlete_id: referredBy || null,
+        signup_source: signupSource,
       } as any);
 
       // 4) Označi invite kao iskorišćen
       await supabase
         .from("invites")
-        .update({ status: "accepted", used_by: sessionUserId } as any)
+        .update({
+          status: "accepted",
+          used_by: sessionUserId,
+          referred_by_athlete_id: referredBy || null,
+        } as any)
         .eq("code", code!);
 
       toast.success("Dobrodošao u FitLink!");
@@ -155,7 +172,11 @@ const Invite = () => {
       if (data.user) {
         await supabase
           .from("invites")
-          .update({ status: "accepted", used_by: data.user.id } as any)
+          .update({
+            status: "accepted",
+            used_by: data.user.id,
+            referred_by_athlete_id: referredBy || null,
+          } as any)
           .eq("code", code!);
       }
 
