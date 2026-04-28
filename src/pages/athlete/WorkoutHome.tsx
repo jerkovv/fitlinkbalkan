@@ -145,6 +145,55 @@ const WorkoutHome = () => {
           </Card>
         )}
 
+        {allDays.length > 0 && (
+          <section>
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground mb-3">
+              <CalendarDays className="h-3.5 w-3.5" />
+              Svi dani u programu
+            </div>
+            <div className="space-y-2">
+              {allDays.map((d) => {
+                const isNext = next?.day_id === d.id;
+                return (
+                  <button
+                    key={d.id}
+                    onClick={() => nav(`/vezbac/trening/${d.id}`)}
+                    className="block w-full text-left"
+                  >
+                    <Card
+                      className={cn(
+                        "p-4 flex items-center gap-3 transition active:scale-[0.99]",
+                        isNext && "ring-2 ring-primary/40"
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "h-10 w-10 rounded-2xl flex items-center justify-center font-display text-[15px] font-bold tnum",
+                          isNext
+                            ? "bg-gradient-brand text-white"
+                            : "bg-gradient-brand-soft text-primary"
+                        )}
+                      >
+                        {d.day_number}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[14px] font-semibold tracking-tight truncate">
+                          {d.name}
+                        </div>
+                        <div className="text-[12px] text-muted-foreground">
+                          {d.exercise_count} {d.exercise_count === 1 ? "vežba" : "vežbi"}
+                          {isNext && " · sledeći u rotaciji"}
+                        </div>
+                      </div>
+                      <Play className="h-4 w-4 text-primary fill-primary" />
+                    </Card>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         <section>
           <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground mb-3">
             <History className="h-3.5 w-3.5" />
