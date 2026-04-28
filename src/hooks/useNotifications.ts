@@ -2,11 +2,24 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
-export type NotificationKind = "booking_created" | "booking_canceled" | "workout_completed" | "message";
+export type NotificationKind =
+  // ka treneru
+  | "booking_created"
+  | "booking_canceled"
+  | "workout_completed"
+  | "message"
+  // ka vežbaču
+  | "program_assigned"
+  | "nutrition_assigned"
+  | "message_from_trainer"
+  | "membership_expiring"
+  | "membership_expired";
 
 export interface AppNotification {
   id: string;
-  trainer_id: string;
+  recipient_id: string;
+  recipient_role: "trainer" | "athlete";
+  sender_id: string | null;
   athlete_id: string;
   kind: NotificationKind;
   title: string;
@@ -19,15 +32,15 @@ export interface AppNotification {
 const PAGE_SIZE = 50;
 
 /**
- * Realtime notifikacije za ulogovanog trenera.
- * Vraća listu, broj nepročitanih i akcije.
+ * Realtime notifikacije za ulogovanog korisnika (trener ili vežbač).
+ * RLS osigurava da vidi samo svoje (recipient_id = auth.uid()).
  */
 export const useNotifications = () => {
-  const { user, role } = useAuth();
+  const { user } = useAuth();
   const [items, setItems] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const enabled = !!user && role === "trainer";
+  const enabled = !!user;
 
   const fetchItems = useCallback(async () => {
     if (!enabled) {
@@ -50,7 +63,6 @@ export const useNotifications = () => {
     fetchItems();
   }, [fetchItems]);
 
-  // Realtime subscription
   useEffect(() => {
     if (!enabled || !user) return;
 
@@ -62,7 +74,7 @@ export const useNotifications = () => {
           event: "*",
           schema: "public",
           table: "notifications",
-          filter: `trainer_id=eq.${user.id}`,
+          filter: `recipient_id=eq.${user.id}`,
         },
         (payload) => {
           if (payload.eventType === "INSERT") {
@@ -102,3 +114,4 @@ export const useNotifications = () => {
 
   return { items, loading, unreadCount, markRead, markAllRead, remove, refetch: fetchItems };
 };
+
