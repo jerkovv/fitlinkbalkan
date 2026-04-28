@@ -11,7 +11,7 @@ import { Briefcase, Loader2 } from "lucide-react";
 const Auth = () => {
   const navigate = useNavigate();
   const { user, role, loading: authLoading } = useAuth();
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -42,6 +42,13 @@ const Auth = () => {
         });
         if (error) throw error;
         toast.success("Nalog kreiran! Proveri email za potvrdu.");
+      } else if (mode === "forgot") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        toast.success("Poslali smo ti link za resetovanje na email.");
+        setMode("login");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -63,12 +70,14 @@ const Auth = () => {
           <Briefcase className="h-5 w-5" strokeWidth={2.25} />
         </div>
         <h1 className="font-display text-[32px] leading-tight font-bold tracking-tightest">
-          {mode === "login" ? "Dobrodošao nazad" : "Postani trener"}
+          {mode === "login" && "Dobrodošao nazad"}
+          {mode === "signup" && "Postani trener"}
+          {mode === "forgot" && "Zaboravljena lozinka"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          {mode === "login"
-            ? "Uloguj se na svoj FitLink nalog."
-            : "Kreiraj nalog i pozovi svoje vežbače."}
+          {mode === "login" && "Uloguj se na svoj FitLink nalog."}
+          {mode === "signup" && "Kreiraj nalog i pozovi svoje vežbače."}
+          {mode === "forgot" && "Unesi email — poslaćemo ti link za resetovanje."}
         </p>
       </div>
 
@@ -99,23 +108,38 @@ const Auth = () => {
           />
         </div>
 
-        <div>
-          <Label htmlFor="password">Lozinka</Label>
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-            className="mt-1.5"
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
-          />
-        </div>
+        {mode !== "forgot" && (
+          <div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Lozinka</Label>
+              {mode === "login" && (
+                <button
+                  type="button"
+                  onClick={() => setMode("forgot")}
+                  className="text-[11px] text-muted-foreground hover:text-foreground transition"
+                >
+                  Zaboravljena?
+                </button>
+              )}
+            </div>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              className="mt-1.5"
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
+            />
+          </div>
+        )}
 
         <Button type="submit" className="w-full mt-6" disabled={submitting}>
           {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          {mode === "login" ? "Uloguj se" : "Kreiraj nalog"}
+          {mode === "login" && "Uloguj se"}
+          {mode === "signup" && "Kreiraj nalog"}
+          {mode === "forgot" && "Pošalji link"}
         </Button>
       </form>
 
@@ -123,7 +147,9 @@ const Auth = () => {
         onClick={() => setMode(mode === "login" ? "signup" : "login")}
         className="mt-6 text-xs text-center text-muted-foreground hover:text-foreground transition"
       >
-        {mode === "login" ? "Nemaš nalog? Registruj se kao trener" : "Već imaš nalog? Uloguj se"}
+        {mode === "login" && "Nemaš nalog? Registruj se kao trener"}
+        {mode === "signup" && "Već imaš nalog? Uloguj se"}
+        {mode === "forgot" && "← Nazad na login"}
       </button>
 
       <p className="mt-4 text-[11px] text-center text-muted-foreground/70">
