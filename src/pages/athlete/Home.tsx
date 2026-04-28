@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Card, IconButton, ProgressBar, SectionTitle, StatCard } from "@/components/ui-bits";
-import { Bell, Play, CalendarPlus } from "lucide-react";
+import { Bell, Play, CalendarPlus, Apple } from "lucide-react";
 import { athleteProfile, athleteWorkout } from "@/data/mock";
 
 const Home = () => {
@@ -71,6 +71,20 @@ const Home = () => {
             <ProgressBar label="Deadlift" trailing={<>🔥 145 kg</>} value={92} tone="brand" />
           </Card>
         </section>
+
+        <Link
+          to="/vezbac/ishrana"
+          className="flex items-center gap-3 card-premium-hover px-5 py-4"
+        >
+          <div className="h-11 w-11 rounded-2xl bg-gradient-brand-soft text-primary flex items-center justify-center">
+            <Apple className="h-[18px] w-[18px]" />
+          </div>
+          <div className="flex-1">
+            <div className="text-[15px] font-semibold tracking-tight">Plan ishrane</div>
+            <div className="text-[12.5px] text-muted-foreground">Današnji obroci i log</div>
+          </div>
+          <span className="text-muted-foreground">→</span>
+        </Link>
 
         <Link
           to="/vezbac/rezervacija"

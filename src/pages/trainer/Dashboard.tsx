@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Avatar, Card, Chip, IconButton, SectionTitle, StatCard } from "@/components/ui-bits";
-import { Bell, Clock, ChevronRight, Plus } from "lucide-react";
+import { Bell, Clock, ChevronRight, Plus, ClipboardList, Apple } from "lucide-react";
 import { trainerProfile, todaySessions } from "@/data/mock";
 
 const statusChip = {
@@ -74,6 +74,33 @@ const Dashboard = () => {
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </div>
         </Card>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Link
+            to="/trener/programi"
+            className="card-premium-hover p-4 flex flex-col gap-2"
+          >
+            <div className="h-10 w-10 rounded-xl bg-gradient-brand-soft flex items-center justify-center">
+              <ClipboardList className="h-5 w-5 text-primary" strokeWidth={2.25} />
+            </div>
+            <div>
+              <div className="font-semibold text-sm tracking-tight">Programi</div>
+              <div className="text-[11px] text-muted-foreground">Treninzi</div>
+            </div>
+          </Link>
+          <Link
+            to="/trener/ishrana"
+            className="card-premium-hover p-4 flex flex-col gap-2"
+          >
+            <div className="h-10 w-10 rounded-xl bg-gradient-brand-soft flex items-center justify-center">
+              <Apple className="h-5 w-5 text-primary" strokeWidth={2.25} />
+            </div>
+            <div>
+              <div className="font-semibold text-sm tracking-tight">Ishrana</div>
+              <div className="text-[11px] text-muted-foreground">Planovi</div>
+            </div>
+          </Link>
+        </div>
 
         <Link
           to="/trener/program"
