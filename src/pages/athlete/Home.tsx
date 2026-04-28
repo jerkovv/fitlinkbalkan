@@ -180,6 +180,20 @@ const Home = () => {
         </section>
 
         <Link
+          to="/vezbac/rezervacija"
+          className="flex items-center gap-3 card-premium-hover px-5 py-4"
+        >
+          <div className="h-11 w-11 rounded-2xl bg-gradient-brand text-white shadow-brand flex items-center justify-center">
+            <CalendarPlus className="h-[18px] w-[18px]" />
+          </div>
+          <div className="flex-1">
+            <div className="text-[15px] font-semibold tracking-tight">Rezerviši termin</div>
+            <div className="text-[12.5px] text-muted-foreground">Pogledaj dostupne slotove</div>
+          </div>
+          <span className="text-primary font-bold">→</span>
+        </Link>
+
+        <Link
           to="/vezbac/ishrana"
           className="flex items-center gap-3 card-premium-hover px-5 py-4"
         >
@@ -189,20 +203,6 @@ const Home = () => {
           <div className="flex-1">
             <div className="text-[15px] font-semibold tracking-tight">Plan ishrane</div>
             <div className="text-[12.5px] text-muted-foreground">Današnji obroci</div>
-          </div>
-          <span className="text-muted-foreground">→</span>
-        </Link>
-
-        <Link
-          to="/vezbac/rezervacija"
-          className="flex items-center gap-3 card-premium-hover px-5 py-4"
-        >
-          <div className="h-11 w-11 rounded-2xl bg-trainer-soft text-trainer-soft-foreground flex items-center justify-center">
-            <CalendarPlus className="h-[18px] w-[18px]" />
-          </div>
-          <div className="flex-1">
-            <div className="text-[15px] font-semibold tracking-tight">Rezerviši termin</div>
-            <div className="text-[12.5px] text-muted-foreground">Pogledaj dostupne slotove</div>
           </div>
           <span className="text-muted-foreground">→</span>
         </Link>

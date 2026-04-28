@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
 import {
   Home, Users, CalendarClock, BarChart3,
-  Dumbbell, TrendingUp, IdCard,
+  Dumbbell, TrendingUp, IdCard, CalendarPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +19,7 @@ const trainerLinks = [
 const athleteLinks = [
   { to: "/vezbac", icon: Home, label: "Početna", end: true },
   { to: "/vezbac/trening", icon: Dumbbell, label: "Trening" },
+  { to: "/vezbac/rezervacija", icon: CalendarPlus, label: "Rezerviši" },
   { to: "/vezbac/napredak", icon: TrendingUp, label: "Napredak" },
   { to: "/vezbac/clanarina", icon: IdCard, label: "Članarina" },
 ];
@@ -35,7 +36,7 @@ export const BottomNav = ({ role }: BottomNavProps) => {
       <div className="pointer-events-none absolute inset-x-0 -top-8 h-8 bg-gradient-to-t from-background to-transparent" />
 
       <div className="mx-3 mb-3 rounded-3xl bg-surface/90 backdrop-blur-xl border border-hairline shadow-large">
-        <ul className="grid grid-cols-4 px-2 py-2">
+        <ul className={cn("grid px-2 py-2", role === "athlete" ? "grid-cols-5" : "grid-cols-4")}>
           {links.map(({ to, icon: Icon, label, end }) => (
             <li key={to}>
               <NavLink
