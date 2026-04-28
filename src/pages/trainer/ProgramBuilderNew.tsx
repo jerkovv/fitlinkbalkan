@@ -156,24 +156,36 @@ const ProgramBuilder = () => {
   const openAssign = async () => {
     setAssignOpen(true);
     if (athletes.length === 0) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: ath } = await supabase
-        .from("athletes")
-        .select("id")
-        .eq("trainer_id", user.id);
-      const ids = (ath ?? []).map((a: any) => a.id);
-      if (ids.length) {
-        const { data: profs } = await supabase
-          .from("profiles")
-          .select("id, full_name, email")
-          .in("id", ids);
-        const pMap = new Map((profs ?? []).map((p: any) => [p.id, p]));
-        setAthletes(ids.map((id) => {
-          const p = pMap.get(id) as any;
-          return { id, full_name: p?.full_name ?? null, email: p?.email ?? "" };
-        }));
+      const { data, error } = await supabase.rpc("get_my_athletes" as any);
+      if (error) {
+        console.error("get_my_athletes error:", error);
+        // Fallback: probaj klasično
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data: ath } = await supabase
+          .from("athletes")
+          .select("id")
+          .eq("trainer_id", user.id);
+        const ids = (ath ?? []).map((a: any) => a.id);
+        if (ids.length) {
+          const { data: profs } = await supabase
+            .from("profiles")
+            .select("id, full_name, email")
+            .in("id", ids);
+          const pMap = new Map((profs ?? []).map((p: any) => [p.id, p]));
+          setAthletes(ids.map((id) => {
+            const p = pMap.get(id) as any;
+            return { id, full_name: p?.full_name ?? null, email: p?.email ?? "" };
+          }));
+        }
+        return;
       }
+      const rows = (data ?? []) as Array<{ id: string; full_name: string | null; email: string | null }>;
+      setAthletes(rows.map((r) => ({
+        id: r.id,
+        full_name: r.full_name,
+        email: r.email ?? "",
+      })));
     }
   };
 
