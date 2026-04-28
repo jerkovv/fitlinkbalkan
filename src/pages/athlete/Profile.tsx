@@ -164,6 +164,60 @@ const Profile = () => {
               </Card>
             )}
 
+            {/* Pozovi prijatelja (referral) */}
+            {trainerInviteCode && user && (
+              <Card className="p-5 bg-gradient-brand-soft border-0 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-9 w-9 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shrink-0">
+                    <Gift className="h-4 w-4" strokeWidth={2.4} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-display text-[16px] font-bold tracking-tight">
+                      Treniraj sa prijateljem
+                    </div>
+                    <div className="text-[12px] text-muted-foreground">
+                      Pozovi nekoga svog na trening kod istog trenera.
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={async () => {
+                      const url = `${window.location.origin}/invite/${trainerInviteCode}?ref=${user.id}`;
+                      try {
+                        await navigator.clipboard.writeText(url);
+                        toast.success("Link kopiran — pošalji prijatelju");
+                      } catch {
+                        toast.error("Ne mogu da kopiram");
+                      }
+                    }}
+                  >
+                    <Copy className="h-4 w-4 mr-2" /> Kopiraj link
+                  </Button>
+                  {typeof navigator !== "undefined" && "share" in navigator && (
+                    <Button
+                      type="button"
+                      onClick={async () => {
+                        const url = `${window.location.origin}/invite/${trainerInviteCode}?ref=${user.id}`;
+                        try {
+                          await (navigator as any).share({
+                            title: "Pridruži mi se na treningu",
+                            text: `Treniram kod ${trainer?.name ?? "odličnog trenera"}. Probaj i ti:`,
+                            url,
+                          });
+                        } catch { /* user canceled */ }
+                      }}
+                    >
+                      <Share2 className="h-4 w-4 mr-2" /> Podeli
+                    </Button>
+                  )}
+                </div>
+              </Card>
+            )}
+
             <Card className="p-5 space-y-4">
               <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 Osnovno
