@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNotifications, type AppNotification, type NotificationKind } from "@/hooks/useNotifications";
+import { NotificationDetail } from "@/components/NotificationDetail";
 import { cn } from "@/lib/utils";
 
 const KIND_META: Record<
