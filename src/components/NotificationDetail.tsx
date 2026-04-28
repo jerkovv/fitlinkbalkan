@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
-  Bell, CalendarPlus, CalendarX, Dumbbell, MessageSquare,
+  Bell, CalendarPlus, CalendarX, Dumbbell, MessageSquare, Check,
   IdCard, Apple, ClipboardList, AlertTriangle, Megaphone, ArrowRight,
 } from "lucide-react";
 import type { AppNotification, NotificationKind } from "@/hooks/useNotifications";
@@ -23,11 +23,15 @@ const KIND_META: Record<
   booking_canceled:     { icon: CalendarX,     tone: "text-[hsl(var(--session-rose-fg))] bg-[hsl(var(--session-rose-bg))]",       label: "Otkazivanje" },
   workout_completed:    { icon: Dumbbell,      tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]",   label: "Završen trening" },
   message:              { icon: MessageSquare, tone: "text-[hsl(var(--session-indigo-fg))] bg-[hsl(var(--session-indigo-bg))]",   label: "Poruka vežbača" },
+  payment_request:      { icon: IdCard,        tone: "text-[hsl(var(--session-amber-fg))] bg-[hsl(var(--session-amber-bg))]",     label: "Zahtev za članarinu" },
+  payment_marked:       { icon: Check,         tone: "text-[hsl(var(--session-emerald-fg))] bg-[hsl(var(--session-emerald-bg))]", label: "Vežbač potvrdio uplatu" },
   program_assigned:     { icon: ClipboardList, tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]",   label: "Nov program" },
   nutrition_assigned:   { icon: Apple,         tone: "text-[hsl(var(--session-emerald-fg))] bg-[hsl(var(--session-emerald-bg))]", label: "Plan ishrane" },
   message_from_trainer: { icon: MessageSquare, tone: "text-[hsl(var(--session-indigo-fg))] bg-[hsl(var(--session-indigo-bg))]",   label: "Poruka trenera" },
   membership_expiring:  { icon: IdCard,        tone: "text-[hsl(var(--session-amber-fg))] bg-[hsl(var(--session-amber-bg))]",     label: "Članarina ističe" },
   membership_expired:   { icon: AlertTriangle, tone: "text-[hsl(var(--session-rose-fg))] bg-[hsl(var(--session-rose-bg))]",       label: "Članarina istekla" },
+  membership_activated: { icon: Check,         tone: "text-[hsl(var(--session-emerald-fg))] bg-[hsl(var(--session-emerald-bg))]", label: "Članarina aktivirana" },
+  membership_rejected:  { icon: AlertTriangle, tone: "text-[hsl(var(--session-rose-fg))] bg-[hsl(var(--session-rose-bg))]",       label: "Zahtev odbijen" },
   broadcast:            { icon: Megaphone,     tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]",   label: "Obaveštenje" },
 };
 
@@ -50,6 +54,8 @@ const getActionTarget = (
   if (n.recipient_role === "trainer") {
     if (n.kind === "booking_created" || n.kind === "booking_canceled")
       return { path: "/trener/kalendar", label: "Otvori kalendar" };
+    if (n.kind === "payment_request" || n.kind === "payment_marked")
+      return { path: "/trener/uplate", label: "Otvori uplate" };
     if (n.kind === "workout_completed" || n.kind === "message")
       return { path: `/trener/vezbaci/${n.athlete_id}`, label: "Otvori profil vežbača" };
     return null;
@@ -57,7 +63,8 @@ const getActionTarget = (
   // athlete
   if (n.kind === "program_assigned") return { path: "/vezbac", label: "Otvori program" };
   if (n.kind === "nutrition_assigned") return { path: "/vezbac/ishrana", label: "Otvori plan ishrane" };
-  if (n.kind === "membership_expiring" || n.kind === "membership_expired")
+  if (n.kind === "membership_expiring" || n.kind === "membership_expired"
+      || n.kind === "membership_activated" || n.kind === "membership_rejected")
     return { path: "/vezbac/clanarina", label: "Otvori članarinu" };
   return null;
 };

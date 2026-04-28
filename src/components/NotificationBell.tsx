@@ -20,12 +20,16 @@ const KIND_META: Record<
   booking_canceled:   { icon: CalendarX,     tone: "text-[hsl(var(--session-rose-fg))] bg-[hsl(var(--session-rose-bg))]" },
   workout_completed:  { icon: Dumbbell,      tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]" },
   message:            { icon: MessageSquare, tone: "text-[hsl(var(--session-indigo-fg))] bg-[hsl(var(--session-indigo-bg))]" },
+  payment_request:    { icon: IdCard,        tone: "text-[hsl(var(--session-amber-fg))] bg-[hsl(var(--session-amber-bg))]" },
+  payment_marked:     { icon: Check,         tone: "text-[hsl(var(--session-emerald-fg))] bg-[hsl(var(--session-emerald-bg))]" },
   // ka vežbaču
   program_assigned:     { icon: ClipboardList,  tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]" },
   nutrition_assigned:   { icon: Apple,          tone: "text-[hsl(var(--session-emerald-fg))] bg-[hsl(var(--session-emerald-bg))]" },
   message_from_trainer: { icon: MessageSquare,  tone: "text-[hsl(var(--session-indigo-fg))] bg-[hsl(var(--session-indigo-bg))]" },
   membership_expiring:  { icon: IdCard,         tone: "text-[hsl(var(--session-amber-fg))] bg-[hsl(var(--session-amber-bg))]" },
   membership_expired:   { icon: AlertTriangle,  tone: "text-[hsl(var(--session-rose-fg))] bg-[hsl(var(--session-rose-bg))]" },
+  membership_activated: { icon: Check,          tone: "text-[hsl(var(--session-emerald-fg))] bg-[hsl(var(--session-emerald-bg))]" },
+  membership_rejected:  { icon: AlertTriangle,  tone: "text-[hsl(var(--session-rose-fg))] bg-[hsl(var(--session-rose-bg))]" },
   broadcast:            { icon: Megaphone,      tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]" },
 };
 

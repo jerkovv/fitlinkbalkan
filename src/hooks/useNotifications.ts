@@ -8,12 +8,16 @@ export type NotificationKind =
   | "booking_canceled"
   | "workout_completed"
   | "message"
+  | "payment_request"
+  | "payment_marked"
   // ka vežbaču
   | "program_assigned"
   | "nutrition_assigned"
   | "message_from_trainer"
   | "membership_expiring"
   | "membership_expired"
+  | "membership_activated"
+  | "membership_rejected"
   | "broadcast";
 
 export interface AppNotification {
