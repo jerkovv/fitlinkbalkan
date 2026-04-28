@@ -351,6 +351,8 @@ const AthleteProfile = () => {
         assignedId = await assignProgramFallback(templateId);
       }
       if (!assignedId) return;
+      const contentReady = await copyProgramContent(templateId, assignedId);
+      if (!contentReady) return;
       toast.success("Program dodeljen vežbaču");
       setProgOpen(false);
       await load();
