@@ -432,15 +432,131 @@ const AthleteProfile = () => {
             <Phone className="h-4 w-4 text-foreground" strokeWidth={2} />
             <span className="text-[11px] font-semibold">Pozovi</span>
           </button>
-          <Link
-            to="/trener/programi"
+          <button
+            onClick={openProgramAssign}
             className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-surface/80 backdrop-blur hover:bg-surface transition"
           >
             <ClipboardList className="h-4 w-4 text-foreground" strokeWidth={2} />
             <span className="text-[11px] font-semibold">Program</span>
-          </Link>
+          </button>
         </div>
       </Card>
+
+      {/* Training program */}
+      <section>
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Trening</div>
+            <div className="font-display text-lg font-bold">Program</div>
+          </div>
+        </div>
+
+        {activeProgram ? (
+          <Card className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-11 w-11 rounded-2xl bg-gradient-brand-soft flex items-center justify-center shrink-0">
+                <Dumbbell className="h-5 w-5 text-primary" strokeWidth={2.25} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-[15px] truncate">{activeProgram.name}</div>
+                <div className="text-[12px] text-muted-foreground">
+                  {activeProgram.total_days} {activeProgram.total_days === 1 ? "dan" : "dana"} · Dodeljen{" "}
+                  {new Date(activeProgram.created_at).toLocaleDateString("sr-RS")}
+                </div>
+              </div>
+            </div>
+            <Button variant="outline" className="w-full mt-3" onClick={openProgramAssign}>
+              Promeni program
+            </Button>
+          </Card>
+        ) : (
+          <button
+            onClick={openProgramAssign}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-hairline hover:border-primary/40 hover:bg-primary-soft/40 py-4 text-[14px] font-semibold text-muted-foreground hover:text-primary-soft-foreground transition"
+          >
+            <Plus className="h-4 w-4" /> Dodeli program treninga
+          </button>
+        )}
+      </section>
+
+      {/* Body metrics */}
+      <section>
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Telo</div>
+            <div className="font-display text-lg font-bold">Merenja</div>
+          </div>
+        </div>
+
+        {latestMetric ? (
+          <Card className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-11 w-11 rounded-2xl bg-info-soft flex items-center justify-center shrink-0">
+                <Scale className="h-5 w-5 text-info-soft-foreground" strokeWidth={2.25} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-[15px]">
+                  {latestMetric.weight_kg ? `${latestMetric.weight_kg} kg` : "—"}
+                  {latestMetric.body_fat_pct ? ` · ${latestMetric.body_fat_pct}% masti` : ""}
+                </div>
+                <div className="text-[12px] text-muted-foreground">
+                  {new Date(latestMetric.recorded_on).toLocaleDateString("sr-RS")}
+                  {metricsHistory.length > 1 && ` · ${metricsHistory.length} merenja`}
+                </div>
+              </div>
+              {metricsHistory.length >= 2 && metricsHistory[0].weight_kg && metricsHistory[metricsHistory.length - 1].weight_kg && (
+                <Chip tone={
+                  (metricsHistory[0].weight_kg! - metricsHistory[metricsHistory.length - 1].weight_kg!) < 0 ? "success" : "info"
+                }>
+                  {(() => {
+                    const diff = metricsHistory[0].weight_kg! - metricsHistory[metricsHistory.length - 1].weight_kg!;
+                    return `${diff >= 0 ? "+" : ""}${diff.toFixed(1)} kg`;
+                  })()}
+                </Chip>
+              )}
+            </div>
+          </Card>
+        ) : (
+          <Card className="p-4 text-center text-[13px] text-muted-foreground">
+            Vežbač još nije unosio merenja.
+          </Card>
+        )}
+      </section>
+
+      {/* Workout history */}
+      <section>
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Aktivnost</div>
+            <div className="font-display text-lg font-bold">Poslednji treninzi</div>
+          </div>
+        </div>
+
+        {sessionLogs.length > 0 ? (
+          <div className="space-y-2">
+            {sessionLogs.map((s) => (
+              <Card key={s.id} className="p-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-success-soft text-success-soft-foreground flex items-center justify-center shrink-0">
+                    <Activity className="h-4 w-4" strokeWidth={2.25} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-[14px]">Dan {s.day_number}</div>
+                    <div className="text-[11.5px] text-muted-foreground">
+                      {s.completed_at ? new Date(s.completed_at).toLocaleDateString("sr-RS") : "—"}
+                      {s.duration_seconds ? ` · ${Math.round(s.duration_seconds / 60)} min` : ""}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card className="p-4 text-center text-[13px] text-muted-foreground">
+            Još nema završenih treninga.
+          </Card>
+        )}
+      </section>
 
       {/* Nutrition section */}
       <section>
