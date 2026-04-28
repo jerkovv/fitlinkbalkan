@@ -120,6 +120,24 @@ const ActiveWorkout = () => {
         .limit(1)
         .maybeSingle();
 
+      // Provera: da li je ovaj dan već završen DANAS?
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const { data: doneToday } = await supabase
+        .from("workout_session_logs")
+        .select("id, completed_at")
+        .eq("athlete_id", user.id)
+        .eq("day_id", dayId)
+        .not("completed_at", "is", null)
+        .gte("completed_at", startOfDay.toISOString())
+        .order("completed_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (doneToday && !existing) {
+        setAlreadyDoneToday({ open: true, completedAt: (doneToday as any).completed_at });
+      }
+
       let sid: string;
       if (existing) {
         sid = (existing as any).id;
