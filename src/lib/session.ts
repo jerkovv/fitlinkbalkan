@@ -12,14 +12,50 @@ export const sessionColors: { value: SessionColor; label: string }[] = [
   { value: "sky", label: "Plava" },
 ];
 
+// VAŽNO: Tailwind ne može da generiše dinamičke klase iz interpolacije.
+// Sve klase moraju biti kompletni literali da bi ih scanner pokupio.
+const SESSION_COLOR_MAP: Record<SessionColor, { bg: string; fg: string; dot: string; border: string }> = {
+  violet: {
+    bg: "bg-[hsl(var(--session-violet-bg))]",
+    fg: "text-[hsl(var(--session-violet-fg))]",
+    dot: "bg-[hsl(var(--session-violet-fg))]",
+    border: "border-[hsl(var(--session-violet-fg)/0.2)]",
+  },
+  indigo: {
+    bg: "bg-[hsl(var(--session-indigo-bg))]",
+    fg: "text-[hsl(var(--session-indigo-fg))]",
+    dot: "bg-[hsl(var(--session-indigo-fg))]",
+    border: "border-[hsl(var(--session-indigo-fg)/0.2)]",
+  },
+  emerald: {
+    bg: "bg-[hsl(var(--session-emerald-bg))]",
+    fg: "text-[hsl(var(--session-emerald-fg))]",
+    dot: "bg-[hsl(var(--session-emerald-fg))]",
+    border: "border-[hsl(var(--session-emerald-fg)/0.2)]",
+  },
+  amber: {
+    bg: "bg-[hsl(var(--session-amber-bg))]",
+    fg: "text-[hsl(var(--session-amber-fg))]",
+    dot: "bg-[hsl(var(--session-amber-fg))]",
+    border: "border-[hsl(var(--session-amber-fg)/0.2)]",
+  },
+  rose: {
+    bg: "bg-[hsl(var(--session-rose-bg))]",
+    fg: "text-[hsl(var(--session-rose-fg))]",
+    dot: "bg-[hsl(var(--session-rose-fg))]",
+    border: "border-[hsl(var(--session-rose-fg)/0.2)]",
+  },
+  sky: {
+    bg: "bg-[hsl(var(--session-sky-bg))]",
+    fg: "text-[hsl(var(--session-sky-fg))]",
+    dot: "bg-[hsl(var(--session-sky-fg))]",
+    border: "border-[hsl(var(--session-sky-fg)/0.2)]",
+  },
+};
+
 export const sessionColorClasses = (color: string) => {
   const c = (sessionColors.find((s) => s.value === color)?.value ?? "violet") as SessionColor;
-  return {
-    bg: `bg-[hsl(var(--session-${c}-bg))]`,
-    fg: `text-[hsl(var(--session-${c}-fg))]`,
-    dot: `bg-[hsl(var(--session-${c}-fg))]`,
-    border: `border-[hsl(var(--session-${c}-fg)/0.2)]`,
-  };
+  return SESSION_COLOR_MAP[c];
 };
 
 export const weekdayLabelsShort = ["PON", "UTO", "SRE", "ČET", "PET", "SUB", "NED"];
