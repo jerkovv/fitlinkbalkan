@@ -95,7 +95,7 @@ const NotificationSettings = () => {
           ))
         )}
       </div>
-      <BottomNav />
+      <BottomNav role="trainer" />
     </PhoneShell>
   );
 };
