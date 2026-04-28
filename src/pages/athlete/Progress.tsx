@@ -90,6 +90,75 @@ const Progress = () => {
         .limit(30);
       setMetrics((met as any) ?? []);
 
+      // ===== TRENER ANALITIKA =====
+      const todayISO = new Date().toISOString().slice(0, 10);
+      const startMonthISO = startMonth.toISOString().slice(0, 10);
+
+      // Sve realizovane sesije sa trenerom (booked u prošlosti ili attended)
+      const { data: tBookings } = await supabase
+        .from("session_bookings")
+        .select("date, status, trainer_id")
+        .eq("athlete_id", user.id)
+        .in("status", ["booked", "attended"])
+        .lte("date", todayISO);
+      const bookings = (tBookings as any[]) ?? [];
+      setTrainerSessionsAll(bookings.length);
+      setTrainerSessionsMonth(bookings.filter((b) => b.date >= startMonthISO).length);
+
+      // Trener ime
+      const trainerId = bookings[0]?.trainer_id;
+      if (trainerId) {
+        const { data: tp } = await supabase
+          .from("profiles").select("full_name").eq("id", trainerId).maybeSingle();
+        setTrainerName((tp as any)?.full_name ?? "");
+      }
+
+      // Aktivna članarina — koliko termina ostalo
+      const { data: mems } = await supabase
+        .from("memberships")
+        .select("status, sessions_total, sessions_used, ends_on")
+        .eq("athlete_id", user.id)
+        .eq("status", "active")
+        .order("ends_on", { ascending: false })
+        .limit(1);
+      const m = (mems as any[])?.[0];
+      if (m && m.sessions_total != null) {
+        setSessionsLeft(Math.max(0, (m.sessions_total ?? 0) - (m.sessions_used ?? 0)));
+      } else {
+        setSessionsLeft(null);
+      }
+
+      // Weekly history — poslednjih 8 nedelja (kombinuje bookings + workout logs)
+      const allDates: string[] = [
+        ...bookings.map((b) => b.date),
+        ...((ses as any[]) ?? []).filter((s) => s.completed_at).map((s) => s.completed_at.slice(0, 10)),
+      ];
+      const weeks: { label: string; count: number; start: Date }[] = [];
+      for (let i = 7; i >= 0; i--) {
+        const ws = new Date(now);
+        ws.setHours(0, 0, 0, 0);
+        ws.setDate(now.getDate() - now.getDay() - i * 7); // nedelja počinje nedeljom
+        const we = new Date(ws);
+        we.setDate(ws.getDate() + 7);
+        const wsISO = ws.toISOString().slice(0, 10);
+        const weISO = we.toISOString().slice(0, 10);
+        const count = allDates.filter((d) => d >= wsISO && d < weISO).length;
+        weeks.push({
+          label: ws.toLocaleDateString("sr-Latn-RS", { day: "numeric", month: "numeric" }),
+          count,
+          start: ws,
+        });
+      }
+      setWeeklyHistory(weeks);
+
+      // Streak — uzastopne nedelje (počev od trenutne unazad) sa bar 1 treningom
+      let s = 0;
+      for (let i = weeks.length - 1; i >= 0; i--) {
+        if (weeks[i].count > 0) s++;
+        else break;
+      }
+      setStreak(s);
+
       setLoading(false);
     };
     load();
