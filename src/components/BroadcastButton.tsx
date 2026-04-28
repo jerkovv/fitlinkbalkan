@@ -165,5 +165,6 @@ export const BroadcastButton = ({ fab = false }: Props) => {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    </>
   );
 };
