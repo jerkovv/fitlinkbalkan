@@ -43,6 +43,14 @@ const Progress = () => {
   const [monthCount, setMonthCount] = useState(0);
   const [weekCount, setWeekCount] = useState(0);
 
+  // Trener stats
+  const [trainerSessionsAll, setTrainerSessionsAll] = useState(0);
+  const [trainerSessionsMonth, setTrainerSessionsMonth] = useState(0);
+  const [sessionsLeft, setSessionsLeft] = useState<number | null>(null);
+  const [streak, setStreak] = useState(0);
+  const [weeklyHistory, setWeeklyHistory] = useState<{ label: string; count: number }[]>([]);
+  const [trainerName, setTrainerName] = useState<string>("");
+
   const [metrics, setMetrics] = useState<Metric[]>([]);
 
   // Add metric dialog
