@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, CalendarPlus, CalendarX, Dumbbell, MessageSquare, Check } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Bell, CalendarPlus, CalendarX, Dumbbell, MessageSquare, Check, IdCard, Apple, ClipboardList, AlertTriangle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,10 +14,17 @@ const KIND_META: Record<
   NotificationKind,
   { icon: typeof Bell; tone: string }
 > = {
+  // ka treneru
   booking_created:    { icon: CalendarPlus,  tone: "text-[hsl(var(--session-emerald-fg))] bg-[hsl(var(--session-emerald-bg))]" },
   booking_canceled:   { icon: CalendarX,     tone: "text-[hsl(var(--session-rose-fg))] bg-[hsl(var(--session-rose-bg))]" },
   workout_completed:  { icon: Dumbbell,      tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]" },
   message:            { icon: MessageSquare, tone: "text-[hsl(var(--session-indigo-fg))] bg-[hsl(var(--session-indigo-bg))]" },
+  // ka vežbaču
+  program_assigned:     { icon: ClipboardList,  tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]" },
+  nutrition_assigned:   { icon: Apple,          tone: "text-[hsl(var(--session-emerald-fg))] bg-[hsl(var(--session-emerald-bg))]" },
+  message_from_trainer: { icon: MessageSquare,  tone: "text-[hsl(var(--session-indigo-fg))] bg-[hsl(var(--session-indigo-bg))]" },
+  membership_expiring:  { icon: IdCard,         tone: "text-[hsl(var(--session-amber-fg))] bg-[hsl(var(--session-amber-bg))]" },
+  membership_expired:   { icon: AlertTriangle,  tone: "text-[hsl(var(--session-rose-fg))] bg-[hsl(var(--session-rose-bg))]" },
 };
 
 const formatRelative = (iso: string) => {
@@ -70,6 +78,7 @@ export const NotificationItem = ({
 
 export const NotificationBell = () => {
   const navigate = useNavigate();
+  const { user, role } = useAuth();
   const { items, unreadCount, markRead, markAllRead } = useNotifications();
   const [open, setOpen] = useState(false);
 
@@ -78,12 +87,26 @@ export const NotificationBell = () => {
   const handleItemClick = async (n: AppNotification) => {
     if (!n.is_read) await markRead(n.id);
     setOpen(false);
-    if (n.kind === "booking_created" || n.kind === "booking_canceled") {
-      navigate("/trener/kalendar");
-    } else if (n.kind === "workout_completed" || n.kind === "message") {
-      navigate(`/trener/vezbaci/${n.athlete_id}`);
+    // Trener
+    if (n.recipient_role === "trainer") {
+      if (n.kind === "booking_created" || n.kind === "booking_canceled") {
+        navigate("/trener/kalendar");
+      } else if (n.kind === "workout_completed" || n.kind === "message") {
+        navigate(`/trener/vezbaci/${n.athlete_id}`);
+      }
+      return;
     }
+    // Vežbač
+    if (n.kind === "program_assigned") navigate("/vezbac");
+    else if (n.kind === "nutrition_assigned") navigate("/vezbac/ishrana");
+    else if (n.kind === "membership_expiring" || n.kind === "membership_expired") navigate("/vezbac/clanarina");
+    // message_from_trainer ostaje samo prikaz u listi
   };
+
+  // Detect role iz useAuth
+  const fullPagePath = role === "athlete"
+    ? "/vezbac/notifikacije"
+    : "/trener/notifikacije";
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -139,7 +162,7 @@ export const NotificationBell = () => {
           <button
             onClick={() => {
               setOpen(false);
-              navigate("/trener/notifikacije");
+              navigate(fullPagePath);
             }}
             className="w-full text-center py-2.5 text-[12.5px] font-semibold text-primary hover:bg-surface-2 transition"
           >

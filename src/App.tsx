@@ -34,6 +34,7 @@ import AthleteBooking from "./pages/athlete/Booking.tsx";
 import AthleteProgress from "./pages/athlete/Progress.tsx";
 import AthleteMembership from "./pages/athlete/Membership.tsx";
 import AthleteNutrition from "./pages/athlete/Nutrition.tsx";
+import AthleteNotifications from "./pages/athlete/Notifications.tsx";
 
 const queryClient = new QueryClient();
 
@@ -77,6 +78,7 @@ const App = () => (
             <Route path="/vezbac/napredak" element={athlete(<AthleteProgress />)} />
             <Route path="/vezbac/clanarina" element={athlete(<AthleteMembership />)} />
             <Route path="/vezbac/ishrana" element={athlete(<AthleteNutrition />)} />
+            <Route path="/vezbac/notifikacije" element={athlete(<AthleteNotifications />)} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

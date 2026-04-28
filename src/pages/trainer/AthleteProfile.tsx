@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { PhoneShell } from "@/components/PhoneShell";
+import { SendMessageToAthlete } from "@/components/SendMessageToAthlete";
 import { Avatar, Card, Chip } from "@/components/ui-bits";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -393,6 +394,7 @@ const AthleteProfile = () => {
   return (
     <PhoneShell
       back="/trener/vezbaci"
+      rightSlot={<SendMessageToAthlete athleteId={athlete.id} athleteName={athlete.full_name ?? undefined} variant="icon" />}
       title={
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-1.5">
