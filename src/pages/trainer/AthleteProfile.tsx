@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   Apple, ClipboardList, Wallet, MessageSquare, Phone, Loader2, Plus, X, Check,
+  Dumbbell, Activity, Scale,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -38,6 +39,33 @@ type AssignedPlan = {
   is_active: boolean;
 };
 
+type AssignedProgram = {
+  id: string;
+  name: string;
+  created_at: string;
+  total_days: number;
+};
+
+type ProgramTemplate = {
+  id: string;
+  name: string;
+  goal: string | null;
+};
+
+type SessionLog = {
+  id: string;
+  day_number: number;
+  completed_at: string | null;
+  duration_seconds: number | null;
+};
+
+type BodyMetric = {
+  id: string;
+  recorded_on: string;
+  weight_kg: number | null;
+  body_fat_pct: number | null;
+};
+
 const goalLabel: Record<string, string> = {
   lose_weight: "Mršavljenje",
   gain_muscle: "Masa",
@@ -58,17 +86,26 @@ const AthleteProfile = () => {
   const [loading, setLoading] = useState(true);
   const [athlete, setAthlete] = useState<AthleteData | null>(null);
   const [activePlan, setActivePlan] = useState<AssignedPlan | null>(null);
+  const [activeProgram, setActiveProgram] = useState<AssignedProgram | null>(null);
+  const [sessionLogs, setSessionLogs] = useState<SessionLog[]>([]);
+  const [latestMetric, setLatestMetric] = useState<BodyMetric | null>(null);
+  const [metricsHistory, setMetricsHistory] = useState<BodyMetric[]>([]);
 
-  // Assign dialog
+  // Nutrition assign dialog
   const [assignOpen, setAssignOpen] = useState(false);
   const [templates, setTemplates] = useState<NutritionTemplate[]>([]);
   const [assigning, setAssigning] = useState<string | null>(null);
+
+  // Program assign dialog
+  const [progOpen, setProgOpen] = useState(false);
+  const [progTemplates, setProgTemplates] = useState<ProgramTemplate[]>([]);
+  const [progAssigning, setProgAssigning] = useState<string | null>(null);
 
   const load = async () => {
     if (!id) return;
     setLoading(true);
 
-    const [aRes, pRes, planRes] = await Promise.all([
+    const [aRes, pRes, planRes, progRes, logsRes, metricsRes] = await Promise.all([
       supabase.from("athletes").select("*").eq("id", id).maybeSingle(),
       supabase.from("profiles").select("full_name, phone").eq("id", id).maybeSingle(),
       supabase
@@ -79,6 +116,26 @@ const AthleteProfile = () => {
         .order("assigned_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
+      supabase
+        .from("assigned_programs")
+        .select("id, name, created_at")
+        .eq("athlete_id", id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("workout_session_logs")
+        .select("id, day_number, completed_at, duration_seconds")
+        .eq("athlete_id", id)
+        .not("completed_at", "is", null)
+        .order("completed_at", { ascending: false })
+        .limit(5),
+      supabase
+        .from("body_metrics")
+        .select("id, recorded_on, weight_kg, body_fat_pct")
+        .eq("athlete_id", id)
+        .order("recorded_on", { ascending: false })
+        .limit(10),
     ]);
 
     if (aRes.data) {
@@ -89,10 +146,53 @@ const AthleteProfile = () => {
       });
     }
     setActivePlan((planRes.data as any) ?? null);
+
+    // Active program + total days count
+    if (progRes.data) {
+      const prog: any = progRes.data;
+      const { count } = await supabase
+        .from("assigned_program_days")
+        .select("id", { count: "exact", head: true })
+        .eq("assigned_program_id", prog.id);
+      setActiveProgram({ id: prog.id, name: prog.name, created_at: prog.created_at, total_days: count ?? 0 });
+    } else {
+      setActiveProgram(null);
+    }
+
+    setSessionLogs((logsRes.data as any) ?? []);
+    const metrics = (metricsRes.data as any[]) ?? [];
+    setMetricsHistory(metrics);
+    setLatestMetric(metrics[0] ?? null);
     setLoading(false);
   };
 
   useEffect(() => { load(); }, [id]);
+
+  const openProgramAssign = async () => {
+    setProgOpen(true);
+    if (progTemplates.length === 0 && user) {
+      const { data } = await supabase
+        .from("program_templates")
+        .select("id, name, goal")
+        .eq("trainer_id", user.id)
+        .order("created_at", { ascending: false });
+      setProgTemplates((data as any) ?? []);
+    }
+  };
+
+  const assignProgram = async (templateId: string) => {
+    if (!user || !id) return;
+    setProgAssigning(templateId);
+    const { error } = await supabase.rpc("assign_program_to_athlete", {
+      p_template_id: templateId,
+      p_athlete_id: id,
+    });
+    setProgAssigning(null);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Program dodeljen vežbaču");
+    setProgOpen(false);
+    load();
+  };
 
   const openAssign = async () => {
     setAssignOpen(true);
@@ -332,15 +432,131 @@ const AthleteProfile = () => {
             <Phone className="h-4 w-4 text-foreground" strokeWidth={2} />
             <span className="text-[11px] font-semibold">Pozovi</span>
           </button>
-          <Link
-            to="/trener/programi"
+          <button
+            onClick={openProgramAssign}
             className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-surface/80 backdrop-blur hover:bg-surface transition"
           >
             <ClipboardList className="h-4 w-4 text-foreground" strokeWidth={2} />
             <span className="text-[11px] font-semibold">Program</span>
-          </Link>
+          </button>
         </div>
       </Card>
+
+      {/* Training program */}
+      <section>
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Trening</div>
+            <div className="font-display text-lg font-bold">Program</div>
+          </div>
+        </div>
+
+        {activeProgram ? (
+          <Card className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-11 w-11 rounded-2xl bg-gradient-brand-soft flex items-center justify-center shrink-0">
+                <Dumbbell className="h-5 w-5 text-primary" strokeWidth={2.25} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-[15px] truncate">{activeProgram.name}</div>
+                <div className="text-[12px] text-muted-foreground">
+                  {activeProgram.total_days} {activeProgram.total_days === 1 ? "dan" : "dana"} · Dodeljen{" "}
+                  {new Date(activeProgram.created_at).toLocaleDateString("sr-RS")}
+                </div>
+              </div>
+            </div>
+            <Button variant="outline" className="w-full mt-3" onClick={openProgramAssign}>
+              Promeni program
+            </Button>
+          </Card>
+        ) : (
+          <button
+            onClick={openProgramAssign}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-hairline hover:border-primary/40 hover:bg-primary-soft/40 py-4 text-[14px] font-semibold text-muted-foreground hover:text-primary-soft-foreground transition"
+          >
+            <Plus className="h-4 w-4" /> Dodeli program treninga
+          </button>
+        )}
+      </section>
+
+      {/* Body metrics */}
+      <section>
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Telo</div>
+            <div className="font-display text-lg font-bold">Merenja</div>
+          </div>
+        </div>
+
+        {latestMetric ? (
+          <Card className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-11 w-11 rounded-2xl bg-info-soft flex items-center justify-center shrink-0">
+                <Scale className="h-5 w-5 text-info-soft-foreground" strokeWidth={2.25} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-[15px]">
+                  {latestMetric.weight_kg ? `${latestMetric.weight_kg} kg` : "—"}
+                  {latestMetric.body_fat_pct ? ` · ${latestMetric.body_fat_pct}% masti` : ""}
+                </div>
+                <div className="text-[12px] text-muted-foreground">
+                  {new Date(latestMetric.recorded_on).toLocaleDateString("sr-RS")}
+                  {metricsHistory.length > 1 && ` · ${metricsHistory.length} merenja`}
+                </div>
+              </div>
+              {metricsHistory.length >= 2 && metricsHistory[0].weight_kg && metricsHistory[metricsHistory.length - 1].weight_kg && (
+                <Chip tone={
+                  (metricsHistory[0].weight_kg! - metricsHistory[metricsHistory.length - 1].weight_kg!) < 0 ? "success" : "info"
+                }>
+                  {(() => {
+                    const diff = metricsHistory[0].weight_kg! - metricsHistory[metricsHistory.length - 1].weight_kg!;
+                    return `${diff >= 0 ? "+" : ""}${diff.toFixed(1)} kg`;
+                  })()}
+                </Chip>
+              )}
+            </div>
+          </Card>
+        ) : (
+          <Card className="p-4 text-center text-[13px] text-muted-foreground">
+            Vežbač još nije unosio merenja.
+          </Card>
+        )}
+      </section>
+
+      {/* Workout history */}
+      <section>
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Aktivnost</div>
+            <div className="font-display text-lg font-bold">Poslednji treninzi</div>
+          </div>
+        </div>
+
+        {sessionLogs.length > 0 ? (
+          <div className="space-y-2">
+            {sessionLogs.map((s) => (
+              <Card key={s.id} className="p-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-success-soft text-success-soft-foreground flex items-center justify-center shrink-0">
+                    <Activity className="h-4 w-4" strokeWidth={2.25} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-[14px]">Dan {s.day_number}</div>
+                    <div className="text-[11.5px] text-muted-foreground">
+                      {s.completed_at ? new Date(s.completed_at).toLocaleDateString("sr-RS") : "—"}
+                      {s.duration_seconds ? ` · ${Math.round(s.duration_seconds / 60)} min` : ""}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card className="p-4 text-center text-[13px] text-muted-foreground">
+            Još nema završenih treninga.
+          </Card>
+        )}
+      </section>
 
       {/* Nutrition section */}
       <section>
@@ -444,6 +660,54 @@ const AthleteProfile = () => {
                         {t.target_kcal ? `${t.target_kcal} kcal` : "—"}
                         {t.goal && ` · ${t.goal}`}
                       </div>
+                    </div>
+                    {isLoading && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Program assign dialog */}
+      <Dialog open={progOpen} onOpenChange={setProgOpen}>
+        <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Dodeli program treninga</DialogTitle>
+          </DialogHeader>
+          {progTemplates.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-muted-foreground mb-3">Nemaš još nijedan program.</p>
+              <Link to="/trener/programi">
+                <Button variant="outline">Napravi program</Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="overflow-y-auto flex-1 space-y-2 -mx-1 px-1">
+              {progTemplates.map((t) => {
+                const isCurrent = activeProgram?.name === t.name;
+                const isLoading = progAssigning === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => assignProgram(t.id)}
+                    disabled={!!progAssigning}
+                    className="w-full text-left p-3 rounded-xl border border-hairline hover:border-primary/40 hover:bg-primary-soft/30 flex items-center gap-3 transition disabled:opacity-50"
+                  >
+                    <div className="h-10 w-10 rounded-xl bg-gradient-brand-soft flex items-center justify-center shrink-0">
+                      <Dumbbell className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-sm truncate flex items-center gap-1.5">
+                        {t.name}
+                        {isCurrent && <Check className="h-3.5 w-3.5 text-primary" />}
+                      </div>
+                      {t.goal && (
+                        <div className="text-[11px] text-muted-foreground">
+                          {goalLabel[t.goal] ?? t.goal}
+                        </div>
+                      )}
                     </div>
                     {isLoading && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
                   </button>
