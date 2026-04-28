@@ -91,6 +91,16 @@ const AthleteProfile = () => {
   const [sessionLogs, setSessionLogs] = useState<SessionLog[]>([]);
   const [latestMetric, setLatestMetric] = useState<BodyMetric | null>(null);
   const [metricsHistory, setMetricsHistory] = useState<BodyMetric[]>([]);
+  const [activeMembership, setActiveMembership] = useState<{
+    id: string;
+    plan_name: string;
+    ends_on: string | null;
+    sessions_total: number | null;
+    sessions_used: number;
+  } | null>(null);
+  const [bonusOpen, setBonusOpen] = useState(false);
+  const [bonusCount, setBonusCount] = useState("1");
+  const [bonusSaving, setBonusSaving] = useState(false);
 
   // Nutrition assign dialog
   const [assignOpen, setAssignOpen] = useState(false);
