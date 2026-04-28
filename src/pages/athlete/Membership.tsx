@@ -58,6 +58,77 @@ type BankInfo = {
   purpose: string | null;
 };
 
+const BankSlip = ({ bank, amount }: { bank: BankInfo | null; amount: number }) => {
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const hasAny =
+    bank && (bank.recipient || bank.account || bank.bank_name || bank.purpose);
+
+  if (!hasAny) {
+    return (
+      <div className="rounded-2xl border border-dashed border-hairline p-4 bg-surface text-center">
+        <Landmark className="h-5 w-5 mx-auto text-muted-foreground mb-2" />
+        <p className="text-[12px] text-muted-foreground">
+          Trener još nije uneo podatke za uplatu na račun. Pošalji zahtev i kontaktiraj ga direktno.
+        </p>
+      </div>
+    );
+  }
+
+  const copy = async (key: string, value: string | null | undefined) => {
+    if (!value) return;
+    await navigator.clipboard.writeText(value);
+    setCopiedKey(key);
+    toast.success("Kopirano");
+    setTimeout(() => setCopiedKey(null), 1500);
+  };
+
+  const Row = ({
+    label, value, k,
+  }: { label: string; value: string | null | undefined; k: string }) => {
+    if (!value) return null;
+    return (
+      <div className="flex items-start gap-3 py-2 border-b border-hairline/60 last:border-0">
+        <div className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground w-24 shrink-0 pt-1">
+          {label}
+        </div>
+        <div className="flex-1 text-[13.5px] font-semibold tracking-tight text-foreground break-all">
+          {value}
+        </div>
+        <button
+          onClick={() => copy(k, value)}
+          className="h-7 w-7 rounded-lg bg-surface hover:bg-surface-2 flex items-center justify-center transition shrink-0"
+          aria-label={`Kopiraj ${label}`}
+        >
+          {copiedKey === k
+            ? <Check className="h-3.5 w-3.5 text-primary" />
+            : <Copy className="h-3.5 w-3.5 text-muted-foreground" />}
+        </button>
+      </div>
+    );
+  };
+
+  return (
+    <div className="rounded-2xl border border-hairline bg-gradient-brand-soft p-4">
+      <div className="flex items-center gap-2 mb-2">
+        <Landmark className="h-4 w-4 text-primary" />
+        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+          Podaci za uplatu
+        </div>
+      </div>
+      <div className="rounded-xl bg-background/70 px-3">
+        <Row label="Iznos" value={`${amount.toLocaleString("sr-RS")} RSD`} k="amount" />
+        <Row label="Primalac" value={bank?.recipient} k="recipient" />
+        <Row label="Račun" value={bank?.account} k="account" />
+        <Row label="Banka" value={bank?.bank_name} k="bank" />
+        <Row label="Model" value={bank?.model} k="model" />
+        <Row label="Poziv" value={bank?.reference} k="reference" />
+        <Row label="Svrha" value={bank?.purpose} k="purpose" />
+      </div>
+    </div>
+  );
+};
+
 const Membership = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
