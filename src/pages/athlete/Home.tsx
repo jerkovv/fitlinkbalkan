@@ -9,20 +9,12 @@ import { MessageTrainerCard } from "@/components/MessageTrainerCard";
 import { NotificationBell } from "@/components/NotificationBell";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-
-type NextDay = {
-  assigned_program_id: string;
-  program_name: string;
-  day_id: string;
-  day_number: number;
-  day_name: string;
-  total_days: number;
-};
+import { getNextWorkoutDay, type NextWorkoutDay } from "@/lib/workouts";
 
 const Home = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [next, setNext] = useState<NextDay | null>(null);
+  const [next, setNext] = useState<NextWorkoutDay | null>(null);
   const [exerciseCount, setExerciseCount] = useState<number>(0);
   const [monthCount, setMonthCount] = useState<number>(0);
   const [trainerName, setTrainerName] = useState<string>("");
@@ -48,10 +40,7 @@ const Home = () => {
 
 
       // Sledeći dan u rotaciji
-      const { data: nd } = await supabase.rpc("get_next_workout_day", {
-        p_athlete_id: user.id,
-      });
-      const nextDay = (nd as any[])?.[0] as NextDay | undefined;
+      const nextDay = await getNextWorkoutDay(user.id);
       setNext(nextDay ?? null);
 
       // Broj vežbi za taj dan
