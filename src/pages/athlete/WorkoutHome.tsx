@@ -3,16 +3,24 @@ import { Link, useNavigate } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui-bits";
-import { Loader2, Play, Dumbbell, History } from "lucide-react";
+import { Loader2, Play, Dumbbell, History, CalendarDays } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { getNextWorkoutDay, type NextWorkoutDay } from "@/lib/workouts";
+import { cn } from "@/lib/utils";
 
 type RecentLog = {
   id: string;
   day_number: number;
   completed_at: string | null;
   duration_seconds: number | null;
+};
+
+type ProgramDay = {
+  id: string;
+  day_number: number;
+  name: string;
+  exercise_count: number;
 };
 
 const WorkoutHome = () => {
@@ -22,6 +30,7 @@ const WorkoutHome = () => {
   const [next, setNext] = useState<NextWorkoutDay | null>(null);
   const [exerciseCount, setExerciseCount] = useState(0);
   const [recent, setRecent] = useState<RecentLog[]>([]);
+  const [allDays, setAllDays] = useState<ProgramDay[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -37,6 +46,23 @@ const WorkoutHome = () => {
           .select("id", { count: "exact", head: true })
           .eq("day_id", nextDay.day_id);
         setExerciseCount(count ?? 0);
+
+        // Učitaj sve dane iz programa da vežbač može opet da pokrene bilo koji
+        const { data: daysData } = await supabase
+          .from("assigned_program_days")
+          .select("id, day_number, name, assigned_program_exercises(id)")
+          .eq("assigned_program_id", nextDay.assigned_program_id)
+          .order("day_number", { ascending: true });
+
+        const list: ProgramDay[] = ((daysData as any[]) ?? []).map((d) => ({
+          id: d.id,
+          day_number: d.day_number,
+          name: d.name,
+          exercise_count: (d.assigned_program_exercises ?? []).length,
+        }));
+        setAllDays(list);
+      } else {
+        setAllDays([]);
       }
 
       const { data: logs } = await supabase
@@ -118,6 +144,55 @@ const WorkoutHome = () => {
               Kontaktiraj trenera da ti dodeli plan treninga.
             </p>
           </Card>
+        )}
+
+        {allDays.length > 0 && (
+          <section>
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground mb-3">
+              <CalendarDays className="h-3.5 w-3.5" />
+              Svi dani u programu
+            </div>
+            <div className="space-y-2">
+              {allDays.map((d) => {
+                const isNext = next?.day_id === d.id;
+                return (
+                  <button
+                    key={d.id}
+                    onClick={() => nav(`/vezbac/trening/${d.id}`)}
+                    className="block w-full text-left"
+                  >
+                    <Card
+                      className={cn(
+                        "p-4 flex items-center gap-3 transition active:scale-[0.99]",
+                        isNext && "ring-2 ring-primary/40"
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "h-10 w-10 rounded-2xl flex items-center justify-center font-display text-[15px] font-bold tnum",
+                          isNext
+                            ? "bg-gradient-brand text-white"
+                            : "bg-gradient-brand-soft text-primary"
+                        )}
+                      >
+                        {d.day_number}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[14px] font-semibold tracking-tight truncate">
+                          {d.name}
+                        </div>
+                        <div className="text-[12px] text-muted-foreground">
+                          {d.exercise_count} {d.exercise_count === 1 ? "vežba" : "vežbi"}
+                          {isNext && " · sledeći u rotaciji"}
+                        </div>
+                      </div>
+                      <Play className="h-4 w-4 text-primary fill-primary" />
+                    </Card>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
         )}
 
         <section>
