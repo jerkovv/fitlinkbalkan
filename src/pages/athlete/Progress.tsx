@@ -254,18 +254,114 @@ const Progress = () => {
           </div>
         ) : tab === "Treninzi" ? (
           <>
+            {/* HERO — Trener analitika */}
+            <Card className="p-5 bg-gradient-to-br from-primary/8 via-surface to-surface relative overflow-hidden">
+              <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-gradient-brand opacity-10 blur-2xl" />
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-1">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  <span className="eyebrow text-primary">
+                    {trainerName ? `Sa trenerom ${trainerName.split(" ")[0]}` : "Sa trenerom"}
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <div className="font-display text-[44px] leading-none font-bold tracking-tightest tnum">
+                    {trainerSessionsAll}
+                  </div>
+                  <div className="text-[13px] text-muted-foreground font-medium">
+                    {trainerSessionsAll === 1 ? "trening ukupno" : "treninga ukupno"}
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center gap-3 text-[12px]">
+                  <span className="inline-flex items-center gap-1 text-muted-foreground">
+                    <CalendarCheck className="h-3.5 w-3.5" />
+                    <span className="font-semibold text-foreground tnum">{trainerSessionsMonth}</span> ovog meseca
+                  </span>
+                  {sessionsLeft != null && (
+                    <span className="inline-flex items-center gap-1 text-muted-foreground">
+                      <Target className="h-3.5 w-3.5" />
+                      <span className="font-semibold text-foreground tnum">{sessionsLeft}</span> ostalo
+                    </span>
+                  )}
+                </div>
+              </div>
+            </Card>
+
             <div className="grid grid-cols-2 gap-3">
               <Card className="p-4">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Ove nedelje</div>
+                <div className="flex items-center justify-between">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Ove nedelje</div>
+                  <Dumbbell className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
                 <div className="font-display text-[28px] font-bold tracking-tightest mt-1 tnum">{weekCount}</div>
                 <div className="text-[12px] text-muted-foreground">treninga</div>
               </Card>
-              <Card className="p-4">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Ovog meseca</div>
-                <div className="font-display text-[28px] font-bold tracking-tightest mt-1 tnum">{monthCount}</div>
-                <div className="text-[12px] text-muted-foreground">treninga</div>
+              <Card className={cn(
+                "p-4",
+                streak >= 3 && "bg-gradient-to-br from-warning-soft/40 to-surface"
+              )}>
+                <div className="flex items-center justify-between">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Streak</div>
+                  <Flame className={cn("h-3.5 w-3.5", streak >= 3 ? "text-warning-soft-foreground" : "text-muted-foreground")} />
+                </div>
+                <div className="font-display text-[28px] font-bold tracking-tightest mt-1 tnum">{streak}</div>
+                <div className="text-[12px] text-muted-foreground">{streak === 1 ? "nedelja" : "nedelja"} u nizu</div>
               </Card>
             </div>
+
+            {/* Bar chart — poslednjih 8 nedelja */}
+            <Card className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    Aktivnost
+                  </div>
+                  <div className="text-[13px] text-foreground font-semibold mt-0.5">Poslednjih 8 nedelja</div>
+                </div>
+                {weeklyHistory.length > 0 && (
+                  <div className="text-right">
+                    <div className="font-display text-[20px] font-bold tracking-tightest tnum">
+                      {(weeklyHistory.reduce((a, b) => a + b.count, 0) / 8).toFixed(1)}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider">prosek/ned</div>
+                  </div>
+                )}
+              </div>
+              {(() => {
+                const maxC = Math.max(1, ...weeklyHistory.map((w) => w.count));
+                return (
+                  <div className="flex items-end gap-1.5 h-24">
+                    {weeklyHistory.map((w, i) => {
+                      const isCurrent = i === weeklyHistory.length - 1;
+                      const h = w.count === 0 ? 4 : (w.count / maxC) * 96;
+                      return (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
+                          <div className="w-full flex items-end h-full">
+                            <div
+                              className={cn(
+                                "w-full rounded-t-md transition-all",
+                                w.count === 0
+                                  ? "bg-hairline"
+                                  : isCurrent
+                                  ? "bg-gradient-to-t from-primary to-primary/60"
+                                  : "bg-primary/30"
+                              )}
+                              style={{ height: `${h}px` }}
+                            />
+                          </div>
+                          <div className={cn(
+                            "text-[9px] font-semibold tnum",
+                            isCurrent ? "text-primary" : "text-muted-foreground"
+                          )}>
+                            {w.count}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </Card>
 
             <section>
               <SectionTitle>Istorija</SectionTitle>
