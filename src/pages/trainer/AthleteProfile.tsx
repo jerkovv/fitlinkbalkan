@@ -86,17 +86,26 @@ const AthleteProfile = () => {
   const [loading, setLoading] = useState(true);
   const [athlete, setAthlete] = useState<AthleteData | null>(null);
   const [activePlan, setActivePlan] = useState<AssignedPlan | null>(null);
+  const [activeProgram, setActiveProgram] = useState<AssignedProgram | null>(null);
+  const [sessionLogs, setSessionLogs] = useState<SessionLog[]>([]);
+  const [latestMetric, setLatestMetric] = useState<BodyMetric | null>(null);
+  const [metricsHistory, setMetricsHistory] = useState<BodyMetric[]>([]);
 
-  // Assign dialog
+  // Nutrition assign dialog
   const [assignOpen, setAssignOpen] = useState(false);
   const [templates, setTemplates] = useState<NutritionTemplate[]>([]);
   const [assigning, setAssigning] = useState<string | null>(null);
+
+  // Program assign dialog
+  const [progOpen, setProgOpen] = useState(false);
+  const [progTemplates, setProgTemplates] = useState<ProgramTemplate[]>([]);
+  const [progAssigning, setProgAssigning] = useState<string | null>(null);
 
   const load = async () => {
     if (!id) return;
     setLoading(true);
 
-    const [aRes, pRes, planRes] = await Promise.all([
+    const [aRes, pRes, planRes, progRes, logsRes, metricsRes] = await Promise.all([
       supabase.from("athletes").select("*").eq("id", id).maybeSingle(),
       supabase.from("profiles").select("full_name, phone").eq("id", id).maybeSingle(),
       supabase
@@ -107,6 +116,26 @@ const AthleteProfile = () => {
         .order("assigned_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
+      supabase
+        .from("assigned_programs")
+        .select("id, name, created_at")
+        .eq("athlete_id", id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("workout_session_logs")
+        .select("id, day_number, completed_at, duration_seconds")
+        .eq("athlete_id", id)
+        .not("completed_at", "is", null)
+        .order("completed_at", { ascending: false })
+        .limit(5),
+      supabase
+        .from("body_metrics")
+        .select("id, recorded_on, weight_kg, body_fat_pct")
+        .eq("athlete_id", id)
+        .order("recorded_on", { ascending: false })
+        .limit(10),
     ]);
 
     if (aRes.data) {
@@ -117,6 +146,23 @@ const AthleteProfile = () => {
       });
     }
     setActivePlan((planRes.data as any) ?? null);
+
+    // Active program + total days count
+    if (progRes.data) {
+      const prog: any = progRes.data;
+      const { count } = await supabase
+        .from("assigned_program_days")
+        .select("id", { count: "exact", head: true })
+        .eq("assigned_program_id", prog.id);
+      setActiveProgram({ id: prog.id, name: prog.name, created_at: prog.created_at, total_days: count ?? 0 });
+    } else {
+      setActiveProgram(null);
+    }
+
+    setSessionLogs((logsRes.data as any) ?? []);
+    const metrics = (metricsRes.data as any[]) ?? [];
+    setMetricsHistory(metrics);
+    setLatestMetric(metrics[0] ?? null);
     setLoading(false);
   };
 
