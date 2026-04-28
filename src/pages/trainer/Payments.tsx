@@ -54,7 +54,7 @@ const Payments = () => {
 
   useEffect(() => { load(); }, [user]);
 
-  const confirm = async (p: Purchase) => {
+  const confirmPurchase = async (p: Purchase) => {
     setBusyId(p.id);
     const { error } = await supabase.rpc("confirm_membership_purchase", {
       p_purchase_id: p.id,
@@ -66,8 +66,8 @@ const Payments = () => {
     load();
   };
 
-  const reject = async (p: Purchase) => {
-    if (!confirm(`Odbiti zahtev "${p.package_name}"?`)) return;
+  const rejectPurchase = async (p: Purchase) => {
+    if (!window.confirm(`Odbiti zahtev "${p.package_name}"?`)) return;
     setBusyId(p.id);
     const { error } = await supabase.rpc("reject_membership_purchase", {
       p_purchase_id: p.id,
