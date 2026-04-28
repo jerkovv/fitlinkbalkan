@@ -47,9 +47,13 @@ const Progress = () => {
   const [trainerSessionsAll, setTrainerSessionsAll] = useState(0);
   const [trainerSessionsMonth, setTrainerSessionsMonth] = useState(0);
   const [sessionsLeft, setSessionsLeft] = useState<number | null>(null);
-  const [streak, setStreak] = useState(0);
+  const [streak, setStreak] = useState(0); // weeks streak (legacy)
+  const [streakDays, setStreakDays] = useState(0);
+  const [longestDays, setLongestDays] = useState(0);
+  const [totalWorkouts, setTotalWorkouts] = useState(0);
   const [weeklyHistory, setWeeklyHistory] = useState<{ label: string; count: number }[]>([]);
   const [trainerName, setTrainerName] = useState<string>("");
+  const [prs, setPrs] = useState<Array<{ id: string; exercise_name: string; best_weight_kg: number | null; best_weight_reps: number | null; best_e1rm_kg: number | null; best_e1rm_at: string | null }>>([]);
 
   const [metrics, setMetrics] = useState<Metric[]>([]);
 
