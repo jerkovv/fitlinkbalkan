@@ -215,6 +215,17 @@ const ActiveWorkout = () => {
     }));
   };
 
+  const checkPr = async (logId: string) => {
+    const { data, error } = await supabase.rpc("check_set_pr", { p_set_log_id: logId } as any);
+    if (error || !data) return;
+    const pr = data as { is_pr: boolean; is_weight_pr?: boolean; is_e1rm_pr?: boolean; weight_kg?: number; reps?: number; e1rm_kg?: number };
+    if (!pr.is_pr) return;
+    const parts: string[] = [];
+    if (pr.is_weight_pr) parts.push(`max ${pr.weight_kg}kg × ${pr.reps}`);
+    if (pr.is_e1rm_pr) parts.push(`1RM ~${pr.e1rm_kg}kg`);
+    toast.success(`🏆 NOVI REKORD! ${parts.join(" · ")}`, { duration: 4500 });
+  };
+
   const completeSet = async (idx: number) => {
     if (!current || !sessionLogId) return;
     const s = sets[idx];
@@ -228,6 +239,7 @@ const ActiveWorkout = () => {
       done: true,
     };
 
+    let logId: string | undefined = s.log_id;
     if (s.log_id) {
       await supabase.from("set_logs").update(payload as any).eq("id", s.log_id);
       updateSet(idx, { done: true });
@@ -241,8 +253,12 @@ const ActiveWorkout = () => {
         toast.error(error.message);
         return;
       }
-      updateSet(idx, { done: true, log_id: (data as any).id });
+      logId = (data as any).id;
+      updateSet(idx, { done: true, log_id: logId });
     }
+
+    // Trigger u DB-u je već upisao PR — pitamo RPC da prikažemo badge
+    if (logId) checkPr(logId);
 
     // Pokreni odmor
     const r = current.rest_seconds ?? 60;
