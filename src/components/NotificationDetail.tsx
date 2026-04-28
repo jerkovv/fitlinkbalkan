@@ -22,6 +22,7 @@ const KIND_META: Record<
   booking_created:      { icon: CalendarPlus,  tone: "text-[hsl(var(--session-emerald-fg))] bg-[hsl(var(--session-emerald-bg))]", label: "Rezervacija" },
   booking_canceled:     { icon: CalendarX,     tone: "text-[hsl(var(--session-rose-fg))] bg-[hsl(var(--session-rose-bg))]",       label: "Otkazivanje" },
   workout_completed:    { icon: Dumbbell,      tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]",   label: "Završen trening" },
+  pr_set:               { icon: Dumbbell,      tone: "text-[hsl(var(--session-amber-fg))] bg-[hsl(var(--session-amber-bg))]",     label: "Lični rekord 🏆" },
   message:              { icon: MessageSquare, tone: "text-[hsl(var(--session-indigo-fg))] bg-[hsl(var(--session-indigo-bg))]",   label: "Poruka vežbača" },
   payment_request:      { icon: IdCard,        tone: "text-[hsl(var(--session-amber-fg))] bg-[hsl(var(--session-amber-bg))]",     label: "Zahtev za članarinu" },
   payment_marked:       { icon: Check,         tone: "text-[hsl(var(--session-emerald-fg))] bg-[hsl(var(--session-emerald-bg))]", label: "Vežbač potvrdio uplatu" },

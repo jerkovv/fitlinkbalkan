@@ -10,6 +10,7 @@ export type NotificationKind =
   | "message"
   | "payment_request"
   | "payment_marked"
+  | "pr_set"
   // ka vežbaču
   | "program_assigned"
   | "nutrition_assigned"
