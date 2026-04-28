@@ -20,6 +20,8 @@ import TrainerCalendar from "./pages/trainer/Calendar.tsx";
 import TrainerPayment from "./pages/trainer/Payment.tsx";
 import TrainerFinances from "./pages/trainer/Finances.tsx";
 import TrainerExerciseLibrary from "./pages/trainer/ExerciseLibrary.tsx";
+import TrainerProgramTemplates from "./pages/trainer/ProgramTemplates.tsx";
+import TrainerProgramBuilderNew from "./pages/trainer/ProgramBuilderNew.tsx";
 
 import AthleteOnboarding from "./pages/athlete/Onboarding.tsx";
 import AthleteHome from "./pages/athlete/Home.tsx";
@@ -55,6 +57,8 @@ const App = () => (
             <Route path="/trener/uplata/:id" element={trainer(<TrainerPayment />)} />
             <Route path="/trener/finansije" element={trainer(<TrainerFinances />)} />
             <Route path="/trener/biblioteka" element={trainer(<TrainerExerciseLibrary />)} />
+            <Route path="/trener/programi" element={trainer(<TrainerProgramTemplates />)} />
+            <Route path="/trener/programi/:id" element={trainer(<TrainerProgramBuilderNew />)} />
 
             {/* Vežbač — protected */}
             <Route path="/vezbac/onboarding" element={athlete(<AthleteOnboarding />)} />
