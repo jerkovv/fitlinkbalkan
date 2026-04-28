@@ -206,7 +206,16 @@ const NutritionBuilder = () => {
     setPickedFood(null);
     setPickedGrams("100");
     setFoodQuery("");
+    setActiveCategory(null);
+    setFilterVegan(false);
+    setFilterGlutenFree(false);
+    setFilterPosno(false);
     if (foods.length === 0) await loadFoods();
+  };
+
+  const selectFood = (f: Food) => {
+    setPickedFood(f);
+    setPickedGrams(String(f.serving_size_g ?? 100));
   };
 
   const addFoodToMeal = async () => {
