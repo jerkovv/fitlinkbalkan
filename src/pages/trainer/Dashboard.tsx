@@ -261,6 +261,38 @@ const Dashboard = () => {
           </section>
         )}
 
+        {/* Top referreri — ko ti dovodi vežbače */}
+        {referrers.length > 0 && (
+          <section>
+            <SectionTitle>Tvoji ambasadori 💜</SectionTitle>
+            <Card className="divide-y divide-hairline">
+              {referrers.map((r) => (
+                <Link
+                  key={r.referrer_id}
+                  to={`/trener/vezbaci/${r.referrer_id}`}
+                  className="p-4 flex items-center gap-3 hover:bg-surface-2 transition"
+                >
+                  <Avatar
+                    initials={(r.referrer_name ?? "??").slice(0, 2).toUpperCase()}
+                    tone="brand"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-[14.5px] truncate">
+                      {r.referrer_name ?? "Bez imena"}
+                    </div>
+                    <div className="text-[12px] text-muted-foreground">
+                      Doveo {r.referred_count}{" "}
+                      {r.referred_count === 1 ? "vežbača" : "vežbača"}
+                      {r.referred_active > 0 && ` · ${r.referred_active} aktivnih`}
+                    </div>
+                  </div>
+                  <Chip tone="success">+{r.referred_count}</Chip>
+                </Link>
+              ))}
+            </Card>
+          </section>
+        )}
+
         {/* Studio */}
         <Card className="p-4 bg-gradient-brand-soft border-0">
           <div className="flex items-center gap-3">
