@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Loader2, Save, Users, Dumbbell, Apple, Copy, Check, X, Plus,
+  Loader2, Save, Users, Dumbbell, Apple, X, Plus, Landmark,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -35,6 +35,14 @@ const Profile = () => {
   const [instagram, setInstagram] = useState("");
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [newSpec, setNewSpec] = useState("");
+
+  // bank
+  const [bankRecipient, setBankRecipient] = useState("");
+  const [bankAccount, setBankAccount] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [bankModel, setBankModel] = useState("");
+  const [bankReference, setBankReference] = useState("");
+  const [bankPurpose, setBankPurpose] = useState("");
 
   // read-only stats
   const [stats, setStats] = useState({
@@ -76,6 +84,12 @@ const Profile = () => {
       setYears(t.years_experience != null ? String(t.years_experience) : "");
       setInstagram(t.instagram_handle ?? "");
       setSpecialties(Array.isArray(t.specialties) ? t.specialties : []);
+      setBankRecipient(t.bank_recipient ?? "");
+      setBankAccount(t.bank_account ?? "");
+      setBankName(t.bank_name ?? "");
+      setBankModel(t.bank_model ?? "");
+      setBankReference(t.bank_reference ?? "");
+      setBankPurpose(t.bank_purpose ?? "");
       
 
       setStats({
