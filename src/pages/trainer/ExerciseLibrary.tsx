@@ -26,6 +26,7 @@ type Exercise = {
   category: string | null;
   is_global: boolean;
   created_by: string | null;
+  video_url: string | null;
 };
 
 const MUSCLE_GROUPS = [
@@ -74,6 +75,7 @@ const ExerciseLibrary = () => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [instructions, setInstructions] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
   const [primaryMuscle, setPrimaryMuscle] = useState<string>("grudi");
   const [equipment, setEquipment] = useState<string>("bucice");
   const [submitting, setSubmitting] = useState(false);
@@ -109,6 +111,12 @@ const ExerciseLibrary = () => {
     e.preventDefault();
     if (!user) return;
     setSubmitting(true);
+    const vUrl = videoUrl.trim();
+    if (vUrl && !/^https?:\/\//i.test(vUrl)) {
+      toast.error("Video link mora počinjati sa http:// ili https://");
+      setSubmitting(false);
+      return;
+    }
     const { error } = await supabase.from("exercises").insert({
       name,
       description: description || null,
@@ -117,6 +125,7 @@ const ExerciseLibrary = () => {
       equipment,
       is_global: false,
       created_by: user.id,
+      video_url: vUrl || null,
     } as any);
     setSubmitting(false);
 
@@ -126,7 +135,7 @@ const ExerciseLibrary = () => {
     }
     toast.success("Vežba dodata");
     setOpen(false);
-    setName(""); setDescription(""); setInstructions("");
+    setName(""); setDescription(""); setInstructions(""); setVideoUrl("");
     setPrimaryMuscle("grudi"); setEquipment("bucice");
     load();
   };
@@ -185,6 +194,20 @@ const ExerciseLibrary = () => {
               <div>
                 <Label htmlFor="ex-instr">Uputstvo (opciono)</Label>
                 <Textarea id="ex-instr" value={instructions} onChange={(e) => setInstructions(e.target.value)} rows={3} className="mt-1.5" />
+              </div>
+              <div>
+                <Label htmlFor="ex-video">Video link (opciono)</Label>
+                <Input
+                  id="ex-video"
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  placeholder="https://youtube.com/watch?v=..."
+                  className="mt-1.5"
+                  type="url"
+                />
+                <div className="text-[11px] text-muted-foreground mt-1">
+                  YouTube, Vimeo ili direktan .mp4 link.
+                </div>
               </div>
               <DialogFooter className="mt-4">
                 <Button type="submit" disabled={submitting} className="w-full">
