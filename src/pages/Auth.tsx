@@ -42,6 +42,13 @@ const Auth = () => {
         });
         if (error) throw error;
         toast.success("Nalog kreiran! Proveri email za potvrdu.");
+      } else if (mode === "forgot") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        toast.success("Poslali smo ti link za resetovanje na email.");
+        setMode("login");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
