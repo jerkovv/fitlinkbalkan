@@ -27,6 +27,7 @@ import TrainerProgramBuilderNew from "./pages/trainer/ProgramBuilderNew.tsx";
 import TrainerNutritionTemplates from "./pages/trainer/NutritionTemplates.tsx";
 import TrainerNutritionBuilder from "./pages/trainer/NutritionBuilder.tsx";
 import TrainerNotifications from "./pages/trainer/Notifications.tsx";
+import TrainerNotificationSettings from "./pages/trainer/NotificationSettings.tsx";
 import TrainerProfile from "./pages/trainer/Profile.tsx";
 import TrainerPackages from "./pages/trainer/Packages.tsx";
 import TrainerPayments from "./pages/trainer/Payments.tsx";
@@ -76,6 +77,7 @@ const App = () => (
             <Route path="/trener/ishrana" element={trainer(<TrainerNutritionTemplates />)} />
             <Route path="/trener/ishrana/:id" element={trainer(<TrainerNutritionBuilder />)} />
             <Route path="/trener/notifikacije" element={trainer(<TrainerNotifications />)} />
+            <Route path="/trener/podesavanja-obavestenja" element={trainer(<TrainerNotificationSettings />)} />
             <Route path="/trener/profil" element={trainer(<TrainerProfile />)} />
             <Route path="/trener/paketi" element={trainer(<TrainerPackages />)} />
             <Route path="/trener/uplate" element={trainer(<TrainerPayments />)} />

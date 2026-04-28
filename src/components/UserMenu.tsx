@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User as UserIcon, Loader2 } from "lucide-react";
+import { LogOut, User as UserIcon, Loader2, Bell } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -90,6 +90,15 @@ export const UserMenu = () => {
           <UserIcon className="h-4 w-4 mr-2" />
           Profil
         </DropdownMenuItem>
+        {role === "trainer" && (
+          <DropdownMenuItem
+            onClick={() => navigate("/trener/podesavanja-obavestenja")}
+            className="cursor-pointer"
+          >
+            <Bell className="h-4 w-4 mr-2" />
+            Obaveštenja
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={handleSignOut}
