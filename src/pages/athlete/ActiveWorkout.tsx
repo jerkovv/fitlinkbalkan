@@ -136,14 +136,18 @@ const ActiveWorkout = () => {
       const map: Record<string, SetEntry[]> = {};
       for (const ex of exList) {
         const arr: SetEntry[] = [];
+        // Prefill iz trenerovog plana: reps i weight_kg postaju default vrednosti
+        // koje vežbač samo potvrdi (ili izmeni pa potvrdi).
+        const planReps = ex.reps ? String(parseInt(ex.reps, 10) || ex.reps) : "";
+        const planWeight = ex.weight_kg != null ? String(ex.weight_kg) : "";
         for (let i = 1; i <= ex.sets; i++) {
           const found = (prevLogs as any[])?.find(
             (l) => l.exercise_id === ex.id && l.set_number === i
           );
           arr.push({
             set_number: i,
-            reps: found?.reps?.toString() ?? "",
-            weight_kg: found?.weight_kg?.toString() ?? "",
+            reps: found?.reps?.toString() ?? planReps,
+            weight_kg: found?.weight_kg?.toString() ?? planWeight,
             rpe: found?.rpe?.toString() ?? "",
             done: !!found?.done,
             log_id: found?.id,
@@ -298,6 +302,27 @@ const ActiveWorkout = () => {
         <Chip tone="info" size="md" className="mx-auto">
           Vežba {currentIdx + 1} od {exercises.length}
         </Chip>
+
+        {/* Trener zadao */}
+        <Card className="p-3.5 bg-primary-soft/50 border-primary/15">
+          <div className="flex items-start gap-2.5">
+            <div className="h-8 w-8 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
+              <Trophy className="h-4 w-4" strokeWidth={2.2} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary/80">
+                Trener ti je zadao
+              </div>
+              <div className="text-[14px] font-bold text-foreground mt-0.5">
+                {current.sets} × {current.reps ?? "—"} ponavljanja
+                {current.weight_kg ? ` sa ${current.weight_kg} kg` : ""}
+              </div>
+              <div className="text-[11.5px] text-muted-foreground mt-0.5 leading-snug">
+                Polja su već popunjena. Klikni ✓ ako si odradio tako, ili izmeni broj pre nego što potvrdiš.
+              </div>
+            </div>
+          </div>
+        </Card>
 
         {/* Set rows */}
         <Card className="p-4 overflow-hidden">
