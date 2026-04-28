@@ -145,10 +145,18 @@ const NutritionBuilder = () => {
   const loadFoods = async () => {
     const { data } = await supabase
       .from("food_items")
-      .select("id, name, category, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g")
+      .select("id, name, category, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, serving_size_g, is_vegan, is_gluten_free, is_posno")
+      .eq("za_trenera", true)
       .order("name");
     setFoods((data as any) ?? []);
   };
+
+  // Kategorije izvučene iz učitanih namirnica
+  const availableCategories = useMemo(() => {
+    const set = new Set<string>();
+    foods.forEach((f) => { if (f.category) set.add(f.category); });
+    return Array.from(set).sort();
+  }, [foods]);
 
   const handleAddDay = async (e: React.FormEvent) => {
     e.preventDefault();
