@@ -85,12 +85,26 @@ export const NotificationBell = () => {
   const handleItemClick = async (n: AppNotification) => {
     if (!n.is_read) await markRead(n.id);
     setOpen(false);
-    if (n.kind === "booking_created" || n.kind === "booking_canceled") {
-      navigate("/trener/kalendar");
-    } else if (n.kind === "workout_completed" || n.kind === "message") {
-      navigate(`/trener/vezbaci/${n.athlete_id}`);
+    // Trener
+    if (n.recipient_role === "trainer") {
+      if (n.kind === "booking_created" || n.kind === "booking_canceled") {
+        navigate("/trener/kalendar");
+      } else if (n.kind === "workout_completed" || n.kind === "message") {
+        navigate(`/trener/vezbaci/${n.athlete_id}`);
+      }
+      return;
     }
+    // Vežbač
+    if (n.kind === "program_assigned") navigate("/vezbac");
+    else if (n.kind === "nutrition_assigned") navigate("/vezbac/ishrana");
+    else if (n.kind === "membership_expiring" || n.kind === "membership_expired") navigate("/vezbac/clanarina");
+    // message_from_trainer ostaje samo prikaz u listi
   };
+
+  // Detect role iz prve notifikacije ili default trener
+  const fullPagePath = items[0]?.recipient_role === "athlete"
+    ? "/vezbac/notifikacije"
+    : "/trener/notifikacije";
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
