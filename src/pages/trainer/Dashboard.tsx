@@ -5,6 +5,7 @@ import { Avatar, Card, Chip, SectionTitle, StatCard } from "@/components/ui-bits
 import { Clock, ChevronRight, Plus, ClipboardList, Apple } from "lucide-react";
 import { trainerProfile, todaySessions } from "@/data/mock";
 import { UserMenu } from "@/components/UserMenu";
+import { NotificationBell } from "@/components/NotificationBell";
 
 const statusChip = {
   active: <Chip tone="success">Aktivno</Chip>,
@@ -24,7 +25,12 @@ const Dashboard = () => {
             <span className="text-gradient-brand"> 👋</span>
           </h1>
         }
-        rightSlot={<UserMenu />}
+        rightSlot={
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <UserMenu />
+          </div>
+        }
       >
         <div className="grid grid-cols-2 gap-3">
           <StatCard tone="brand" value="12" unit="članova" label="Aktivnih" />

@@ -5,6 +5,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { Card, SectionTitle, StatCard } from "@/components/ui-bits";
 import { Play, CalendarPlus, Apple, Loader2, Dumbbell } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
+import { MessageTrainerCard } from "@/components/MessageTrainerCard";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -189,6 +190,8 @@ const Home = () => {
           </div>
           <span className="text-muted-foreground">→</span>
         </Link>
+
+        <MessageTrainerCard />
       </PhoneShell>
       <BottomNav role="athlete" />
     </>
