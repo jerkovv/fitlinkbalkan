@@ -155,7 +155,7 @@ const Booking = () => {
     if (!confirm("Otkazati rezervaciju?")) return;
     const key = isMineKey(s);
     setActingKey(key);
-    const { error } = await supabase.from("session_bookings").delete().eq("id", myBook.id);
+    const { error } = await supabase.rpc("cancel_session_booking", { p_booking_id: myBook.id });
     setActingKey(null);
     if (error) { toast.error(error.message); return; }
     toast.success("Rezervacija otkazana");
