@@ -98,20 +98,12 @@ const Profile = () => {
     <>
       <PhoneShell
         hasBottomNav
+        back="/vezbac"
         eyebrow="Tvoj profil"
         title={
           <h1 className="font-display text-[28px] leading-[1.05] font-bold tracking-tightest">
             Profil
           </h1>
-        }
-        leftSlot={
-          <button
-            onClick={() => nav(-1)}
-            aria-label="Nazad"
-            className="h-10 w-10 rounded-full flex items-center justify-center bg-surface-2 text-foreground active:scale-95 transition"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
         }
       >
         {loading ? (
