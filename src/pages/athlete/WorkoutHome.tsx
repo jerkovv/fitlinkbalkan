@@ -75,6 +75,10 @@ const WorkoutHome = () => {
         .limit(5);
       setRecent((logs as any[]) ?? []);
 
+      const { data: streakData } = await supabase.rpc("get_athlete_streak", { p_athlete_id: user.id } as any);
+      const sd = (streakData as any[])?.[0];
+      if (sd) setStreak(sd.current_streak_days ?? 0);
+
       setLoading(false);
     };
     load();
