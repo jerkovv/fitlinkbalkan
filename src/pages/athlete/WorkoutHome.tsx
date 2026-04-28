@@ -277,6 +277,7 @@ const WorkoutHome = () => {
         </section>
       </PhoneShell>
       <BottomNav role="athlete" />
+      <AthleteOnboardingTour />
     </>
   );
 };
