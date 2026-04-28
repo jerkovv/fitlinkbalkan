@@ -23,6 +23,15 @@ type AthleteRow = {
   membership: { plan_name: string; status: string; ends_on: string | null } | null;
 };
 
+type PendingInvite = {
+  id: string;
+  email: string;
+  full_name: string | null;
+  code: string;
+  sent_at: string | null;
+  expires_at: string | null;
+};
+
 const goalLabel: Record<string, string> = {
   lose_weight: "Mršavljenje",
   gain_muscle: "Masa",
