@@ -135,6 +135,10 @@ const Dashboard = () => {
       const { data: risk } = await supabase.rpc("get_at_risk_athletes", { p_days: 4 } as any);
       if (alive) setAtRisk(((risk as any[]) ?? []).slice(0, 5));
 
+      // Referral statistika — ko je doveo druge
+      const { data: refs } = await supabase.rpc("get_my_referral_stats" as any);
+      if (alive) setReferrers(((refs as any[]) ?? []).slice(0, 3));
+
       setLoading(false);
     })();
 
