@@ -2,123 +2,122 @@
 @tailwind components;
 @tailwind utilities;
 
-/* FITLINK — Performance Design System v4
-   "Plasma" — midnight navy + incandescent orange.
-   Hyrox / Tracksmith / Bandit Running editorial sport vibe.
-   All colors HSL only. */
+/* FITLINK — Premium Design System v5
+   Light, Apple-minimal. Deep electric purple → indigo (unisex tech-premium).
+   Linear / Arc / Vercel inspired. All colors HSL only. */
 
 @layer base {
   :root {
-    /* Surfaces — deep midnight navy, never pure black */
-    --background: 222 35% 6%;           /* #0a0d1a — midnight */
-    --foreground: 30 25% 96%;           /* warm off-white */
-    --surface: 222 30% 9%;              /* card */
-    --surface-2: 222 28% 12%;           /* elevated */
-    --surface-3: 222 25% 16%;           /* input fill */
-    --hairline: 222 20% 20%;            /* divider */
+    /* Surfaces — clean off-white */
+    --background: 240 20% 98%;
+    --foreground: 240 18% 10%;
+    --surface: 0 0% 100%;
+    --surface-2: 240 20% 96%;
+    --surface-3: 240 16% 93%;
+    --hairline: 240 14% 90%;
 
-    --card: 222 30% 9%;
-    --card-foreground: 30 25% 96%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 18% 10%;
 
-    --popover: 222 30% 11%;
-    --popover-foreground: 30 25% 96%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 18% 10%;
 
-    /* Brand — incandescent orange (molten metal, plasma) */
-    --brand-1: 18 100% 58%;             /* #FF6A2C — molten orange */
-    --brand-2: 8 95% 55%;               /* deep ember red-orange */
-    --brand-3: 32 100% 60%;             /* solar amber */
+    /* Brand — deep electric purple → indigo (NOT pink, NOT magenta) */
+    --brand-1: 258 88% 58%;             /* #6E3CFA — deep electric purple */
+    --brand-2: 244 85% 60%;              /* indigo */
+    --brand-3: 230 90% 62%;              /* royal blue end */
 
-    --primary: 18 100% 58%;
-    --primary-foreground: 222 40% 6%;   /* midnight on plasma */
-    --primary-soft: 18 70% 14%;
-    --primary-soft-foreground: 18 100% 72%;
+    --primary: 258 88% 58%;
+    --primary-foreground: 0 0% 100%;
+    --primary-soft: 258 90% 96%;
+    --primary-soft-foreground: 258 70% 42%;
 
-    /* Trener role — plasma orange (primary) */
-    --trainer: 18 100% 58%;
-    --trainer-soft: 18 60% 13%;
-    --trainer-soft-foreground: 18 100% 72%;
+    /* Trener role — deep purple (primary) */
+    --trainer: 258 88% 58%;
+    --trainer-soft: 258 90% 96%;
+    --trainer-soft-foreground: 258 70% 42%;
 
-    /* Athlete role — hot magenta (peče) */
-    --athlete: 328 95% 60%;
-    --athlete-soft: 328 60% 14%;
-    --athlete-soft-foreground: 328 100% 75%;
+    /* Athlete role — saturated indigo (sibling, not competitor) */
+    --athlete: 235 85% 60%;
+    --athlete-soft: 235 90% 96%;
+    --athlete-soft-foreground: 235 75% 42%;
 
     /* Status */
-    --success: 152 75% 48%;
-    --success-foreground: 222 40% 6%;
-    --success-soft: 152 50% 12%;
-    --success-soft-foreground: 152 80% 65%;
+    --success: 152 65% 38%;
+    --success-foreground: 0 0% 100%;
+    --success-soft: 150 60% 95%;
+    --success-soft-foreground: 152 70% 26%;
 
-    --warning: 42 100% 58%;
-    --warning-foreground: 222 40% 6%;
-    --warning-soft: 42 60% 14%;
-    --warning-soft-foreground: 42 100% 72%;
+    --warning: 32 95% 50%;
+    --warning-foreground: 0 0% 100%;
+    --warning-soft: 38 100% 95%;
+    --warning-soft-foreground: 28 80% 38%;
 
-    --destructive: 358 90% 62%;
+    --destructive: 0 75% 55%;
     --destructive-foreground: 0 0% 100%;
-    --destructive-soft: 358 60% 16%;
-    --destructive-soft-foreground: 358 95% 78%;
+    --destructive-soft: 0 90% 96%;
+    --destructive-soft-foreground: 0 70% 42%;
 
     /* Neutrals */
-    --secondary: 222 25% 14%;
-    --secondary-foreground: 30 20% 95%;
+    --secondary: 240 16% 95%;
+    --secondary-foreground: 240 18% 18%;
 
-    --muted: 222 22% 13%;
-    --muted-foreground: 222 12% 62%;
+    --muted: 240 16% 95%;
+    --muted-foreground: 240 8% 46%;
 
-    --accent: 18 100% 58%;
-    --accent-foreground: 222 40% 6%;
+    --accent: 244 85% 60%;
+    --accent-foreground: 0 0% 100%;
 
-    --border: 222 20% 18%;
-    --input: 222 22% 14%;
-    --ring: 18 100% 58%;
+    --border: 240 14% 90%;
+    --input: 240 14% 90%;
+    --ring: 258 88% 58%;
 
-    --radius: 0.625rem;                 /* 10px — sharper, editorial */
+    --radius: 1rem;                     /* 16px */
 
-    /* Gradients — sunset over deep ocean */
-    --gradient-brand: linear-gradient(135deg, hsl(18 100% 60%) 0%, hsl(8 95% 52%) 50%, hsl(328 90% 55%) 100%);
-    --gradient-brand-soft: linear-gradient(135deg, hsl(18 50% 12%) 0%, hsl(328 40% 10%) 100%);
-    --gradient-trainer: linear-gradient(135deg, hsl(18 100% 60%), hsl(32 100% 55%));
-    --gradient-athlete: linear-gradient(135deg, hsl(328 95% 60%), hsl(298 90% 55%));
-    --gradient-success: linear-gradient(135deg, hsl(152 75% 48%), hsl(168 70% 45%));
-    --gradient-dark: linear-gradient(180deg, hsl(222 35% 9%) 0%, hsl(222 40% 5%) 100%);
-    --gradient-hero: radial-gradient(ellipse at top, hsl(18 80% 20% / 0.4) 0%, hsl(222 35% 6%) 60%);
+    /* Gradients — deep purple → indigo → royal blue (no pink) */
+    --gradient-brand: linear-gradient(135deg, hsl(258 88% 58%) 0%, hsl(244 85% 60%) 55%, hsl(230 90% 62%) 100%);
+    --gradient-brand-soft: linear-gradient(135deg, hsl(258 100% 97%) 0%, hsl(244 100% 97%) 55%, hsl(230 100% 97%) 100%);
+    --gradient-trainer: linear-gradient(135deg, hsl(258 88% 58%), hsl(244 85% 60%));
+    --gradient-athlete: linear-gradient(135deg, hsl(235 85% 60%), hsl(220 90% 60%));
+    --gradient-success: linear-gradient(135deg, hsl(152 65% 42%), hsl(168 70% 38%));
+    --gradient-dark: linear-gradient(135deg, hsl(258 60% 14%), hsl(244 70% 12%));
+    --gradient-hero: radial-gradient(ellipse at top, hsl(258 100% 96%) 0%, hsl(240 20% 98%) 60%);
 
-    /* Shadows — plasma glow */
-    --shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.6);
-    --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.5), 0 2px 6px hsl(0 0% 0% / 0.4);
-    --shadow-md: 0 4px 8px -2px hsl(0 0% 0% / 0.6), 0 12px 24px -6px hsl(0 0% 0% / 0.5);
-    --shadow-lg: 0 8px 16px -4px hsl(0 0% 0% / 0.7), 0 24px 48px -12px hsl(0 0% 0% / 0.6);
-    --shadow-brand: 0 0 0 1px hsl(18 100% 58% / 0.35), 0 8px 32px -4px hsl(18 100% 58% / 0.5);
-    --shadow-trainer: 0 0 28px -4px hsl(18 100% 58% / 0.5);
-    --shadow-athlete: 0 0 28px -4px hsl(328 95% 60% / 0.5);
-    --shadow-success: 0 0 24px -4px hsl(152 75% 48% / 0.4);
-    --shadow-glow: 0 0 60px hsl(18 100% 58% / 0.25);
+    /* Shadows — Apple-style multi-layer */
+    --shadow-xs: 0 1px 2px hsl(258 30% 20% / 0.04);
+    --shadow-sm: 0 1px 2px hsl(258 30% 20% / 0.04), 0 2px 6px hsl(258 30% 20% / 0.04);
+    --shadow-md: 0 4px 8px -2px hsl(258 30% 20% / 0.06), 0 12px 24px -6px hsl(258 30% 20% / 0.08);
+    --shadow-lg: 0 8px 16px -4px hsl(258 30% 20% / 0.08), 0 24px 48px -12px hsl(258 30% 20% / 0.12);
+    --shadow-brand: 0 8px 24px -8px hsl(258 88% 58% / 0.45), 0 2px 6px hsl(244 85% 60% / 0.18);
+    --shadow-trainer: 0 8px 24px -8px hsl(258 88% 58% / 0.40);
+    --shadow-athlete: 0 8px 24px -8px hsl(235 85% 60% / 0.40);
+    --shadow-success: 0 8px 24px -8px hsl(152 65% 38% / 0.35);
+    --shadow-glow: 0 0 60px hsl(258 88% 58% / 0.18);
 
     /* Sidebar */
-    --sidebar-background: 222 35% 7%;
-    --sidebar-foreground: 30 20% 95%;
-    --sidebar-primary: 18 100% 58%;
-    --sidebar-primary-foreground: 222 40% 6%;
-    --sidebar-accent: 222 25% 13%;
-    --sidebar-accent-foreground: 30 20% 95%;
-    --sidebar-border: 222 20% 18%;
-    --sidebar-ring: 18 100% 58%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 240 18% 10%;
+    --sidebar-primary: 258 88% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 16% 95%;
+    --sidebar-accent-foreground: 240 18% 10%;
+    --sidebar-border: 240 14% 90%;
+    --sidebar-ring: 258 88% 58%;
   }
 
-  .light {
-    --background: 30 25% 97%;
-    --foreground: 222 40% 8%;
-    --surface: 0 0% 100%;
-    --surface-2: 30 20% 95%;
-    --surface-3: 30 15% 92%;
-    --hairline: 222 10% 88%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 40% 8%;
-    --border: 222 10% 88%;
-    --input: 30 15% 93%;
-    --muted: 30 15% 95%;
-    --muted-foreground: 222 10% 40%;
+  .dark {
+    --background: 240 18% 6%;
+    --foreground: 240 20% 96%;
+    --surface: 240 16% 9%;
+    --surface-2: 240 16% 12%;
+    --surface-3: 240 14% 16%;
+    --hairline: 240 14% 18%;
+    --card: 240 16% 9%;
+    --card-foreground: 240 20% 96%;
+    --border: 240 14% 18%;
+    --input: 240 14% 18%;
+    --muted: 240 14% 16%;
+    --muted-foreground: 240 10% 64%;
   }
 }
 
