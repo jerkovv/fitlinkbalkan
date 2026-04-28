@@ -9,8 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Loader2, Save, Users, Dumbbell, Apple, X, Plus, Landmark,
+  Loader2, Save, Users, Dumbbell, Apple, X, Plus, Landmark, Eye,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 const SPEC_SUGGESTIONS = [
@@ -43,6 +44,9 @@ const Profile = () => {
   const [bankModel, setBankModel] = useState("");
   const [bankReference, setBankReference] = useState("");
   const [bankPurpose, setBankPurpose] = useState("");
+
+  // privacy
+  const [showAttendees, setShowAttendees] = useState(false);
 
   // read-only stats
   const [stats, setStats] = useState({
@@ -90,6 +94,7 @@ const Profile = () => {
       setBankModel(t.bank_model ?? "");
       setBankReference(t.bank_reference ?? "");
       setBankPurpose(t.bank_purpose ?? "");
+      setShowAttendees(!!t.show_attendees_to_athletes);
       
 
       setStats({
@@ -146,6 +151,7 @@ const Profile = () => {
           bank_model: bankModel.trim() || null,
           bank_reference: bankReference.trim() || null,
           bank_purpose: bankPurpose.trim() || null,
+          show_attendees_to_athletes: showAttendees,
         } as any)
         .eq("id", user.id);
       if (tErr) throw tErr;
