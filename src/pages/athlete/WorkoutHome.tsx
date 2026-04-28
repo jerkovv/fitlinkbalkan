@@ -7,6 +7,7 @@ import { Loader2, Play, Dumbbell, History, CalendarDays } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { getNextWorkoutDay, type NextWorkoutDay } from "@/lib/workouts";
+import { cn } from "@/lib/utils";
 
 type RecentLog = {
   id: string;
