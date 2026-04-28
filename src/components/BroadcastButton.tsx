@@ -57,33 +57,35 @@ export const BroadcastButton = ({ fab = false }: Props) => {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {fab ? (
-          <div className="fixed inset-x-0 bottom-28 z-20 pointer-events-none flex justify-center">
-            <div className="w-full max-w-[440px] px-5 flex justify-end">
-              <button
-                aria-label="Pošalji obaveštenje svima"
-                className={cn(
-                  "pointer-events-auto h-14 px-5 rounded-full",
-                  "bg-gradient-brand text-white shadow-brand font-bold text-[13px] tracking-tight",
-                  "inline-flex items-center gap-2 active:scale-95 transition",
-                )}
-              >
-                <Megaphone className="h-4 w-4" strokeWidth={2.5} />
-                Obaveštenje
-              </button>
-            </div>
+    <>
+      {fab && (
+        <div className="fixed inset-x-0 bottom-28 z-20 pointer-events-none flex justify-center">
+          <div className="w-full max-w-[440px] px-5 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              aria-label="Pošalji obaveštenje svima"
+              className={cn(
+                "pointer-events-auto h-14 px-5 rounded-full",
+                "bg-gradient-brand text-white shadow-brand font-bold text-[13px] tracking-tight",
+                "inline-flex items-center gap-2 active:scale-95 transition",
+              )}
+            >
+              <Megaphone className="h-4 w-4" strokeWidth={2.5} />
+              Obaveštenje
+            </button>
           </div>
-            <Megaphone className="h-4 w-4" strokeWidth={2.5} />
-            Obaveštenje
-          </button>
-        ) : (
-          <Button className="gap-2">
-            <Megaphone className="h-4 w-4" /> Obaveštenje
-          </Button>
+        </div>
+      )}
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        {!fab && (
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Megaphone className="h-4 w-4" /> Obaveštenje
+            </Button>
+          </DialogTrigger>
         )}
-      </DialogTrigger>
 
       <DialogContent className="max-w-md">
         <DialogHeader>
