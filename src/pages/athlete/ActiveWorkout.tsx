@@ -506,6 +506,54 @@ const ActiveWorkout = () => {
         )}
       </PhoneShell>
       <BottomNav role="athlete" />
+
+      <AlertDialog
+        open={alreadyDoneToday.open}
+        onOpenChange={(open) => setAlreadyDoneToday((p) => ({ ...p, open }))}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Već si završio ovaj trening danas</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ovaj dan iz programa je već markiran kao završen
+              {alreadyDoneToday.completedAt
+                ? ` u ${new Date(alreadyDoneToday.completedAt).toLocaleTimeString("sr-Latn-RS", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}`
+                : ""}
+              . Da li si siguran da želiš da pokreneš novi trening za isti dan?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => nav("/vezbac")}>Nazad</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => setAlreadyDoneToday({ open: false, completedAt: null })}
+            >
+              Da, pokreni opet
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmFinishOpen} onOpenChange={setConfirmFinishOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Završiti trening?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {allDone
+                ? "Svi setovi su odrađeni. Da li želiš da završiš i sačuvaš trening?"
+                : `Odradio si ${totalDone} od ${totalSets} setova. Ako završiš sada, ostali setovi neće biti zabeleženi.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={finishing}>Otkaži</AlertDialogCancel>
+            <AlertDialogAction onClick={doFinishWorkout} disabled={finishing}>
+              {finishing ? "Čuvanje..." : "Da, završi"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
