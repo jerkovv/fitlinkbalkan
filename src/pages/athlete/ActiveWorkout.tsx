@@ -35,7 +35,7 @@ type ProgramExercise = {
   weight_kg: number | null;
   rest_seconds: number | null;
   exercise_id: string;
-  exercises: { name: string; primary_muscle: string | null } | null;
+  exercises: { name: string; primary_muscle: string | null; video_url: string | null } | null;
 };
 
 type SetEntry = {
@@ -102,7 +102,7 @@ const ActiveWorkout = () => {
 
       const { data: exData } = await supabase
         .from("assigned_program_exercises")
-        .select("id, position, sets, reps, weight_kg, rest_seconds, exercise_id, exercises(name, primary_muscle)")
+        .select("id, position, sets, reps, weight_kg, rest_seconds, exercise_id, exercises(name, primary_muscle, video_url)")
         .eq("day_id", dayId)
         .order("position", { ascending: true });
 
