@@ -63,6 +63,7 @@ const ActiveWorkout = () => {
   const [day, setDay] = useState<DayInfo | null>(null);
   const [exercises, setExercises] = useState<ProgramExercise[]>([]);
   const [sessionLogId, setSessionLogId] = useState<string | null>(null);
+  const [videoOpen, setVideoOpen] = useState(false);
   const [setsByEx, setSetsByEx] = useState<Record<string, SetEntry[]>>({});
   const [currentIdx, setCurrentIdx] = useState(0);
   const [alreadyDoneToday, setAlreadyDoneToday] = useState<{ open: boolean; completedAt: string | null }>({
@@ -337,8 +338,17 @@ const ActiveWorkout = () => {
             <ChevronLeft className="h-4 w-4" />
           </button>
           <div className="flex-1 text-center">
-            <div className="font-display text-[20px] font-bold tracking-tighter leading-tight">
+            <div className="font-display text-[20px] font-bold tracking-tighter leading-tight inline-flex items-center gap-2">
               {current.exercises?.name ?? "Vežba"}
+              {current.exercises?.video_url && (
+                <button
+                  onClick={() => setVideoOpen(true)}
+                  aria-label="Pogledaj demo"
+                  className="h-7 w-7 rounded-full bg-primary-soft text-primary flex items-center justify-center active:scale-95 transition"
+                >
+                  <PlayCircle className="h-4 w-4" strokeWidth={2.4} />
+                </button>
+              )}
             </div>
             <div className="text-[12.5px] text-muted-foreground">
               {current.sets} setova · {current.reps ?? "—"} reps
