@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Loader2, Save, Users, Dumbbell, Apple, Copy, Check, X, Plus,
+  Loader2, Save, Users, Dumbbell, Apple, X, Plus, Landmark,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -35,6 +35,14 @@ const Profile = () => {
   const [instagram, setInstagram] = useState("");
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [newSpec, setNewSpec] = useState("");
+
+  // bank
+  const [bankRecipient, setBankRecipient] = useState("");
+  const [bankAccount, setBankAccount] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [bankModel, setBankModel] = useState("");
+  const [bankReference, setBankReference] = useState("");
+  const [bankPurpose, setBankPurpose] = useState("");
 
   // read-only stats
   const [stats, setStats] = useState({
@@ -76,6 +84,12 @@ const Profile = () => {
       setYears(t.years_experience != null ? String(t.years_experience) : "");
       setInstagram(t.instagram_handle ?? "");
       setSpecialties(Array.isArray(t.specialties) ? t.specialties : []);
+      setBankRecipient(t.bank_recipient ?? "");
+      setBankAccount(t.bank_account ?? "");
+      setBankName(t.bank_name ?? "");
+      setBankModel(t.bank_model ?? "");
+      setBankReference(t.bank_reference ?? "");
+      setBankPurpose(t.bank_purpose ?? "");
       
 
       setStats({
@@ -126,6 +140,12 @@ const Profile = () => {
           years_experience: yearsNum,
           instagram_handle: igClean,
           specialties,
+          bank_recipient: bankRecipient.trim() || null,
+          bank_account: bankAccount.trim() || null,
+          bank_name: bankName.trim() || null,
+          bank_model: bankModel.trim() || null,
+          bank_reference: bankReference.trim() || null,
+          bank_purpose: bankPurpose.trim() || null,
         } as any)
         .eq("id", user.id);
       if (tErr) throw tErr;
@@ -338,6 +358,88 @@ const Profile = () => {
                     </button>
                   ))}
                 </div>
+              </div>
+            </Card>
+
+            {/* Podaci za uplatu na račun */}
+            <Card className="p-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <Landmark className="h-4 w-4 text-primary" />
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Uplata na račun
+                </div>
+              </div>
+              <p className="text-[12px] text-muted-foreground -mt-2">
+                Ovi podaci se prikazuju vežbaču kad odabere plaćanje na račun.
+              </p>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="bankRecipient">Primalac</Label>
+                <Input
+                  id="bankRecipient"
+                  value={bankRecipient}
+                  onChange={(e) => setBankRecipient(e.target.value)}
+                  placeholder="Marko Marković PR / Naziv firme"
+                  maxLength={100}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="bankAccount">Broj računa</Label>
+                <Input
+                  id="bankAccount"
+                  value={bankAccount}
+                  onChange={(e) => setBankAccount(e.target.value)}
+                  placeholder="160-0000000000000-00"
+                  maxLength={30}
+                  inputMode="numeric"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="bankName">Banka</Label>
+                <Input
+                  id="bankName"
+                  value={bankName}
+                  onChange={(e) => setBankName(e.target.value)}
+                  placeholder="Banca Intesa"
+                  maxLength={60}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="bankModel">Model</Label>
+                  <Input
+                    id="bankModel"
+                    value={bankModel}
+                    onChange={(e) => setBankModel(e.target.value)}
+                    placeholder="97"
+                    maxLength={3}
+                    inputMode="numeric"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="bankReference">Poziv na broj</Label>
+                  <Input
+                    id="bankReference"
+                    value={bankReference}
+                    onChange={(e) => setBankReference(e.target.value)}
+                    placeholder="opciono"
+                    maxLength={22}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="bankPurpose">Svrha uplate</Label>
+                <Input
+                  id="bankPurpose"
+                  value={bankPurpose}
+                  onChange={(e) => setBankPurpose(e.target.value)}
+                  placeholder="Članarina za trening"
+                  maxLength={140}
+                />
               </div>
             </Card>
 
