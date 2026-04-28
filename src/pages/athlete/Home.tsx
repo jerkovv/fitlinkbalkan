@@ -7,6 +7,7 @@ import { Play, CalendarPlus, Apple, Loader2, Dumbbell, UserRound } from "lucide-
 import { UserMenu } from "@/components/UserMenu";
 import { MessageTrainerCard } from "@/components/MessageTrainerCard";
 import { NotificationBell } from "@/components/NotificationBell";
+import { ChatBell } from "@/components/ChatBell";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { getNextWorkoutDay, type NextWorkoutDay } from "@/lib/workouts";
@@ -105,6 +106,7 @@ const Home = () => {
         }
         rightSlot={
           <div className="flex items-center gap-2">
+            <ChatBell />
             <NotificationBell />
             <UserMenu />
           </div>

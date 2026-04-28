@@ -32,6 +32,8 @@ import TrainerNotificationSettings from "./pages/trainer/NotificationSettings.ts
 import TrainerProfile from "./pages/trainer/Profile.tsx";
 import TrainerPackages from "./pages/trainer/Packages.tsx";
 import TrainerPayments from "./pages/trainer/Payments.tsx";
+import TrainerChatList from "./pages/trainer/ChatList.tsx";
+import TrainerChatThread from "./pages/trainer/ChatThread.tsx";
 
 
 import AthleteHome from "./pages/athlete/Home.tsx";
@@ -43,6 +45,7 @@ import AthleteMembership from "./pages/athlete/Membership.tsx";
 import AthleteNutrition from "./pages/athlete/Nutrition.tsx";
 import AthleteNotifications from "./pages/athlete/Notifications.tsx";
 import AthleteProfile from "./pages/athlete/Profile.tsx";
+import AthleteChat from "./pages/athlete/Chat.tsx";
 
 const queryClient = new QueryClient();
 
@@ -83,6 +86,8 @@ const App = () => (
             <Route path="/trener/profil" element={trainer(<TrainerProfile />)} />
             <Route path="/trener/paketi" element={trainer(<TrainerPackages />)} />
             <Route path="/trener/uplate" element={trainer(<TrainerPayments />)} />
+            <Route path="/trener/chat" element={trainer(<TrainerChatList />)} />
+            <Route path="/trener/chat/:athleteId" element={trainer(<TrainerChatThread />)} />
 
             {/* Vežbač — protected */}
             <Route path="/vezbac" element={athlete(<AthleteHome />)} />
@@ -94,6 +99,7 @@ const App = () => (
             <Route path="/vezbac/ishrana" element={athlete(<AthleteNutrition />)} />
             <Route path="/vezbac/notifikacije" element={athlete(<AthleteNotifications />)} />
             <Route path="/vezbac/profil" element={athlete(<AthleteProfile />)} />
+            <Route path="/vezbac/chat" element={athlete(<AthleteChat />)} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

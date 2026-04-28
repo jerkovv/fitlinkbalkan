@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import { NotificationBell } from "@/components/NotificationBell";
+import { ChatBell } from "@/components/ChatBell";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -160,6 +161,7 @@ const Dashboard = () => {
         }
         rightSlot={
           <div className="flex items-center gap-2">
+            <ChatBell />
             <NotificationBell />
             <UserMenu />
           </div>
