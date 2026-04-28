@@ -282,9 +282,9 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
                     <div className="px-3.5 py-2">
                       <div className="grid grid-cols-[20px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_28px] gap-1.5 pb-1.5 text-[10px] uppercase tracking-[0.12em] text-muted-foreground/80 font-semibold border-b border-hairline">
                         <span>#</span>
-                        <span className="text-center">KG</span>
-                        <span className="text-center">Reps</span>
-                        <span className="text-center">RPE</span>
+                        <span className="text-center">Kg</span>
+                        <span className="text-center">Pon.</span>
+                        <span className="text-center">Tež.</span>
                         <span></span>
                       </div>
 
