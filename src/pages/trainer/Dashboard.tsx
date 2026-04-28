@@ -1,11 +1,14 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Avatar, Card, Chip, SectionTitle, StatCard } from "@/components/ui-bits";
-import { Clock, ChevronRight, Plus, ClipboardList, Apple } from "lucide-react";
+import { Clock, ChevronRight, Plus, ClipboardList, Apple, Package, Wallet } from "lucide-react";
 import { trainerProfile, todaySessions } from "@/data/mock";
 import { UserMenu } from "@/components/UserMenu";
 import { NotificationBell } from "@/components/NotificationBell";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 
 const statusChip = {
   active: <Chip tone="success">Aktivno</Chip>,
@@ -14,6 +17,19 @@ const statusChip = {
 };
 
 const Dashboard = () => {
+  const { user } = useAuth();
+  const [pendingPayments, setPendingPayments] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("membership_purchases")
+      .select("id", { count: "exact", head: true })
+      .eq("trainer_id", user.id)
+      .eq("status", "pending")
+      .then(({ count }) => setPendingPayments(count ?? 0));
+  }, [user]);
+
   return (
     <>
       <PhoneShell
