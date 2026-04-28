@@ -136,14 +136,18 @@ const ActiveWorkout = () => {
       const map: Record<string, SetEntry[]> = {};
       for (const ex of exList) {
         const arr: SetEntry[] = [];
+        // Prefill iz trenerovog plana: reps i weight_kg postaju default vrednosti
+        // koje vežbač samo potvrdi (ili izmeni pa potvrdi).
+        const planReps = ex.reps ? String(parseInt(ex.reps, 10) || ex.reps) : "";
+        const planWeight = ex.weight_kg != null ? String(ex.weight_kg) : "";
         for (let i = 1; i <= ex.sets; i++) {
           const found = (prevLogs as any[])?.find(
             (l) => l.exercise_id === ex.id && l.set_number === i
           );
           arr.push({
             set_number: i,
-            reps: found?.reps?.toString() ?? "",
-            weight_kg: found?.weight_kg?.toString() ?? "",
+            reps: found?.reps?.toString() ?? planReps,
+            weight_kg: found?.weight_kg?.toString() ?? planWeight,
             rpe: found?.rpe?.toString() ?? "",
             done: !!found?.done,
             log_id: found?.id,
