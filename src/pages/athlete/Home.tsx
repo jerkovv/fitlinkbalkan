@@ -26,9 +26,11 @@ const Home = () => {
   const [exerciseCount, setExerciseCount] = useState<number>(0);
   const [monthCount, setMonthCount] = useState<number>(0);
   const [trainerName, setTrainerName] = useState<string>("");
-  const [fullName, setFullName] = useState<string>("");
+  const [fullName, setFullName] = useState<string | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
-  const firstName = (fullName || user?.email || "").split(" ")[0] ?? "";
+  const emailHandle = (user?.email ?? "").split("@")[0] ?? "";
+  const firstName = (fullName?.trim() || emailHandle).split(/\s+/)[0] ?? "";
 
   useEffect(() => {
     if (!user) return;
@@ -41,7 +43,8 @@ const Home = () => {
         .select("full_name")
         .eq("id", user.id)
         .maybeSingle();
-      setFullName((prof as any)?.full_name ?? "");
+      setFullName((prof as any)?.full_name ?? null);
+      setProfileLoaded(true);
 
 
       // Sledeći dan u rotaciji
@@ -100,8 +103,15 @@ const Home = () => {
         eyebrow="Dobro došao nazad"
         title={
           <h1 className="font-display text-[34px] leading-[1.05] font-bold tracking-tightest">
-            Zdravo, {firstName}
-            <span className="text-gradient-brand"> 💪</span>
+            Zdravo,{" "}
+            {profileLoaded ? (
+              <>
+                {firstName}
+                <span className="text-gradient-brand"> 💪</span>
+              </>
+            ) : (
+              <span className="inline-block h-7 w-32 align-middle rounded-md bg-muted animate-pulse" />
+            )}
           </h1>
         }
         rightSlot={
