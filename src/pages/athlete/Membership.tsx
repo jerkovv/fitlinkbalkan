@@ -280,7 +280,13 @@ const Membership = () => {
   const expired =
     active?.ends_on ? new Date(active.ends_on) < new Date() : false;
   const noSessionsLeft = sessionsLeft === 0;
+  const neverHadMembership = !active && recent.length === 0;
   const needsRenewal = !active || expired || noSessionsLeft;
+  const ctaLabel = neverHadMembership
+    ? "Izaberi paket"
+    : needsRenewal
+    ? "Produži članarinu"
+    : "Kupi novi paket";
 
   return (
     <>
@@ -359,7 +365,7 @@ const Membership = () => {
               className="w-full bg-gradient-brand text-white shadow-brand hover:opacity-95"
             >
               <Plus className="h-4 w-4 mr-2" />
-              {needsRenewal ? "Produži članarinu" : "Kupi novi paket"}
+              {ctaLabel}
             </Button>
 
             {packages.length === 0 && (
