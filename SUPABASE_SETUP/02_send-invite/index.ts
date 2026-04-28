@@ -108,6 +108,15 @@ Deno.serve(async (req) => {
       );
     }
 
+    // 0) Otkazi sve prethodne pending pozivnice za isti email od istog trenera
+    //    (sprečava dupliranje u listi "Poslate pozivnice")
+    await admin
+      .from("invites")
+      .update({ status: "cancelled" })
+      .eq("trainer_id", trainerId)
+      .eq("email", email)
+      .eq("status", "pending");
+
     // 1) Kreiraj invite (7 dana važi)
     const code = generateCode(10);
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
