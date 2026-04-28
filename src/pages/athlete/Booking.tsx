@@ -157,7 +157,7 @@ const Booking = () => {
     <>
       <PhoneShell hasBottomNav title="Rezerviši trening" eyebrow={trainerName ? `Kod ${trainerName}` : "Rezervacije"}>
         {!hasMembership && trainerId && (
-          <div className="rounded-2xl bg-amber-soft/60 border border-amber-soft px-4 py-3 text-[13px]">
+          <div className="rounded-2xl bg-warning-soft text-warning-soft-foreground border border-warning/20 px-4 py-3 text-[13px]">
             Potrebna ti je aktivna članarina da bi rezervisao termin.
           </div>
         )}
