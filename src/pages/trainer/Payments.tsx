@@ -143,13 +143,13 @@ const Payments = () => {
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     variant="outline"
-                    onClick={() => reject(p)}
+                    onClick={() => rejectPurchase(p)}
                     disabled={busyId === p.id}
                   >
                     <X className="h-4 w-4 mr-1.5" /> Odbij
                   </Button>
                   <Button
-                    onClick={() => confirm(p)}
+                    onClick={() => confirmPurchase(p)}
                     disabled={busyId === p.id}
                     className="bg-gradient-brand text-white shadow-brand"
                   >
