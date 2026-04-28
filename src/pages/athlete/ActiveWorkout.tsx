@@ -534,6 +534,15 @@ const ActiveWorkout = () => {
       </PhoneShell>
       <BottomNav role="athlete" />
 
+      {current?.exercises?.video_url && (
+        <VideoModal
+          url={current.exercises.video_url}
+          title={current.exercises.name}
+          open={videoOpen}
+          onOpenChange={setVideoOpen}
+        />
+      )}
+
       <AlertDialog
         open={alreadyDoneToday.open}
         onOpenChange={(open) => setAlreadyDoneToday((p) => ({ ...p, open }))}
