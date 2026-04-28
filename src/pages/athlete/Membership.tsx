@@ -350,10 +350,14 @@ const Membership = () => {
                     ? "Članarina je istekla"
                     : noSessionsLeft
                     ? "Iskoristio si sve treninge"
+                    : neverHadMembership
+                    ? "Dobrodošao!"
                     : "Nemaš aktivnu članarinu"}
                 </div>
                 <p className="text-[13px] text-muted-foreground">
-                  Izaberi paket da nastaviš sa treninzima.
+                  {neverHadMembership
+                    ? "Izaberi svoj prvi paket da kreneš sa treninzima."
+                    : "Izaberi paket da nastaviš sa treninzima."}
                 </p>
               </Card>
             )}
