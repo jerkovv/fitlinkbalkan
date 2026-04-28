@@ -41,6 +41,7 @@ type Purchase = {
   payment_method: "cash" | "bank";
   status: "pending" | "rejected";
   requested_at: string;
+  payment_marked_at: string | null;
 };
 
 const fmtDate = (iso: string | null) => {
@@ -218,7 +219,7 @@ const Membership = () => {
           .order("price_rsd", { ascending: true }),
         supabase
           .from("membership_purchases")
-          .select("id, package_name, sessions_count, duration_days, price_rsd, payment_method, status, requested_at")
+          .select("id, package_name, sessions_count, duration_days, price_rsd, payment_method, status, requested_at, payment_marked_at")
           .eq("athlete_id", user.id)
           .in("status", ["pending", "rejected"])
           .order("requested_at", { ascending: false })
@@ -270,6 +271,14 @@ const Membership = () => {
     const { error } = await supabase.rpc("cancel_membership_purchase", { p_purchase_id: id });
     if (error) return toast.error(error.message);
     toast.success("Zahtev otkazan");
+    load();
+  };
+
+  const markPaid = async (id: string) => {
+    if (!window.confirm("Potvrđuješ da si izvršio uplatu? Trener će dobiti notifikaciju.")) return;
+    const { error } = await supabase.rpc("mark_membership_paid", { p_purchase_id: id });
+    if (error) return toast.error(error.message);
+    toast.success("Trener je obavešten o uplati");
     load();
   };
 
