@@ -32,6 +32,8 @@ import TrainerNotificationSettings from "./pages/trainer/NotificationSettings.ts
 import TrainerProfile from "./pages/trainer/Profile.tsx";
 import TrainerPackages from "./pages/trainer/Packages.tsx";
 import TrainerPayments from "./pages/trainer/Payments.tsx";
+import TrainerChatList from "./pages/trainer/ChatList.tsx";
+import TrainerChatThread from "./pages/trainer/ChatThread.tsx";
 
 
 import AthleteHome from "./pages/athlete/Home.tsx";
@@ -43,6 +45,7 @@ import AthleteMembership from "./pages/athlete/Membership.tsx";
 import AthleteNutrition from "./pages/athlete/Nutrition.tsx";
 import AthleteNotifications from "./pages/athlete/Notifications.tsx";
 import AthleteProfile from "./pages/athlete/Profile.tsx";
+import AthleteChat from "./pages/athlete/Chat.tsx";
 
 const queryClient = new QueryClient();
 
