@@ -13,7 +13,8 @@ export type NotificationKind =
   | "nutrition_assigned"
   | "message_from_trainer"
   | "membership_expiring"
-  | "membership_expired";
+  | "membership_expired"
+  | "broadcast";
 
 export interface AppNotification {
   id: string;

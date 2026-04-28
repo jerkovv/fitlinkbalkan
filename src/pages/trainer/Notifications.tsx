@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { NotificationItem } from "@/components/NotificationBell";
+import { BroadcastButton } from "@/components/BroadcastButton";
 import { useNotifications, type AppNotification } from "@/hooks/useNotifications";
 import { Bell, Check, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -98,6 +99,7 @@ const Notifications = () => {
           </ul>
         )}
       </PhoneShell>
+      <BroadcastButton fab />
       <BottomNav role="trainer" />
     </>
   );
