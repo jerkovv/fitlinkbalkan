@@ -1,12 +1,96 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
-import { Card, ProgressBar, SectionTitle, StatCard } from "@/components/ui-bits";
-import { Play, CalendarPlus, Apple } from "lucide-react";
-import { athleteProfile, athleteWorkout } from "@/data/mock";
+import { Card, SectionTitle, StatCard } from "@/components/ui-bits";
+import { Play, CalendarPlus, Apple, Loader2, Dumbbell } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
+
+type NextDay = {
+  assigned_program_id: string;
+  program_name: string;
+  day_id: string;
+  day_number: number;
+  day_name: string;
+  total_days: number;
+};
 
 const Home = () => {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [next, setNext] = useState<NextDay | null>(null);
+  const [exerciseCount, setExerciseCount] = useState<number>(0);
+  const [monthCount, setMonthCount] = useState<number>(0);
+  const [trainerName, setTrainerName] = useState<string>("");
+  const [fullName, setFullName] = useState<string>("");
+
+  const firstName = (fullName || user?.email || "").split(" ")[0] ?? "";
+
+  useEffect(() => {
+    if (!user) return;
+    const load = async () => {
+      setLoading(true);
+
+      // Profil
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .maybeSingle();
+      setFullName((prof as any)?.full_name ?? "");
+
+
+      // Sledeći dan u rotaciji
+      const { data: nd } = await supabase.rpc("get_next_workout_day", {
+        p_athlete_id: user.id,
+      });
+      const nextDay = (nd as any[])?.[0] as NextDay | undefined;
+      setNext(nextDay ?? null);
+
+      // Broj vežbi za taj dan
+      if (nextDay) {
+        const { count } = await supabase
+          .from("assigned_program_exercises")
+          .select("id", { count: "exact", head: true })
+          .eq("day_id", nextDay.day_id);
+        setExerciseCount(count ?? 0);
+      }
+
+      // Treninzi ovog meseca
+      const start = new Date();
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+      const { count: monthC } = await supabase
+        .from("workout_session_logs")
+        .select("id", { count: "exact", head: true })
+        .eq("athlete_id", user.id)
+        .not("completed_at", "is", null)
+        .gte("completed_at", start.toISOString());
+      setMonthCount(monthC ?? 0);
+
+      // Trener
+      const { data: ath } = await supabase
+        .from("athletes")
+        .select("trainer_id")
+        .eq("id", user.id)
+        .maybeSingle();
+      const trainerId = (ath as any)?.trainer_id;
+      if (trainerId) {
+        const { data: tr } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", trainerId)
+          .maybeSingle();
+        setTrainerName((tr as any)?.full_name ?? "");
+      }
+
+      setLoading(false);
+    };
+    load();
+  }, [user]);
+
   return (
     <>
       <PhoneShell
@@ -14,58 +98,67 @@ const Home = () => {
         eyebrow="Dobro došao nazad"
         title={
           <h1 className="font-display text-[34px] leading-[1.05] font-bold tracking-tightest">
-            Zdravo, {athleteProfile.name}
+            Zdravo, {firstName}
             <span className="text-gradient-brand"> 💪</span>
           </h1>
         }
         rightSlot={<UserMenu />}
       >
-        {/* Hero — sledeći trening */}
-        <Link to="/vezbac/trening" className="block">
-          <Card className="p-5 bg-gradient-brand text-white border-0 shadow-brand relative overflow-hidden">
-            <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
-            <div className="relative">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/80 mb-2">
-                Sledeći trening
-              </div>
-              <div className="font-display text-[26px] font-bold tracking-tighter leading-tight">
-                {athleteWorkout.title}
-              </div>
-              <div className="text-[13px] text-white/85 mt-1.5">
-                Danas u 10:00 · Trener {athleteProfile.trainerName.split(" ")[0]}
-              </div>
-
-              <div className="mt-4">
-                <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
-                  <div className="h-full bg-white rounded-full" style={{ width: `${athleteWorkout.progressPct}%` }} />
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : next ? (
+          <Link to={`/vezbac/trening/${next.day_id}`} className="block">
+            <Card className="p-5 bg-gradient-brand text-white border-0 shadow-brand relative overflow-hidden">
+              <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+              <div className="relative">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/80 mb-2">
+                  Sledeći trening
                 </div>
-                <div className="flex justify-between mt-1.5 text-[11px] text-white/80">
-                  <span>{athleteWorkout.progressLabel}</span>
-                  <span>{athleteWorkout.progressPct}%</span>
+                <div className="font-display text-[26px] font-bold tracking-tighter leading-tight">
+                  {next.day_name}
+                </div>
+                <div className="text-[13px] text-white/85 mt-1.5">
+                  {next.program_name} · Dan {next.day_number} od {next.total_days}
+                  {trainerName ? ` · Trener ${trainerName.split(" ")[0]}` : ""}
+                </div>
+
+                <div className="mt-4 text-[13px] text-white/90">
+                  {exerciseCount} {exerciseCount === 1 ? "vežba" : "vežbi"} na rasporedu
+                </div>
+
+                <div className="mt-5 inline-flex items-center gap-2 bg-white text-foreground rounded-full px-4 py-2 text-[13px] font-bold shadow-soft">
+                  <Play className="h-3.5 w-3.5 fill-foreground" /> Počni trening
                 </div>
               </div>
-
-              <div className="mt-5 inline-flex items-center gap-2 bg-white text-foreground rounded-full px-4 py-2 text-[13px] font-bold shadow-soft">
-                <Play className="h-3.5 w-3.5 fill-foreground" /> Počni trening
-              </div>
+            </Card>
+          </Link>
+        ) : (
+          <Card className="p-6 text-center space-y-3">
+            <div className="h-12 w-12 mx-auto rounded-2xl bg-muted flex items-center justify-center">
+              <Dumbbell className="h-5 w-5 text-muted-foreground" />
             </div>
+            <div className="font-display text-[18px] font-bold tracking-tight">
+              Nemaš još dodeljen program
+            </div>
+            <p className="text-[13px] text-muted-foreground">
+              Kontaktiraj trenera da ti dodeli plan treninga.
+            </p>
           </Card>
-        </Link>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
-          <StatCard tone="brand" value="8" unit="treninga" label="Ovog meseca" />
-          <StatCard tone="success" value={athleteProfile.daysLeft} unit="dana" label="Do isteka" />
+          <StatCard tone="brand" value={String(monthCount)} unit="treninga" label="Ovog meseca" />
+          <StatCard tone="success" value={next ? String(next.total_days) : "—"} unit="dana" label="U programu" />
         </div>
 
-        {/* PR teaser */}
         <section>
           <SectionTitle action={<Link to="/vezbac/napredak" className="text-[12px] font-semibold text-primary">Napredak →</Link>}>
-            Tvoji rekordi
+            Tvoj napredak
           </SectionTitle>
-          <Card className="p-5 space-y-4">
-            <ProgressBar label="Bench Press" trailing={<>🔥 95 kg</>} value={72} tone="brand" />
-            <ProgressBar label="Squat" trailing={<>🔥 120 kg</>} value={85} tone="brand" />
-            <ProgressBar label="Deadlift" trailing={<>🔥 145 kg</>} value={92} tone="brand" />
+          <Card className="p-5 text-[13px] text-muted-foreground">
+            Završi prvih nekoliko treninga da vidiš statistiku rekorda.
           </Card>
         </section>
 
@@ -78,7 +171,7 @@ const Home = () => {
           </div>
           <div className="flex-1">
             <div className="text-[15px] font-semibold tracking-tight">Plan ishrane</div>
-            <div className="text-[12.5px] text-muted-foreground">Današnji obroci i log</div>
+            <div className="text-[12.5px] text-muted-foreground">Današnji obroci</div>
           </div>
           <span className="text-muted-foreground">→</span>
         </Link>
