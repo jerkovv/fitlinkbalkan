@@ -162,7 +162,7 @@ export const NotificationBell = () => {
           <button
             onClick={() => {
               setOpen(false);
-              navigate("/trener/notifikacije");
+              navigate(fullPagePath);
             }}
             className="w-full text-center py-2.5 text-[12.5px] font-semibold text-primary hover:bg-surface-2 transition"
           >
