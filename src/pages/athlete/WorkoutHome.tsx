@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui-bits";
-import { Loader2, Play, Dumbbell, History } from "lucide-react";
+import { Loader2, Play, Dumbbell, History, CalendarDays } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { getNextWorkoutDay, type NextWorkoutDay } from "@/lib/workouts";
@@ -15,6 +15,13 @@ type RecentLog = {
   duration_seconds: number | null;
 };
 
+type ProgramDay = {
+  id: string;
+  day_number: number;
+  name: string;
+  exercise_count: number;
+};
+
 const WorkoutHome = () => {
   const { user } = useAuth();
   const nav = useNavigate();
@@ -22,6 +29,7 @@ const WorkoutHome = () => {
   const [next, setNext] = useState<NextWorkoutDay | null>(null);
   const [exerciseCount, setExerciseCount] = useState(0);
   const [recent, setRecent] = useState<RecentLog[]>([]);
+  const [allDays, setAllDays] = useState<ProgramDay[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -37,6 +45,23 @@ const WorkoutHome = () => {
           .select("id", { count: "exact", head: true })
           .eq("day_id", nextDay.day_id);
         setExerciseCount(count ?? 0);
+
+        // Učitaj sve dane iz programa da vežbač može opet da pokrene bilo koji
+        const { data: daysData } = await supabase
+          .from("assigned_program_days")
+          .select("id, day_number, name, assigned_program_exercises(id)")
+          .eq("assigned_program_id", nextDay.assigned_program_id)
+          .order("day_number", { ascending: true });
+
+        const list: ProgramDay[] = ((daysData as any[]) ?? []).map((d) => ({
+          id: d.id,
+          day_number: d.day_number,
+          name: d.name,
+          exercise_count: (d.assigned_program_exercises ?? []).length,
+        }));
+        setAllDays(list);
+      } else {
+        setAllDays([]);
       }
 
       const { data: logs } = await supabase
