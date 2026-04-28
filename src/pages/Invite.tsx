@@ -150,15 +150,17 @@ const Invite = () => {
         signup_source: signupSource,
       } as any);
 
-      // 4) Označi invite kao iskorišćen
-      await supabase
-        .from("invites")
-        .update({
-          status: "accepted",
-          used_by: sessionUserId,
-          referred_by_athlete_id: referredBy || null,
-        } as any)
-        .eq("code", code!);
+      // 4) Označi invite kao iskorišćen (samo ako postoji per-athlete invite zapis)
+      if (hasInviteRow) {
+        await supabase
+          .from("invites")
+          .update({
+            status: "accepted",
+            used_by: sessionUserId,
+            referred_by_athlete_id: referredBy || null,
+          } as any)
+          .eq("code", code!);
+      }
 
       toast.success("Dobrodošao u FitLink!");
       navigate("/vezbac");
