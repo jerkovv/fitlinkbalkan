@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui-bits";
-import { Loader2, Play, Dumbbell, History, CalendarDays } from "lucide-react";
+import { Loader2, Play, Dumbbell, History, CalendarDays, Flame } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { getNextWorkoutDay, type NextWorkoutDay } from "@/lib/workouts";
@@ -31,6 +31,7 @@ const WorkoutHome = () => {
   const [exerciseCount, setExerciseCount] = useState(0);
   const [recent, setRecent] = useState<RecentLog[]>([]);
   const [allDays, setAllDays] = useState<ProgramDay[]>([]);
+  const [streak, setStreak] = useState(0);
 
   useEffect(() => {
     if (!user) return;
