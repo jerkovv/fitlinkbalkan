@@ -42,7 +42,7 @@ const formatRelative = (iso: string) => {
   if (h < 24) return `${h}h`;
   const d = Math.floor(h / 24);
   if (d < 7) return `${d}d`;
-  return new Date(iso).toLocaleDateString("sr-RS", { day: "2-digit", month: "2-digit" });
+  return new Date(iso).toLocaleDateString("sr-Latn-RS", { day: "2-digit", month: "2-digit" });
 };
 
 export const NotificationItem = ({

@@ -46,7 +46,7 @@ type Purchase = {
 
 const fmtDate = (iso: string | null) => {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("sr-RS", {
+  return new Date(iso).toLocaleDateString("sr-Latn-RS", {
     day: "numeric", month: "short", year: "numeric",
   });
 };
@@ -154,7 +154,7 @@ const BankSlip = ({ bank, amount }: { bank: BankInfo | null; amount: number }) =
       )}
 
       <div className="rounded-xl bg-background/70 px-3">
-        <Row label="Iznos" value={`${amount.toLocaleString("sr-RS")} RSD`} k="amount" />
+        <Row label="Iznos" value={`${amount.toLocaleString("sr-Latn-RS")} RSD`} k="amount" />
         <Row label="Primalac" value={bank?.recipient} k="recipient" />
         <Row label="Račun" value={bank?.account} k="account" />
         <Row label="Banka" value={bank?.bank_name} k="bank" />
@@ -408,7 +408,7 @@ const Membership = () => {
                             {p.package_name}
                           </div>
                           <div className="text-[12px] text-muted-foreground">
-                            {p.price_rsd.toLocaleString("sr-RS")} RSD ·{" "}
+                            {p.price_rsd.toLocaleString("sr-Latn-RS")} RSD ·{" "}
                             {p.payment_method === "cash" ? "Keš" : "Račun"}
                             {p.payment_marked_at ? " · uplata označena" : ""}
                           </div>
@@ -480,7 +480,7 @@ const Membership = () => {
                       </div>
                     </div>
                     <div className="font-display text-[18px] font-bold tracking-tight text-primary tnum shrink-0">
-                      {pkg.price_rsd.toLocaleString("sr-RS")}{" "}
+                      {pkg.price_rsd.toLocaleString("sr-Latn-RS")}{" "}
                       <span className="text-[10px] text-muted-foreground">RSD</span>
                     </div>
                   </div>

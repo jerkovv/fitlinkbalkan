@@ -38,10 +38,10 @@ const fmtWhen = (iso: string) => {
   const d = new Date(iso);
   const today = new Date();
   const sameDay = d.toDateString() === today.toDateString();
-  if (sameDay) return `Danas, ${d.toLocaleTimeString("sr-RS", { hour: "2-digit", minute: "2-digit" })}`;
+  if (sameDay) return `Danas, ${d.toLocaleTimeString("sr-Latn-RS", { hour: "2-digit", minute: "2-digit" })}`;
   const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
   if (d.toDateString() === yesterday.toDateString()) return "Juče";
-  return d.toLocaleDateString("sr-RS", { day: "2-digit", month: "short" });
+  return d.toLocaleDateString("sr-Latn-RS", { day: "2-digit", month: "short" });
 };
 
 const Finances = () => {
@@ -190,7 +190,7 @@ const Finances = () => {
                             isLast ? "bg-gradient-brand shadow-brand" : "bg-surface-3",
                           )}
                           style={{ height: `${h}%` }}
-                          title={`${sum.toLocaleString("sr-RS")} RSD`}
+                          title={`${sum.toLocaleString("sr-Latn-RS")} RSD`}
                         />
                       </div>
                       <span className={cn(
@@ -238,7 +238,7 @@ const Finances = () => {
                           </div>
                         </div>
                         <div className="text-[15px] font-bold tracking-tight tnum shrink-0">
-                          {p.price_rsd.toLocaleString("sr-RS")}{" "}
+                          {p.price_rsd.toLocaleString("sr-Latn-RS")}{" "}
                           <span className="text-[11px] text-muted-foreground font-semibold">RSD</span>
                         </div>
                       </li>

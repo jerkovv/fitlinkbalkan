@@ -88,7 +88,7 @@ const WorkoutHome = () => {
   const formatDate = (iso: string | null) => {
     if (!iso) return "";
     const d = new Date(iso);
-    return d.toLocaleDateString("sr-RS", { day: "numeric", month: "short" });
+    return d.toLocaleDateString("sr-Latn-RS", { day: "numeric", month: "short" });
   };
 
   return (
