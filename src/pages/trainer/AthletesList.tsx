@@ -158,7 +158,21 @@ const AthletesList = () => {
       const { data, error } = await supabase.functions.invoke("send-invite", {
         body: { full_name: name, email },
       });
-      if (error) throw error;
+
+      // Ako je funkcija vratila non-2xx, izvuci pravu poruku iz response body-ja
+      if (error) {
+        let serverMsg: string | null = null;
+        const ctx: any = (error as any).context;
+        if (ctx && typeof ctx.json === "function") {
+          try {
+            const j = await ctx.json();
+            serverMsg = j?.error ?? null;
+          } catch {
+            try { serverMsg = await ctx.text(); } catch { /* ignore */ }
+          }
+        }
+        throw new Error(serverMsg || error.message || "Greška pri slanju pozivnice");
+      }
       if ((data as any)?.error) throw new Error((data as any).error);
 
       toast.success(`Pozivnica poslata na ${email}`);
