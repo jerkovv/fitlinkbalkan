@@ -22,6 +22,8 @@ import TrainerFinances from "./pages/trainer/Finances.tsx";
 import TrainerExerciseLibrary from "./pages/trainer/ExerciseLibrary.tsx";
 import TrainerProgramTemplates from "./pages/trainer/ProgramTemplates.tsx";
 import TrainerProgramBuilderNew from "./pages/trainer/ProgramBuilderNew.tsx";
+import TrainerNutritionTemplates from "./pages/trainer/NutritionTemplates.tsx";
+import TrainerNutritionBuilder from "./pages/trainer/NutritionBuilder.tsx";
 
 import AthleteOnboarding from "./pages/athlete/Onboarding.tsx";
 import AthleteHome from "./pages/athlete/Home.tsx";
@@ -29,6 +31,7 @@ import AthleteWorkout from "./pages/athlete/ActiveWorkout.tsx";
 import AthleteBooking from "./pages/athlete/Booking.tsx";
 import AthleteProgress from "./pages/athlete/Progress.tsx";
 import AthleteMembership from "./pages/athlete/Membership.tsx";
+import AthleteNutrition from "./pages/athlete/Nutrition.tsx";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +62,8 @@ const App = () => (
             <Route path="/trener/biblioteka" element={trainer(<TrainerExerciseLibrary />)} />
             <Route path="/trener/programi" element={trainer(<TrainerProgramTemplates />)} />
             <Route path="/trener/programi/:id" element={trainer(<TrainerProgramBuilderNew />)} />
+            <Route path="/trener/ishrana" element={trainer(<TrainerNutritionTemplates />)} />
+            <Route path="/trener/ishrana/:id" element={trainer(<TrainerNutritionBuilder />)} />
 
             {/* Vežbač — protected */}
             <Route path="/vezbac/onboarding" element={athlete(<AthleteOnboarding />)} />
@@ -67,6 +72,7 @@ const App = () => (
             <Route path="/vezbac/rezervacija" element={athlete(<AthleteBooking />)} />
             <Route path="/vezbac/napredak" element={athlete(<AthleteProgress />)} />
             <Route path="/vezbac/clanarina" element={athlete(<AthleteMembership />)} />
+            <Route path="/vezbac/ishrana" element={athlete(<AthleteNutrition />)} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
