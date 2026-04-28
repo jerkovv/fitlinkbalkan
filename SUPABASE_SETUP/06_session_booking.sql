@@ -295,13 +295,13 @@ BEGIN
     RAISE EXCEPTION 'Niste član ovog trenera';
   END IF;
 
-  -- Provera: aktivna članarina (memberships tabela ako postoji)
+  -- Provera: aktivna članarina
   SELECT EXISTS (
     SELECT 1 FROM memberships m
     WHERE m.athlete_id = v_athlete_id
       AND m.trainer_id = p_trainer_id
       AND m.status = 'active'
-      AND (m.valid_until IS NULL OR m.valid_until >= p_date)
+      AND (m.ends_on IS NULL OR m.ends_on >= p_date)
   ) INTO v_has_membership;
 
   IF NOT v_has_membership THEN
