@@ -113,6 +113,9 @@ const AthleteProfile = () => {
   const [progTemplates, setProgTemplates] = useState<ProgramTemplate[]>([]);
   const [progAssigning, setProgAssigning] = useState<string | null>(null);
 
+  // Workout session detail
+  const [openSessionId, setOpenSessionId] = useState<string | null>(null);
+
   const load = async () => {
     if (!id) return;
     setLoading(true);
