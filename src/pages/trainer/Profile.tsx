@@ -23,7 +23,7 @@ const Profile = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [copied, setCopied] = useState(false);
+  
 
   // editable
   const [fullName, setFullName] = useState("");
@@ -36,8 +36,7 @@ const Profile = () => {
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [newSpec, setNewSpec] = useState("");
 
-  // read-only
-  const [inviteCode, setInviteCode] = useState<string>("");
+  // read-only stats
   const [stats, setStats] = useState({
     athletes: 0,
     programs: 0,
@@ -77,7 +76,7 @@ const Profile = () => {
       setYears(t.years_experience != null ? String(t.years_experience) : "");
       setInstagram(t.instagram_handle ?? "");
       setSpecialties(Array.isArray(t.specialties) ? t.specialties : []);
-      setInviteCode(t.invite_code ?? "");
+      
 
       setStats({
         athletes: aCount.count ?? 0,
@@ -100,15 +99,6 @@ const Profile = () => {
 
   const removeSpecialty = (s: string) => {
     setSpecialties(specialties.filter((x) => x !== s));
-  };
-
-  const copyInvite = async () => {
-    if (!inviteCode) return;
-    const url = `${window.location.origin}/invite/${inviteCode}`;
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    toast.success("Invite link kopiran");
-    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleSave = async () => {
