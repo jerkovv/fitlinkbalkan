@@ -43,6 +43,7 @@ const Dashboard = () => {
   const [pendingPayments, setPendingPayments] = useState(0);
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [atRisk, setAtRisk] = useState<{ athlete_id: string; full_name: string | null; days_inactive: number }[]>([]);
+  const [referrers, setReferrers] = useState<{ referrer_id: string; referrer_name: string | null; referred_count: number; referred_active: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
