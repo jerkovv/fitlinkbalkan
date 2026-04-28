@@ -58,6 +58,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/invite/:code" element={<Invite />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Trener — protected */}
             <Route path="/trener/onboarding" element={trainer(<TrainerOnboarding />)} />
