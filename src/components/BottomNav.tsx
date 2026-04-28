@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
 import {
   Home, Users, CalendarClock, BarChart3,
-  Dumbbell, TrendingUp, IdCard,
+  Dumbbell, TrendingUp, IdCard, CalendarPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +19,7 @@ const trainerLinks = [
 const athleteLinks = [
   { to: "/vezbac", icon: Home, label: "Početna", end: true },
   { to: "/vezbac/trening", icon: Dumbbell, label: "Trening" },
+  { to: "/vezbac/rezervacija", icon: CalendarPlus, label: "Rezerviši" },
   { to: "/vezbac/napredak", icon: TrendingUp, label: "Napredak" },
   { to: "/vezbac/clanarina", icon: IdCard, label: "Članarina" },
 ];
