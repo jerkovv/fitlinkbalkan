@@ -174,6 +174,7 @@ const WorkoutHome = () => {
               </div>
             </Card>
           </button>
+          </>
         ) : (
           <Card className="p-6 text-center space-y-3">
             <div className="h-12 w-12 mx-auto rounded-2xl bg-muted flex items-center justify-center">
