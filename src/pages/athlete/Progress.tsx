@@ -327,14 +327,19 @@ const Progress = () => {
               </Card>
               <Card className={cn(
                 "p-4",
-                streak >= 3 && "bg-gradient-to-br from-warning-soft/40 to-surface"
+                streakDays >= 3 && "bg-gradient-to-br from-warning-soft/40 to-surface"
               )}>
                 <div className="flex items-center justify-between">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Streak</div>
-                  <Flame className={cn("h-3.5 w-3.5", streak >= 3 ? "text-warning-soft-foreground" : "text-muted-foreground")} />
+                  <Flame className={cn("h-3.5 w-3.5", streakDays >= 3 ? "text-warning-soft-foreground" : "text-muted-foreground")} />
                 </div>
-                <div className="font-display text-[28px] font-bold tracking-tightest mt-1 tnum">{streak}</div>
-                <div className="text-[12px] text-muted-foreground">{streak === 1 ? "nedelja" : "nedelja"} u nizu</div>
+                <div className="font-display text-[28px] font-bold tracking-tightest mt-1 tnum">{streakDays}</div>
+                <div className="text-[12px] text-muted-foreground">
+                  {streakDays === 1 ? "dan" : "dana"} u nizu
+                  {longestDays > streakDays && longestDays > 0 && (
+                    <span className="text-muted-foreground/70"> · best {longestDays}</span>
+                  )}
+                </div>
               </Card>
             </div>
 
