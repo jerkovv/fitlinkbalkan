@@ -266,7 +266,6 @@ const Booking = () => {
                         <Button
                           variant={full ? "outline" : "default"}
                           size="sm"
-                          fullWidth
                           disabled={full || acting || !hasMembership}
                           onClick={() => book(s)}
                           className="w-full"
