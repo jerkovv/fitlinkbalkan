@@ -12,8 +12,9 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Search, Dumbbell, Loader2, User2, Globe2 } from "lucide-react";
+import { ArrowLeft, Plus, Search, Dumbbell, Loader2, User2, Globe2, PlayCircle } from "lucide-react";
 import { toast } from "sonner";
+import { VideoModal } from "@/components/VideoModal";
 
 type Exercise = {
   id: string;
@@ -79,6 +80,7 @@ const ExerciseLibrary = () => {
   const [primaryMuscle, setPrimaryMuscle] = useState<string>("grudi");
   const [equipment, setEquipment] = useState<string>("bucice");
   const [submitting, setSubmitting] = useState(false);
+  const [videoOpenFor, setVideoOpenFor] = useState<Exercise | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -370,11 +372,31 @@ const ExerciseLibrary = () => {
                     <p className="text-sm whitespace-pre-line">{selected.instructions}</p>
                   </div>
                 )}
+
+                {selected.video_url && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setVideoOpenFor(selected)}
+                  >
+                    <PlayCircle className="h-4 w-4 mr-2" /> Pogledaj demonstraciju
+                  </Button>
+                )}
               </div>
             </>
           )}
         </DialogContent>
       </Dialog>
+
+      {videoOpenFor?.video_url && (
+        <VideoModal
+          url={videoOpenFor.video_url}
+          title={videoOpenFor.name}
+          open={!!videoOpenFor}
+          onOpenChange={(o) => !o && setVideoOpenFor(null)}
+        />
+      )}
     </div>
   );
 };
