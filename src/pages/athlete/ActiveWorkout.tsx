@@ -303,6 +303,27 @@ const ActiveWorkout = () => {
           Vežba {currentIdx + 1} od {exercises.length}
         </Chip>
 
+        {/* Trener zadao */}
+        <Card className="p-3.5 bg-primary-soft/50 border-primary/15">
+          <div className="flex items-start gap-2.5">
+            <div className="h-8 w-8 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
+              <Trophy className="h-4 w-4" strokeWidth={2.2} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary/80">
+                Trener ti je zadao
+              </div>
+              <div className="text-[14px] font-bold text-foreground mt-0.5">
+                {current.sets} × {current.reps ?? "—"} ponavljanja
+                {current.weight_kg ? ` sa ${current.weight_kg} kg` : ""}
+              </div>
+              <div className="text-[11.5px] text-muted-foreground mt-0.5 leading-snug">
+                Polja su već popunjena. Klikni ✓ ako si odradio tako, ili izmeni broj pre nego što potvrdiš.
+              </div>
+            </div>
+          </div>
+        </Card>
+
         {/* Set rows */}
         <Card className="p-4 overflow-hidden">
           <div className="grid grid-cols-[22px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_32px] gap-1.5 px-1 pb-2 text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80 font-semibold border-b border-hairline">
