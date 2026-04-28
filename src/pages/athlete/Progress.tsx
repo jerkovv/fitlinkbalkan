@@ -397,6 +397,33 @@ const Progress = () => {
               })()}
             </Card>
 
+            {prs.length > 0 && (
+              <section>
+                <SectionTitle>Lični rekordi 🏆</SectionTitle>
+                <Card className="divide-y divide-hairline">
+                  {prs.map((p) => (
+                    <div key={p.id} className="p-4 flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-warning-soft/60 to-primary-soft text-primary flex items-center justify-center shrink-0">
+                        <Sparkles className="h-4 w-4" strokeWidth={2.4} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-[14px] truncate">{p.exercise_name}</div>
+                        <div className="text-[12px] text-muted-foreground">
+                          {p.best_weight_kg ? `${p.best_weight_kg} kg × ${p.best_weight_reps}` : "—"}
+                          {p.best_e1rm_kg ? ` · 1RM ~${p.best_e1rm_kg} kg` : ""}
+                        </div>
+                      </div>
+                      {p.best_e1rm_at && (
+                        <div className="text-[11px] text-muted-foreground/80 tnum shrink-0">
+                          {formatDate(p.best_e1rm_at)}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </Card>
+              </section>
+            )}
+
             <section>
               <SectionTitle>Istorija</SectionTitle>
               {sessions.length === 0 ? (
