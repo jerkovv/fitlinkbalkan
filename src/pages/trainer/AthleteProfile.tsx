@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { WorkoutSessionDetailDialog } from "@/components/WorkoutSessionDetailDialog";
+import { assignProgramToAthlete } from "@/lib/programAssignment";
 
 type AthleteData = {
   id: string;
@@ -335,25 +336,12 @@ const AthleteProfile = () => {
     if (!user || !id) return;
     setProgAssigning(templateId);
     try {
-      // Pokušaj prvo RPC (atomski snapshot na bazi)
-      const { data, error } = await supabase.rpc("assign_program_to_athlete", {
-        p_template_id: templateId,
-        p_athlete_id: id,
-      });
-      let assignedId: string | null = null;
-      if (!error && data) {
-        assignedId = data as any;
-      } else {
-        // Fallback: ručno u JS-u (radi i bez SQL skripte)
-        if (error) console.warn("RPC assign_program_to_athlete fail, koristim fallback:", error.message);
-        assignedId = await assignProgramFallback(templateId);
-      }
-      if (!assignedId) return;
-      const contentReady = await copyProgramContent(templateId, assignedId);
-      if (!contentReady) return;
+      await assignProgramToAthlete(templateId, id);
       toast.success("Program dodeljen vežbaču");
       setProgOpen(false);
       await load();
+    } catch (error: any) {
+      toast.error(error.message ?? "Greška pri dodeli programa");
     } finally {
       setProgAssigning(null);
     }
