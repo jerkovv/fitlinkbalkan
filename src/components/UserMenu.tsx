@@ -83,7 +83,7 @@ export const UserMenu = () => {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() =>
-            navigate(role === "trainer" ? "/trener" : "/vezbac/profil")
+            navigate(role === "trainer" ? "/trener/profil" : "/vezbac/profil")
           }
           className="cursor-pointer"
         >
