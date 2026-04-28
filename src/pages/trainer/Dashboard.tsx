@@ -306,7 +306,7 @@ const Dashboard = () => {
               </span>
             )}
           </Link>
-          <Link to="/trener/sesije" className="card-premium-hover p-4 flex flex-col gap-2">
+          <Link to="/trener/termini" className="card-premium-hover p-4 flex flex-col gap-2">
             <div className="h-10 w-10 rounded-xl bg-gradient-brand-soft flex items-center justify-center">
               <Settings className="h-5 w-5 text-primary" strokeWidth={2.25} />
             </div>
