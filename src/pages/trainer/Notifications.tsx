@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { NotificationItem } from "@/components/NotificationBell";
+import { NotificationDetail } from "@/components/NotificationDetail";
 import { BroadcastButton } from "@/components/BroadcastButton";
 import { useNotifications, type AppNotification } from "@/hooks/useNotifications";
 import { Bell, Check, Trash2 } from "lucide-react";
@@ -11,9 +11,9 @@ import { cn } from "@/lib/utils";
 type Filter = "all" | "unread";
 
 const Notifications = () => {
-  const navigate = useNavigate();
   const { items, loading, unreadCount, markRead, markAllRead, remove } = useNotifications();
   const [filter, setFilter] = useState<Filter>("all");
+  const [selected, setSelected] = useState<AppNotification | null>(null);
 
   const visible = useMemo(
     () => (filter === "unread" ? items.filter((n) => !n.is_read) : items),
@@ -22,11 +22,7 @@ const Notifications = () => {
 
   const handleClick = async (n: AppNotification) => {
     if (!n.is_read) await markRead(n.id);
-    if (n.kind === "booking_created" || n.kind === "booking_canceled") {
-      navigate("/trener/kalendar");
-    } else if (n.kind === "workout_completed" || n.kind === "message") {
-      navigate(`/trener/vezbaci/${n.athlete_id}`);
-    }
+    setSelected(n);
   };
 
   return (
@@ -99,6 +95,11 @@ const Notifications = () => {
           </ul>
         )}
       </PhoneShell>
+      <NotificationDetail
+        notification={selected}
+        open={!!selected}
+        onOpenChange={(o) => !o && setSelected(null)}
+      />
       <BroadcastButton fab />
       <BottomNav role="trainer" />
     </>
