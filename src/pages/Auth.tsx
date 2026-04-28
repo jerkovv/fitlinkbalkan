@@ -11,7 +11,7 @@ import { Briefcase, Loader2 } from "lucide-react";
 const Auth = () => {
   const navigate = useNavigate();
   const { user, role, loading: authLoading } = useAuth();
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
