@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Card, SectionTitle, StatCard } from "@/components/ui-bits";
-import { Play, CalendarPlus, Apple, Loader2, Dumbbell } from "lucide-react";
+import { Play, CalendarPlus, Apple, Loader2, Dumbbell, UserRound } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import { MessageTrainerCard } from "@/components/MessageTrainerCard";
 import { NotificationBell } from "@/components/NotificationBell";
