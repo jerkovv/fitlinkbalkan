@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
@@ -58,14 +58,27 @@ const Calendar = () => {
   // Slot detail dialog
   const [openSlot, setOpenSlot] = useState<Slot | null>(null);
 
-  // 14 dana napred + 7 nazad da trener može da gleda istoriju
+  // 28 dana napred počev od danas (današnji dan = prvi)
   const days = useMemo(() => {
-    return Array.from({ length: 21 }).map((_, i) => {
+    return Array.from({ length: 28 }).map((_, i) => {
       const d = new Date(today);
-      d.setDate(today.getDate() + i - 7);
+      d.setDate(today.getDate() + i);
       return d;
     });
   }, [today]);
+
+  // Scroll aktivni dan u vidik
+  const stripRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    const idx = days.findIndex((d) => toIsoDate(d) === toIsoDate(selectedDate));
+    if (idx < 0) return;
+    const child = el.children[idx] as HTMLElement | undefined;
+    if (!child) return;
+    const target = child.offsetLeft - (el.clientWidth - child.clientWidth) / 2;
+    el.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
+  }, [selectedDate, days]);
 
   const load = async () => {
     if (!user) return;
@@ -184,7 +197,7 @@ const Calendar = () => {
             </button>
           </div>
 
-          <div className="flex gap-2 -mx-2 px-2 overflow-x-auto no-scrollbar pb-1">
+          <div ref={stripRef} className="flex gap-2 -mx-2 px-2 overflow-x-auto no-scrollbar pb-1 scroll-smooth">
             {days.map((d) => {
               const active = toIsoDate(d) === toIsoDate(selectedDate);
               const wd = weekdayLabelsShort[dateToWeekday(d)];
