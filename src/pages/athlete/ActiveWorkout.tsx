@@ -5,6 +5,16 @@ import { BottomNav } from "@/components/BottomNav";
 import { Button, Card, Chip } from "@/components/ui-bits";
 import { Check, Loader2, ChevronLeft, ChevronRight, RotateCcw, Trophy, HelpCircle } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
@@ -54,6 +64,12 @@ const ActiveWorkout = () => {
   const [sessionLogId, setSessionLogId] = useState<string | null>(null);
   const [setsByEx, setSetsByEx] = useState<Record<string, SetEntry[]>>({});
   const [currentIdx, setCurrentIdx] = useState(0);
+  const [alreadyDoneToday, setAlreadyDoneToday] = useState<{ open: boolean; completedAt: string | null }>({
+    open: false,
+    completedAt: null,
+  });
+  const [confirmFinishOpen, setConfirmFinishOpen] = useState(false);
+  const [finishing, setFinishing] = useState(false);
 
   // Rest timer
   const [rest, setRest] = useState(0);
@@ -103,6 +119,24 @@ const ActiveWorkout = () => {
         .order("started_at", { ascending: false })
         .limit(1)
         .maybeSingle();
+
+      // Provera: da li je ovaj dan već završen DANAS?
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const { data: doneToday } = await supabase
+        .from("workout_session_logs")
+        .select("id, completed_at")
+        .eq("athlete_id", user.id)
+        .eq("day_id", dayId)
+        .not("completed_at", "is", null)
+        .gte("completed_at", startOfDay.toISOString())
+        .order("completed_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (doneToday && !existing) {
+        setAlreadyDoneToday({ open: true, completedAt: (doneToday as any).completed_at });
+      }
 
       let sid: string;
       if (existing) {
@@ -216,18 +250,22 @@ const ActiveWorkout = () => {
     setRest(r);
   };
 
-  const finishWorkout = async () => {
+  const doFinishWorkout = async () => {
     if (!sessionLogId) return;
-    const startedAt = new Date(); // approx — server already set started_at
+    setFinishing(true);
     await supabase
       .from("workout_session_logs")
       .update({
         completed_at: new Date().toISOString(),
       } as any)
       .eq("id", sessionLogId);
+    setFinishing(false);
+    setConfirmFinishOpen(false);
     toast.success("Trening završen! 💪");
     nav("/vezbac");
   };
+
+  const finishWorkout = () => setConfirmFinishOpen(true);
 
   if (loading) {
     return (
@@ -468,6 +506,54 @@ const ActiveWorkout = () => {
         )}
       </PhoneShell>
       <BottomNav role="athlete" />
+
+      <AlertDialog
+        open={alreadyDoneToday.open}
+        onOpenChange={(open) => setAlreadyDoneToday((p) => ({ ...p, open }))}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Već si završio ovaj trening danas</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ovaj dan iz programa je već markiran kao završen
+              {alreadyDoneToday.completedAt
+                ? ` u ${new Date(alreadyDoneToday.completedAt).toLocaleTimeString("sr-Latn-RS", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}`
+                : ""}
+              . Da li si siguran da želiš da pokreneš novi trening za isti dan?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => nav("/vezbac")}>Nazad</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => setAlreadyDoneToday({ open: false, completedAt: null })}
+            >
+              Da, pokreni opet
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmFinishOpen} onOpenChange={setConfirmFinishOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Završiti trening?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {allDone
+                ? "Svi setovi su odrađeni. Da li želiš da završiš i sačuvaš trening?"
+                : `Odradio si ${totalDone} od ${totalSets} setova. Ako završiš sada, ostali setovi neće biti zabeleženi.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={finishing}>Otkaži</AlertDialogCancel>
+            <AlertDialogAction onClick={doFinishWorkout} disabled={finishing}>
+              {finishing ? "Čuvanje..." : "Da, završi"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
