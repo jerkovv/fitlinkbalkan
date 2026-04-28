@@ -9,9 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Loader2, Save, Users, Dumbbell, Apple, X, Plus, Landmark, Eye,
+  Loader2, Save, Users, Dumbbell, Apple, X, Plus, Landmark, Eye, Ban,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 
 const SPEC_SUGGESTIONS = [
@@ -47,6 +50,7 @@ const Profile = () => {
 
   // privacy
   const [showAttendees, setShowAttendees] = useState(false);
+  const [cancelCutoff, setCancelCutoff] = useState<number>(0);
 
   // read-only stats
   const [stats, setStats] = useState({
@@ -95,6 +99,7 @@ const Profile = () => {
       setBankReference(t.bank_reference ?? "");
       setBankPurpose(t.bank_purpose ?? "");
       setShowAttendees(!!t.show_attendees_to_athletes);
+      setCancelCutoff(typeof t.cancel_cutoff_hours === "number" ? t.cancel_cutoff_hours : 0);
       
 
       setStats({
@@ -152,6 +157,7 @@ const Profile = () => {
           bank_reference: bankReference.trim() || null,
           bank_purpose: bankPurpose.trim() || null,
           show_attendees_to_athletes: showAttendees,
+          cancel_cutoff_hours: cancelCutoff,
         } as any)
         .eq("id", user.id);
       if (tErr) throw tErr;
@@ -392,6 +398,42 @@ const Profile = () => {
                   onCheckedChange={setShowAttendees}
                   aria-label="Prikaži učesnike vežbačima"
                 />
+              </div>
+            </Card>
+
+            {/* Pravila otkazivanja */}
+            <Card className="p-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <Ban className="h-4 w-4 text-primary" />
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Pravila otkazivanja
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-[14px] font-semibold tracking-tight">
+                  Najkasnije otkazivanje
+                </div>
+                <p className="text-[12.5px] text-muted-foreground">
+                  Vežbač ne može otkazati rezervaciju ako je do termina ostalo manje od izabranog roka.
+                </p>
+                <Select
+                  value={String(cancelCutoff)}
+                  onValueChange={(v) => setCancelCutoff(parseInt(v, 10))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Bez ograničenja (do početka termina)</SelectItem>
+                    <SelectItem value="2">2 sata pre termina</SelectItem>
+                    <SelectItem value="4">4 sata pre termina</SelectItem>
+                    <SelectItem value="6">6 sati pre termina</SelectItem>
+                    <SelectItem value="12">12 sati pre termina</SelectItem>
+                    <SelectItem value="24">24 sata pre termina</SelectItem>
+                    <SelectItem value="48">48 sati pre termina</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </Card>
 

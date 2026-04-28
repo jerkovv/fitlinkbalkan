@@ -48,6 +48,7 @@ const Booking = () => {
   const [loading, setLoading] = useState(true);
   const [actingKey, setActingKey] = useState<string | null>(null);
   const [showAttendees, setShowAttendees] = useState<boolean>(false);
+  const [cancelCutoff, setCancelCutoff] = useState<number>(0);
   const [attendeesSlot, setAttendeesSlot] = useState<Slot | null>(null);
   const [attendees, setAttendees] = useState<{ athlete_id: string; full_name: string; is_me: boolean }[]>([]);
   const [attendeesLoading, setAttendeesLoading] = useState(false);
@@ -85,9 +86,10 @@ const Booking = () => {
             .order("ends_on", { ascending: false })
             .limit(1)
             .maybeSingle(),
-          supabase.from("trainers").select("show_attendees_to_athletes").eq("id", tid).maybeSingle(),
+          supabase.from("trainers").select("show_attendees_to_athletes, cancel_cutoff_hours").eq("id", tid).maybeSingle(),
         ]);
         setShowAttendees(!!(tr as any)?.show_attendees_to_athletes);
+        setCancelCutoff(((tr as any)?.cancel_cutoff_hours as number) ?? 0);
         setTrainerName((prof as any)?.full_name ?? "Trener");
         const m: any = mem;
         const todayISO = toIsoDate(today);
@@ -155,7 +157,7 @@ const Booking = () => {
     if (!confirm("Otkazati rezervaciju?")) return;
     const key = isMineKey(s);
     setActingKey(key);
-    const { error } = await supabase.from("session_bookings").delete().eq("id", myBook.id);
+    const { error } = await supabase.rpc("cancel_session_booking", { p_booking_id: myBook.id });
     setActingKey(null);
     if (error) { toast.error(error.message); return; }
     toast.success("Rezervacija otkazana");
@@ -184,6 +186,12 @@ const Booking = () => {
         {!hasMembership && trainerId && (
           <div className="rounded-2xl bg-warning-soft text-warning-soft-foreground border border-warning/20 px-4 py-3 text-[13px]">
             Potrebna ti je aktivna članarina da bi rezervisao termin.
+          </div>
+        )}
+
+        {cancelCutoff > 0 && trainerId && (
+          <div className="rounded-2xl bg-surface-2 border border-hairline px-4 py-2.5 text-[12px] text-muted-foreground">
+            Otkazivanje je moguće najkasnije <span className="font-semibold text-foreground">{cancelCutoff}h</span> pre termina.
           </div>
         )}
 
