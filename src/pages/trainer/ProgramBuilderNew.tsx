@@ -153,6 +153,40 @@ const ProgramBuilder = () => {
     return library.filter((l) => l.name.toLowerCase().includes(libQuery.toLowerCase()));
   }, [library, libQuery]);
 
+  const openAssign = async () => {
+    setAssignOpen(true);
+    if (athletes.length === 0) {
+      // Učitaj sve vežbače (user_roles role='athlete') + njihove profile
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "athlete");
+      const ids = (roles ?? []).map((r: any) => r.user_id);
+      if (ids.length) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", ids);
+        setAthletes(((profs as any) ?? []).map((p: any) => ({
+          id: p.id, full_name: p.full_name, email: p.email,
+        })));
+      }
+    }
+  };
+
+  const handleAssign = async (athleteId: string) => {
+    if (!templateId) return;
+    setAssigning(athleteId);
+    const { error } = await supabase.rpc("assign_program_to_athlete", {
+      p_template_id: templateId,
+      p_athlete_id: athleteId,
+    });
+    setAssigning(null);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Program dodeljen vežbaču");
+    setAssignOpen(false);
+  };
+
   return (
     <PhoneShell
       back="/trener/programi"
