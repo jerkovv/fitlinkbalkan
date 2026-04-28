@@ -516,73 +516,77 @@ const NutritionBuilder = () => {
           </DialogHeader>
 
           {!pickedFood ? (
-            <>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={foodQuery}
-                  onChange={(e) => setFoodQuery(e.target.value)}
-                  placeholder="Pretraži namirnicu..."
-                  className="pl-9"
-                  autoFocus
-                />
-              </div>
+            <div className="flex flex-col flex-1 min-h-0">
+              {/* Sticky filter bar */}
+              <div className="px-5 pt-4 pb-3 space-y-3 border-b border-hairline shrink-0 bg-surface">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={foodQuery}
+                    onChange={(e) => setFoodQuery(e.target.value)}
+                    placeholder="Pretraži namirnicu..."
+                    className="pl-9 h-10"
+                    autoFocus
+                  />
+                </div>
 
-              {/* Dietary toggle filteri */}
-              <div className="flex gap-1.5 flex-wrap">
-                {[
-                  { key: "vegan", label: "Veganski", active: filterVegan, set: setFilterVegan },
-                  { key: "gf", label: "Bez glutena", active: filterGlutenFree, set: setFilterGlutenFree },
-                  { key: "posno", label: "Posno", active: filterPosno, set: setFilterPosno },
-                ].map((t) => (
-                  <button
-                    key={t.key}
-                    onClick={() => t.set(!t.active)}
-                    className={`pill px-3 py-1 text-[11px] ${
-                      t.active
-                        ? "bg-primary text-primary-foreground shadow-brand"
-                        : "bg-surface-2 text-muted-foreground hover:bg-surface-3"
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Kategorije — horizontal scroll */}
-              {availableCategories.length > 0 && (
-                <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
-                  <button
-                    onClick={() => setActiveCategory(null)}
-                    className={`pill px-3 py-1.5 text-[11px] shrink-0 ${
-                      activeCategory === null
-                        ? "bg-foreground text-background"
-                        : "bg-surface-2 text-muted-foreground hover:bg-surface-3"
-                    }`}
-                  >
-                    Sve
-                  </button>
-                  {availableCategories.map((c) => (
+                {/* Dietary toggle filteri */}
+                <div className="flex gap-1.5 flex-wrap">
+                  {[
+                    { key: "vegan", label: "Veganski", active: filterVegan, set: setFilterVegan },
+                    { key: "gf", label: "Bez glutena", active: filterGlutenFree, set: setFilterGlutenFree },
+                    { key: "posno", label: "Posno", active: filterPosno, set: setFilterPosno },
+                  ].map((t) => (
                     <button
-                      key={c}
-                      onClick={() => setActiveCategory(c === activeCategory ? null : c)}
+                      key={t.key}
+                      onClick={() => t.set(!t.active)}
+                      className={`pill px-3 py-1.5 text-[11px] ${
+                        t.active
+                          ? "bg-primary text-primary-foreground shadow-brand"
+                          : "bg-surface-2 text-muted-foreground hover:bg-surface-3"
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Kategorije — horizontal scroll */}
+                {availableCategories.length > 0 && (
+                  <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-5 px-5">
+                    <button
+                      onClick={() => setActiveCategory(null)}
                       className={`pill px-3 py-1.5 text-[11px] shrink-0 ${
-                        c === activeCategory
+                        activeCategory === null
                           ? "bg-foreground text-background"
                           : "bg-surface-2 text-muted-foreground hover:bg-surface-3"
                       }`}
                     >
-                      {c}
+                      Sve
                     </button>
-                  ))}
-                </div>
-              )}
+                    {availableCategories.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => setActiveCategory(c === activeCategory ? null : c)}
+                        className={`pill px-3 py-1.5 text-[11px] shrink-0 ${
+                          c === activeCategory
+                            ? "bg-foreground text-background"
+                            : "bg-surface-2 text-muted-foreground hover:bg-surface-3"
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-              <div className="text-[10px] text-muted-foreground -mb-1">
+              {/* Counter + scrollable lista */}
+              <div className="px-5 pt-2 pb-1 text-[10px] text-muted-foreground shrink-0">
                 {filteredFoods.length} {filteredFoods.length === 1 ? "namirnica" : "namirnica"}
               </div>
 
-              <div className="overflow-y-auto flex-1 space-y-1 -mx-1 px-1">
+              <div className="overflow-y-auto flex-1 min-h-0 px-3 pb-4 space-y-1">
                 {filteredFoods.length === 0 ? (
                   <p className="text-xs text-muted-foreground text-center py-8">
                     Nema namirnica za odabrane filtere
@@ -598,7 +602,7 @@ const NutritionBuilder = () => {
                         <Apple className="h-4 w-4 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-semibold text-sm truncate">{f.name}</span>
                           {f.is_vegan && (
                             <span className="pill px-1.5 py-0 text-[9px] bg-success-soft text-success-soft-foreground">V</span>
@@ -619,9 +623,9 @@ const NutritionBuilder = () => {
                   ))
                 )}
               </div>
-            </>
+            </div>
           ) : (
-            <div className="space-y-4">
+            <div className="px-5 pb-5 pt-4 space-y-4 overflow-y-auto">
               <div className="bg-surface-2 rounded-xl p-3">
                 <div className="font-semibold text-sm">{pickedFood.name}</div>
                 <div className="text-[11px] text-muted-foreground">
