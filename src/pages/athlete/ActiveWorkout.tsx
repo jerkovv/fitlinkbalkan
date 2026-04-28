@@ -5,6 +5,16 @@ import { BottomNav } from "@/components/BottomNav";
 import { Button, Card, Chip } from "@/components/ui-bits";
 import { Check, Loader2, ChevronLeft, ChevronRight, RotateCcw, Trophy, HelpCircle } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
