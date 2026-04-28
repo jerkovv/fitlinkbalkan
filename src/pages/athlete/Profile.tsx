@@ -56,11 +56,11 @@ const Profile = () => {
       if (a.trainer_id) {
         const { data: tr } = await supabase
           .from("profiles")
-          .select("full_name, phone, email")
+          .select("full_name, phone")
           .eq("id", a.trainer_id)
           .maybeSingle();
         const t: any = tr;
-        if (t) setTrainer({ name: t.full_name ?? "Trener", phone: t.phone, email: t.email });
+        if (t) setTrainer({ name: t.full_name ?? "Trener", phone: t.phone, email: null });
       }
 
       setLoading(false);
