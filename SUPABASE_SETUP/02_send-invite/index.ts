@@ -133,9 +133,10 @@ Deno.serve(async (req) => {
     }
 
     // 2) Šalji invite mejl preko Supabase Auth
-    const origin =
-      req.headers.get("origin") ?? new URL(req.url).origin;
-    const redirectTo = `${origin}/invite/${code}`;
+    // VAŽNO: koristimo fiksni produkcioni domen, ne req origin
+    // (jer kad se zove iz preview-a origin može biti localhost ili preview URL)
+    const PUBLIC_SITE_URL = "https://fitlinkbalkan.lovable.app";
+    const redirectTo = `${PUBLIC_SITE_URL}/invite/${code}`;
 
     const { error: emailErr } = await admin.auth.admin.inviteUserByEmail(
       email,
