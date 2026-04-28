@@ -5,7 +5,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { Avatar, Card, Chip, SectionTitle, StatCard } from "@/components/ui-bits";
 import {
   Clock, ChevronRight, ClipboardList, Apple, Package, Wallet,
-  Calendar as CalIcon, Users, Settings,
+  Calendar as CalIcon, Users, Settings, AlertTriangle,
 } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -42,6 +42,7 @@ const Dashboard = () => {
   const [expiringSoon, setExpiringSoon] = useState(0);
   const [pendingPayments, setPendingPayments] = useState(0);
   const [sessions, setSessions] = useState<SessionRow[]>([]);
+  const [atRisk, setAtRisk] = useState<{ athlete_id: string; full_name: string | null; days_inactive: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -128,6 +129,11 @@ const Dashboard = () => {
           athlete_name: nameMap.get(b.athlete_id) ?? "Vežbač",
         }))
       );
+
+      // At-risk vežbači (nisu trenirali 4+ dana, imaju aktivan program)
+      const { data: risk } = await supabase.rpc("get_at_risk_athletes", { p_days: 4 } as any);
+      if (alive) setAtRisk(((risk as any[]) ?? []).slice(0, 5));
+
       setLoading(false);
     })();
 
@@ -210,6 +216,45 @@ const Dashboard = () => {
             </ul>
           )}
         </section>
+
+        {/* At-risk vežbači */}
+        {atRisk.length > 0 && (
+          <section>
+            <SectionTitle
+              action={
+                <Link to="/trener/vezbaci" className="text-[12px] font-semibold text-primary">
+                  Svi vežbači →
+                </Link>
+              }
+            >
+              Treba ih probuditi
+            </SectionTitle>
+            <ul className="space-y-2">
+              {atRisk.map((r) => (
+                <li key={r.athlete_id}>
+                  <Link
+                    to={`/trener/vezbaci/${r.athlete_id}`}
+                    className="flex items-center gap-3 card-premium-hover px-4 py-3.5"
+                  >
+                    <div className="h-11 w-11 rounded-2xl flex items-center justify-center bg-[hsl(var(--session-amber-bg))] text-[hsl(var(--session-amber-fg))]">
+                      <AlertTriangle className="h-[18px] w-[18px]" strokeWidth={2} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[15px] font-semibold leading-tight tracking-tight truncate">
+                        {r.full_name ?? "Bez imena"}
+                      </div>
+                      <div className="text-[12.5px] text-muted-foreground mt-0.5">
+                        Nije trenirao {r.days_inactive} {r.days_inactive === 1 ? "dan" : "dana"}
+                      </div>
+                    </div>
+                    <Chip tone="warning">Pošalji nudge</Chip>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {/* Studio */}
         <Card className="p-4 bg-gradient-brand-soft border-0">
