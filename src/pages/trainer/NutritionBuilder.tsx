@@ -527,24 +527,97 @@ const NutritionBuilder = () => {
                   autoFocus
                 />
               </div>
-              <div className="overflow-y-auto flex-1 space-y-1 -mx-1 px-1">
-                {filteredFoods.map((f) => (
+
+              {/* Dietary toggle filteri */}
+              <div className="flex gap-1.5 flex-wrap">
+                {[
+                  { key: "vegan", label: "Veganski", active: filterVegan, set: setFilterVegan },
+                  { key: "gf", label: "Bez glutena", active: filterGlutenFree, set: setFilterGlutenFree },
+                  { key: "posno", label: "Posno", active: filterPosno, set: setFilterPosno },
+                ].map((t) => (
                   <button
-                    key={f.id}
-                    onClick={() => setPickedFood(f)}
-                    className="w-full text-left p-3 rounded-lg hover:bg-surface-2 flex items-center gap-3 transition"
+                    key={t.key}
+                    onClick={() => t.set(!t.active)}
+                    className={`pill px-3 py-1 text-[11px] ${
+                      t.active
+                        ? "bg-primary text-primary-foreground shadow-brand"
+                        : "bg-surface-2 text-muted-foreground hover:bg-surface-3"
+                    }`}
                   >
-                    <div className="h-9 w-9 rounded-lg bg-gradient-brand-soft flex items-center justify-center shrink-0">
-                      <Apple className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm truncate">{f.name}</div>
-                      <div className="text-[11px] text-muted-foreground">
-                        {f.kcal_per_100g} kcal · P{f.protein_per_100g} U{f.carbs_per_100g} M{f.fat_per_100g} /100g
-                      </div>
-                    </div>
+                    {t.label}
                   </button>
                 ))}
+              </div>
+
+              {/* Kategorije — horizontal scroll */}
+              {availableCategories.length > 0 && (
+                <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
+                  <button
+                    onClick={() => setActiveCategory(null)}
+                    className={`pill px-3 py-1.5 text-[11px] shrink-0 ${
+                      activeCategory === null
+                        ? "bg-foreground text-background"
+                        : "bg-surface-2 text-muted-foreground hover:bg-surface-3"
+                    }`}
+                  >
+                    Sve
+                  </button>
+                  {availableCategories.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => setActiveCategory(c === activeCategory ? null : c)}
+                      className={`pill px-3 py-1.5 text-[11px] shrink-0 ${
+                        c === activeCategory
+                          ? "bg-foreground text-background"
+                          : "bg-surface-2 text-muted-foreground hover:bg-surface-3"
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="text-[10px] text-muted-foreground -mb-1">
+                {filteredFoods.length} {filteredFoods.length === 1 ? "namirnica" : "namirnica"}
+              </div>
+
+              <div className="overflow-y-auto flex-1 space-y-1 -mx-1 px-1">
+                {filteredFoods.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-8">
+                    Nema namirnica za odabrane filtere
+                  </p>
+                ) : (
+                  filteredFoods.map((f) => (
+                    <button
+                      key={f.id}
+                      onClick={() => selectFood(f)}
+                      className="w-full text-left p-3 rounded-lg hover:bg-surface-2 flex items-center gap-3 transition"
+                    >
+                      <div className="h-9 w-9 rounded-lg bg-gradient-brand-soft flex items-center justify-center shrink-0">
+                        <Apple className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-sm truncate">{f.name}</span>
+                          {f.is_vegan && (
+                            <span className="pill px-1.5 py-0 text-[9px] bg-success-soft text-success-soft-foreground">V</span>
+                          )}
+                          {f.is_gluten_free && (
+                            <span className="pill px-1.5 py-0 text-[9px] bg-primary-soft text-primary-soft-foreground">GF</span>
+                          )}
+                          {f.is_posno && (
+                            <span className="pill px-1.5 py-0 text-[9px] bg-warning-soft text-warning-soft-foreground">P</span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground truncate">
+                          {f.category && <span>{f.category} · </span>}
+                          {f.kcal_per_100g} kcal · P{f.protein_per_100g} U{f.carbs_per_100g} M{f.fat_per_100g} /100g
+                        </div>
+                      </div>
+                    </button>
+                  ))
+                )}
               </div>
             </>
           ) : (
@@ -555,6 +628,7 @@ const NutritionBuilder = () => {
                   {pickedFood.kcal_per_100g} kcal · P{pickedFood.protein_per_100g} U{pickedFood.carbs_per_100g} M{pickedFood.fat_per_100g} /100g
                 </div>
               </div>
+
               <div>
                 <Label htmlFor="grams">Količina (g)</Label>
                 <Input
@@ -565,7 +639,30 @@ const NutritionBuilder = () => {
                   className="mt-1.5"
                   autoFocus
                 />
+                {/* Brzi gram preseti */}
+                <div className="flex gap-1.5 mt-2 flex-wrap">
+                  {[50, 100, 150, 200].map((g) => (
+                    <button
+                      key={g}
+                      type="button"
+                      onClick={() => setPickedGrams(String(g))}
+                      className="pill px-2.5 py-1 text-[11px] bg-surface-2 hover:bg-surface-3 text-muted-foreground"
+                    >
+                      {g}g
+                    </button>
+                  ))}
+                  {pickedFood.serving_size_g && (
+                    <button
+                      type="button"
+                      onClick={() => setPickedGrams(String(pickedFood.serving_size_g))}
+                      className="pill px-2.5 py-1 text-[11px] bg-primary-soft text-primary-soft-foreground hover:bg-primary-soft/80"
+                    >
+                      1 porcija ({pickedFood.serving_size_g}g)
+                    </button>
+                  )}
+                </div>
               </div>
+
               {pickedGrams && parseFloat(pickedGrams) > 0 && (
                 <div className="text-center text-sm bg-gradient-brand-soft rounded-xl p-3">
                   <div className="font-bold text-lg text-primary">
