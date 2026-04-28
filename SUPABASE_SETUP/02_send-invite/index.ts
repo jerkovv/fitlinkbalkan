@@ -152,30 +152,37 @@ Deno.serve(async (req) => {
     );
 
     if (emailErr) {
-      // Rollback — obriši invite ako mejl nije poslat
-      await admin.from("invites").delete().eq("id", inv.id);
-
       const msg = emailErr.message?.toLowerCase() ?? "";
-      if (
+      const alreadyExists =
         msg.includes("already") ||
         msg.includes("registered") ||
-        msg.includes("exists")
-      ) {
-        return new Response(
-          JSON.stringify({
-            error:
-              "Korisnik sa ovim emailom već ima nalog. Zamoli ga da se uloguje pa ti pošalje ID.",
-          }),
-          {
-            status: 409,
+        msg.includes("exists");
+
+      if (alreadyExists) {
+        // User već postoji — pošalji magic link na isti /invite/:code URL.
+        // Kad klikne, biće ulogovan i Invite.tsx će ga vezati za trenera.
+        const { error: linkErr } = await admin.auth.admin.generateLink({
+          type: "magiclink",
+          email,
+          options: { redirectTo },
+        });
+
+        if (linkErr) {
+          await admin.from("invites").delete().eq("id", inv.id);
+          return new Response(JSON.stringify({ error: linkErr.message }), {
+            status: 500,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
+          });
+        }
+        // generateLink sa adminom šalje email automatski ako je SMTP podešen
+      } else {
+        // Pravi error — rollback
+        await admin.from("invites").delete().eq("id", inv.id);
+        return new Response(JSON.stringify({ error: emailErr.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
-      return new Response(JSON.stringify({ error: emailErr.message }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
     }
 
     // 3) Označi sent_at
