@@ -51,6 +51,18 @@ const Profile = () => {
       setBirthYear(a.birth_year != null ? String(a.birth_year) : "");
       setGender((a.gender as Gender) ?? "");
       setNotes(a.notes ?? "");
+
+      // Fetch trener
+      if (a.trainer_id) {
+        const { data: tr } = await supabase
+          .from("profiles")
+          .select("full_name, phone, email")
+          .eq("id", a.trainer_id)
+          .maybeSingle();
+        const t: any = tr;
+        if (t) setTrainer({ name: t.full_name ?? "Trener", phone: t.phone, email: t.email });
+      }
+
       setLoading(false);
     };
     load();
