@@ -235,10 +235,10 @@ const Calendar = () => {
         <div className="flex items-baseline justify-between">
           <div>
             <div className="eyebrow text-muted-foreground">
-              {isToday ? "Danas" : selectedDate.toLocaleDateString("sr-RS", { weekday: "long" })}
+              {isToday ? "Danas" : selectedDate.toLocaleDateString("sr-Latn-RS", { weekday: "long" })}
             </div>
             <div className="font-display text-xl font-bold">
-              {selectedDate.toLocaleDateString("sr-RS", { day: "numeric", month: "long" })}
+              {selectedDate.toLocaleDateString("sr-Latn-RS", { day: "numeric", month: "long" })}
             </div>
           </div>
           {slots.length > 0 && (

@@ -149,7 +149,7 @@ const AthletesList = () => {
       rows.map((r) => {
         const status = statusFromEnds(r.membership?.ends_on ?? null);
         const expiresLabel = r.membership?.ends_on
-          ? `do ${new Date(r.membership.ends_on).toLocaleDateString("sr-RS", { day: "2-digit", month: "short" })}`
+          ? `do ${new Date(r.membership.ends_on).toLocaleDateString("sr-Latn-RS", { day: "2-digit", month: "short" })}`
           : "Bez članarine";
         return { ...r, status, expiresLabel };
       }),
@@ -339,7 +339,7 @@ const AthletesList = () => {
                       ? new Date(p.expires_at).getTime() < Date.now()
                       : false;
                     const sentLabel = p.sent_at
-                      ? new Date(p.sent_at).toLocaleDateString("sr-RS", {
+                      ? new Date(p.sent_at).toLocaleDateString("sr-Latn-RS", {
                           day: "2-digit", month: "short",
                         })
                       : "—";

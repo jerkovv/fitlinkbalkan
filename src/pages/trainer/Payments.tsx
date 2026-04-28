@@ -128,7 +128,7 @@ const Payments = () => {
                     </div>
                     <div className="flex items-center gap-2 mt-1.5">
                       <span className="font-display text-[16px] font-bold tracking-tight text-primary tnum">
-                        {p.price_rsd.toLocaleString("sr-RS")} RSD
+                        {p.price_rsd.toLocaleString("sr-Latn-RS")} RSD
                       </span>
                       <Chip tone={p.payment_method === "cash" ? "warning" : "info"}>
                         {p.payment_method === "cash" ? "Keš" : "Račun"}

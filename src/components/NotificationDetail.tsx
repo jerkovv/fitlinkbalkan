@@ -37,7 +37,7 @@ const KIND_META: Record<
 
 const formatDateTime = (iso: string) => {
   const d = new Date(iso);
-  return d.toLocaleString("sr-RS", {
+  return d.toLocaleString("sr-Latn-RS", {
     day: "2-digit", month: "2-digit", year: "numeric",
     hour: "2-digit", minute: "2-digit",
   });

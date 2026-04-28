@@ -171,7 +171,7 @@ const Packages = () => {
                       {p.sessions_count} treninga · {p.duration_days} dana
                     </div>
                     <div className="font-display text-[18px] font-bold tracking-tight text-primary mt-1 tnum">
-                      {p.price_rsd.toLocaleString("sr-RS")} RSD
+                      {p.price_rsd.toLocaleString("sr-Latn-RS")} RSD
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-2">

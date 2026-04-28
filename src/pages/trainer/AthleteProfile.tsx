@@ -581,7 +581,7 @@ const AthleteProfile = () => {
               {athlete.height_cm && <Chip tone="info">{athlete.height_cm} cm</Chip>}
             </div>
             <div className="text-[13px] text-muted-foreground">
-              Pridružen {new Date(athlete.joined_at).toLocaleDateString("sr-RS")}
+              Pridružen {new Date(athlete.joined_at).toLocaleDateString("sr-Latn-RS")}
             </div>
           </div>
         </div>
@@ -627,7 +627,7 @@ const AthleteProfile = () => {
                 <div className="font-semibold text-[15px] truncate">{activeProgram.name}</div>
                 <div className="text-[12px] text-muted-foreground">
                   {activeProgram.total_days} {activeProgram.total_days === 1 ? "dan" : "dana"} · Dodeljen{" "}
-                  {new Date(activeProgram.assigned_at).toLocaleDateString("sr-RS")}
+                  {new Date(activeProgram.assigned_at).toLocaleDateString("sr-Latn-RS")}
                 </div>
               </div>
             </div>
@@ -666,7 +666,7 @@ const AthleteProfile = () => {
                   {latestMetric.body_fat_pct ? ` · ${latestMetric.body_fat_pct}% masti` : ""}
                 </div>
                 <div className="text-[12px] text-muted-foreground">
-                  {new Date(latestMetric.recorded_on).toLocaleDateString("sr-RS")}
+                  {new Date(latestMetric.recorded_on).toLocaleDateString("sr-Latn-RS")}
                   {metricsHistory.length > 1 && ` · ${metricsHistory.length} merenja`}
                 </div>
               </div>
@@ -714,7 +714,7 @@ const AthleteProfile = () => {
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-[14px]">Dan {s.day_number}</div>
                       <div className="text-[11.5px] text-muted-foreground">
-                        {s.completed_at ? new Date(s.completed_at).toLocaleDateString("sr-RS") : "—"}
+                        {s.completed_at ? new Date(s.completed_at).toLocaleDateString("sr-Latn-RS") : "—"}
                         {s.duration_seconds ? ` · ${Math.round(s.duration_seconds / 60)} min` : ""}
                       </div>
                     </div>
@@ -750,7 +750,7 @@ const AthleteProfile = () => {
                 <div className="font-semibold text-[15px] truncate">{activePlan.name}</div>
                 <div className="text-[12px] text-muted-foreground">
                   {activePlan.target_kcal ? `${activePlan.target_kcal} kcal · ` : ""}
-                  Dodeljeno {new Date(activePlan.assigned_at).toLocaleDateString("sr-RS")}
+                  Dodeljeno {new Date(activePlan.assigned_at).toLocaleDateString("sr-Latn-RS")}
                 </div>
               </div>
               <button
@@ -795,7 +795,7 @@ const AthleteProfile = () => {
                   {activeMembership.sessions_total != null
                     ? `${activeMembership.sessions_used} / ${activeMembership.sessions_total} iskorišćeno`
                     : "Bez limita treninga"}
-                  {activeMembership.ends_on && ` · do ${new Date(activeMembership.ends_on).toLocaleDateString("sr-RS", { day: "numeric", month: "short" })}`}
+                  {activeMembership.ends_on && ` · do ${new Date(activeMembership.ends_on).toLocaleDateString("sr-Latn-RS", { day: "numeric", month: "short" })}`}
                 </div>
               </div>
             </div>

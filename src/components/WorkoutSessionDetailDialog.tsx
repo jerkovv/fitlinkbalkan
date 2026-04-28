@@ -42,7 +42,7 @@ type ExerciseRow = {
 
 const formatDate = (iso: string | null) => {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("sr-RS", {
+  return new Date(iso).toLocaleDateString("sr-Latn-RS", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -189,7 +189,7 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
                 <div className="text-[11px] text-muted-foreground">Datum</div>
                 <div className="text-[12.5px] font-bold tnum mt-0.5">
                   {meta.completed_at
-                    ? new Date(meta.completed_at).toLocaleDateString("sr-RS", {
+                    ? new Date(meta.completed_at).toLocaleDateString("sr-Latn-RS", {
                         day: "numeric",
                         month: "short",
                       })
@@ -219,7 +219,7 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
                   Ukupna tonaža
                 </div>
                 <div className="font-display text-[26px] font-bold tracking-tighter tnum text-primary mt-0.5">
-                  {totalVolume.toLocaleString("sr-RS")} kg
+                  {totalVolume.toLocaleString("sr-Latn-RS")} kg
                 </div>
               </div>
               <Dumbbell className="h-7 w-7 text-primary/60" />
