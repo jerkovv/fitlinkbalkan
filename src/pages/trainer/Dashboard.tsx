@@ -11,7 +11,7 @@ import { UserMenu } from "@/components/UserMenu";
 import { NotificationBell } from "@/components/NotificationBell";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
+
 
 type SessionRow = {
   id: string;
