@@ -257,10 +257,22 @@ const Invite = () => {
           <Dumbbell className="h-5 w-5" strokeWidth={2.25} />
         </div>
         <h1 className="font-display text-[32px] leading-tight font-bold tracking-tightest">
-          {magicSession ? "Skoro gotovo!" : "Pozvan si!"}
+          {magicSession
+            ? "Skoro gotovo!"
+            : signupSource === "public_landing" || signupSource === "referral"
+            ? "Kreiraj nalog"
+            : "Pozvan si!"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          {trainerName} te poziva da postaneš njegov vežbač na FitLink-u.
+          {magicSession ? (
+            <>Postavi lozinku da završiš pristup nalogu kod <span className="font-semibold text-foreground">{trainerName || "trenera"}</span>.</>
+          ) : signupSource === "public_landing" ? (
+            <>Postani vežbač kod <span className="font-semibold text-foreground">{trainerName || "trenera"}</span> na FitLink-u.</>
+          ) : signupSource === "referral" ? (
+            <>Prijatelj te je preporučio za trening kod <span className="font-semibold text-foreground">{trainerName || "trenera"}</span>.</>
+          ) : (
+            <><span className="font-semibold text-foreground">{trainerName || "Trener"}</span> te poziva da postaneš njegov vežbač na FitLink-u.</>
+          )}
         </p>
       </div>
 
