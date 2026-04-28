@@ -15,7 +15,19 @@ import { toast } from "sonner";
 
 type Day = { id: string; day_number: number; name: string };
 type Meal = { id: string; day_id: string; meal_order: number; name: string; time_hint: string | null };
-type Food = { id: string; name: string; category: string | null; kcal_per_100g: number; protein_per_100g: number; carbs_per_100g: number; fat_per_100g: number };
+type Food = {
+  id: string;
+  name: string;
+  category: string | null;
+  kcal_per_100g: number;
+  protein_per_100g: number;
+  carbs_per_100g: number;
+  fat_per_100g: number;
+  serving_size_g: number | null;
+  is_vegan: boolean | null;
+  is_gluten_free: boolean | null;
+  is_posno: boolean | null;
+};
 type MealItem = {
   id: string; meal_id: string; food_id: string; grams: number; item_order: number;
   food_items: Food | null;
