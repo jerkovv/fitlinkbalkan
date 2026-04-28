@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Avatar, Chip } from "@/components/ui-bits";
-import { Search, ChevronRight, Loader2, UserPlus, Mail, Loader } from "lucide-react";
+import { Search, ChevronRight, Loader2, UserPlus, Mail, Loader, Clock, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -21,6 +21,15 @@ type AthleteRow = {
   joined_at: string;
   profile: { full_name: string | null } | null;
   membership: { plan_name: string; status: string; ends_on: string | null } | null;
+};
+
+type PendingInvite = {
+  id: string;
+  email: string;
+  full_name: string | null;
+  code: string;
+  sent_at: string | null;
+  expires_at: string | null;
 };
 
 const goalLabel: Record<string, string> = {
@@ -64,6 +73,8 @@ const AthletesList = () => {
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<AthleteRow[]>([]);
+  const [pending, setPending] = useState<PendingInvite[]>([]);
+  const [resendingId, setResendingId] = useState<string | null>(null);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
 
   const load = async () => {
@@ -117,6 +128,16 @@ const AthletesList = () => {
       .eq("id", user.id)
       .maybeSingle();
     setInviteCode((tr as any)?.invite_code ?? null);
+
+    // Pending email pozivnice (poslate, čekamo prihvatanje)
+    const { data: inv } = await supabase
+      .from("invites")
+      .select("id, email, full_name, code, sent_at, expires_at")
+      .eq("trainer_id", user.id)
+      .eq("status", "pending")
+      .not("email", "is", null)
+      .order("sent_at", { ascending: false });
+    setPending(((inv ?? []) as any[]) as PendingInvite[]);
 
     setLoading(false);
   };
@@ -200,6 +221,43 @@ const AthletesList = () => {
     }
   };
 
+  const resendInvite = async (inv: PendingInvite) => {
+    if (!inv.email) return;
+    setResendingId(inv.id);
+    try {
+      // Otkazi stari invite
+      await supabase.from("invites").update({ status: "cancelled" }).eq("id", inv.id);
+
+      // Pošalji novi sa istim podacima
+      const { data, error } = await supabase.functions.invoke("send-invite", {
+        body: { full_name: inv.full_name ?? inv.email, email: inv.email },
+      });
+
+      if (error) {
+        let serverMsg: string | null = null;
+        const ctx: any = (error as any).context;
+        if (ctx && typeof ctx.json === "function") {
+          try {
+            const j = await ctx.json();
+            serverMsg = j?.error ?? null;
+          } catch { /* ignore */ }
+        }
+        throw new Error(serverMsg || error.message || "Greška pri slanju");
+      }
+      if ((data as any)?.error) throw new Error((data as any).error);
+
+      toast.success(`Pozivnica ponovo poslata na ${inv.email}`);
+      await load();
+    } catch (e: any) {
+      toast.error(e.message ?? "Greška pri ponovnom slanju");
+      // Vrati stari invite na pending da se ne izgubi
+      await supabase.from("invites").update({ status: "pending" }).eq("id", inv.id);
+      await load();
+    } finally {
+      setResendingId(null);
+    }
+  };
+
   return (
     <>
       <PhoneShell hasBottomNav title="Vežbači" eyebrow={`${rows.length} ukupno`}>
@@ -268,6 +326,60 @@ const AthletesList = () => {
                 </li>
               )}
             </ul>
+
+            {/* Pending pozivnice */}
+            {pending.length > 0 && (
+              <div className="space-y-2 pt-2">
+                <div className="eyebrow text-muted-foreground px-1">
+                  Poslate pozivnice · {pending.length}
+                </div>
+                <ul className="space-y-2">
+                  {pending.map((p) => {
+                    const expired = p.expires_at
+                      ? new Date(p.expires_at).getTime() < Date.now()
+                      : false;
+                    const sentLabel = p.sent_at
+                      ? new Date(p.sent_at).toLocaleDateString("sr-RS", {
+                          day: "2-digit", month: "short",
+                        })
+                      : "—";
+                    return (
+                      <li
+                        key={p.id}
+                        className="flex items-center gap-3 card-premium px-4 py-3"
+                      >
+                        <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[14.5px] font-semibold tracking-tight truncate">
+                            {p.full_name ?? p.email}
+                          </div>
+                          <div className="text-[12px] text-muted-foreground mt-0.5 truncate">
+                            {p.email} · {expired ? "istekla" : `poslato ${sentLabel}`}
+                          </div>
+                        </div>
+                        <Chip tone={expired ? "danger" : "warning"}>
+                          {expired ? "Istekla" : "Čeka"}
+                        </Chip>
+                        <button
+                          onClick={() => resendInvite(p)}
+                          disabled={resendingId === p.id}
+                          className="h-9 w-9 rounded-full bg-primary-soft/60 hover:bg-primary-soft text-primary flex items-center justify-center transition disabled:opacity-50"
+                          title="Pošalji ponovo"
+                        >
+                          {resendingId === p.id ? (
+                            <Loader className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
 
             <button
               onClick={() => setInviteOpen(true)}
