@@ -701,20 +701,27 @@ const AthleteProfile = () => {
         {sessionLogs.length > 0 ? (
           <div className="space-y-2">
             {sessionLogs.map((s) => (
-              <Card key={s.id} className="p-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-success-soft text-success-soft-foreground flex items-center justify-center shrink-0">
-                    <Activity className="h-4 w-4" strokeWidth={2.25} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-[14px]">Dan {s.day_number}</div>
-                    <div className="text-[11.5px] text-muted-foreground">
-                      {s.completed_at ? new Date(s.completed_at).toLocaleDateString("sr-RS") : "—"}
-                      {s.duration_seconds ? ` · ${Math.round(s.duration_seconds / 60)} min` : ""}
+              <button
+                key={s.id}
+                onClick={() => setOpenSessionId(s.id)}
+                className="block w-full text-left active:scale-[0.99] transition"
+              >
+                <Card className="p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-success-soft text-success-soft-foreground flex items-center justify-center shrink-0">
+                      <Activity className="h-4 w-4" strokeWidth={2.25} />
                     </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-[14px]">Dan {s.day_number}</div>
+                      <div className="text-[11.5px] text-muted-foreground">
+                        {s.completed_at ? new Date(s.completed_at).toLocaleDateString("sr-RS") : "—"}
+                        {s.duration_seconds ? ` · ${Math.round(s.duration_seconds / 60)} min` : ""}
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                   </div>
-                </div>
-              </Card>
+                </Card>
+              </button>
             ))}
           </div>
         ) : (
