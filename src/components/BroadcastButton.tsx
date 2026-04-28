@@ -60,15 +60,21 @@ export const BroadcastButton = ({ fab = false }: Props) => {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {fab ? (
-          <button
-            aria-label="Pošalji obaveštenje svima"
-            className={cn(
-              "fixed bottom-28 right-5 z-20 h-14 px-5 rounded-full",
-              "bg-gradient-brand text-white shadow-brand font-bold text-[13px] tracking-tight",
-              "inline-flex items-center gap-2 active:scale-95 transition",
-              "max-w-[440px]:right-[max(20px,calc((100vw-440px)/2+20px))]",
-            )}
-          >
+          <div className="fixed inset-x-0 bottom-28 z-20 pointer-events-none flex justify-center">
+            <div className="w-full max-w-[440px] px-5 flex justify-end">
+              <button
+                aria-label="Pošalji obaveštenje svima"
+                className={cn(
+                  "pointer-events-auto h-14 px-5 rounded-full",
+                  "bg-gradient-brand text-white shadow-brand font-bold text-[13px] tracking-tight",
+                  "inline-flex items-center gap-2 active:scale-95 transition",
+                )}
+              >
+                <Megaphone className="h-4 w-4" strokeWidth={2.5} />
+                Obaveštenje
+              </button>
+            </div>
+          </div>
             <Megaphone className="h-4 w-4" strokeWidth={2.5} />
             Obaveštenje
           </button>
