@@ -48,6 +48,7 @@ const Booking = () => {
   const [loading, setLoading] = useState(true);
   const [actingKey, setActingKey] = useState<string | null>(null);
   const [showAttendees, setShowAttendees] = useState<boolean>(false);
+  const [cancelCutoff, setCancelCutoff] = useState<number>(0);
   const [attendeesSlot, setAttendeesSlot] = useState<Slot | null>(null);
   const [attendees, setAttendees] = useState<{ athlete_id: string; full_name: string; is_me: boolean }[]>([]);
   const [attendeesLoading, setAttendeesLoading] = useState(false);
@@ -85,9 +86,10 @@ const Booking = () => {
             .order("ends_on", { ascending: false })
             .limit(1)
             .maybeSingle(),
-          supabase.from("trainers").select("show_attendees_to_athletes").eq("id", tid).maybeSingle(),
+          supabase.from("trainers").select("show_attendees_to_athletes, cancel_cutoff_hours").eq("id", tid).maybeSingle(),
         ]);
         setShowAttendees(!!(tr as any)?.show_attendees_to_athletes);
+        setCancelCutoff(((tr as any)?.cancel_cutoff_hours as number) ?? 0);
         setTrainerName((prof as any)?.full_name ?? "Trener");
         const m: any = mem;
         const todayISO = toIsoDate(today);
