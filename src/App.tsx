@@ -30,7 +30,7 @@ import TrainerProfile from "./pages/trainer/Profile.tsx";
 import TrainerPackages from "./pages/trainer/Packages.tsx";
 import TrainerPayments from "./pages/trainer/Payments.tsx";
 
-import AthleteOnboarding from "./pages/athlete/Onboarding.tsx";
+
 import AthleteHome from "./pages/athlete/Home.tsx";
 import AthleteWorkout from "./pages/athlete/ActiveWorkout.tsx";
 import AthleteWorkoutHome from "./pages/athlete/WorkoutHome.tsx";
@@ -79,7 +79,6 @@ const App = () => (
             <Route path="/trener/uplate" element={trainer(<TrainerPayments />)} />
 
             {/* Vežbač — protected */}
-            <Route path="/vezbac/onboarding" element={athlete(<AthleteOnboarding />)} />
             <Route path="/vezbac" element={athlete(<AthleteHome />)} />
             <Route path="/vezbac/trening" element={athlete(<AthleteWorkoutHome />)} />
             <Route path="/vezbac/trening/:dayId" element={athlete(<AthleteWorkout />)} />
