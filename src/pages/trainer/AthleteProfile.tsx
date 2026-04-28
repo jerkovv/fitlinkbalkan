@@ -140,7 +140,7 @@ const AthleteProfile = () => {
         .eq("athlete_id", id)
         .not("completed_at", "is", null)
         .order("completed_at", { ascending: false })
-        .limit(5),
+        .limit(20),
       supabase
         .from("body_metrics")
         .select("id, recorded_on, weight_kg, body_fat_pct")
