@@ -37,7 +37,7 @@ const Index = () => {
           </p>
 
           <Link
-            to="/trener/onboarding"
+            to="/auth"
             className="group block card-premium-hover p-5"
           >
             <div className="flex items-center gap-4">
@@ -56,10 +56,7 @@ const Index = () => {
             </div>
           </Link>
 
-          <Link
-            to="/vezbac/onboarding"
-            className="group block card-premium-hover p-5"
-          >
+          <div className="block p-5 rounded-2xl bg-surface border border-hairline opacity-90">
             <div className="flex items-center gap-4">
               <div className="h-12 w-12 rounded-2xl bg-athlete-soft text-athlete-soft-foreground flex items-center justify-center">
                 <Dumbbell className="h-5 w-5" strokeWidth={2.25} />
@@ -69,11 +66,14 @@ const Index = () => {
                   Ja sam Vežbač
                 </div>
                 <div className="text-[13px] text-muted-foreground mt-0.5">
-                  Pratim trening i napredak
+                  Potreban ti je poziv od trenera
                 </div>
               </div>
-              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition" />
             </div>
+          </div>
+
+          <Link to="/auth" className="block text-[12px] text-center text-primary hover:underline pt-2">
+            Već imaš nalog? Uloguj se
           </Link>
 
           <p className="pt-4 text-[11px] text-center text-muted-foreground/70">
