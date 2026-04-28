@@ -99,6 +99,7 @@ const Notifications = () => {
           </ul>
         )}
       </PhoneShell>
+      <BroadcastButton fab />
       <BottomNav role="trainer" />
     </>
   );
