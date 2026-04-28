@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, UserRound, Phone, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 type Goal = "lose_weight" | "gain_muscle" | "endurance" | "mobility" | "general";
