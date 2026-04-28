@@ -95,6 +95,14 @@
     --shadow-success: 0 8px 24px -8px hsl(152 65% 38% / 0.35);
     --shadow-glow: 0 0 60px hsl(268 80% 56% / 0.18);
 
+    /* Session type colors (booking) — soft bg + strong fg */
+    --session-violet-bg: 268 100% 97%;   --session-violet-fg: 268 75% 45%;
+    --session-indigo-bg: 240 100% 97%;   --session-indigo-fg: 240 75% 50%;
+    --session-emerald-bg: 152 70% 95%;   --session-emerald-fg: 152 70% 32%;
+    --session-amber-bg:   38 100% 95%;   --session-amber-fg:   30 90% 42%;
+    --session-rose-bg:   348 100% 96%;   --session-rose-fg:   348 75% 45%;
+    --session-sky-bg:    200 100% 95%;   --session-sky-fg:    200 80% 38%;
+
     /* Sidebar */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 240 18% 10%;

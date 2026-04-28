@@ -17,6 +17,7 @@ import TrainerAthletes from "./pages/trainer/AthletesList.tsx";
 import TrainerAthleteProfile from "./pages/trainer/AthleteProfile.tsx";
 import TrainerProgram from "./pages/trainer/ProgramBuilder.tsx";
 import TrainerCalendar from "./pages/trainer/Calendar.tsx";
+import TrainerSessionSettings from "./pages/trainer/SessionSettings.tsx";
 import TrainerPayment from "./pages/trainer/Payment.tsx";
 import TrainerFinances from "./pages/trainer/Finances.tsx";
 import TrainerExerciseLibrary from "./pages/trainer/ExerciseLibrary.tsx";
@@ -57,6 +58,7 @@ const App = () => (
             <Route path="/trener/vezbaci/:id" element={trainer(<TrainerAthleteProfile />)} />
             <Route path="/trener/program" element={trainer(<TrainerProgram />)} />
             <Route path="/trener/kalendar" element={trainer(<TrainerCalendar />)} />
+            <Route path="/trener/termini" element={trainer(<TrainerSessionSettings />)} />
             <Route path="/trener/uplata/:id" element={trainer(<TrainerPayment />)} />
             <Route path="/trener/finansije" element={trainer(<TrainerFinances />)} />
             <Route path="/trener/biblioteka" element={trainer(<TrainerExerciseLibrary />)} />
