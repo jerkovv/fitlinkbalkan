@@ -82,26 +82,14 @@ export const NotificationBell = () => {
   const { user, role } = useAuth();
   const { items, unreadCount, markRead, markAllRead } = useNotifications();
   const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<AppNotification | null>(null);
 
   const preview = items.slice(0, 6);
 
   const handleItemClick = async (n: AppNotification) => {
     if (!n.is_read) await markRead(n.id);
     setOpen(false);
-    // Trener
-    if (n.recipient_role === "trainer") {
-      if (n.kind === "booking_created" || n.kind === "booking_canceled") {
-        navigate("/trener/kalendar");
-      } else if (n.kind === "workout_completed" || n.kind === "message") {
-        navigate(`/trener/vezbaci/${n.athlete_id}`);
-      }
-      return;
-    }
-    // Vežbač
-    if (n.kind === "program_assigned") navigate("/vezbac");
-    else if (n.kind === "nutrition_assigned") navigate("/vezbac/ishrana");
-    else if (n.kind === "membership_expiring" || n.kind === "membership_expired") navigate("/vezbac/clanarina");
-    // message_from_trainer ostaje samo prikaz u listi
+    setSelected(n);
   };
 
   // Detect role iz useAuth
