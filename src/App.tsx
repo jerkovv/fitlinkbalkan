@@ -68,7 +68,7 @@ const App = () => (
             {/* Vežbač — protected */}
             <Route path="/vezbac/onboarding" element={athlete(<AthleteOnboarding />)} />
             <Route path="/vezbac" element={athlete(<AthleteHome />)} />
-            <Route path="/vezbac/trening" element={athlete(<AthleteWorkout />)} />
+            <Route path="/vezbac/trening/:dayId" element={athlete(<AthleteWorkout />)} />
             <Route path="/vezbac/rezervacija" element={athlete(<AthleteBooking />)} />
             <Route path="/vezbac/napredak" element={athlete(<AthleteProgress />)} />
             <Route path="/vezbac/clanarina" element={athlete(<AthleteMembership />)} />
