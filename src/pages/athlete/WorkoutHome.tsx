@@ -6,15 +6,7 @@ import { Card } from "@/components/ui-bits";
 import { Loader2, Play, Dumbbell, History } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-
-type NextDay = {
-  assigned_program_id: string;
-  program_name: string;
-  day_id: string;
-  day_number: number;
-  day_name: string;
-  total_days: number;
-};
+import { getNextWorkoutDay, type NextWorkoutDay } from "@/lib/workouts";
 
 type RecentLog = {
   id: string;
@@ -27,7 +19,7 @@ const WorkoutHome = () => {
   const { user } = useAuth();
   const nav = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [next, setNext] = useState<NextDay | null>(null);
+  const [next, setNext] = useState<NextWorkoutDay | null>(null);
   const [exerciseCount, setExerciseCount] = useState(0);
   const [recent, setRecent] = useState<RecentLog[]>([]);
 
@@ -36,10 +28,7 @@ const WorkoutHome = () => {
     const load = async () => {
       setLoading(true);
 
-      const { data: nd } = await supabase.rpc("get_next_workout_day", {
-        p_athlete_id: user.id,
-      });
-      const nextDay = (nd as any[])?.[0] as NextDay | undefined;
+      const nextDay = await getNextWorkoutDay(user.id);
       setNext(nextDay ?? null);
 
       if (nextDay) {
