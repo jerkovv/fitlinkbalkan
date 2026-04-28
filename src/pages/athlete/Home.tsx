@@ -103,8 +103,15 @@ const Home = () => {
         eyebrow="Dobro došao nazad"
         title={
           <h1 className="font-display text-[34px] leading-[1.05] font-bold tracking-tightest">
-            Zdravo, {firstName}
-            <span className="text-gradient-brand"> 💪</span>
+            Zdravo,{" "}
+            {profileLoaded ? (
+              <>
+                {firstName}
+                <span className="text-gradient-brand"> 💪</span>
+              </>
+            ) : (
+              <span className="inline-block h-7 w-32 align-middle rounded-md bg-muted animate-pulse" />
+            )}
           </h1>
         }
         rightSlot={
