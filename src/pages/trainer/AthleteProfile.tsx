@@ -220,6 +220,56 @@ const AthleteProfile = () => {
     }
   };
 
+  const copyProgramContent = async (templateId: string, assignedProgramId: string): Promise<boolean> => {
+    const { data: existingDays, error: existingErr } = await supabase
+      .from("assigned_program_days")
+      .select("id", { count: "exact", head: true })
+      .eq("assigned_program_id", assignedProgramId);
+    if (existingErr) { toast.error(existingErr.message); return false; }
+    if ((existingDays as any) || false) return true;
+
+    const { count } = await supabase
+      .from("assigned_program_days")
+      .select("id", { count: "exact", head: true })
+      .eq("assigned_program_id", assignedProgramId);
+    if ((count ?? 0) > 0) return true;
+
+    const { data: tDays } = await supabase
+      .from("program_template_days")
+      .select("id, day_number, name")
+      .eq("template_id", templateId)
+      .order("day_number");
+    const days: any[] = (tDays as any[]) ?? [];
+    if (days.length === 0) { toast.error("Program nema nijedan dan. Dodaj bar jedan dan."); return false; }
+
+    const { data: tExs } = await supabase
+      .from("program_template_exercises")
+      .select("day_id, exercise_id, position, sets, reps, weight_kg, rest_seconds")
+      .in("day_id", days.map((d) => d.id))
+      .order("position");
+
+    const { data: newDays, error: dErr } = await supabase
+      .from("assigned_program_days")
+      .insert(days.map((d) => ({ assigned_program_id: assignedProgramId, day_number: d.day_number, name: d.name })) as any)
+      .select("id, day_number");
+    if (dErr) { toast.error(dErr.message); return false; }
+
+    const dayMap = new Map<string, string>();
+    days.forEach((oldDay) => {
+      const newDay = (newDays as any[]).find((d) => d.day_number === oldDay.day_number);
+      if (newDay) dayMap.set(oldDay.id, newDay.id);
+    });
+
+    const exInserts = ((tExs as any[]) ?? [])
+      .map((e) => ({ day_id: dayMap.get(e.day_id), exercise_id: e.exercise_id, position: e.position, sets: e.sets, reps: e.reps, weight_kg: e.weight_kg, rest_seconds: e.rest_seconds }))
+      .filter((e) => e.day_id);
+    if (exInserts.length) {
+      const { error: eErr } = await supabase.from("assigned_program_exercises").insert(exInserts as any);
+      if (eErr) { toast.error(eErr.message); return false; }
+    }
+    return true;
+  };
+
   const assignProgramFallback = async (templateId: string): Promise<string | null> => {
     if (!user || !id) return null;
     // 1) Učitaj template + dane + vežbe
