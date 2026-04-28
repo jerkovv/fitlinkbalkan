@@ -95,6 +95,11 @@ const Notifications = () => {
           </ul>
         )}
       </PhoneShell>
+      <NotificationDetail
+        notification={selected}
+        open={!!selected}
+        onOpenChange={(o) => !o && setSelected(null)}
+      />
       <BroadcastButton fab />
       <BottomNav role="trainer" />
     </>
