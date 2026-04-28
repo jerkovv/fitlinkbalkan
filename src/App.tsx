@@ -27,6 +27,8 @@ import TrainerNutritionTemplates from "./pages/trainer/NutritionTemplates.tsx";
 import TrainerNutritionBuilder from "./pages/trainer/NutritionBuilder.tsx";
 import TrainerNotifications from "./pages/trainer/Notifications.tsx";
 import TrainerProfile from "./pages/trainer/Profile.tsx";
+import TrainerPackages from "./pages/trainer/Packages.tsx";
+import TrainerPayments from "./pages/trainer/Payments.tsx";
 
 import AthleteOnboarding from "./pages/athlete/Onboarding.tsx";
 import AthleteHome from "./pages/athlete/Home.tsx";
