@@ -14,7 +14,6 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, Save, UserRound, Phone, Mail, Gift, Copy, Share2 } from "lucide-react";
 import { toast } from "sonner";
-import { toast } from "sonner";
 
 type Goal = "lose_weight" | "gain_muscle" | "endurance" | "mobility" | "general";
 type Gender = "male" | "female" | "other";
