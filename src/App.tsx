@@ -75,6 +75,8 @@ const App = () => (
             <Route path="/trener/ishrana/:id" element={trainer(<TrainerNutritionBuilder />)} />
             <Route path="/trener/notifikacije" element={trainer(<TrainerNotifications />)} />
             <Route path="/trener/profil" element={trainer(<TrainerProfile />)} />
+            <Route path="/trener/paketi" element={trainer(<TrainerPackages />)} />
+            <Route path="/trener/uplate" element={trainer(<TrainerPayments />)} />
 
             {/* Vežbač — protected */}
             <Route path="/vezbac/onboarding" element={athlete(<AthleteOnboarding />)} />
