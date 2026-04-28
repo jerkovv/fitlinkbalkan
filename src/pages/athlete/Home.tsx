@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Card, SectionTitle, StatCard } from "@/components/ui-bits";
-import { Play, CalendarPlus, Apple, Loader2, Dumbbell } from "lucide-react";
+import { Play, CalendarPlus, Apple, Loader2, Dumbbell, UserRound } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import { MessageTrainerCard } from "@/components/MessageTrainerCard";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -121,6 +121,16 @@ const Home = () => {
           </div>
         }
       >
+        {trainerName && (
+          <div className="-mt-3 mb-1 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-2 border border-hairline self-start">
+            <div className="h-5 w-5 rounded-full bg-gradient-brand text-white flex items-center justify-center">
+              <UserRound className="h-3 w-3" strokeWidth={2.5} />
+            </div>
+            <span className="text-[12px] text-muted-foreground">
+              Trener: <span className="font-semibold text-foreground">{trainerName}</span>
+            </span>
+          </div>
+        )}
         {loading ? (
           <div className="flex justify-center py-16">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />

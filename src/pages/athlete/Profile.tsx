@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, UserRound, Phone, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 type Goal = "lose_weight" | "gain_muscle" | "endurance" | "mobility" | "general";
@@ -31,6 +31,7 @@ const Profile = () => {
   const [birthYear, setBirthYear] = useState<string>("");
   const [gender, setGender] = useState<Gender | "">("");
   const [notes, setNotes] = useState("");
+  const [trainer, setTrainer] = useState<{ name: string; phone: string | null; email: string | null } | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -50,6 +51,18 @@ const Profile = () => {
       setBirthYear(a.birth_year != null ? String(a.birth_year) : "");
       setGender((a.gender as Gender) ?? "");
       setNotes(a.notes ?? "");
+
+      // Fetch trener
+      if (a.trainer_id) {
+        const { data: tr } = await supabase
+          .from("profiles")
+          .select("full_name, phone")
+          .eq("id", a.trainer_id)
+          .maybeSingle();
+        const t: any = tr;
+        if (t) setTrainer({ name: t.full_name ?? "Trener", phone: t.phone, email: null });
+      }
+
       setLoading(false);
     };
     load();
@@ -111,6 +124,45 @@ const Profile = () => {
           </div>
         ) : (
           <>
+            {trainer && (
+              <Card className="p-5 bg-gradient-to-br from-primary/8 via-surface to-surface relative overflow-hidden">
+                <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full bg-gradient-brand opacity-10 blur-2xl" />
+                <div className="relative flex items-center gap-4">
+                  <div className="h-14 w-14 rounded-2xl bg-gradient-brand text-white flex items-center justify-center shadow-brand shrink-0">
+                    <UserRound className="h-6 w-6" strokeWidth={2.25} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
+                      Tvoj trener
+                    </div>
+                    <div className="font-display text-[20px] font-bold tracking-tightest leading-tight mt-0.5 truncate">
+                      {trainer.name}
+                    </div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5">
+                      {trainer.phone && (
+                        <a
+                          href={`tel:${trainer.phone}`}
+                          className="inline-flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground transition"
+                        >
+                          <Phone className="h-3 w-3" />
+                          {trainer.phone}
+                        </a>
+                      )}
+                      {trainer.email && (
+                        <a
+                          href={`mailto:${trainer.email}`}
+                          className="inline-flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground transition truncate"
+                        >
+                          <Mail className="h-3 w-3" />
+                          {trainer.email}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
+
             <Card className="p-5 space-y-4">
               <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 Osnovno
