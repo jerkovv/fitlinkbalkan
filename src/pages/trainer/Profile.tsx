@@ -191,34 +191,6 @@ const Profile = () => {
               </Card>
             </div>
 
-            {/* Invite code */}
-            {inviteCode && (
-              <Card className="p-4 bg-gradient-brand-soft border-0">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary mb-2">
-                  Tvoj invite kod
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 font-display text-[24px] font-bold tracking-[0.2em] text-foreground">
-                    {inviteCode}
-                  </div>
-                  <button
-                    onClick={copyInvite}
-                    className="h-10 w-10 rounded-xl bg-surface flex items-center justify-center hover:bg-surface-2 transition"
-                    aria-label="Kopiraj link"
-                  >
-                    {copied ? (
-                      <Check className="h-4 w-4 text-success" />
-                    ) : (
-                      <Copy className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </button>
-                </div>
-                <p className="text-[11px] text-muted-foreground mt-2">
-                  Pošalji vežbaču link da se poveže na tvoj nalog.
-                </p>
-              </Card>
-            )}
-
             {/* Osnovno */}
             <Card className="p-5 space-y-4">
               <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">

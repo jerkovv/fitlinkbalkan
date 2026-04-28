@@ -5,7 +5,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { Avatar, Card, Chip, SectionTitle, StatCard } from "@/components/ui-bits";
 import {
   Clock, ChevronRight, ClipboardList, Apple, Package, Wallet,
-  Calendar as CalIcon, Users, Settings, Copy, Check,
+  Calendar as CalIcon, Users, Settings,
 } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -37,8 +37,6 @@ const Dashboard = () => {
 
   const [trainerName, setTrainerName] = useState<string>("");
   const [studio, setStudio] = useState<string>("");
-  const [inviteCode, setInviteCode] = useState<string>("");
-  const [copied, setCopied] = useState(false);
 
   const [activeAthletes, setActiveAthletes] = useState(0);
   const [expiringSoon, setExpiringSoon] = useState(0);
@@ -56,13 +54,12 @@ const Dashboard = () => {
       // Trener profil
       const [{ data: profile }, { data: trainer }] = await Promise.all([
         supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
-        supabase.from("trainers").select("studio_name, invite_code").eq("id", user.id).maybeSingle(),
+        supabase.from("trainers").select("studio_name").eq("id", user.id).maybeSingle(),
       ]);
 
       if (!alive) return;
       setTrainerName((profile as any)?.full_name?.split(" ")[0] ?? "treneru");
       setStudio((trainer as any)?.studio_name ?? "Tvoj studio");
-      setInviteCode((trainer as any)?.invite_code ?? "");
 
       // Vežbači
       const { data: ath } = await supabase
@@ -222,7 +219,7 @@ const Dashboard = () => {
           )}
         </section>
 
-        {/* Studio + invite */}
+        {/* Studio */}
         <Card className="p-4 bg-gradient-brand-soft border-0">
           <div className="flex items-center gap-3">
             <Avatar
@@ -232,22 +229,8 @@ const Dashboard = () => {
             />
             <div className="flex-1 min-w-0">
               <div className="text-[14px] font-semibold tracking-tight truncate">{studio}</div>
-              <div className="text-[12px] text-muted-foreground">
-                Invite kod:{" "}
-                <span className="font-semibold text-foreground tracking-wider">
-                  {inviteCode || "—"}
-                </span>
-              </div>
+              <div className="text-[12px] text-muted-foreground">Tvoj studio</div>
             </div>
-            {inviteCode && (
-              <button
-                onClick={copyInvite}
-                className="h-9 w-9 rounded-xl bg-background/70 hover:bg-background flex items-center justify-center transition"
-                aria-label="Kopiraj invite kod"
-              >
-                {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
-              </button>
-            )}
           </div>
         </Card>
 
