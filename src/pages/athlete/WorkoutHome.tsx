@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
+import { AthleteOnboardingTour } from "@/components/AthleteOnboardingTour";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui-bits";
 import { Loader2, Play, Dumbbell, History, CalendarDays, Flame, AlertTriangle } from "lucide-react";
@@ -276,6 +277,7 @@ const WorkoutHome = () => {
         </section>
       </PhoneShell>
       <BottomNav role="athlete" />
+      <AthleteOnboardingTour />
     </>
   );
 };

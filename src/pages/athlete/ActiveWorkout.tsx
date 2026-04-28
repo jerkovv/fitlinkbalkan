@@ -3,7 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Button, Card, Chip } from "@/components/ui-bits";
-import { Check, Loader2, ChevronLeft, ChevronRight, RotateCcw, Trophy, HelpCircle } from "lucide-react";
+import { Check, Loader2, ChevronLeft, ChevronRight, RotateCcw, Trophy, HelpCircle, PlayCircle } from "lucide-react";
+import { VideoModal } from "@/components/VideoModal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   AlertDialog,
@@ -35,7 +36,7 @@ type ProgramExercise = {
   weight_kg: number | null;
   rest_seconds: number | null;
   exercise_id: string;
-  exercises: { name: string; primary_muscle: string | null } | null;
+  exercises: { name: string; primary_muscle: string | null; video_url: string | null } | null;
 };
 
 type SetEntry = {
@@ -62,6 +63,7 @@ const ActiveWorkout = () => {
   const [day, setDay] = useState<DayInfo | null>(null);
   const [exercises, setExercises] = useState<ProgramExercise[]>([]);
   const [sessionLogId, setSessionLogId] = useState<string | null>(null);
+  const [videoOpen, setVideoOpen] = useState(false);
   const [setsByEx, setSetsByEx] = useState<Record<string, SetEntry[]>>({});
   const [currentIdx, setCurrentIdx] = useState(0);
   const [alreadyDoneToday, setAlreadyDoneToday] = useState<{ open: boolean; completedAt: string | null }>({
@@ -102,7 +104,7 @@ const ActiveWorkout = () => {
 
       const { data: exData } = await supabase
         .from("assigned_program_exercises")
-        .select("id, position, sets, reps, weight_kg, rest_seconds, exercise_id, exercises(name, primary_muscle)")
+        .select("id, position, sets, reps, weight_kg, rest_seconds, exercise_id, exercises(name, primary_muscle, video_url)")
         .eq("day_id", dayId)
         .order("position", { ascending: true });
 
@@ -336,8 +338,17 @@ const ActiveWorkout = () => {
             <ChevronLeft className="h-4 w-4" />
           </button>
           <div className="flex-1 text-center">
-            <div className="font-display text-[20px] font-bold tracking-tighter leading-tight">
+            <div className="font-display text-[20px] font-bold tracking-tighter leading-tight inline-flex items-center gap-2">
               {current.exercises?.name ?? "Vežba"}
+              {current.exercises?.video_url && (
+                <button
+                  onClick={() => setVideoOpen(true)}
+                  aria-label="Pogledaj demo"
+                  className="h-7 w-7 rounded-full bg-primary-soft text-primary flex items-center justify-center active:scale-95 transition"
+                >
+                  <PlayCircle className="h-4 w-4" strokeWidth={2.4} />
+                </button>
+              )}
             </div>
             <div className="text-[12.5px] text-muted-foreground">
               {current.sets} setova · {current.reps ?? "—"} reps
@@ -522,6 +533,15 @@ const ActiveWorkout = () => {
         )}
       </PhoneShell>
       <BottomNav role="athlete" />
+
+      {current?.exercises?.video_url && (
+        <VideoModal
+          url={current.exercises.video_url}
+          title={current.exercises.name}
+          open={videoOpen}
+          onOpenChange={setVideoOpen}
+        />
+      )}
 
       <AlertDialog
         open={alreadyDoneToday.open}
