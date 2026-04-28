@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   Apple, ClipboardList, Wallet, MessageSquare, Phone, Loader2, Plus, X, Check,
+  Dumbbell, TrendingUp, Activity, Scale,
 } from "lucide-react";
 import { toast } from "sonner";
 
