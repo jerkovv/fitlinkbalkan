@@ -99,6 +99,7 @@ export const NotificationBell = () => {
     : "/trener/notifikacije";
 
   return (
+    <>
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <button
@@ -161,5 +162,11 @@ export const NotificationBell = () => {
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
+    <NotificationDetail
+      notification={selected}
+      open={!!selected}
+      onOpenChange={(o) => !o && setSelected(null)}
+    />
+    </>
   );
 };
