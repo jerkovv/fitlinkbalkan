@@ -192,14 +192,30 @@ const Invite = () => {
       if (error) throw error;
 
       if (data.user) {
-        await supabase
-          .from("invites")
-          .update({
-            status: "accepted",
-            used_by: data.user.id,
-            referred_by_athlete_id: referredBy || null,
-          } as any)
-          .eq("code", code!);
+        // Eksplicitni upsert role/athlete (handle_new_user trigger hvata samo invite-email flow)
+        await supabase.from("user_roles").upsert({
+          user_id: data.user.id,
+          role: "athlete",
+        } as any);
+
+        await supabase.from("athletes").upsert({
+          id: data.user.id,
+          trainer_id: trainerId,
+          goal: "general",
+          referred_by_athlete_id: referredBy || null,
+          signup_source: signupSource,
+        } as any);
+
+        if (hasInviteRow) {
+          await supabase
+            .from("invites")
+            .update({
+              status: "accepted",
+              used_by: data.user.id,
+              referred_by_athlete_id: referredBy || null,
+            } as any)
+            .eq("code", code!);
+        }
       }
 
       toast.success("Nalog kreiran! Proveri email za potvrdu.");
