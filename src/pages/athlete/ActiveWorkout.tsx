@@ -302,9 +302,30 @@ const ActiveWorkout = () => {
         <Card className="p-4 overflow-hidden">
           <div className="grid grid-cols-[22px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_32px] gap-1.5 px-1 pb-2 text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80 font-semibold border-b border-hairline">
             <span>Set</span>
-            <span className="text-center">KG</span>
-            <span className="text-center">Reps</span>
-            <span className="text-center">RPE</span>
+            <span className="text-center">Kg</span>
+            <span className="text-center">Ponavljanja</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="text-center inline-flex items-center justify-center gap-1 hover:text-foreground transition"
+                >
+                  Težina
+                  <HelpCircle className="h-3 w-3" strokeWidth={2.2} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent side="top" className="w-64 text-[12px] leading-relaxed normal-case tracking-normal font-normal">
+                <div className="font-semibold text-[13px] mb-1.5 text-foreground">Koliko ti je bilo teško?</div>
+                <div className="text-muted-foreground mb-2">Oceni od 1 do 10:</div>
+                <ul className="space-y-1 text-muted-foreground">
+                  <li><span className="font-semibold text-foreground">1–4</span> · lako, mogao si još puno</li>
+                  <li><span className="font-semibold text-foreground">5–6</span> · srednje, ostalo 4–5 ponavljanja</li>
+                  <li><span className="font-semibold text-foreground">7–8</span> · teško, ostalo 2–3 ponavljanja</li>
+                  <li><span className="font-semibold text-foreground">9</span> · jedva, ostalo 1 ponavljanje</li>
+                  <li><span className="font-semibold text-foreground">10</span> · maksimum, više nisi mogao</li>
+                </ul>
+              </PopoverContent>
+            </Popover>
             <span></span>
           </div>
           {sets.map((s, i) => (
