@@ -5,7 +5,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { Avatar, Card, Chip, SectionTitle, StatCard } from "@/components/ui-bits";
 import {
   Clock, ChevronRight, ClipboardList, Apple, Package, Wallet,
-  Calendar as CalIcon, Users, Settings,
+  Calendar as CalIcon, Users, Settings, AlertTriangle,
 } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -42,6 +42,7 @@ const Dashboard = () => {
   const [expiringSoon, setExpiringSoon] = useState(0);
   const [pendingPayments, setPendingPayments] = useState(0);
   const [sessions, setSessions] = useState<SessionRow[]>([]);
+  const [atRisk, setAtRisk] = useState<{ athlete_id: string; full_name: string | null; days_inactive: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
