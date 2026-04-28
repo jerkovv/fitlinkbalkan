@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
-import { Card, IconButton, ProgressBar, SectionTitle, StatCard } from "@/components/ui-bits";
-import { Bell, Play, CalendarPlus, Apple } from "lucide-react";
+import { Card, ProgressBar, SectionTitle, StatCard } from "@/components/ui-bits";
+import { Play, CalendarPlus, Apple } from "lucide-react";
 import { athleteProfile, athleteWorkout } from "@/data/mock";
+import { UserMenu } from "@/components/UserMenu";
 
 const Home = () => {
   return (
@@ -17,11 +18,7 @@ const Home = () => {
             <span className="text-gradient-brand"> 💪</span>
           </h1>
         }
-        rightSlot={
-          <IconButton aria-label="Notifikacije">
-            <Bell className="h-[18px] w-[18px]" />
-          </IconButton>
-        }
+        rightSlot={<UserMenu />}
       >
         {/* Hero — sledeći trening */}
         <Link to="/vezbac/trening" className="block">

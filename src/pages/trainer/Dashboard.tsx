@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
-import { Avatar, Card, Chip, IconButton, SectionTitle, StatCard } from "@/components/ui-bits";
-import { Bell, Clock, ChevronRight, Plus, ClipboardList, Apple } from "lucide-react";
+import { Avatar, Card, Chip, SectionTitle, StatCard } from "@/components/ui-bits";
+import { Clock, ChevronRight, Plus, ClipboardList, Apple } from "lucide-react";
 import { trainerProfile, todaySessions } from "@/data/mock";
+import { UserMenu } from "@/components/UserMenu";
 
 const statusChip = {
   active: <Chip tone="success">Aktivno</Chip>,
@@ -23,11 +24,7 @@ const Dashboard = () => {
             <span className="text-gradient-brand"> 👋</span>
           </h1>
         }
-        rightSlot={
-          <IconButton aria-label="Notifikacije">
-            <Bell className="h-[18px] w-[18px]" strokeWidth={2} />
-          </IconButton>
-        }
+        rightSlot={<UserMenu />}
       >
         <div className="grid grid-cols-2 gap-3">
           <StatCard tone="brand" value="12" unit="članova" label="Aktivnih" />
