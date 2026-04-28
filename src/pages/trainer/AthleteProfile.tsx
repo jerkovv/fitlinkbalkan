@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 import { WorkoutSessionDetailDialog } from "@/components/WorkoutSessionDetailDialog";
 import { assignProgramToAthlete } from "@/lib/programAssignment";
+import { ProgressPhotos } from "@/components/ProgressPhotos";
 
 type AthleteData = {
   id: string;
@@ -676,6 +677,9 @@ const AthleteProfile = () => {
           </Card>
         )}
       </section>
+
+      {/* Progress fotke (samo deljene) */}
+      {id && <ProgressPhotos athleteId={id} canManage={false} sharedOnly />}
 
       {/* Workout history */}
       <section>
