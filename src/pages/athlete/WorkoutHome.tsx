@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui-bits";
-import { Loader2, Play, Dumbbell, History, CalendarDays, Flame } from "lucide-react";
+import { Loader2, Play, Dumbbell, History, CalendarDays, Flame, AlertTriangle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { getNextWorkoutDay, type NextWorkoutDay } from "@/lib/workouts";
@@ -32,6 +32,8 @@ const WorkoutHome = () => {
   const [recent, setRecent] = useState<RecentLog[]>([]);
   const [allDays, setAllDays] = useState<ProgramDay[]>([]);
   const [streak, setStreak] = useState(0);
+  const [daysInactive, setDaysInactive] = useState<number>(0);
+  const [hasEverTrained, setHasEverTrained] = useState(true);
 
   useEffect(() => {
     if (!user) return;
@@ -78,6 +80,13 @@ const WorkoutHome = () => {
       const { data: streakData } = await supabase.rpc("get_athlete_streak", { p_athlete_id: user.id } as any);
       const sd = (streakData as any[])?.[0];
       if (sd) setStreak(sd.current_streak_days ?? 0);
+
+      const { data: lastWk } = await supabase.rpc("get_athlete_last_workout", { p_athlete_id: user.id } as any);
+      const lw = (lastWk as any[])?.[0];
+      if (lw) {
+        setDaysInactive(lw.days_inactive ?? 0);
+        setHasEverTrained(!!lw.last_workout_at);
+      }
 
       setLoading(false);
     };
