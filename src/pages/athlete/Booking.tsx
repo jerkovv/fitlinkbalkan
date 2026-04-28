@@ -189,6 +189,12 @@ const Booking = () => {
           </div>
         )}
 
+        {cancelCutoff > 0 && trainerId && (
+          <div className="rounded-2xl bg-surface-2 border border-hairline px-4 py-2.5 text-[12px] text-muted-foreground">
+            Otkazivanje je moguće najkasnije <span className="font-semibold text-foreground">{cancelCutoff}h</span> pre termina.
+          </div>
+        )}
+
         {/* Day picker */}
         <section>
           <SectionTitle>Koji dan?</SectionTitle>
