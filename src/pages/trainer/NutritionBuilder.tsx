@@ -288,11 +288,23 @@ const NutritionBuilder = () => {
   const openAssign = async () => {
     setAssignOpen(true);
     if (athletes.length === 0) {
-      const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "athlete");
-      const ids = (roles ?? []).map((r: any) => r.user_id);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: ath } = await supabase
+        .from("athletes")
+        .select("id")
+        .eq("trainer_id", user.id);
+      const ids = (ath ?? []).map((a: any) => a.id);
       if (ids.length) {
-        const { data: profs } = await supabase.from("profiles").select("id, full_name, email").in("id", ids);
-        setAthletes(((profs as any) ?? []).map((p: any) => ({ id: p.id, full_name: p.full_name, email: p.email })));
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", ids);
+        const pMap = new Map((profs ?? []).map((p: any) => [p.id, p]));
+        setAthletes(ids.map((id) => {
+          const p = pMap.get(id) as any;
+          return { id, full_name: p?.full_name ?? null, email: p?.email ?? "" };
+        }));
       }
     }
   };
