@@ -380,6 +380,10 @@ const Membership = () => {
                   ? "Predaš novac treneru. Kad on potvrdi, članarina kreće."
                   : "Uplati na trenerov račun. Kad on vidi uplatu i potvrdi, članarina kreće."}
               </p>
+
+              {method === "bank" && (
+                <BankSlip bank={bank} amount={selectedPkg.price_rsd} />
+              )}
             </div>
           )}
 
