@@ -33,6 +33,15 @@ const Home = () => {
     const load = async () => {
       setLoading(true);
 
+      // Profil
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .maybeSingle();
+      setFullName((prof as any)?.full_name ?? "");
+
+
       // Sledeći dan u rotaciji
       const { data: nd } = await supabase.rpc("get_next_workout_day", {
         p_athlete_id: user.id,
