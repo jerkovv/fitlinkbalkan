@@ -669,6 +669,54 @@ const AthleteProfile = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Program assign dialog */}
+      <Dialog open={progOpen} onOpenChange={setProgOpen}>
+        <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Dodeli program treninga</DialogTitle>
+          </DialogHeader>
+          {progTemplates.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-muted-foreground mb-3">Nemaš još nijedan program.</p>
+              <Link to="/trener/programi">
+                <Button variant="outline">Napravi program</Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="overflow-y-auto flex-1 space-y-2 -mx-1 px-1">
+              {progTemplates.map((t) => {
+                const isCurrent = activeProgram?.name === t.name;
+                const isLoading = progAssigning === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => assignProgram(t.id)}
+                    disabled={!!progAssigning}
+                    className="w-full text-left p-3 rounded-xl border border-hairline hover:border-primary/40 hover:bg-primary-soft/30 flex items-center gap-3 transition disabled:opacity-50"
+                  >
+                    <div className="h-10 w-10 rounded-xl bg-gradient-brand-soft flex items-center justify-center shrink-0">
+                      <Dumbbell className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-sm truncate flex items-center gap-1.5">
+                        {t.name}
+                        {isCurrent && <Check className="h-3.5 w-3.5 text-primary" />}
+                      </div>
+                      {t.goal && (
+                        <div className="text-[11px] text-muted-foreground">
+                          {goalLabel[t.goal] ?? t.goal}
+                        </div>
+                      )}
+                    </div>
+                    {isLoading && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </PhoneShell>
   );
 };
