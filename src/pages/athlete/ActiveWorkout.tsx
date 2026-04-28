@@ -250,18 +250,22 @@ const ActiveWorkout = () => {
     setRest(r);
   };
 
-  const finishWorkout = async () => {
+  const doFinishWorkout = async () => {
     if (!sessionLogId) return;
-    const startedAt = new Date(); // approx — server already set started_at
+    setFinishing(true);
     await supabase
       .from("workout_session_logs")
       .update({
         completed_at: new Date().toISOString(),
       } as any)
       .eq("id", sessionLogId);
+    setFinishing(false);
+    setConfirmFinishOpen(false);
     toast.success("Trening završen! 💪");
     nav("/vezbac");
   };
+
+  const finishWorkout = () => setConfirmFinishOpen(true);
 
   if (loading) {
     return (
