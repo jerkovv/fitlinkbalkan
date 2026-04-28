@@ -367,6 +367,34 @@ const Profile = () => {
               </div>
             </Card>
 
+            {/* Privatnost grupnih termina */}
+            <Card className="p-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <Eye className="h-4 w-4 text-primary" />
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Privatnost termina
+                </div>
+              </div>
+
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14px] font-semibold tracking-tight">
+                    Vidljivost učesnika
+                  </div>
+                  <p className="text-[12.5px] text-muted-foreground mt-1">
+                    {showAttendees
+                      ? "Vežbači vide imena drugih koji su rezervisali isti termin."
+                      : "Vežbači vide samo broj rezervisanih (npr. 3 / 6)."}
+                  </p>
+                </div>
+                <Switch
+                  checked={showAttendees}
+                  onCheckedChange={setShowAttendees}
+                  aria-label="Prikaži učesnike vežbačima"
+                />
+              </div>
+            </Card>
+
             {/* Podaci za uplatu na račun */}
             <Card className="p-5 space-y-4">
               <div className="flex items-center gap-2">
