@@ -9,9 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Loader2, Save, Users, Dumbbell, Apple, X, Plus, Landmark, Eye,
+  Loader2, Save, Users, Dumbbell, Apple, X, Plus, Landmark, Eye, Ban,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 
 const SPEC_SUGGESTIONS = [
@@ -47,6 +50,7 @@ const Profile = () => {
 
   // privacy
   const [showAttendees, setShowAttendees] = useState(false);
+  const [cancelCutoff, setCancelCutoff] = useState<number>(0);
 
   // read-only stats
   const [stats, setStats] = useState({
