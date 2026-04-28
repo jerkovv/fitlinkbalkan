@@ -39,6 +39,33 @@ type AssignedPlan = {
   is_active: boolean;
 };
 
+type AssignedProgram = {
+  id: string;
+  name: string;
+  created_at: string;
+  total_days: number;
+};
+
+type ProgramTemplate = {
+  id: string;
+  name: string;
+  goal: string | null;
+};
+
+type SessionLog = {
+  id: string;
+  day_number: number;
+  completed_at: string | null;
+  duration_seconds: number | null;
+};
+
+type BodyMetric = {
+  id: string;
+  recorded_on: string;
+  weight_kg: number | null;
+  body_fat_pct: number | null;
+};
+
 const goalLabel: Record<string, string> = {
   lose_weight: "Mršavljenje",
   gain_muscle: "Masa",
