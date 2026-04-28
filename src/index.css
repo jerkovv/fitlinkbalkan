@@ -2,19 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
-/* FITLINK — Premium Design System v5
-   Light, Apple-minimal. Deep electric purple → indigo (unisex tech-premium).
-   Linear / Arc / Vercel inspired. All colors HSL only. */
+/* FITLINK — Premium Design System v6
+   Light, Apple-minimal. Violet-led palette (less feminine than v2).
+   Primary = royal violet, gradient finishes with magenta accent only.
+   All colors HSL only. */
 
 @layer base {
   :root {
-    /* Surfaces — clean off-white */
-    --background: 240 20% 98%;
+    /* Surfaces — neutral cool gray (no magenta tint) */
+    --background: 240 12% 98%;
     --foreground: 240 18% 10%;
     --surface: 0 0% 100%;
-    --surface-2: 240 20% 96%;
-    --surface-3: 240 16% 93%;
-    --hairline: 240 14% 90%;
+    --surface-2: 240 14% 96%;
+    --surface-3: 240 12% 93%;
+    --hairline: 240 10% 89%;
 
     --card: 0 0% 100%;
     --card-foreground: 240 18% 10%;
@@ -22,25 +23,25 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 18% 10%;
 
-    /* Brand — deep electric purple → indigo (NOT pink, NOT magenta) */
-    --brand-1: 258 88% 58%;             /* #6E3CFA — deep electric purple */
-    --brand-2: 244 85% 60%;              /* indigo */
-    --brand-3: 230 90% 62%;              /* royal blue end */
+    /* Brand — royal violet → indigo (magenta only as gradient tail) */
+    --brand-1: 268 80% 56%;             /* royal violet primary */
+    --brand-2: 252 80% 58%;             /* indigo middle */
+    --brand-3: 322 78% 60%;             /* magenta tail accent */
 
-    --primary: 258 88% 58%;
+    --primary: 268 80% 56%;
     --primary-foreground: 0 0% 100%;
-    --primary-soft: 258 90% 96%;
-    --primary-soft-foreground: 258 70% 42%;
+    --primary-soft: 268 85% 96%;
+    --primary-soft-foreground: 268 65% 40%;
 
-    /* Trener role — deep purple (primary) */
-    --trainer: 258 88% 58%;
-    --trainer-soft: 258 90% 96%;
-    --trainer-soft-foreground: 258 70% 42%;
+    /* Trener role — royal violet (primary) */
+    --trainer: 268 80% 56%;
+    --trainer-soft: 268 85% 96%;
+    --trainer-soft-foreground: 268 65% 40%;
 
-    /* Athlete role — saturated indigo (sibling, not competitor) */
-    --athlete: 235 85% 60%;
-    --athlete-soft: 235 90% 96%;
-    --athlete-soft-foreground: 235 75% 42%;
+    /* Athlete role — deep violet (sibling, NOT pink) */
+    --athlete: 252 80% 60%;
+    --athlete-soft: 252 85% 96%;
+    --athlete-soft-foreground: 252 70% 42%;
 
     /* Status */
     --success: 152 65% 38%;
@@ -59,50 +60,50 @@
     --destructive-soft-foreground: 0 70% 42%;
 
     /* Neutrals */
-    --secondary: 240 16% 95%;
+    --secondary: 240 14% 95%;
     --secondary-foreground: 240 18% 18%;
 
-    --muted: 240 16% 95%;
+    --muted: 240 14% 95%;
     --muted-foreground: 240 8% 46%;
 
-    --accent: 244 85% 60%;
+    --accent: 252 80% 58%;
     --accent-foreground: 0 0% 100%;
 
-    --border: 240 14% 90%;
-    --input: 240 14% 90%;
-    --ring: 258 88% 58%;
+    --border: 240 10% 89%;
+    --input: 240 10% 89%;
+    --ring: 268 80% 56%;
 
-    --radius: 1rem;                     /* 16px */
+    --radius: 1rem;                     /* 16px — sharper than v2's 18 */
 
-    /* Gradients — deep purple → indigo → royal blue (no pink) */
-    --gradient-brand: linear-gradient(135deg, hsl(258 88% 58%) 0%, hsl(244 85% 60%) 55%, hsl(230 90% 62%) 100%);
-    --gradient-brand-soft: linear-gradient(135deg, hsl(258 100% 97%) 0%, hsl(244 100% 97%) 55%, hsl(230 100% 97%) 100%);
-    --gradient-trainer: linear-gradient(135deg, hsl(258 88% 58%), hsl(244 85% 60%));
-    --gradient-athlete: linear-gradient(135deg, hsl(235 85% 60%), hsl(220 90% 60%));
+    /* Gradients — violet → indigo → magenta tail */
+    --gradient-brand: linear-gradient(135deg, hsl(268 80% 56%) 0%, hsl(252 80% 58%) 55%, hsl(322 78% 60%) 100%);
+    --gradient-brand-soft: linear-gradient(135deg, hsl(268 100% 97%) 0%, hsl(252 100% 97%) 55%, hsl(322 100% 97%) 100%);
+    --gradient-trainer: linear-gradient(135deg, hsl(268 80% 58%), hsl(252 82% 60%));
+    --gradient-athlete: linear-gradient(135deg, hsl(252 80% 60%), hsl(238 85% 62%));
     --gradient-success: linear-gradient(135deg, hsl(152 65% 42%), hsl(168 70% 38%));
-    --gradient-dark: linear-gradient(135deg, hsl(258 60% 14%), hsl(244 70% 12%));
-    --gradient-hero: radial-gradient(ellipse at top, hsl(258 100% 96%) 0%, hsl(240 20% 98%) 60%);
+    --gradient-dark: linear-gradient(135deg, hsl(268 60% 14%), hsl(252 70% 12%));
+    --gradient-hero: radial-gradient(ellipse at top, hsl(268 100% 96%) 0%, hsl(240 12% 98%) 60%);
 
     /* Shadows — Apple-style multi-layer */
-    --shadow-xs: 0 1px 2px hsl(258 30% 20% / 0.04);
-    --shadow-sm: 0 1px 2px hsl(258 30% 20% / 0.04), 0 2px 6px hsl(258 30% 20% / 0.04);
-    --shadow-md: 0 4px 8px -2px hsl(258 30% 20% / 0.06), 0 12px 24px -6px hsl(258 30% 20% / 0.08);
-    --shadow-lg: 0 8px 16px -4px hsl(258 30% 20% / 0.08), 0 24px 48px -12px hsl(258 30% 20% / 0.12);
-    --shadow-brand: 0 8px 24px -8px hsl(258 88% 58% / 0.45), 0 2px 6px hsl(244 85% 60% / 0.18);
-    --shadow-trainer: 0 8px 24px -8px hsl(258 88% 58% / 0.40);
-    --shadow-athlete: 0 8px 24px -8px hsl(235 85% 60% / 0.40);
+    --shadow-xs: 0 1px 2px hsl(268 30% 20% / 0.04);
+    --shadow-sm: 0 1px 2px hsl(268 30% 20% / 0.04), 0 2px 6px hsl(268 30% 20% / 0.04);
+    --shadow-md: 0 4px 8px -2px hsl(268 30% 20% / 0.06), 0 12px 24px -6px hsl(268 30% 20% / 0.08);
+    --shadow-lg: 0 8px 16px -4px hsl(268 30% 20% / 0.08), 0 24px 48px -12px hsl(268 30% 20% / 0.12);
+    --shadow-brand: 0 8px 24px -8px hsl(268 80% 56% / 0.45), 0 2px 6px hsl(252 80% 58% / 0.18);
+    --shadow-trainer: 0 8px 24px -8px hsl(268 80% 56% / 0.40);
+    --shadow-athlete: 0 8px 24px -8px hsl(252 80% 60% / 0.40);
     --shadow-success: 0 8px 24px -8px hsl(152 65% 38% / 0.35);
-    --shadow-glow: 0 0 60px hsl(258 88% 58% / 0.18);
+    --shadow-glow: 0 0 60px hsl(268 80% 56% / 0.18);
 
     /* Sidebar */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 240 18% 10%;
-    --sidebar-primary: 258 88% 58%;
+    --sidebar-primary: 268 80% 56%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 16% 95%;
+    --sidebar-accent: 240 14% 95%;
     --sidebar-accent-foreground: 240 18% 10%;
-    --sidebar-border: 240 14% 90%;
-    --sidebar-ring: 258 88% 58%;
+    --sidebar-border: 240 10% 89%;
+    --sidebar-ring: 268 80% 56%;
   }
 
   .dark {
