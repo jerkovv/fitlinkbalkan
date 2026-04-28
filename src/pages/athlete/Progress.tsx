@@ -11,6 +11,7 @@ import { TrendingUp, TrendingDown, Plus, Loader2, Dumbbell, Scale, Flame, Calend
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { ProgressPhotos } from "@/components/ProgressPhotos";
 
 const tabs = ["Treninzi", "Telo"] as const;
 
@@ -548,6 +549,8 @@ const Progress = () => {
                 </Card>
               )}
             </section>
+
+            {user && <ProgressPhotos athleteId={user.id} canManage />}
           </>
         )}
 
