@@ -3,7 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Button, Card, Chip } from "@/components/ui-bits";
-import { Check, Loader2, ChevronLeft, ChevronRight, RotateCcw, Trophy, HelpCircle } from "lucide-react";
+import { Check, Loader2, ChevronLeft, ChevronRight, RotateCcw, Trophy, HelpCircle, PlayCircle } from "lucide-react";
+import { VideoModal } from "@/components/VideoModal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   AlertDialog,
