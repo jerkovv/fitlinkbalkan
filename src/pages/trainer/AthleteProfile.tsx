@@ -221,17 +221,11 @@ const AthleteProfile = () => {
   };
 
   const copyProgramContent = async (templateId: string, assignedProgramId: string): Promise<boolean> => {
-    const { data: existingDays, error: existingErr } = await supabase
+    const { count, error: existingErr } = await supabase
       .from("assigned_program_days")
       .select("id", { count: "exact", head: true })
       .eq("assigned_program_id", assignedProgramId);
     if (existingErr) { toast.error(existingErr.message); return false; }
-    if ((existingDays as any) || false) return true;
-
-    const { count } = await supabase
-      .from("assigned_program_days")
-      .select("id", { count: "exact", head: true })
-      .eq("assigned_program_id", assignedProgramId);
     if ((count ?? 0) > 0) return true;
 
     const { data: tDays } = await supabase
