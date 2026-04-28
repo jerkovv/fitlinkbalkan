@@ -162,6 +162,22 @@ const Booking = () => {
     loadDay();
   };
 
+  const openAttendees = async (s: Slot) => {
+    if (!trainerId || !showAttendees) return;
+    setAttendeesSlot(s);
+    setAttendees([]);
+    setAttendeesLoading(true);
+    const { data, error } = await supabase.rpc("get_slot_attendees", {
+      p_trainer_id: trainerId,
+      p_date: toIsoDate(selectedDate),
+      p_start_time: formatTime(s.start_time),
+      p_session_type_id: s.session_type_id,
+    });
+    setAttendeesLoading(false);
+    if (error) { toast.error(error.message); return; }
+    setAttendees((data as any[]) ?? []);
+  };
+
   return (
     <>
       <PhoneShell hasBottomNav title="Rezerviši trening" eyebrow={trainerName ? `Kod ${trainerName}` : "Rezervacije"}>
