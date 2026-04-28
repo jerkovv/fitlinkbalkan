@@ -18,14 +18,15 @@ type NextDay = {
 };
 
 const Home = () => {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [next, setNext] = useState<NextDay | null>(null);
   const [exerciseCount, setExerciseCount] = useState<number>(0);
   const [monthCount, setMonthCount] = useState<number>(0);
   const [trainerName, setTrainerName] = useState<string>("");
+  const [fullName, setFullName] = useState<string>("");
 
-  const firstName = (profile?.full_name ?? user?.email ?? "").split(" ")[0] ?? "";
+  const firstName = (fullName || user?.email || "").split(" ")[0] ?? "";
 
   useEffect(() => {
     if (!user) return;
