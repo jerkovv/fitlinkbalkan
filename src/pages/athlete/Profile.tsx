@@ -12,7 +12,8 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, Save, UserRound, Phone, Mail, Gift, Copy, Share2 } from "lucide-react";
+import { Loader2, Save, UserRound, Phone, Mail, Gift, Copy, Share2, HelpCircle } from "lucide-react";
+import { AthleteOnboardingTour } from "@/components/AthleteOnboardingTour";
 import { toast } from "sonner";
 
 type Goal = "lose_weight" | "gain_muscle" | "endurance" | "mobility" | "general";
@@ -33,6 +34,7 @@ const Profile = () => {
   const [notes, setNotes] = useState("");
   const [trainer, setTrainer] = useState<{ name: string; phone: string | null; email: string | null } | null>(null);
   const [trainerInviteCode, setTrainerInviteCode] = useState<string | null>(null);
+  const [tourOpen, setTourOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -364,10 +366,19 @@ const Profile = () => {
               )}
               Sačuvaj izmene
             </Button>
+
+            <button
+              type="button"
+              onClick={() => setTourOpen(true)}
+              className="w-full text-center text-[12.5px] font-semibold text-muted-foreground hover:text-primary inline-flex items-center justify-center gap-1.5 py-2"
+            >
+              <HelpCircle className="h-3.5 w-3.5" /> Pregled aplikacije
+            </button>
           </>
         )}
       </PhoneShell>
       <BottomNav role="athlete" />
+      {tourOpen && <AthleteOnboardingTour forceOpen onClose={() => setTourOpen(false)} />}
     </>
   );
 };
