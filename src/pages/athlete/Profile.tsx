@@ -12,7 +12,8 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, Save, UserRound, Phone, Mail } from "lucide-react";
+import { Loader2, Save, UserRound, Phone, Mail, Gift, Copy, Share2 } from "lucide-react";
+import { toast } from "sonner";
 import { toast } from "sonner";
 
 type Goal = "lose_weight" | "gain_muscle" | "endurance" | "mobility" | "general";
@@ -32,6 +33,7 @@ const Profile = () => {
   const [gender, setGender] = useState<Gender | "">("");
   const [notes, setNotes] = useState("");
   const [trainer, setTrainer] = useState<{ name: string; phone: string | null; email: string | null } | null>(null);
+  const [trainerInviteCode, setTrainerInviteCode] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -54,13 +56,13 @@ const Profile = () => {
 
       // Fetch trener
       if (a.trainer_id) {
-        const { data: tr } = await supabase
-          .from("profiles")
-          .select("full_name, phone")
-          .eq("id", a.trainer_id)
-          .maybeSingle();
+        const [{ data: tr }, { data: trRow }] = await Promise.all([
+          supabase.from("profiles").select("full_name, phone").eq("id", a.trainer_id).maybeSingle(),
+          supabase.from("trainers").select("invite_code").eq("id", a.trainer_id).maybeSingle(),
+        ]);
         const t: any = tr;
         if (t) setTrainer({ name: t.full_name ?? "Trener", phone: t.phone, email: null });
+        setTrainerInviteCode((trRow as any)?.invite_code ?? null);
       }
 
       setLoading(false);
