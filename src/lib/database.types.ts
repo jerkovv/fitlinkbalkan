@@ -4,7 +4,7 @@ export type SessionStatus = 'scheduled' | 'completed' | 'cancelled' | 'no_show';
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
 export type PaymentMethod = 'cash' | 'card' | 'bank_transfer' | 'stripe';
 export type MembershipStatus = 'active' | 'paused' | 'expired' | 'cancelled';
-export type InviteStatus = 'pending' | 'accepted' | 'expired';
+export type InviteStatus = 'pending' | 'accepted' | 'expired' | 'cancelled';
 export type GoalType = 'lose_weight' | 'gain_muscle' | 'endurance' | 'mobility' | 'general';
 
 export interface Profile {

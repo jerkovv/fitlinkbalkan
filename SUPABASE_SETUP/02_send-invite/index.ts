@@ -147,10 +147,15 @@ Deno.serve(async (req) => {
     const PUBLIC_SITE_URL = "https://fitlinkbalkan.lovable.app";
     const redirectTo = `${PUBLIC_SITE_URL}/invite/${code}`;
 
-    const { error: emailErr } = await admin.auth.admin.inviteUserByEmail(
+    const authMailer = createClient(SUPABASE_URL, ANON, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const { error: emailErr } = await authMailer.auth.signInWithOtp({
       email,
-      {
-        redirectTo,
+      options: {
+        emailRedirectTo: redirectTo,
+        shouldCreateUser: true,
         data: {
           invite_code: code,
           trainer_id: trainerId,
@@ -158,40 +163,15 @@ Deno.serve(async (req) => {
           role: "athlete",
         },
       },
-    );
+    });
 
     if (emailErr) {
-      const msg = emailErr.message?.toLowerCase() ?? "";
-      const alreadyExists =
-        msg.includes("already") ||
-        msg.includes("registered") ||
-        msg.includes("exists");
-
-      if (alreadyExists) {
-        // User već postoji — pošalji magic link na isti /invite/:code URL.
-        // Kad klikne, biće ulogovan i Invite.tsx će ga vezati za trenera.
-        const { error: linkErr } = await admin.auth.admin.generateLink({
-          type: "magiclink",
-          email,
-          options: { redirectTo },
-        });
-
-        if (linkErr) {
-          await admin.from("invites").delete().eq("id", inv.id);
-          return new Response(JSON.stringify({ error: linkErr.message }), {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        // generateLink sa adminom šalje email automatski ako je SMTP podešen
-      } else {
-        // Pravi error — rollback
-        await admin.from("invites").delete().eq("id", inv.id);
-        return new Response(JSON.stringify({ error: emailErr.message }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      // Rollback invite ako Supabase nije uspeo stvarno da pošalje email
+      await admin.from("invites").delete().eq("id", inv.id);
+      return new Response(JSON.stringify({ error: emailErr.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // 3) Označi sent_at
