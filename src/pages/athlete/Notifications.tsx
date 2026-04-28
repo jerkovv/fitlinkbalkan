@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { NotificationItem } from "@/components/NotificationBell";
+import { NotificationDetail } from "@/components/NotificationDetail";
 import { useNotifications, type AppNotification } from "@/hooks/useNotifications";
 import { Bell, Check, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -10,9 +10,9 @@ import { cn } from "@/lib/utils";
 type Filter = "all" | "unread";
 
 const Notifications = () => {
-  const navigate = useNavigate();
   const { items, loading, unreadCount, markRead, markAllRead, remove } = useNotifications();
   const [filter, setFilter] = useState<Filter>("all");
+  const [selected, setSelected] = useState<AppNotification | null>(null);
 
   const visible = useMemo(
     () => (filter === "unread" ? items.filter((n) => !n.is_read) : items),
@@ -21,10 +21,7 @@ const Notifications = () => {
 
   const handleClick = async (n: AppNotification) => {
     if (!n.is_read) await markRead(n.id);
-    if (n.kind === "program_assigned") navigate("/vezbac");
-    else if (n.kind === "nutrition_assigned") navigate("/vezbac/ishrana");
-    else if (n.kind === "membership_expiring" || n.kind === "membership_expired")
-      navigate("/vezbac/clanarina");
+    setSelected(n);
   };
 
   return (
