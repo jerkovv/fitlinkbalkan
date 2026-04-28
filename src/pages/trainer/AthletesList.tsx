@@ -327,6 +327,60 @@ const AthletesList = () => {
               )}
             </ul>
 
+            {/* Pending pozivnice */}
+            {pending.length > 0 && (
+              <div className="space-y-2 pt-2">
+                <div className="eyebrow text-muted-foreground px-1">
+                  Poslate pozivnice · {pending.length}
+                </div>
+                <ul className="space-y-2">
+                  {pending.map((p) => {
+                    const expired = p.expires_at
+                      ? new Date(p.expires_at).getTime() < Date.now()
+                      : false;
+                    const sentLabel = p.sent_at
+                      ? new Date(p.sent_at).toLocaleDateString("sr-RS", {
+                          day: "2-digit", month: "short",
+                        })
+                      : "—";
+                    return (
+                      <li
+                        key={p.id}
+                        className="flex items-center gap-3 card-premium px-4 py-3"
+                      >
+                        <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[14.5px] font-semibold tracking-tight truncate">
+                            {p.full_name ?? p.email}
+                          </div>
+                          <div className="text-[12px] text-muted-foreground mt-0.5 truncate">
+                            {p.email} · {expired ? "istekla" : `poslato ${sentLabel}`}
+                          </div>
+                        </div>
+                        <Chip tone={expired ? "danger" : "warning"}>
+                          {expired ? "Istekla" : "Čeka"}
+                        </Chip>
+                        <button
+                          onClick={() => resendInvite(p)}
+                          disabled={resendingId === p.id}
+                          className="h-9 w-9 rounded-full bg-primary-soft/60 hover:bg-primary-soft text-primary flex items-center justify-center transition disabled:opacity-50"
+                          title="Pošalji ponovo"
+                        >
+                          {resendingId === p.id ? (
+                            <Loader className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+
             <button
               onClick={() => setInviteOpen(true)}
               className="w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-brand text-white py-4 text-[14px] font-semibold shadow-brand active:scale-[0.99] transition"
