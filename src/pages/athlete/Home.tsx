@@ -6,6 +6,7 @@ import { Card, SectionTitle, StatCard } from "@/components/ui-bits";
 import { Play, CalendarPlus, Apple, Loader2, Dumbbell } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import { MessageTrainerCard } from "@/components/MessageTrainerCard";
+import { NotificationBell } from "@/components/NotificationBell";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -103,7 +104,12 @@ const Home = () => {
             <span className="text-gradient-brand"> 💪</span>
           </h1>
         }
-        rightSlot={<UserMenu />}
+        rightSlot={
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <UserMenu />
+          </div>
+        }
       >
         {loading ? (
           <div className="flex justify-center py-16">

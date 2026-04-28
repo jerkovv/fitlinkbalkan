@@ -34,6 +34,7 @@ import AthleteBooking from "./pages/athlete/Booking.tsx";
 import AthleteProgress from "./pages/athlete/Progress.tsx";
 import AthleteMembership from "./pages/athlete/Membership.tsx";
 import AthleteNutrition from "./pages/athlete/Nutrition.tsx";
+import AthleteNotifications from "./pages/athlete/Notifications.tsx";
 
 const queryClient = new QueryClient();
 
