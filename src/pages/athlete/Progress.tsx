@@ -47,9 +47,13 @@ const Progress = () => {
   const [trainerSessionsAll, setTrainerSessionsAll] = useState(0);
   const [trainerSessionsMonth, setTrainerSessionsMonth] = useState(0);
   const [sessionsLeft, setSessionsLeft] = useState<number | null>(null);
-  const [streak, setStreak] = useState(0);
+  const [streak, setStreak] = useState(0); // weeks streak (legacy)
+  const [streakDays, setStreakDays] = useState(0);
+  const [longestDays, setLongestDays] = useState(0);
+  const [totalWorkouts, setTotalWorkouts] = useState(0);
   const [weeklyHistory, setWeeklyHistory] = useState<{ label: string; count: number }[]>([]);
   const [trainerName, setTrainerName] = useState<string>("");
+  const [prs, setPrs] = useState<Array<{ id: string; exercise_name: string; best_weight_kg: number | null; best_weight_reps: number | null; best_e1rm_kg: number | null; best_e1rm_at: string | null }>>([]);
 
   const [metrics, setMetrics] = useState<Metric[]>([]);
 
@@ -158,6 +162,31 @@ const Progress = () => {
         else break;
       }
       setStreak(s);
+
+      // Server-side streak (precizniji — uzastopni DANI)
+      const { data: streakData } = await supabase.rpc("get_athlete_streak", { p_athlete_id: user.id } as any);
+      const sd = (streakData as any[])?.[0];
+      if (sd) {
+        setStreakDays(sd.current_streak_days ?? 0);
+        setLongestDays(sd.longest_streak_days ?? 0);
+        setTotalWorkouts(sd.total_workouts ?? 0);
+      }
+
+      // Top 5 PR-ova (po e1rm, najsvežiji prvo za remi)
+      const { data: prData } = await supabase
+        .from("personal_records")
+        .select("id, exercise_id, best_weight_kg, best_weight_reps, best_e1rm_kg, best_e1rm_at, exercises(name)")
+        .eq("athlete_id", user.id)
+        .order("best_e1rm_kg", { ascending: false, nullsFirst: false })
+        .limit(8);
+      setPrs(((prData as any[]) ?? []).map((p) => ({
+        id: p.id,
+        exercise_name: p.exercises?.name ?? "Vežba",
+        best_weight_kg: p.best_weight_kg,
+        best_weight_reps: p.best_weight_reps,
+        best_e1rm_kg: p.best_e1rm_kg,
+        best_e1rm_at: p.best_e1rm_at,
+      })));
 
       setLoading(false);
     };
@@ -298,14 +327,19 @@ const Progress = () => {
               </Card>
               <Card className={cn(
                 "p-4",
-                streak >= 3 && "bg-gradient-to-br from-warning-soft/40 to-surface"
+                streakDays >= 3 && "bg-gradient-to-br from-warning-soft/40 to-surface"
               )}>
                 <div className="flex items-center justify-between">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Streak</div>
-                  <Flame className={cn("h-3.5 w-3.5", streak >= 3 ? "text-warning-soft-foreground" : "text-muted-foreground")} />
+                  <Flame className={cn("h-3.5 w-3.5", streakDays >= 3 ? "text-warning-soft-foreground" : "text-muted-foreground")} />
                 </div>
-                <div className="font-display text-[28px] font-bold tracking-tightest mt-1 tnum">{streak}</div>
-                <div className="text-[12px] text-muted-foreground">{streak === 1 ? "nedelja" : "nedelja"} u nizu</div>
+                <div className="font-display text-[28px] font-bold tracking-tightest mt-1 tnum">{streakDays}</div>
+                <div className="text-[12px] text-muted-foreground">
+                  {streakDays === 1 ? "dan" : "dana"} u nizu
+                  {longestDays > streakDays && longestDays > 0 && (
+                    <span className="text-muted-foreground/70"> · best {longestDays}</span>
+                  )}
+                </div>
               </Card>
             </div>
 
@@ -362,6 +396,33 @@ const Progress = () => {
                 );
               })()}
             </Card>
+
+            {prs.length > 0 && (
+              <section>
+                <SectionTitle>Lični rekordi 🏆</SectionTitle>
+                <Card className="divide-y divide-hairline">
+                  {prs.map((p) => (
+                    <div key={p.id} className="p-4 flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-warning-soft/60 to-primary-soft text-primary flex items-center justify-center shrink-0">
+                        <Sparkles className="h-4 w-4" strokeWidth={2.4} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-[14px] truncate">{p.exercise_name}</div>
+                        <div className="text-[12px] text-muted-foreground">
+                          {p.best_weight_kg ? `${p.best_weight_kg} kg × ${p.best_weight_reps}` : "—"}
+                          {p.best_e1rm_kg ? ` · 1RM ~${p.best_e1rm_kg} kg` : ""}
+                        </div>
+                      </div>
+                      {p.best_e1rm_at && (
+                        <div className="text-[11px] text-muted-foreground/80 tnum shrink-0">
+                          {formatDate(p.best_e1rm_at)}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </Card>
+              </section>
+            )}
 
             <section>
               <SectionTitle>Istorija</SectionTitle>

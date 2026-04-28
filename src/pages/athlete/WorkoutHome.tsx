@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui-bits";
-import { Loader2, Play, Dumbbell, History, CalendarDays } from "lucide-react";
+import { Loader2, Play, Dumbbell, History, CalendarDays, Flame } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { getNextWorkoutDay, type NextWorkoutDay } from "@/lib/workouts";
@@ -31,6 +31,7 @@ const WorkoutHome = () => {
   const [exerciseCount, setExerciseCount] = useState(0);
   const [recent, setRecent] = useState<RecentLog[]>([]);
   const [allDays, setAllDays] = useState<ProgramDay[]>([]);
+  const [streak, setStreak] = useState(0);
 
   useEffect(() => {
     if (!user) return;
@@ -74,6 +75,10 @@ const WorkoutHome = () => {
         .limit(5);
       setRecent((logs as any[]) ?? []);
 
+      const { data: streakData } = await supabase.rpc("get_athlete_streak", { p_athlete_id: user.id } as any);
+      const sd = (streakData as any[])?.[0];
+      if (sd) setStreak(sd.current_streak_days ?? 0);
+
       setLoading(false);
     };
     load();
@@ -97,9 +102,17 @@ const WorkoutHome = () => {
         hasBottomNav
         eyebrow="Trening"
         title={
-          <h1 className="font-display text-[28px] leading-[1.05] font-bold tracking-tightest">
-            Tvoji treninzi
-          </h1>
+          <div className="flex items-end justify-between gap-3">
+            <h1 className="font-display text-[28px] leading-[1.05] font-bold tracking-tightest">
+              Tvoji treninzi
+            </h1>
+            {streak > 0 && (
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-warning-soft/60 text-warning-soft-foreground px-3 py-1.5 text-[12px] font-bold tnum shrink-0">
+                <Flame className="h-3.5 w-3.5" strokeWidth={2.5} />
+                {streak} {streak === 1 ? "dan" : "dana"}
+              </div>
+            )}
+          </div>
         }
       >
         {loading ? (
