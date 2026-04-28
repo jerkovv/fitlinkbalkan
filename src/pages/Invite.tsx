@@ -124,7 +124,7 @@ const Invite = () => {
         .eq("code", code!);
 
       toast.success("Dobrodošao u FitLink!");
-      navigate("/vezbac/onboarding");
+      navigate("/vezbac");
     } catch (err: any) {
       toast.error(err.message ?? "Greška pri završetku registracije");
     } finally {
@@ -160,7 +160,7 @@ const Invite = () => {
       }
 
       toast.success("Nalog kreiran! Proveri email za potvrdu.");
-      navigate("/vezbac/onboarding");
+      navigate("/vezbac");
     } catch (err: any) {
       toast.error(err.message ?? "Greška pri registraciji");
     } finally {
