@@ -577,7 +577,7 @@ const AthleteProfile = () => {
                 <div className="font-semibold text-[15px] truncate">{activeProgram.name}</div>
                 <div className="text-[12px] text-muted-foreground">
                   {activeProgram.total_days} {activeProgram.total_days === 1 ? "dan" : "dana"} · Dodeljen{" "}
-                  {new Date(activeProgram.created_at).toLocaleDateString("sr-RS")}
+                  {new Date(activeProgram.assigned_at).toLocaleDateString("sr-RS")}
                 </div>
               </div>
             </div>
