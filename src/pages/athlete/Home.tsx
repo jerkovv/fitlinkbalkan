@@ -26,9 +26,11 @@ const Home = () => {
   const [exerciseCount, setExerciseCount] = useState<number>(0);
   const [monthCount, setMonthCount] = useState<number>(0);
   const [trainerName, setTrainerName] = useState<string>("");
-  const [fullName, setFullName] = useState<string>("");
+  const [fullName, setFullName] = useState<string | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
-  const firstName = (fullName || user?.email || "").split(" ")[0] ?? "";
+  const emailHandle = (user?.email ?? "").split("@")[0] ?? "";
+  const firstName = (fullName?.trim() || emailHandle).split(/\s+/)[0] ?? "";
 
   useEffect(() => {
     if (!user) return;
