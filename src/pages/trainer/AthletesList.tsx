@@ -73,6 +73,8 @@ const AthletesList = () => {
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<AthleteRow[]>([]);
+  const [pending, setPending] = useState<PendingInvite[]>([]);
+  const [resendingId, setResendingId] = useState<string | null>(null);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
 
   const load = async () => {
