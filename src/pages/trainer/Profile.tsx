@@ -450,6 +450,24 @@ const Profile = () => {
                     placeholder="dejan-pt"
                     className="lowercase border-0 focus-visible:ring-0 focus-visible:ring-offset-0 flex-1 min-w-0"
                   />
+                  <button
+                    type="button"
+                    disabled={!publicSlug || !!slugError}
+                    onClick={async () => {
+                      const url = `${window.location.origin}/t/${publicSlug.trim().toLowerCase()}`;
+                      try {
+                        await navigator.clipboard.writeText(url);
+                        toast.success("Link kopiran");
+                      } catch {
+                        toast.error("Ne mogu da kopiram");
+                      }
+                    }}
+                    className="flex items-center justify-center px-3 border-l border-input text-muted-foreground hover:text-primary hover:bg-primary-soft/40 transition disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+                    title="Kopiraj link"
+                    aria-label="Kopiraj link"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
                 </div>
                 {slugError && (
                   <div className="text-[11.5px] text-destructive">{slugError}</div>
