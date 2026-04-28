@@ -43,7 +43,8 @@ const Home = () => {
         .select("full_name")
         .eq("id", user.id)
         .maybeSingle();
-      setFullName((prof as any)?.full_name ?? "");
+      setFullName((prof as any)?.full_name ?? null);
+      setProfileLoaded(true);
 
 
       // Sledeći dan u rotaciji
