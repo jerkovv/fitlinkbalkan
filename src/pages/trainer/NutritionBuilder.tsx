@@ -510,8 +510,8 @@ const NutritionBuilder = () => {
 
       {/* Food Picker */}
       <Dialog open={!!pickerMealId} onOpenChange={(o) => !o && setPickerMealId(null)}>
-        <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="max-w-md max-h-[85vh] p-0 gap-0 flex flex-col overflow-hidden">
+          <DialogHeader className="px-5 pt-5 pb-3 border-b border-hairline shrink-0">
             <DialogTitle>{pickedFood ? "Količina" : "Izaberi namirnicu"}</DialogTitle>
           </DialogHeader>
 
