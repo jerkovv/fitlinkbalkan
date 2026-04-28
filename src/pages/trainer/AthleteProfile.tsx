@@ -647,22 +647,89 @@ const AthleteProfile = () => {
         )}
       </section>
 
-      {/* Action */}
-      <Link
-        to={`/trener/uplata/${athlete.id}`}
-        className="flex items-center justify-between card-premium-hover px-5 py-4"
-      >
-        <div className="flex items-center gap-3">
-          <div className="h-11 w-11 rounded-2xl bg-success-soft text-success-soft-foreground flex items-center justify-center">
-            <Wallet className="h-[18px] w-[18px]" strokeWidth={2} />
+      {/* Membership */}
+      {activeMembership ? (
+        <Card className="p-5 space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-11 w-11 rounded-2xl bg-success-soft text-success-soft-foreground flex items-center justify-center shrink-0">
+                <Wallet className="h-[18px] w-[18px]" strokeWidth={2} />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[15px] font-semibold tracking-tight truncate">
+                  {activeMembership.plan_name}
+                </div>
+                <div className="text-[12px] text-muted-foreground">
+                  {activeMembership.sessions_total != null
+                    ? `${activeMembership.sessions_used} / ${activeMembership.sessions_total} iskorišćeno`
+                    : "Bez limita treninga"}
+                  {activeMembership.ends_on && ` · do ${new Date(activeMembership.ends_on).toLocaleDateString("sr-RS", { day: "numeric", month: "short" })}`}
+                </div>
+              </div>
+            </div>
+            <Chip tone="success">Aktivna</Chip>
           </div>
-          <div>
-            <div className="text-[15px] font-semibold tracking-tight">Evidentiraj uplatu</div>
-            <div className="text-[12.5px] text-muted-foreground">Mesečna članarina</div>
+          {activeMembership.sessions_total != null && (
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-brand rounded-full"
+                style={{
+                  width: `${Math.min(100, (activeMembership.sessions_used / activeMembership.sessions_total) * 100)}%`,
+                }}
+              />
+            </div>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setBonusOpen(true)}
+            className="w-full"
+          >
+            <Plus className="h-4 w-4 mr-1.5" /> Dodaj bonus treninge
+          </Button>
+        </Card>
+      ) : (
+        <Card className="p-5 text-center text-[13px] text-muted-foreground">
+          Vežbač nema aktivnu članarinu. Kad izabere paket, pojaviće se u{" "}
+          <Link to="/trener/uplate" className="text-primary font-semibold">
+            Zahtevima za uplatu
+          </Link>
+          .
+        </Card>
+      )}
+
+      {/* Bonus dialog */}
+      <Dialog open={bonusOpen} onOpenChange={setBonusOpen}>
+        <DialogContent className="max-w-[380px]">
+          <DialogHeader>
+            <DialogTitle>Dodaj bonus treninge</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-[13px] text-muted-foreground">
+              Dodato će se na trenutnu članarinu, bez plaćanja.
+            </p>
+            <input
+              type="number"
+              min={1}
+              max={100}
+              value={bonusCount}
+              onChange={(e) => setBonusCount(e.target.value)}
+              className="w-full px-4 py-3 rounded-2xl border border-hairline bg-surface text-center font-display text-[24px] font-bold tracking-tight focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
           </div>
-        </div>
-        <span className="text-muted-foreground">→</span>
-      </Link>
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="outline" onClick={() => setBonusOpen(false)}>Otkaži</Button>
+            <Button
+              onClick={addBonus}
+              disabled={bonusSaving}
+              className="bg-gradient-brand text-white shadow-brand"
+            >
+              {bonusSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Dodaj
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Assign dialog */}
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
