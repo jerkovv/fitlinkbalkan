@@ -26,9 +26,11 @@ const Invite = () => {
       if (!code) return;
       const { data, error } = await supabase
         .from("invites")
-        .select("trainer_id, status, expires_at, trainers:trainer_id(profiles:id(full_name))")
+        .select("trainer_id, status, expires_at")
         .eq("code", code)
         .maybeSingle();
+
+      console.log("[Invite] lookup result", { code, data, error });
 
       if (error || !data || data.status !== "pending") {
         setValid(false);
@@ -37,8 +39,14 @@ const Invite = () => {
       } else {
         setValid(true);
         setTrainerId(data.trainer_id);
-        // @ts-ignore — nested select
-        setTrainerName(data.trainers?.profiles?.full_name ?? "tvog trenera");
+
+        // Učitaj ime trenera odvojeno (profiles preko user_id)
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", data.trainer_id)
+          .maybeSingle();
+        setTrainerName(profile?.full_name ?? "tvog trenera");
       }
       setChecking(false);
     };
