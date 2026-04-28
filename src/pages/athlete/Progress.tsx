@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { TrendingUp, TrendingDown, Plus, Loader2, Dumbbell, Scale } from "lucide-react";
+import { TrendingUp, TrendingDown, Plus, Loader2, Dumbbell, Scale, Flame, CalendarCheck, Target, Sparkles } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -42,6 +42,14 @@ const Progress = () => {
   const [sessions, setSessions] = useState<SessionLog[]>([]);
   const [monthCount, setMonthCount] = useState(0);
   const [weekCount, setWeekCount] = useState(0);
+
+  // Trener stats
+  const [trainerSessionsAll, setTrainerSessionsAll] = useState(0);
+  const [trainerSessionsMonth, setTrainerSessionsMonth] = useState(0);
+  const [sessionsLeft, setSessionsLeft] = useState<number | null>(null);
+  const [streak, setStreak] = useState(0);
+  const [weeklyHistory, setWeeklyHistory] = useState<{ label: string; count: number }[]>([]);
+  const [trainerName, setTrainerName] = useState<string>("");
 
   const [metrics, setMetrics] = useState<Metric[]>([]);
 
@@ -81,6 +89,75 @@ const Progress = () => {
         .order("recorded_on", { ascending: false })
         .limit(30);
       setMetrics((met as any) ?? []);
+
+      // ===== TRENER ANALITIKA =====
+      const todayISO = new Date().toISOString().slice(0, 10);
+      const startMonthISO = startMonth.toISOString().slice(0, 10);
+
+      // Sve realizovane sesije sa trenerom (booked u prošlosti ili attended)
+      const { data: tBookings } = await supabase
+        .from("session_bookings")
+        .select("date, status, trainer_id")
+        .eq("athlete_id", user.id)
+        .in("status", ["booked", "attended"])
+        .lte("date", todayISO);
+      const bookings = (tBookings as any[]) ?? [];
+      setTrainerSessionsAll(bookings.length);
+      setTrainerSessionsMonth(bookings.filter((b) => b.date >= startMonthISO).length);
+
+      // Trener ime
+      const trainerId = bookings[0]?.trainer_id;
+      if (trainerId) {
+        const { data: tp } = await supabase
+          .from("profiles").select("full_name").eq("id", trainerId).maybeSingle();
+        setTrainerName((tp as any)?.full_name ?? "");
+      }
+
+      // Aktivna članarina — koliko termina ostalo
+      const { data: mems } = await supabase
+        .from("memberships")
+        .select("status, sessions_total, sessions_used, ends_on")
+        .eq("athlete_id", user.id)
+        .eq("status", "active")
+        .order("ends_on", { ascending: false })
+        .limit(1);
+      const m = (mems as any[])?.[0];
+      if (m && m.sessions_total != null) {
+        setSessionsLeft(Math.max(0, (m.sessions_total ?? 0) - (m.sessions_used ?? 0)));
+      } else {
+        setSessionsLeft(null);
+      }
+
+      // Weekly history — poslednjih 8 nedelja (kombinuje bookings + workout logs)
+      const allDates: string[] = [
+        ...bookings.map((b) => b.date),
+        ...((ses as any[]) ?? []).filter((s) => s.completed_at).map((s) => s.completed_at.slice(0, 10)),
+      ];
+      const weeks: { label: string; count: number; start: Date }[] = [];
+      for (let i = 7; i >= 0; i--) {
+        const ws = new Date(now);
+        ws.setHours(0, 0, 0, 0);
+        ws.setDate(now.getDate() - now.getDay() - i * 7); // nedelja počinje nedeljom
+        const we = new Date(ws);
+        we.setDate(ws.getDate() + 7);
+        const wsISO = ws.toISOString().slice(0, 10);
+        const weISO = we.toISOString().slice(0, 10);
+        const count = allDates.filter((d) => d >= wsISO && d < weISO).length;
+        weeks.push({
+          label: ws.toLocaleDateString("sr-Latn-RS", { day: "numeric", month: "numeric" }),
+          count,
+          start: ws,
+        });
+      }
+      setWeeklyHistory(weeks);
+
+      // Streak — uzastopne nedelje (počev od trenutne unazad) sa bar 1 treningom
+      let s = 0;
+      for (let i = weeks.length - 1; i >= 0; i--) {
+        if (weeks[i].count > 0) s++;
+        else break;
+      }
+      setStreak(s);
 
       setLoading(false);
     };
@@ -177,18 +254,114 @@ const Progress = () => {
           </div>
         ) : tab === "Treninzi" ? (
           <>
+            {/* HERO — Trener analitika */}
+            <Card className="p-5 bg-gradient-to-br from-primary/8 via-surface to-surface relative overflow-hidden">
+              <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-gradient-brand opacity-10 blur-2xl" />
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-1">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  <span className="eyebrow text-primary">
+                    {trainerName ? `Sa trenerom ${trainerName.split(" ")[0]}` : "Sa trenerom"}
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <div className="font-display text-[44px] leading-none font-bold tracking-tightest tnum">
+                    {trainerSessionsAll}
+                  </div>
+                  <div className="text-[13px] text-muted-foreground font-medium">
+                    {trainerSessionsAll === 1 ? "trening ukupno" : "treninga ukupno"}
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center gap-3 text-[12px]">
+                  <span className="inline-flex items-center gap-1 text-muted-foreground">
+                    <CalendarCheck className="h-3.5 w-3.5" />
+                    <span className="font-semibold text-foreground tnum">{trainerSessionsMonth}</span> ovog meseca
+                  </span>
+                  {sessionsLeft != null && (
+                    <span className="inline-flex items-center gap-1 text-muted-foreground">
+                      <Target className="h-3.5 w-3.5" />
+                      <span className="font-semibold text-foreground tnum">{sessionsLeft}</span> ostalo
+                    </span>
+                  )}
+                </div>
+              </div>
+            </Card>
+
             <div className="grid grid-cols-2 gap-3">
               <Card className="p-4">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Ove nedelje</div>
+                <div className="flex items-center justify-between">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Ove nedelje</div>
+                  <Dumbbell className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
                 <div className="font-display text-[28px] font-bold tracking-tightest mt-1 tnum">{weekCount}</div>
                 <div className="text-[12px] text-muted-foreground">treninga</div>
               </Card>
-              <Card className="p-4">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Ovog meseca</div>
-                <div className="font-display text-[28px] font-bold tracking-tightest mt-1 tnum">{monthCount}</div>
-                <div className="text-[12px] text-muted-foreground">treninga</div>
+              <Card className={cn(
+                "p-4",
+                streak >= 3 && "bg-gradient-to-br from-warning-soft/40 to-surface"
+              )}>
+                <div className="flex items-center justify-between">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Streak</div>
+                  <Flame className={cn("h-3.5 w-3.5", streak >= 3 ? "text-warning-soft-foreground" : "text-muted-foreground")} />
+                </div>
+                <div className="font-display text-[28px] font-bold tracking-tightest mt-1 tnum">{streak}</div>
+                <div className="text-[12px] text-muted-foreground">{streak === 1 ? "nedelja" : "nedelja"} u nizu</div>
               </Card>
             </div>
+
+            {/* Bar chart — poslednjih 8 nedelja */}
+            <Card className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    Aktivnost
+                  </div>
+                  <div className="text-[13px] text-foreground font-semibold mt-0.5">Poslednjih 8 nedelja</div>
+                </div>
+                {weeklyHistory.length > 0 && (
+                  <div className="text-right">
+                    <div className="font-display text-[20px] font-bold tracking-tightest tnum">
+                      {(weeklyHistory.reduce((a, b) => a + b.count, 0) / 8).toFixed(1)}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider">prosek/ned</div>
+                  </div>
+                )}
+              </div>
+              {(() => {
+                const maxC = Math.max(1, ...weeklyHistory.map((w) => w.count));
+                return (
+                  <div className="flex items-end gap-1.5 h-24">
+                    {weeklyHistory.map((w, i) => {
+                      const isCurrent = i === weeklyHistory.length - 1;
+                      const h = w.count === 0 ? 4 : (w.count / maxC) * 96;
+                      return (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
+                          <div className="w-full flex items-end h-full">
+                            <div
+                              className={cn(
+                                "w-full rounded-t-md transition-all",
+                                w.count === 0
+                                  ? "bg-hairline"
+                                  : isCurrent
+                                  ? "bg-gradient-to-t from-primary to-primary/60"
+                                  : "bg-primary/30"
+                              )}
+                              style={{ height: `${h}px` }}
+                            />
+                          </div>
+                          <div className={cn(
+                            "text-[9px] font-semibold tnum",
+                            isCurrent ? "text-primary" : "text-muted-foreground"
+                          )}>
+                            {w.count}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </Card>
 
             <section>
               <SectionTitle>Istorija</SectionTitle>
