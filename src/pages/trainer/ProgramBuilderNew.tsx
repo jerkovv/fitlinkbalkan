@@ -379,6 +379,54 @@ const ProgramBuilder = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Assign Dialog */}
+      <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+        <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
+          <DialogHeader><DialogTitle>Dodeli vežbaču</DialogTitle></DialogHeader>
+          <div className="overflow-y-auto flex-1 space-y-1 -mx-1 px-1">
+            {athletes.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                Nemaš još vežbača. Pošalji invite link.
+              </p>
+            ) : (
+              athletes.map((a) => (
+                <button
+                  key={a.id}
+                  onClick={() => handleAssign(a.id)}
+                  disabled={assigning === a.id}
+                  className="w-full text-left p-3 rounded-lg hover:bg-surface-2 flex items-center gap-3 transition disabled:opacity-50"
+                >
+                  <div className="h-10 w-10 rounded-full bg-gradient-athlete text-primary-foreground flex items-center justify-center font-bold text-sm shrink-0">
+                    {(a.full_name ?? a.email).slice(0, 1).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm truncate">{a.full_name ?? "Bez imena"}</div>
+                    <div className="text-[11px] text-muted-foreground truncate">{a.email}</div>
+                  </div>
+                  {assigning === a.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  ) : (
+                    <Check className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sticky bottom CTA */}
+      {days.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 px-6 pb-6 pt-3 bg-gradient-to-t from-background via-background to-transparent pointer-events-none">
+          <div className="max-w-[440px] mx-auto pointer-events-auto">
+            <Button onClick={openAssign} className="w-full h-12 shadow-brand">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Dodeli vežbaču
+            </Button>
+          </div>
+        </div>
+      )}
     </PhoneShell>
   );
 };
