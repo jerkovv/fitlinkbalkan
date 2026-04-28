@@ -87,8 +87,13 @@ const Membership = () => {
     setTrainerId(tid);
 
     if (tid) {
-      const [profRes, memRes, pkgRes, purRes] = await Promise.all([
+      const [profRes, trRes, memRes, pkgRes, purRes] = await Promise.all([
         supabase.from("profiles").select("full_name").eq("id", tid).maybeSingle(),
+        supabase
+          .from("trainers")
+          .select("bank_recipient, bank_account, bank_name, bank_model, bank_reference, bank_purpose")
+          .eq("id", tid)
+          .maybeSingle(),
         supabase
           .from("memberships")
           .select("id, plan_name, status, starts_on, ends_on, sessions_total, sessions_used")
@@ -114,6 +119,15 @@ const Membership = () => {
       ]);
 
       setTrainerName((profRes.data as any)?.full_name ?? "Trener");
+      const tr: any = trRes.data ?? {};
+      setBank({
+        recipient: tr.bank_recipient ?? null,
+        account: tr.bank_account ?? null,
+        bank_name: tr.bank_name ?? null,
+        model: tr.bank_model ?? null,
+        reference: tr.bank_reference ?? null,
+        purpose: tr.bank_purpose ?? null,
+      });
       setActive((memRes.data as any) ?? null);
       setPackages((pkgRes.data as any[]) ?? []);
       setRecent((purRes.data as any[]) ?? []);
