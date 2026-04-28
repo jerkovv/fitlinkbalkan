@@ -174,7 +174,36 @@ const AthleteProfile = () => {
     const metrics = (metricsRes.data as any[]) ?? [];
     setMetricsHistory(metrics);
     setLatestMetric(metrics[0] ?? null);
+
+    // Active membership
+    const { data: memData } = await supabase
+      .from("memberships")
+      .select("id, plan_name, ends_on, sessions_total, sessions_used")
+      .eq("athlete_id", id)
+      .eq("status", "active")
+      .order("ends_on", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setActiveMembership((memData as any) ?? null);
+
     setLoading(false);
+  };
+
+  const addBonus = async () => {
+    if (!activeMembership) return;
+    const n = parseInt(bonusCount, 10);
+    if (!n || n < 1) return toast.error("Unesi broj treninga");
+    setBonusSaving(true);
+    const { error } = await supabase.rpc("add_bonus_sessions", {
+      p_membership_id: activeMembership.id,
+      p_count: n,
+    });
+    setBonusSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success(`Dodato ${n} treninga`);
+    setBonusOpen(false);
+    setBonusCount("1");
+    load();
   };
 
   useEffect(() => { load(); }, [id]);
