@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Loader2, Save, Users, Dumbbell, Apple, X, Plus, Landmark, Eye, Ban,
+  Loader2, Save, Users, Dumbbell, Apple, X, Plus, Landmark, Eye, Ban, Globe, Copy, ExternalLink,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -51,6 +51,12 @@ const Profile = () => {
   // privacy
   const [showAttendees, setShowAttendees] = useState(false);
   const [cancelCutoff, setCancelCutoff] = useState<number>(0);
+
+  // public landing
+  const [publicSlug, setPublicSlug] = useState("");
+  const [publicEnabled, setPublicEnabled] = useState(true);
+  const [headline, setHeadline] = useState("");
+  const [slugError, setSlugError] = useState<string | null>(null);
 
   // read-only stats
   const [stats, setStats] = useState({
@@ -100,6 +106,9 @@ const Profile = () => {
       setBankPurpose(t.bank_purpose ?? "");
       setShowAttendees(!!t.show_attendees_to_athletes);
       setCancelCutoff(typeof t.cancel_cutoff_hours === "number" ? t.cancel_cutoff_hours : 0);
+      setPublicSlug(t.public_slug ?? "");
+      setPublicEnabled(t.public_enabled !== false);
+      setHeadline(t.headline ?? "");
       
 
       setStats({
