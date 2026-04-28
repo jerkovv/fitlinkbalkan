@@ -86,6 +86,8 @@ const App = () => (
             <Route path="/trener/profil" element={trainer(<TrainerProfile />)} />
             <Route path="/trener/paketi" element={trainer(<TrainerPackages />)} />
             <Route path="/trener/uplate" element={trainer(<TrainerPayments />)} />
+            <Route path="/trener/chat" element={trainer(<TrainerChatList />)} />
+            <Route path="/trener/chat/:athleteId" element={trainer(<TrainerChatThread />)} />
 
             {/* Vežbač — protected */}
             <Route path="/vezbac" element={athlete(<AthleteHome />)} />
