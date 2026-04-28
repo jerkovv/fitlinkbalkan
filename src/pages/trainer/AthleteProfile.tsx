@@ -220,26 +220,93 @@ const AthleteProfile = () => {
     }
   };
 
+  const assignProgramFallback = async (templateId: string): Promise<string | null> => {
+    if (!user || !id) return null;
+    // 1) Učitaj template + dane + vežbe
+    const [tplRes, daysRes] = await Promise.all([
+      supabase.from("program_templates").select("name").eq("id", templateId).maybeSingle(),
+      supabase.from("program_template_days").select("id, day_number, name").eq("template_id", templateId).order("day_number"),
+    ]);
+    const tpl: any = tplRes.data;
+    if (!tpl) { toast.error("Program template ne postoji"); return null; }
+    const tDays: any[] = (daysRes.data as any) ?? [];
+    if (tDays.length === 0) { toast.error("Program nema nijedan dan. Dodaj bar jedan dan."); return null; }
+
+    const tDayIds = tDays.map((d) => d.id);
+    const { data: tExs } = await supabase
+      .from("program_template_exercises")
+      .select("day_id, exercise_id, position, sets, reps, weight_kg, rest_seconds")
+      .in("day_id", tDayIds)
+      .order("position");
+
+    // 2) Insert assigned_programs
+    const { data: ap, error: apErr } = await supabase
+      .from("assigned_programs")
+      .insert({ athlete_id: id, trainer_id: user.id, name: tpl.name } as any)
+      .select("id")
+      .single();
+    if (apErr || !ap) { toast.error(apErr?.message ?? "Greška pri kreiranju programa"); return null; }
+    const assignedId = (ap as any).id;
+
+    // 3) Insert dani
+    const dayInserts = tDays.map((d) => ({
+      assigned_program_id: assignedId, day_number: d.day_number, name: d.name,
+    }));
+    const { data: newDays, error: dErr } = await supabase
+      .from("assigned_program_days")
+      .insert(dayInserts as any)
+      .select("id, day_number");
+    if (dErr) { toast.error(dErr.message); return null; }
+
+    const dayMap = new Map<string, string>();
+    tDays.forEach((od) => {
+      const nd = (newDays as any[]).find((x) => x.day_number === od.day_number);
+      if (nd) dayMap.set(od.id, nd.id);
+    });
+
+    // 4) Insert vežbe
+    const exInserts = ((tExs as any[]) ?? [])
+      .map((e) => ({
+        day_id: dayMap.get(e.day_id),
+        exercise_id: e.exercise_id,
+        position: e.position,
+        sets: e.sets,
+        reps: e.reps,
+        weight_kg: e.weight_kg,
+        rest_seconds: e.rest_seconds,
+      }))
+      .filter((e) => e.day_id);
+    if (exInserts.length) {
+      const { error: eErr } = await supabase.from("assigned_program_exercises").insert(exInserts as any);
+      if (eErr) { toast.error(eErr.message); return null; }
+    }
+    return assignedId;
+  };
+
   const assignProgram = async (templateId: string) => {
     if (!user || !id) return;
     setProgAssigning(templateId);
-    const { data, error } = await supabase.rpc("assign_program_to_athlete", {
-      p_template_id: templateId,
-      p_athlete_id: id,
-    });
-    setProgAssigning(null);
-    if (error) {
-      console.error("assign_program_to_athlete error:", error);
-      toast.error(error.message);
-      return;
+    try {
+      // Pokušaj prvo RPC (atomski snapshot na bazi)
+      const { data, error } = await supabase.rpc("assign_program_to_athlete", {
+        p_template_id: templateId,
+        p_athlete_id: id,
+      });
+      let assignedId: string | null = null;
+      if (!error && data) {
+        assignedId = data as any;
+      } else {
+        // Fallback: ručno u JS-u (radi i bez SQL skripte)
+        if (error) console.warn("RPC assign_program_to_athlete fail, koristim fallback:", error.message);
+        assignedId = await assignProgramFallback(templateId);
+      }
+      if (!assignedId) return;
+      toast.success("Program dodeljen vežbaču");
+      setProgOpen(false);
+      await load();
+    } finally {
+      setProgAssigning(null);
     }
-    if (!data) {
-      toast.error("Program nije dodeljen — pokušaj ponovo.");
-      return;
-    }
-    toast.success("Program dodeljen vežbaču");
-    setProgOpen(false);
-    await load();
   };
 
   const openAssign = async () => {
