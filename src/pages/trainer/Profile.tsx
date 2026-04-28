@@ -134,8 +134,25 @@ const Profile = () => {
     setSpecialties(specialties.filter((x) => x !== s));
   };
 
+  const validateSlug = (s: string): string | null => {
+    if (!s) return null; // null je OK (sakriva landing)
+    if (!/^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/.test(s)) {
+      return "Slug: 3-40 znakova, mala slova, brojevi, crtice. Bez razmaka.";
+    }
+    return null;
+  };
+
   const handleSave = async () => {
     if (!user) return;
+
+    const slugClean = publicSlug.trim().toLowerCase();
+    const slugErr = validateSlug(slugClean);
+    setSlugError(slugErr);
+    if (slugErr) {
+      toast.error(slugErr);
+      return;
+    }
+
     setSaving(true);
     try {
       const { error: pErr } = await supabase
@@ -167,9 +184,17 @@ const Profile = () => {
           bank_purpose: bankPurpose.trim() || null,
           show_attendees_to_athletes: showAttendees,
           cancel_cutoff_hours: cancelCutoff,
+          public_slug: slugClean || null,
+          public_enabled: publicEnabled,
+          headline: headline.trim() || null,
         } as any)
         .eq("id", user.id);
-      if (tErr) throw tErr;
+      if (tErr) {
+        if ((tErr.message || "").toLowerCase().includes("uniq_trainers_public_slug")) {
+          throw new Error("Taj slug je već zauzet, izaberi drugi.");
+        }
+        throw tErr;
+      }
 
       toast.success("Profil sačuvan");
     } catch (e: any) {
