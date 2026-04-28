@@ -3,21 +3,21 @@ import { Link } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Avatar, Chip } from "@/components/ui-bits";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, ChevronRight } from "lucide-react";
 import { athletes, AthleteStatus } from "@/data/mock";
 import { cn } from "@/lib/utils";
 
-const filters: { key: "all" | AthleteStatus; label: string }[] = [
+const filters: { key: "all" | AthleteStatus; label: string; count?: number }[] = [
   { key: "all", label: "Svi" },
   { key: "active", label: "Aktivni" },
   { key: "expiring", label: "Uskoro" },
   { key: "expired", label: "Istekli" },
 ];
 
-const statusDot = {
-  active: <Chip tone="success">●  Aktivan</Chip>,
-  expiring: <Chip tone="warning">●  Uskoro</Chip>,
-  expired: <Chip tone="danger">●  Istekao</Chip>,
+const statusChip = {
+  active: <Chip tone="success">Aktivan</Chip>,
+  expiring: <Chip tone="warning">Uskoro</Chip>,
+  expired: <Chip tone="danger">Istekao</Chip>,
 };
 
 const AthletesList = () => {
@@ -30,27 +30,29 @@ const AthletesList = () => {
 
   return (
     <>
-      <PhoneShell title={`Moji Vežbači (${athletes.length})`} variant="trainer">
-        <div className="flex items-center gap-2 rounded-xl bg-surface-3 px-3 py-2.5 mb-3">
-          <Search className="h-4 w-4 text-muted-foreground" />
+      <PhoneShell hasBottomNav title="Vežbači" eyebrow={`${athletes.length} ukupno`}>
+        {/* Search */}
+        <div className="flex items-center gap-2 card-premium px-4 py-3 focus-within:ring-2 focus-within:ring-primary/40 transition">
+          <Search className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={2} />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Pretraži ime..."
-            className="bg-transparent flex-1 text-sm placeholder:text-muted-foreground focus:outline-none"
+            className="bg-transparent flex-1 text-[15px] placeholder:text-muted-foreground/70 focus:outline-none"
           />
         </div>
 
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+        {/* Filter pills */}
+        <div className="flex gap-2 -mx-2 px-2 overflow-x-auto no-scrollbar">
           {filters.map((f) => (
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
               className={cn(
-                "px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wide whitespace-nowrap transition",
+                "pill px-4 py-2 text-[13px] whitespace-nowrap transition",
                 filter === f.key
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-surface-3 text-muted-foreground hover:text-foreground",
+                  ? "bg-foreground text-background"
+                  : "bg-surface border border-hairline text-muted-foreground hover:text-foreground",
               )}
             >
               {f.label}
@@ -58,28 +60,32 @@ const AthletesList = () => {
           ))}
         </div>
 
+        {/* List */}
         <ul className="space-y-2">
           {filtered.map((a) => (
             <li key={a.id}>
               <Link
                 to={`/trener/vezbaci/${a.id}`}
-                className="flex items-center gap-3 rounded-xl bg-surface border border-border/60 p-3 hover:border-primary/50 transition"
+                className="flex items-center gap-3 card-premium-hover px-4 py-3"
               >
-                <Avatar initials={a.initials} tone={a.status === "active" ? "trainer" : a.status === "expiring" ? "athlete" : "trainer"} />
+                <Avatar initials={a.initials} tone={a.status === "expiring" ? "athlete" : "brand"} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold">{a.name}</div>
-                  <div className="text-xs text-muted-foreground">{a.expiresLabel}</div>
+                  <div className="text-[15px] font-semibold tracking-tight">{a.name}</div>
+                  <div className="text-[12.5px] text-muted-foreground mt-0.5">
+                    {a.program} · {a.expiresLabel}
+                  </div>
                 </div>
-                {statusDot[a.status]}
+                {statusChip[a.status]}
+                <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
               </Link>
             </li>
           ))}
           {filtered.length === 0 && (
-            <li className="text-center text-xs text-muted-foreground py-8">Nema rezultata.</li>
+            <li className="text-center text-[13px] text-muted-foreground py-10">Nema rezultata.</li>
           )}
         </ul>
 
-        <button className="mt-4 w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 py-3 text-sm font-semibold text-primary-soft-foreground hover:bg-primary-soft/40 transition">
+        <button className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-hairline hover:border-primary/40 hover:bg-primary-soft/40 py-4 text-[14px] font-semibold text-muted-foreground hover:text-primary-soft-foreground transition">
           <Plus className="h-4 w-4" /> Dodaj novog vežbača
         </button>
       </PhoneShell>

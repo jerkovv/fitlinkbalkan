@@ -1,46 +1,74 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { ReactNode } from "react";
 
 interface PhoneShellProps {
+  /** Large title (Apple-style). Pass a string for default styling, or any node. */
   title: ReactNode;
+  /** Optional small eyebrow above the title */
+  eyebrow?: ReactNode;
+  /** Back link target */
   back?: string;
-  variant?: "trainer" | "athlete" | "neutral";
-  children: ReactNode;
+  /** Right-side action (icon button etc.) */
   rightSlot?: ReactNode;
+  /** Whether the page uses the bottom nav (adds bottom padding) */
+  hasBottomNav?: boolean;
+  children: ReactNode;
 }
 
-const variantClasses = {
-  trainer: "text-primary-soft-foreground",
-  athlete: "text-accent-soft-foreground",
-  neutral: "text-foreground",
-};
-
-export const PhoneShell = ({ title, back, variant = "neutral", children, rightSlot }: PhoneShellProps) => {
+export const PhoneShell = ({
+  title,
+  eyebrow,
+  back,
+  rightSlot,
+  hasBottomNav = false,
+  children,
+}: PhoneShellProps) => {
   return (
-    <div className="phone-shell pb-28 animate-fade-in">
+    <div className={`phone-shell ${hasBottomNav ? "pb-32" : "pb-10"} animate-fade-in`}>
       {/* Status bar */}
-      <div className="flex items-center justify-between px-5 pt-3 pb-1 text-[10px] text-muted-foreground/60">
+      <div className="flex items-center justify-between px-6 pt-4 pb-1 text-[11px] font-semibold text-foreground/60 tnum">
         <span>9:41</span>
-        <span>●●●</span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-foreground/60" />
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-foreground/60" />
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-foreground/60" />
+        </span>
       </div>
 
-      {/* Title bar */}
-      <header className={`flex items-center gap-2 px-5 py-3 border-b border-border/60 ${variantClasses[variant]}`}>
-        {back && (
-          <Link
-            to={back}
-            className="-ml-1 mr-1 inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-3 transition"
-            aria-label="Nazad"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
+      {/* Top bar — back + right action */}
+      {(back || rightSlot) && (
+        <div className="flex items-center justify-between px-6 pt-3">
+          {back ? (
+            <Link
+              to={back}
+              aria-label="Nazad"
+              className="-ml-2 inline-flex h-10 w-10 items-center justify-center rounded-full hover:bg-surface-2 transition active:scale-95"
+            >
+              <ChevronLeft className="h-5 w-5" strokeWidth={2.25} />
+            </Link>
+          ) : <span />}
+          {rightSlot}
+        </div>
+      )}
+
+      {/* Large Apple-style title */}
+      <header className="px-6 pt-3 pb-5">
+        {eyebrow && (
+          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-1.5">
+            {eyebrow}
+          </div>
         )}
-        <h1 className="text-base font-bold tracking-tight flex-1">{title}</h1>
-        {rightSlot}
+        {typeof title === "string" ? (
+          <h1 className="font-display text-[34px] leading-[1.1] font-bold tracking-tightest">
+            {title}
+          </h1>
+        ) : (
+          title
+        )}
       </header>
 
-      <main className="px-5 py-4">{children}</main>
+      <main className="px-6 space-y-5">{children}</main>
     </div>
   );
 };

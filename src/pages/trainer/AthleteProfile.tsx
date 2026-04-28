@@ -1,7 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
-import { Avatar, Chip, ProgressBar } from "@/components/ui-bits";
-import { ClipboardList, Wallet } from "lucide-react";
+import { Avatar, Card, Chip, ProgressBar, SectionTitle } from "@/components/ui-bits";
+import { ClipboardList, Wallet, MessageSquare, Phone } from "lucide-react";
 import { athletes } from "@/data/mock";
 
 const AthleteProfile = () => {
@@ -9,48 +9,81 @@ const AthleteProfile = () => {
   const athlete = athletes.find((a) => a.id === id) ?? athletes[0];
 
   return (
-    <PhoneShell title={athlete.name} back="/trener/vezbaci" variant="trainer">
-      <div className="flex items-center gap-3 mb-5">
-        <Avatar initials={athlete.initials} tone="trainer" size="lg" />
+    <PhoneShell
+      back="/trener/vezbaci"
+      title={
         <div>
-          <div className="text-base font-bold">{athlete.name}</div>
-          <div className="flex gap-1.5 mt-1">
-            <Chip tone="success">Aktivan</Chip>
-            <Chip tone="info">{athlete.program}</Chip>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-1.5">
+            Profil vežbača
+          </div>
+          <h1 className="font-display text-[28px] leading-[1.1] font-bold tracking-tightest">{athlete.name}</h1>
+        </div>
+      }
+    >
+      {/* Hero */}
+      <Card className="p-5 bg-gradient-brand-soft border-0">
+        <div className="flex items-center gap-4">
+          <Avatar initials={athlete.initials} tone="brand" size="xl" />
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap gap-1.5 mb-1.5">
+              <Chip tone="success">Aktivan</Chip>
+              <Chip tone="info">{athlete.program}</Chip>
+            </div>
+            <div className="text-[13px] text-muted-foreground">{athlete.expiresLabel}</div>
           </div>
         </div>
-      </div>
 
-      <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
-        Personal Records
-      </div>
-      <div className="space-y-3 rounded-xl bg-surface border border-border/60 p-4 mb-5">
-        {athlete.prs.map((pr) => (
-          <ProgressBar
-            key={pr.lift}
-            label={pr.lift}
-            trailing={<>🔥 {pr.weight}kg PR</>}
-            value={pr.progress}
-            tone="trainer"
-          />
-        ))}
-      </div>
+        <div className="grid grid-cols-3 gap-2 mt-5">
+          <button className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-surface/80 backdrop-blur hover:bg-surface transition">
+            <MessageSquare className="h-4 w-4 text-foreground" strokeWidth={2} />
+            <span className="text-[11px] font-semibold">Poruka</span>
+          </button>
+          <button className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-surface/80 backdrop-blur hover:bg-surface transition">
+            <Phone className="h-4 w-4 text-foreground" strokeWidth={2} />
+            <span className="text-[11px] font-semibold">Pozovi</span>
+          </button>
+          <Link
+            to="/trener/program"
+            className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-surface/80 backdrop-blur hover:bg-surface transition"
+          >
+            <ClipboardList className="h-4 w-4 text-foreground" strokeWidth={2} />
+            <span className="text-[11px] font-semibold">Program</span>
+          </Link>
+        </div>
+      </Card>
 
-      <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Akcije</div>
-      <div className="grid grid-cols-2 gap-2">
-        <Link
-          to="/trener/program"
-          className="rounded-xl bg-primary-soft text-primary-soft-foreground py-3 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-primary/30 transition"
-        >
-          <ClipboardList className="h-4 w-4" /> Program
-        </Link>
-        <Link
-          to={`/trener/uplata/${athlete.id}`}
-          className="rounded-xl bg-success-soft text-success-soft-foreground py-3 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-success/25 transition"
-        >
-          <Wallet className="h-4 w-4" /> Uplata
-        </Link>
-      </div>
+      {/* PRs */}
+      <section>
+        <SectionTitle>Personal Records</SectionTitle>
+        <Card className="p-5 space-y-4">
+          {athlete.prs.map((pr) => (
+            <ProgressBar
+              key={pr.lift}
+              label={pr.lift}
+              trailing={<>🔥 {pr.weight} kg</>}
+              value={pr.progress}
+              tone="brand"
+            />
+          ))}
+        </Card>
+      </section>
+
+      {/* Action */}
+      <Link
+        to={`/trener/uplata/${athlete.id}`}
+        className="flex items-center justify-between card-premium-hover px-5 py-4"
+      >
+        <div className="flex items-center gap-3">
+          <div className="h-11 w-11 rounded-2xl bg-success-soft text-success-soft-foreground flex items-center justify-center">
+            <Wallet className="h-[18px] w-[18px]" strokeWidth={2} />
+          </div>
+          <div>
+            <div className="text-[15px] font-semibold tracking-tight">Evidentiraj uplatu</div>
+            <div className="text-[12.5px] text-muted-foreground">Mesečna · 5.000 RSD</div>
+          </div>
+        </div>
+        <span className="text-muted-foreground">→</span>
+      </Link>
     </PhoneShell>
   );
 };
