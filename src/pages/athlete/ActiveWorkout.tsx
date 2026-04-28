@@ -64,6 +64,12 @@ const ActiveWorkout = () => {
   const [sessionLogId, setSessionLogId] = useState<string | null>(null);
   const [setsByEx, setSetsByEx] = useState<Record<string, SetEntry[]>>({});
   const [currentIdx, setCurrentIdx] = useState(0);
+  const [alreadyDoneToday, setAlreadyDoneToday] = useState<{ open: boolean; completedAt: string | null }>({
+    open: false,
+    completedAt: null,
+  });
+  const [confirmFinishOpen, setConfirmFinishOpen] = useState(false);
+  const [finishing, setFinishing] = useState(false);
 
   // Rest timer
   const [rest, setRest] = useState(0);
