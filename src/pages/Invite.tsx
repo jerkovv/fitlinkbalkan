@@ -28,6 +28,8 @@ const Invite = () => {
   const [trainerId, setTrainerId] = useState<string>("");
   const [inviteEmail, setInviteEmail] = useState<string | null>(null);
   const [inviteFullName, setInviteFullName] = useState<string | null>(null);
+  // true = postoji zapis u invites tabeli (lični invite), false = trainer-level kod (public/referral)
+  const [hasInviteRow, setHasInviteRow] = useState(false);
 
   // Magic link flow detection
   const [magicSession, setMagicSession] = useState(false);
@@ -44,36 +46,55 @@ const Invite = () => {
     const init = async () => {
       if (!code) return;
 
-      // Provera invite zapisa
-      const { data, error } = await supabase
+      let resolvedTrainerId: string | null = null;
+
+      // 1) Probaj per-athlete invite zapis
+      const { data: inviteRow } = await supabase
         .from("invites")
         .select("trainer_id, status, expires_at, email, full_name")
         .eq("code", code)
         .maybeSingle();
 
-      if (error || !data || data.status !== "pending") {
-        setValid(false);
-        setChecking(false);
-        return;
+      if (inviteRow && inviteRow.status === "pending") {
+        const expired =
+          inviteRow.expires_at && new Date(inviteRow.expires_at) < new Date();
+        if (!expired) {
+          resolvedTrainerId = (inviteRow as any).trainer_id;
+          setHasInviteRow(true);
+          setInviteEmail((inviteRow as any).email ?? null);
+          setInviteFullName((inviteRow as any).full_name ?? null);
+          if ((inviteRow as any).email) setEmail((inviteRow as any).email);
+          if ((inviteRow as any).full_name) setFullName((inviteRow as any).full_name);
+        }
       }
-      if (data.expires_at && new Date(data.expires_at) < new Date()) {
+
+      // 2) Fallback: trener-level invite_code (public landing / referral / share)
+      if (!resolvedTrainerId) {
+        const { data: trainerRow } = await supabase
+          .from("trainers")
+          .select("id")
+          .eq("invite_code", code)
+          .maybeSingle();
+        if (trainerRow?.id) {
+          resolvedTrainerId = trainerRow.id;
+          setHasInviteRow(false);
+        }
+      }
+
+      if (!resolvedTrainerId) {
         setValid(false);
         setChecking(false);
         return;
       }
 
       setValid(true);
-      setTrainerId((data as any).trainer_id);
-      setInviteEmail((data as any).email ?? null);
-      setInviteFullName((data as any).full_name ?? null);
-      if ((data as any).email) setEmail((data as any).email);
-      if ((data as any).full_name) setFullName((data as any).full_name);
+      setTrainerId(resolvedTrainerId);
 
       // Trenerovo ime
       const { data: profile } = await supabase
         .from("profiles")
         .select("full_name")
-        .eq("id", (data as any).trainer_id)
+        .eq("id", resolvedTrainerId)
         .maybeSingle();
       setTrainerName(profile?.full_name ?? "tvog trenera");
 
@@ -83,7 +104,6 @@ const Invite = () => {
         setMagicSession(true);
         setSessionUserId(session.user.id);
         setSessionEmail(session.user.email ?? null);
-        // Predpopuni ako je auto-ulogovan
         if (session.user.email) setEmail(session.user.email);
       }
 
