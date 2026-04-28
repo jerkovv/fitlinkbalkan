@@ -78,6 +78,7 @@ const App = () => (
             <Route path="/vezbac/napredak" element={athlete(<AthleteProgress />)} />
             <Route path="/vezbac/clanarina" element={athlete(<AthleteMembership />)} />
             <Route path="/vezbac/ishrana" element={athlete(<AthleteNutrition />)} />
+            <Route path="/vezbac/notifikacije" element={athlete(<AthleteNotifications />)} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
