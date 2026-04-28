@@ -361,6 +361,88 @@ const Profile = () => {
               </div>
             </Card>
 
+            {/* Podaci za uplatu na račun */}
+            <Card className="p-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <Landmark className="h-4 w-4 text-primary" />
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Uplata na račun
+                </div>
+              </div>
+              <p className="text-[12px] text-muted-foreground -mt-2">
+                Ovi podaci se prikazuju vežbaču kad odabere plaćanje na račun.
+              </p>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="bankRecipient">Primalac</Label>
+                <Input
+                  id="bankRecipient"
+                  value={bankRecipient}
+                  onChange={(e) => setBankRecipient(e.target.value)}
+                  placeholder="Marko Marković PR / Naziv firme"
+                  maxLength={100}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="bankAccount">Broj računa</Label>
+                <Input
+                  id="bankAccount"
+                  value={bankAccount}
+                  onChange={(e) => setBankAccount(e.target.value)}
+                  placeholder="160-0000000000000-00"
+                  maxLength={30}
+                  inputMode="numeric"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="bankName">Banka</Label>
+                <Input
+                  id="bankName"
+                  value={bankName}
+                  onChange={(e) => setBankName(e.target.value)}
+                  placeholder="Banca Intesa"
+                  maxLength={60}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="bankModel">Model</Label>
+                  <Input
+                    id="bankModel"
+                    value={bankModel}
+                    onChange={(e) => setBankModel(e.target.value)}
+                    placeholder="97"
+                    maxLength={3}
+                    inputMode="numeric"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="bankReference">Poziv na broj</Label>
+                  <Input
+                    id="bankReference"
+                    value={bankReference}
+                    onChange={(e) => setBankReference(e.target.value)}
+                    placeholder="opciono"
+                    maxLength={22}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="bankPurpose">Svrha uplate</Label>
+                <Input
+                  id="bankPurpose"
+                  value={bankPurpose}
+                  onChange={(e) => setBankPurpose(e.target.value)}
+                  placeholder="Članarina za trening"
+                  maxLength={140}
+                />
+              </div>
+            </Card>
+
             <Button
               onClick={handleSave}
               disabled={saving}
