@@ -9,7 +9,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Loader2, ShieldCheck, Package, Banknote, Receipt, Clock, X, Plus,
+  Loader2, ShieldCheck, Package, Banknote, Receipt, Clock, X, Plus, Copy, Check, Landmark,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -49,11 +49,21 @@ const fmtDate = (iso: string | null) => {
   });
 };
 
+type BankInfo = {
+  recipient: string | null;
+  account: string | null;
+  bank_name: string | null;
+  model: string | null;
+  reference: string | null;
+  purpose: string | null;
+};
+
 const Membership = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [trainerId, setTrainerId] = useState<string | null>(null);
   const [trainerName, setTrainerName] = useState("");
+  const [bank, setBank] = useState<BankInfo | null>(null);
   const [active, setActive] = useState<Membership | null>(null);
   const [packages, setPackages] = useState<Pkg[]>([]);
   const [recent, setRecent] = useState<Purchase[]>([]);
