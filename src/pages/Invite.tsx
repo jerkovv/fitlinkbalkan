@@ -360,7 +360,7 @@ const Invite = () => {
           </div>
           <Button type="submit" className="w-full mt-6" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Prihvati i kreiraj nalog
+            {signupSource === "public_landing" || signupSource === "referral" ? "Kreiraj nalog" : "Prihvati i kreiraj nalog"}
           </Button>
         </form>
       )}
