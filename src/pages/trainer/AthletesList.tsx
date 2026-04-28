@@ -5,9 +5,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Avatar, Chip } from "@/components/ui-bits";
-import { Search, Plus, ChevronRight, Loader2, UserPlus } from "lucide-react";
+import { Search, ChevronRight, Loader2, UserPlus, Mail, Loader } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type AthleteRow = {
   id: string;
@@ -135,15 +141,46 @@ const AthletesList = () => {
       (a.profile?.full_name ?? "").toLowerCase().includes(q.toLowerCase()),
   );
 
-  const copyInvite = async () => {
+  // Invite dialog
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteName, setInviteName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const sendInvite = async () => {
+    const name = inviteName.trim();
+    const email = inviteEmail.trim().toLowerCase();
+    if (!name) { toast.error("Unesi ime vežbača"); return; }
+    if (!email || !email.includes("@")) { toast.error("Unesi validan email"); return; }
+
+    setSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-invite", {
+        body: { full_name: name, email },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+
+      toast.success(`Pozivnica poslata na ${email}`);
+      setInviteOpen(false);
+      setInviteName("");
+      setInviteEmail("");
+    } catch (e: any) {
+      toast.error(e.message ?? "Greška pri slanju pozivnice");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const copyInviteLink = async () => {
     if (!inviteCode) {
-      toast.error("Nemaš invite kod. Idi na onboarding.");
+      toast.error("Nemaš lični invite link.");
       return;
     }
     const url = `${window.location.origin}/invite/${inviteCode}`;
     try {
       await navigator.clipboard.writeText(url);
-      toast.success("Invite link kopiran");
+      toast.success("Link kopiran");
     } catch {
       toast.error("Ne mogu da kopiram");
     }
@@ -219,15 +256,70 @@ const AthletesList = () => {
             </ul>
 
             <button
-              onClick={copyInvite}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-hairline hover:border-primary/40 hover:bg-primary-soft/40 py-4 text-[14px] font-semibold text-muted-foreground hover:text-primary-soft-foreground transition"
+              onClick={() => setInviteOpen(true)}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-brand text-white py-4 text-[14px] font-semibold shadow-brand active:scale-[0.99] transition"
             >
-              <UserPlus className="h-4 w-4" /> Pošalji invite link
+              <Mail className="h-4 w-4" /> Pozovi vežbača emailom
+            </button>
+            <button
+              onClick={copyInviteLink}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-hairline hover:border-primary/40 hover:bg-primary-soft/40 py-3 text-[13px] font-semibold text-muted-foreground hover:text-primary-soft-foreground transition mt-2"
+            >
+              <UserPlus className="h-4 w-4" /> ili kopiraj lični link
             </button>
           </>
         )}
       </PhoneShell>
       <BottomNav role="trainer" />
+
+      {/* Invite dialog */}
+      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Pozovi novog vežbača</DialogTitle>
+            <DialogDescription>
+              Poslaće mu se email sa linkom za pridruživanje. Link važi 7 dana.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <div>
+              <Label htmlFor="inv-name">Ime i prezime</Label>
+              <Input
+                id="inv-name"
+                value={inviteName}
+                onChange={(e) => setInviteName(e.target.value)}
+                placeholder="npr. Marko Petrović"
+                className="mt-1.5"
+                disabled={sending}
+                autoFocus
+              />
+            </div>
+            <div>
+              <Label htmlFor="inv-email">Email</Label>
+              <Input
+                id="inv-email"
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="marko@email.com"
+                className="mt-1.5"
+                disabled={sending}
+              />
+            </div>
+            <Button
+              onClick={sendInvite}
+              disabled={sending}
+              className="w-full mt-4"
+            >
+              {sending ? (
+                <><Loader className="h-4 w-4 mr-2 animate-spin" /> Šaljem...</>
+              ) : (
+                <><Mail className="h-4 w-4 mr-2" /> Pošalji pozivnicu</>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
