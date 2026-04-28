@@ -99,6 +99,7 @@ const Profile = () => {
       setBankReference(t.bank_reference ?? "");
       setBankPurpose(t.bank_purpose ?? "");
       setShowAttendees(!!t.show_attendees_to_athletes);
+      setCancelCutoff(typeof t.cancel_cutoff_hours === "number" ? t.cancel_cutoff_hours : 0);
       
 
       setStats({
@@ -156,6 +157,7 @@ const Profile = () => {
           bank_reference: bankReference.trim() || null,
           bank_purpose: bankPurpose.trim() || null,
           show_attendees_to_athletes: showAttendees,
+          cancel_cutoff_hours: cancelCutoff,
         } as any)
         .eq("id", user.id);
       if (tErr) throw tErr;
