@@ -10,6 +10,9 @@ import {
   sessionColorClasses, dateToWeekday, toIsoDate, formatTime, addMinutesToTime,
 } from "@/lib/session";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 const weekdayShort = ["PON", "UTO", "SRE", "ČET", "PET", "SUB", "NED"];
@@ -44,6 +47,10 @@ const Booking = () => {
   const [myBookings, setMyBookings] = useState<MyBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [actingKey, setActingKey] = useState<string | null>(null);
+  const [showAttendees, setShowAttendees] = useState<boolean>(false);
+  const [attendeesSlot, setAttendeesSlot] = useState<Slot | null>(null);
+  const [attendees, setAttendees] = useState<{ athlete_id: string; full_name: string; is_me: boolean }[]>([]);
+  const [attendeesLoading, setAttendeesLoading] = useState(false);
 
   // 7 dana napred (počinjući od danas)
   const days = useMemo(() => {
@@ -67,7 +74,7 @@ const Booking = () => {
       setTrainerId(tid);
 
       if (tid) {
-        const [{ data: prof }, { data: mem }] = await Promise.all([
+        const [{ data: prof }, { data: mem }, { data: tr }] = await Promise.all([
           supabase.from("profiles").select("full_name").eq("id", tid).maybeSingle(),
           supabase
             .from("memberships")
@@ -78,7 +85,9 @@ const Booking = () => {
             .order("ends_on", { ascending: false })
             .limit(1)
             .maybeSingle(),
+          supabase.from("trainers").select("show_attendees_to_athletes").eq("id", tid).maybeSingle(),
         ]);
+        setShowAttendees(!!(tr as any)?.show_attendees_to_athletes);
         setTrainerName((prof as any)?.full_name ?? "Trener");
         const m: any = mem;
         const todayISO = toIsoDate(today);
@@ -151,6 +160,22 @@ const Booking = () => {
     if (error) { toast.error(error.message); return; }
     toast.success("Rezervacija otkazana");
     loadDay();
+  };
+
+  const openAttendees = async (s: Slot) => {
+    if (!trainerId || !showAttendees) return;
+    setAttendeesSlot(s);
+    setAttendees([]);
+    setAttendeesLoading(true);
+    const { data, error } = await supabase.rpc("get_slot_attendees", {
+      p_trainer_id: trainerId,
+      p_date: toIsoDate(selectedDate),
+      p_start_time: formatTime(s.start_time),
+      p_session_type_id: s.session_type_id,
+    });
+    setAttendeesLoading(false);
+    if (error) { toast.error(error.message); return; }
+    setAttendees((data as any[]) ?? []);
   };
 
   return (
@@ -233,12 +258,25 @@ const Booking = () => {
                             {formatTime(s.start_time)} – {endTime}
                           </span>
                         </span>
-                        <span className="flex items-center gap-1.5">
-                          <Users className="h-3.5 w-3.5" />
-                          <span className="tnum font-semibold text-foreground">
-                            {s.booked_count} / {s.capacity}
+                        {showAttendees && s.booked_count > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => openAttendees(s)}
+                            className="flex items-center gap-1.5 hover:text-primary transition"
+                          >
+                            <Users className="h-3.5 w-3.5" />
+                            <span className="tnum font-semibold text-foreground underline-offset-4 hover:underline">
+                              {s.booked_count} / {s.capacity}
+                            </span>
+                          </button>
+                        ) : (
+                          <span className="flex items-center gap-1.5">
+                            <Users className="h-3.5 w-3.5" />
+                            <span className="tnum font-semibold text-foreground">
+                              {s.booked_count} / {s.capacity}
+                            </span>
                           </span>
-                        </span>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-2 text-[12.5px] text-muted-foreground mb-3">
@@ -283,6 +321,49 @@ const Booking = () => {
         </section>
       </PhoneShell>
       <BottomNav role="athlete" />
+
+      <Dialog open={!!attendeesSlot} onOpenChange={(o) => !o && setAttendeesSlot(null)}>
+        <DialogContent className="max-w-[380px]">
+          <DialogHeader>
+            <DialogTitle>{attendeesSlot?.type_name ?? "Učesnici"}</DialogTitle>
+            <DialogDescription>
+              {attendeesSlot
+                ? `${formatTime(attendeesSlot.start_time)} · ${attendeesSlot.booked_count} / ${attendeesSlot.capacity}`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          {attendeesLoading ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : attendees.length === 0 ? (
+            <div className="text-center text-[13px] text-muted-foreground py-4">
+              Još nema rezervacija.
+            </div>
+          ) : (
+            <ul className="space-y-2 max-h-[50vh] overflow-y-auto">
+              {attendees.map((a) => (
+                <li
+                  key={a.athlete_id}
+                  className="flex items-center gap-3 rounded-2xl bg-surface border border-hairline px-3 py-2.5"
+                >
+                  <div className="h-8 w-8 rounded-full bg-primary-soft text-primary-soft-foreground flex items-center justify-center text-[12px] font-semibold">
+                    {a.full_name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0 text-[13.5px] font-semibold tracking-tight truncate">
+                    {a.full_name}
+                  </div>
+                  {a.is_me && (
+                    <span className="text-[10.5px] font-semibold uppercase tracking-wider text-primary">
+                      Ti
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
