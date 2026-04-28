@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { Bell, CalendarPlus, CalendarX, Dumbbell, MessageSquare, Check, IdCard, Apple, ClipboardList, AlertTriangle } from "lucide-react";
 import {
   DropdownMenu,
@@ -77,6 +78,7 @@ export const NotificationItem = ({
 
 export const NotificationBell = () => {
   const navigate = useNavigate();
+  const { user, role } = useAuth();
   const { items, unreadCount, markRead, markAllRead } = useNotifications();
   const [open, setOpen] = useState(false);
 
@@ -101,8 +103,8 @@ export const NotificationBell = () => {
     // message_from_trainer ostaje samo prikaz u listi
   };
 
-  // Detect role iz prve notifikacije ili default trener
-  const fullPagePath = items[0]?.recipient_role === "athlete"
+  // Detect role iz useAuth
+  const fullPagePath = role === "athlete"
     ? "/vezbac/notifikacije"
     : "/trener/notifikacije";
 
