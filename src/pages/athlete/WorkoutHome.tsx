@@ -102,9 +102,17 @@ const WorkoutHome = () => {
         hasBottomNav
         eyebrow="Trening"
         title={
-          <h1 className="font-display text-[28px] leading-[1.05] font-bold tracking-tightest">
-            Tvoji treninzi
-          </h1>
+          <div className="flex items-end justify-between gap-3">
+            <h1 className="font-display text-[28px] leading-[1.05] font-bold tracking-tightest">
+              Tvoji treninzi
+            </h1>
+            {streak > 0 && (
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-warning-soft/60 text-warning-soft-foreground px-3 py-1.5 text-[12px] font-bold tnum shrink-0">
+                <Flame className="h-3.5 w-3.5" strokeWidth={2.5} />
+                {streak} {streak === 1 ? "dan" : "dana"}
+              </div>
+            )}
+          </div>
         }
       >
         {loading ? (
