@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import { assignProgramToAthlete } from "@/lib/programAssignment";
 import { PhoneShell } from "@/components/PhoneShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -192,14 +193,15 @@ const ProgramBuilder = () => {
   const handleAssign = async (athleteId: string) => {
     if (!templateId) return;
     setAssigning(athleteId);
-    const { error } = await supabase.rpc("assign_program_to_athlete", {
-      p_template_id: templateId,
-      p_athlete_id: athleteId,
-    });
-    setAssigning(null);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Program dodeljen vežbaču");
-    setAssignOpen(false);
+    try {
+      await assignProgramToAthlete(templateId, athleteId);
+      toast.success("Program dodeljen vežbaču");
+      setAssignOpen(false);
+    } catch (error: any) {
+      toast.error(error.message ?? "Greška pri dodeli programa");
+    } finally {
+      setAssigning(null);
+    }
   };
 
   return (
