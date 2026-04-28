@@ -282,7 +282,7 @@ const Calendar = () => {
                         <div className="flex items-start justify-between gap-2 mb-1.5">
                           <div className="font-semibold text-[14px] truncate">{s.type_name}</div>
                           {s.is_canceled ? (
-                            <Chip tone="warn">Otkazano</Chip>
+                            <Chip tone="warning">Otkazano</Chip>
                           ) : full ? (
                             <Chip tone="success">Pun</Chip>
                           ) : (
