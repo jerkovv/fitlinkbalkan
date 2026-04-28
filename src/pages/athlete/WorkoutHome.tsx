@@ -129,10 +129,30 @@ const WorkoutHome = () => {
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : next ? (
-          <button
-            onClick={() => nav(`/vezbac/trening/${next.day_id}`)}
-            className="block w-full text-left"
-          >
+          <>
+            {daysInactive >= 4 && (
+              <Card className="p-4 flex items-start gap-3 bg-[hsl(var(--session-amber-bg))] border-0">
+                <div className="h-10 w-10 rounded-2xl bg-[hsl(var(--session-amber-fg))]/15 text-[hsl(var(--session-amber-fg))] flex items-center justify-center shrink-0">
+                  <AlertTriangle className="h-[18px] w-[18px]" strokeWidth={2.25} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14px] font-semibold tracking-tight text-[hsl(var(--session-amber-fg))]">
+                    {hasEverTrained
+                      ? `Nisi trenirao ${daysInactive} dana`
+                      : "Vreme je za prvi trening"}
+                  </div>
+                  <div className="text-[12.5px] text-[hsl(var(--session-amber-fg))]/85 mt-0.5">
+                    {hasEverTrained
+                      ? "Ne lomi naviku — kreni odmah, biće lakše nego što misliš."
+                      : "Tvoj program te čeka. Krenimo polako."}
+                  </div>
+                </div>
+              </Card>
+            )}
+            <button
+              onClick={() => nav(`/vezbac/trening/${next.day_id}`)}
+              className="block w-full text-left"
+            >
             <Card className="p-5 bg-gradient-brand text-white border-0 shadow-brand relative overflow-hidden">
               <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
               <div className="relative">
