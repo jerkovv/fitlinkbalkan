@@ -10,6 +10,9 @@ import {
   sessionColorClasses, dateToWeekday, toIsoDate, formatTime, addMinutesToTime,
 } from "@/lib/session";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 const weekdayShort = ["PON", "UTO", "SRE", "ČET", "PET", "SUB", "NED"];
@@ -44,6 +47,10 @@ const Booking = () => {
   const [myBookings, setMyBookings] = useState<MyBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [actingKey, setActingKey] = useState<string | null>(null);
+  const [showAttendees, setShowAttendees] = useState<boolean>(false);
+  const [attendeesSlot, setAttendeesSlot] = useState<Slot | null>(null);
+  const [attendees, setAttendees] = useState<{ athlete_id: string; full_name: string; is_me: boolean }[]>([]);
+  const [attendeesLoading, setAttendeesLoading] = useState(false);
 
   // 7 dana napred (počinjući od danas)
   const days = useMemo(() => {
@@ -67,7 +74,7 @@ const Booking = () => {
       setTrainerId(tid);
 
       if (tid) {
-        const [{ data: prof }, { data: mem }] = await Promise.all([
+        const [{ data: prof }, { data: mem }, { data: tr }] = await Promise.all([
           supabase.from("profiles").select("full_name").eq("id", tid).maybeSingle(),
           supabase
             .from("memberships")
@@ -78,7 +85,9 @@ const Booking = () => {
             .order("ends_on", { ascending: false })
             .limit(1)
             .maybeSingle(),
+          supabase.from("trainers").select("show_attendees_to_athletes").eq("id", tid).maybeSingle(),
         ]);
+        setShowAttendees(!!(tr as any)?.show_attendees_to_athletes);
         setTrainerName((prof as any)?.full_name ?? "Trener");
         const m: any = mem;
         const todayISO = toIsoDate(today);
