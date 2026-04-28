@@ -289,7 +289,7 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
                                 <span
                                   className={cn(
                                     "text-[10px] font-semibold",
-                                    wDelta > 0 ? "text-success" : "text-warn"
+                                    wDelta > 0 ? "text-success" : "text-destructive"
                                   )}
                                 >
                                   {wDelta > 0 ? (
