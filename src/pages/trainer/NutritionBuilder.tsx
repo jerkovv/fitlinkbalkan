@@ -301,12 +301,12 @@ const NutritionBuilder = () => {
         if (ids.length) {
           const { data: profs } = await supabase
             .from("profiles")
-            .select("id, full_name, email")
+            .select("id, full_name")
             .in("id", ids);
           const pMap = new Map((profs ?? []).map((p: any) => [p.id, p]));
           setAthletes(ids.map((id) => {
             const p = pMap.get(id) as any;
-            return { id, full_name: p?.full_name ?? null, email: p?.email ?? "" };
+            return { id, full_name: p?.full_name ?? null, email: "" };
           }));
         }
         return;
