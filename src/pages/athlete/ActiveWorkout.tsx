@@ -299,8 +299,8 @@ const ActiveWorkout = () => {
         </Chip>
 
         {/* Set rows */}
-        <Card className="p-4">
-          <div className="grid grid-cols-[24px_1fr_1fr_1fr_36px] gap-2 px-1 pb-2 text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80 font-semibold border-b border-hairline">
+        <Card className="p-4 overflow-hidden">
+          <div className="grid grid-cols-[22px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_32px] gap-1.5 px-1 pb-2 text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80 font-semibold border-b border-hairline">
             <span>Set</span>
             <span className="text-center">KG</span>
             <span className="text-center">Reps</span>
@@ -310,7 +310,7 @@ const ActiveWorkout = () => {
           {sets.map((s, i) => (
             <div
               key={i}
-              className="grid grid-cols-[24px_1fr_1fr_1fr_36px] gap-2 items-center py-2 border-b border-hairline last:border-b-0"
+              className="grid grid-cols-[22px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_32px] gap-1.5 items-center py-2 border-b border-hairline last:border-b-0"
             >
               <span className="text-[12px] text-muted-foreground font-semibold tnum">{s.set_number}</span>
               <input
@@ -320,7 +320,7 @@ const ActiveWorkout = () => {
                 disabled={s.done}
                 placeholder="–"
                 className={cn(
-                  "rounded-xl py-2 text-center text-[15px] font-bold tnum focus:outline-none focus:ring-2 focus:ring-primary/40",
+                  "w-full min-w-0 rounded-xl py-2 text-center text-[15px] font-bold tnum focus:outline-none focus:ring-2 focus:ring-primary/40",
                   s.done ? "bg-surface-2 text-foreground" : "bg-primary-soft text-primary-soft-foreground"
                 )}
               />
@@ -331,7 +331,7 @@ const ActiveWorkout = () => {
                 disabled={s.done}
                 placeholder="–"
                 className={cn(
-                  "rounded-xl py-2 text-center text-[15px] font-bold tnum focus:outline-none focus:ring-2 focus:ring-primary/40",
+                  "w-full min-w-0 rounded-xl py-2 text-center text-[15px] font-bold tnum focus:outline-none focus:ring-2 focus:ring-primary/40",
                   s.done ? "bg-surface-2 text-foreground" : "bg-primary-soft text-primary-soft-foreground"
                 )}
               />
@@ -342,7 +342,7 @@ const ActiveWorkout = () => {
                 disabled={s.done}
                 placeholder="–"
                 className={cn(
-                  "rounded-xl py-2 text-center text-[15px] font-bold tnum focus:outline-none focus:ring-2 focus:ring-primary/40",
+                  "w-full min-w-0 rounded-xl py-2 text-center text-[15px] font-bold tnum focus:outline-none focus:ring-2 focus:ring-primary/40",
                   s.done ? "bg-surface-2 text-foreground" : "bg-primary-soft text-primary-soft-foreground"
                 )}
               />
