@@ -407,6 +407,94 @@ const Profile = () => {
               </div>
             </Card>
 
+            {/* Public landing */}
+            <Card className="p-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-primary" />
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Javna stranica
+                </div>
+              </div>
+              <p className="text-[12.5px] text-muted-foreground -mt-2">
+                Lični sajt sa tvojim paketima i bio-om — podeli na Instagramu ili WhatsApp-u.
+              </p>
+
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14px] font-semibold tracking-tight">Vidljivo javnosti</div>
+                  <div className="text-[12px] text-muted-foreground mt-0.5">
+                    Ako isključiš, niko ne može otvoriti tvoj /t/ link.
+                  </div>
+                </div>
+                <Switch checked={publicEnabled} onCheckedChange={setPublicEnabled} />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="slug">Tvoj slug</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-[13px] text-muted-foreground tnum shrink-0">
+                    {window.location.host}/t/
+                  </span>
+                  <Input
+                    id="slug"
+                    value={publicSlug}
+                    onChange={(e) => {
+                      const v = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+                      setPublicSlug(v);
+                      setSlugError(validateSlug(v));
+                    }}
+                    placeholder="dejan-pt"
+                    className="lowercase"
+                  />
+                </div>
+                {slugError && (
+                  <div className="text-[11.5px] text-destructive">{slugError}</div>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="headline">Slogan / headline</Label>
+                <Input
+                  id="headline"
+                  value={headline}
+                  onChange={(e) => setHeadline(e.target.value)}
+                  placeholder="Personal trener — snaga i mršavljenje za zauzete ljude"
+                  maxLength={140}
+                />
+                <div className="text-[11px] text-muted-foreground text-right tnum">
+                  {headline.length}/140
+                </div>
+              </div>
+
+              {publicSlug && publicEnabled && !slugError && (
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={async () => {
+                      const url = `${window.location.origin}/t/${publicSlug.trim().toLowerCase()}`;
+                      try {
+                        await navigator.clipboard.writeText(url);
+                        toast.success("Link kopiran");
+                      } catch {
+                        toast.error("Ne mogu da kopiram");
+                      }
+                    }}
+                  >
+                    <Copy className="h-4 w-4 mr-2" /> Kopiraj link
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => window.open(`/t/${publicSlug.trim().toLowerCase()}`, "_blank")}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </Card>
+
             {/* Privatnost grupnih termina */}
             <Card className="p-5 space-y-4">
               <div className="flex items-center gap-2">
