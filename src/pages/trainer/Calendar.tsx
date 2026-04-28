@@ -442,7 +442,7 @@ const Calendar = () => {
           )}
         </section>
       </PhoneShell>
-      <BottomNav role="trainer" active="kalendar" />
+      <BottomNav role="trainer" />
 
       {/* Add session dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
