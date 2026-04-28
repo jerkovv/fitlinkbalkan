@@ -957,6 +957,12 @@ const AthleteProfile = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      <WorkoutSessionDetailDialog
+        sessionId={openSessionId}
+        open={!!openSessionId}
+        onOpenChange={(o) => !o && setOpenSessionId(null)}
+      />
     </PhoneShell>
   );
 };
