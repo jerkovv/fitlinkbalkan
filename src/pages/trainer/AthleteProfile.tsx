@@ -11,9 +11,10 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   Apple, ClipboardList, Wallet, MessageSquare, Phone, Loader2, Plus, X, Check,
-  Dumbbell, Activity, Scale,
+  Dumbbell, Activity, Scale, ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
+import { WorkoutSessionDetailDialog } from "@/components/WorkoutSessionDetailDialog";
 
 type AthleteData = {
   id: string;
