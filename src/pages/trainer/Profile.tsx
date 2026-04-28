@@ -140,6 +140,12 @@ const Profile = () => {
           years_experience: yearsNum,
           instagram_handle: igClean,
           specialties,
+          bank_recipient: bankRecipient.trim() || null,
+          bank_account: bankAccount.trim() || null,
+          bank_name: bankName.trim() || null,
+          bank_model: bankModel.trim() || null,
+          bank_reference: bankReference.trim() || null,
+          bank_purpose: bankPurpose.trim() || null,
         } as any)
         .eq("id", user.id);
       if (tErr) throw tErr;
