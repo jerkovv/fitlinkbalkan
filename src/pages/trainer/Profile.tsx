@@ -431,9 +431,13 @@ const Profile = () => {
 
               <div className="space-y-1.5">
                 <Label htmlFor="slug">Tvoj slug</Label>
-                <div className="flex items-center gap-2">
-                  <span className="text-[13px] text-muted-foreground tnum shrink-0">
-                    {window.location.host}/t/
+                <div className="flex items-stretch rounded-md border border-input bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-0">
+                  <span
+                    className="flex items-center px-3 text-[12.5px] text-muted-foreground bg-muted/50 border-r border-input max-w-[55%] truncate tnum"
+                    title={`${window.location.host}/t/`}
+                  >
+                    <span className="truncate">{window.location.host}</span>
+                    <span className="shrink-0">/t/</span>
                   </span>
                   <Input
                     id="slug"
@@ -444,7 +448,7 @@ const Profile = () => {
                       setSlugError(validateSlug(v));
                     }}
                     placeholder="dejan-pt"
-                    className="lowercase"
+                    className="lowercase border-0 focus-visible:ring-0 focus-visible:ring-offset-0 flex-1 min-w-0"
                   />
                 </div>
                 {slugError && (
