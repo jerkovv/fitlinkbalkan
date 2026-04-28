@@ -9,7 +9,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Plus, Loader2, Dumbbell, Search, Trash2, GripVertical, ChevronDown, ChevronUp,
+  Plus, Loader2, Dumbbell, Search, Trash2, GripVertical, ChevronDown, ChevronUp, UserPlus, Check,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -26,6 +26,7 @@ type Exercise = {
   exercises: { name: string; primary_muscle: string } | null;
 };
 type LibExercise = { id: string; name: string; primary_muscle: string; equipment: string };
+type Athlete = { id: string; full_name: string | null; email: string };
 
 const ProgramBuilder = () => {
   const { id: templateId } = useParams<{ id: string }>();
@@ -43,6 +44,11 @@ const ProgramBuilder = () => {
   const [pickerDayId, setPickerDayId] = useState<string | null>(null);
   const [library, setLibrary] = useState<LibExercise[]>([]);
   const [libQuery, setLibQuery] = useState("");
+
+  // Assign dialog
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [athletes, setAthletes] = useState<Athlete[]>([]);
+  const [assigning, setAssigning] = useState<string | null>(null);
 
   const load = async () => {
     if (!templateId) return;
