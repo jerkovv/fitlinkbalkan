@@ -257,10 +257,16 @@ const NutritionBuilder = () => {
   };
 
   const filteredFoods = useMemo(() => {
-    if (!foodQuery) return foods;
-    const q = foodQuery.toLowerCase();
-    return foods.filter((f) => f.name.toLowerCase().includes(q) || (f.category ?? "").toLowerCase().includes(q));
-  }, [foods, foodQuery]);
+    const q = foodQuery.trim().toLowerCase();
+    return foods.filter((f) => {
+      if (activeCategory && f.category !== activeCategory) return false;
+      if (filterVegan && !f.is_vegan) return false;
+      if (filterGlutenFree && !f.is_gluten_free) return false;
+      if (filterPosno && !f.is_posno) return false;
+      if (q && !f.name.toLowerCase().includes(q) && !(f.category ?? "").toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [foods, foodQuery, activeCategory, filterVegan, filterGlutenFree, filterPosno]);
 
   const setScheduleDay = async (weekday: number, dayId: string | null) => {
     if (!templateId) return;
