@@ -5,6 +5,9 @@
 -- 3) Public RPC: get_trainer_public_profile(slug) — bez auth-a
 -- =====================================================================
 
+-- citext za case-insensitive slug
+CREATE EXTENSION IF NOT EXISTS citext;
+
 -- ---------------------------------------------------------------------
 -- 1) Trainers public fields
 -- ---------------------------------------------------------------------
