@@ -9,9 +9,10 @@ import {
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Loader2, ShieldCheck, Package, Banknote, Receipt, Clock, X, Plus, Copy, Check, Landmark,
+  Loader2, ShieldCheck, Package, Banknote, Receipt, Clock, X, Plus, Copy, Check, Landmark, QrCode,
 } from "lucide-react";
 import { toast } from "sonner";
+import { generateIpsQrDataUrl } from "@/lib/ipsQr";
 
 type Membership = {
   id: string;
@@ -60,6 +61,26 @@ type BankInfo = {
 
 const BankSlip = ({ bank, amount }: { bank: BankInfo | null; amount: number }) => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [qr, setQr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    if (bank?.account && bank?.recipient && amount > 0) {
+      generateIpsQrDataUrl(
+        {
+          recipient: bank.recipient,
+          account: bank.account,
+          model: bank.model,
+          reference: bank.reference,
+          purpose: bank.purpose,
+        },
+        amount,
+      ).then((url) => { if (alive) setQr(url); });
+    } else {
+      setQr(null);
+    }
+    return () => { alive = false; };
+  }, [bank, amount]);
 
   const hasAny =
     bank && (bank.recipient || bank.account || bank.bank_name || bank.purpose);
@@ -109,13 +130,28 @@ const BankSlip = ({ bank, amount }: { bank: BankInfo | null; amount: number }) =
   };
 
   return (
-    <div className="rounded-2xl border border-hairline bg-gradient-brand-soft p-4">
-      <div className="flex items-center gap-2 mb-2">
+    <div className="rounded-2xl border border-hairline bg-gradient-brand-soft p-4 space-y-3">
+      <div className="flex items-center gap-2">
         <Landmark className="h-4 w-4 text-primary" />
         <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
           Podaci za uplatu
         </div>
       </div>
+
+      {qr && (
+        <div className="rounded-xl bg-background p-4 flex flex-col items-center gap-2">
+          <img
+            src={qr}
+            alt="IPS QR kod za plaćanje"
+            className="w-48 h-48"
+          />
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <QrCode className="h-3 w-3" />
+            Skeniraj IPS QR u m-banking aplikaciji
+          </div>
+        </div>
+      )}
+
       <div className="rounded-xl bg-background/70 px-3">
         <Row label="Iznos" value={`${amount.toLocaleString("sr-RS")} RSD`} k="amount" />
         <Row label="Primalac" value={bank?.recipient} k="recipient" />
