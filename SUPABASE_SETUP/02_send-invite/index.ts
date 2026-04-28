@@ -147,31 +147,52 @@ Deno.serve(async (req) => {
     const PUBLIC_SITE_URL = "https://fitlinkbalkan.lovable.app";
     const redirectTo = `${PUBLIC_SITE_URL}/invite/${code}`;
 
-    const authMailer = createClient(SUPABASE_URL, ANON, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    const userData = {
+      invite_code: code,
+      trainer_id: trainerId,
+      full_name: fullName,
+      role: "athlete",
+    };
 
-    const { error: emailErr } = await authMailer.auth.signInWithOtp({
+    const { error: inviteEmailErr } = await admin.auth.admin.inviteUserByEmail(
       email,
-      options: {
-        emailRedirectTo: redirectTo,
-        shouldCreateUser: true,
-        data: {
-          invite_code: code,
-          trainer_id: trainerId,
-          full_name: fullName,
-          role: "athlete",
-        },
-      },
-    });
+      { redirectTo, data: userData },
+    );
 
-    if (emailErr) {
-      // Rollback invite ako Supabase nije uspeo stvarno da pošalje email
-      await admin.from("invites").delete().eq("id", inv.id);
-      return new Response(JSON.stringify({ error: emailErr.message }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (inviteEmailErr) {
+      const msg = inviteEmailErr.message?.toLowerCase() ?? "";
+      const alreadyExists =
+        msg.includes("already") ||
+        msg.includes("registered") ||
+        msg.includes("exists");
+
+      if (alreadyExists) {
+        const authMailer = createClient(SUPABASE_URL, ANON, {
+          auth: { autoRefreshToken: false, persistSession: false },
+        });
+        const { error: otpErr } = await authMailer.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: redirectTo,
+            shouldCreateUser: false,
+            data: userData,
+          },
+        });
+
+        if (otpErr) {
+          await admin.from("invites").delete().eq("id", inv.id);
+          return new Response(JSON.stringify({ error: otpErr.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } else {
+        await admin.from("invites").delete().eq("id", inv.id);
+        return new Response(JSON.stringify({ error: inviteEmailErr.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // 3) Označi sent_at
