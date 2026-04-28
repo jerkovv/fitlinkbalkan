@@ -129,6 +129,11 @@ const Dashboard = () => {
           athlete_name: nameMap.get(b.athlete_id) ?? "Vežbač",
         }))
       );
+
+      // At-risk vežbači (nisu trenirali 4+ dana, imaju aktivan program)
+      const { data: risk } = await supabase.rpc("get_at_risk_athletes", { p_days: 4 } as any);
+      if (alive) setAtRisk(((risk as any[]) ?? []).slice(0, 5));
+
       setLoading(false);
     })();
 
