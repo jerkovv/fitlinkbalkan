@@ -73,6 +73,10 @@ const NutritionBuilder = () => {
   const [foodQuery, setFoodQuery] = useState("");
   const [pickedFood, setPickedFood] = useState<Food | null>(null);
   const [pickedGrams, setPickedGrams] = useState("100");
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [filterVegan, setFilterVegan] = useState(false);
+  const [filterGlutenFree, setFilterGlutenFree] = useState(false);
+  const [filterPosno, setFilterPosno] = useState(false);
 
   // Schedule
   const [scheduleOpen, setScheduleOpen] = useState(false);
