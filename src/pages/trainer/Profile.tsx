@@ -23,7 +23,7 @@ const Profile = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [copied, setCopied] = useState(false);
+  
 
   // editable
   const [fullName, setFullName] = useState("");
@@ -36,8 +36,7 @@ const Profile = () => {
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [newSpec, setNewSpec] = useState("");
 
-  // read-only
-  const [inviteCode, setInviteCode] = useState<string>("");
+  // read-only stats
   const [stats, setStats] = useState({
     athletes: 0,
     programs: 0,
@@ -77,7 +76,7 @@ const Profile = () => {
       setYears(t.years_experience != null ? String(t.years_experience) : "");
       setInstagram(t.instagram_handle ?? "");
       setSpecialties(Array.isArray(t.specialties) ? t.specialties : []);
-      setInviteCode(t.invite_code ?? "");
+      
 
       setStats({
         athletes: aCount.count ?? 0,
@@ -100,15 +99,6 @@ const Profile = () => {
 
   const removeSpecialty = (s: string) => {
     setSpecialties(specialties.filter((x) => x !== s));
-  };
-
-  const copyInvite = async () => {
-    if (!inviteCode) return;
-    const url = `${window.location.origin}/invite/${inviteCode}`;
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    toast.success("Invite link kopiran");
-    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleSave = async () => {
@@ -190,34 +180,6 @@ const Profile = () => {
                 <div className="text-[11px] text-muted-foreground">Ishrana</div>
               </Card>
             </div>
-
-            {/* Invite code */}
-            {inviteCode && (
-              <Card className="p-4 bg-gradient-brand-soft border-0">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary mb-2">
-                  Tvoj invite kod
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 font-display text-[24px] font-bold tracking-[0.2em] text-foreground">
-                    {inviteCode}
-                  </div>
-                  <button
-                    onClick={copyInvite}
-                    className="h-10 w-10 rounded-xl bg-surface flex items-center justify-center hover:bg-surface-2 transition"
-                    aria-label="Kopiraj link"
-                  >
-                    {copied ? (
-                      <Check className="h-4 w-4 text-success" />
-                    ) : (
-                      <Copy className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </button>
-                </div>
-                <p className="text-[11px] text-muted-foreground mt-2">
-                  Pošalji vežbaču link da se poveže na tvoj nalog.
-                </p>
-              </Card>
-            )}
 
             {/* Osnovno */}
             <Card className="p-5 space-y-4">
