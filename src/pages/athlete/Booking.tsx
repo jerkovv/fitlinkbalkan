@@ -321,6 +321,49 @@ const Booking = () => {
         </section>
       </PhoneShell>
       <BottomNav role="athlete" />
+
+      <Dialog open={!!attendeesSlot} onOpenChange={(o) => !o && setAttendeesSlot(null)}>
+        <DialogContent className="max-w-[380px]">
+          <DialogHeader>
+            <DialogTitle>{attendeesSlot?.type_name ?? "Učesnici"}</DialogTitle>
+            <DialogDescription>
+              {attendeesSlot
+                ? `${formatTime(attendeesSlot.start_time)} · ${attendeesSlot.booked_count} / ${attendeesSlot.capacity}`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          {attendeesLoading ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : attendees.length === 0 ? (
+            <div className="text-center text-[13px] text-muted-foreground py-4">
+              Još nema rezervacija.
+            </div>
+          ) : (
+            <ul className="space-y-2 max-h-[50vh] overflow-y-auto">
+              {attendees.map((a) => (
+                <li
+                  key={a.athlete_id}
+                  className="flex items-center gap-3 rounded-2xl bg-surface border border-hairline px-3 py-2.5"
+                >
+                  <div className="h-8 w-8 rounded-full bg-primary-soft text-primary-soft-foreground flex items-center justify-center text-[12px] font-semibold">
+                    {a.full_name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0 text-[13.5px] font-semibold tracking-tight truncate">
+                    {a.full_name}
+                  </div>
+                  {a.is_me && (
+                    <span className="text-[10.5px] font-semibold uppercase tracking-wider text-primary">
+                      Ti
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
