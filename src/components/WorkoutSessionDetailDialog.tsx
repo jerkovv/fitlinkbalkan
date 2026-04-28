@@ -112,11 +112,15 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
         .eq("day_id", s.day_id)
         .order("position", { ascending: true });
 
-      // 3. Set logs za sesiju
-      const { data: logs } = await supabase
+      // 3. Set logs za sesiju — uključi i exercise meta preko relacije
+      const { data: logs, error: logsErr } = await supabase
         .from("set_logs")
-        .select("exercise_id, set_number, reps, weight_kg, rpe, done")
+        .select(
+          "exercise_id, set_number, reps, weight_kg, rpe, done, assigned_program_exercises(id, position, sets, reps, weight_kg, exercises(name, primary_muscle))"
+        )
         .eq("session_log_id", sessionId);
+
+      if (logsErr) console.error("set_logs fetch error:", logsErr);
 
       const logsByEx: Record<string, any[]> = {};
       for (const l of (logs as any[]) ?? []) {
@@ -124,16 +128,40 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
         logsByEx[l.exercise_id].push(l);
       }
 
-      const rows: ExerciseRow[] = ((exData as any[]) ?? []).map((ex) => ({
-        id: ex.id,
-        position: ex.position,
-        sets: ex.sets,
-        planned_reps: ex.reps,
-        planned_weight: ex.weight_kg,
-        exercise_name: ex.exercises?.name ?? "Vežba",
-        primary_muscle: ex.exercises?.primary_muscle ?? null,
-        set_logs: (logsByEx[ex.id] ?? []).sort((a, b) => a.set_number - b.set_number),
-      }));
+      // Spoji: prvo vežbe iz dana (planirano), zatim DODAJ vežbe iz logova
+      // koje više nisu u danu (npr. trener ih je obrisao posle treninga).
+      const seen = new Set<string>();
+      const planned: ExerciseRow[] = ((exData as any[]) ?? []).map((ex) => {
+        seen.add(ex.id);
+        return {
+          id: ex.id,
+          position: ex.position,
+          sets: ex.sets,
+          planned_reps: ex.reps,
+          planned_weight: ex.weight_kg,
+          exercise_name: ex.exercises?.name ?? "Vežba",
+          primary_muscle: ex.exercises?.primary_muscle ?? null,
+          set_logs: (logsByEx[ex.id] ?? []).sort((a, b) => a.set_number - b.set_number),
+        };
+      });
+
+      const orphans: ExerciseRow[] = [];
+      for (const exId of Object.keys(logsByEx)) {
+        if (seen.has(exId)) continue;
+        const sample = logsByEx[exId][0]?.assigned_program_exercises;
+        orphans.push({
+          id: exId,
+          position: sample?.position ?? 999,
+          sets: sample?.sets ?? logsByEx[exId].length,
+          planned_reps: sample?.reps ?? null,
+          planned_weight: sample?.weight_kg ?? null,
+          exercise_name: sample?.exercises?.name ?? "Vežba (uklonjena iz plana)",
+          primary_muscle: sample?.exercises?.primary_muscle ?? null,
+          set_logs: logsByEx[exId].sort((a, b) => a.set_number - b.set_number),
+        });
+      }
+
+      const rows = [...planned, ...orphans].sort((a, b) => a.position - b.position);
 
       setExercises(rows);
       setLoading(false);
