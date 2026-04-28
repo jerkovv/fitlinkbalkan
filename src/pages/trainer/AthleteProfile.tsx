@@ -43,7 +43,7 @@ type AssignedPlan = {
 type AssignedProgram = {
   id: string;
   name: string;
-  created_at: string;
+  assigned_at: string;
   total_days: number;
 };
 
@@ -129,9 +129,9 @@ const AthleteProfile = () => {
         .maybeSingle(),
       supabase
         .from("assigned_programs")
-        .select("id, name, created_at")
+        .select("id, name, assigned_at")
         .eq("athlete_id", id)
-        .order("created_at", { ascending: false })
+        .order("assigned_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
       supabase
@@ -165,7 +165,7 @@ const AthleteProfile = () => {
         .from("assigned_program_days")
         .select("id", { count: "exact", head: true })
         .eq("assigned_program_id", prog.id);
-      setActiveProgram({ id: prog.id, name: prog.name, created_at: prog.created_at, total_days: count ?? 0 });
+      setActiveProgram({ id: prog.id, name: prog.name, assigned_at: prog.assigned_at, total_days: count ?? 0 });
     } else {
       setActiveProgram(null);
     }
