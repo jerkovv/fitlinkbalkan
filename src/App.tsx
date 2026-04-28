@@ -3,9 +3,13 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/hooks/useAuth";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import Auth from "./pages/Auth.tsx";
+import Invite from "./pages/Invite.tsx";
 
 import TrainerOnboarding from "./pages/trainer/Onboarding.tsx";
 import TrainerDashboard from "./pages/trainer/Dashboard.tsx";
@@ -25,36 +29,42 @@ import AthleteMembership from "./pages/athlete/Membership.tsx";
 
 const queryClient = new QueryClient();
 
+const trainer = (el: JSX.Element) => <ProtectedRoute requireRole="trainer">{el}</ProtectedRoute>;
+const athlete = (el: JSX.Element) => <ProtectedRoute requireRole="athlete">{el}</ProtectedRoute>;
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/invite/:code" element={<Invite />} />
 
-          {/* Trener */}
-          <Route path="/trener/onboarding" element={<TrainerOnboarding />} />
-          <Route path="/trener" element={<TrainerDashboard />} />
-          <Route path="/trener/vezbaci" element={<TrainerAthletes />} />
-          <Route path="/trener/vezbaci/:id" element={<TrainerAthleteProfile />} />
-          <Route path="/trener/program" element={<TrainerProgram />} />
-          <Route path="/trener/kalendar" element={<TrainerCalendar />} />
-          <Route path="/trener/uplata/:id" element={<TrainerPayment />} />
-          <Route path="/trener/finansije" element={<TrainerFinances />} />
+            {/* Trener — protected */}
+            <Route path="/trener/onboarding" element={trainer(<TrainerOnboarding />)} />
+            <Route path="/trener" element={trainer(<TrainerDashboard />)} />
+            <Route path="/trener/vezbaci" element={trainer(<TrainerAthletes />)} />
+            <Route path="/trener/vezbaci/:id" element={trainer(<TrainerAthleteProfile />)} />
+            <Route path="/trener/program" element={trainer(<TrainerProgram />)} />
+            <Route path="/trener/kalendar" element={trainer(<TrainerCalendar />)} />
+            <Route path="/trener/uplata/:id" element={trainer(<TrainerPayment />)} />
+            <Route path="/trener/finansije" element={trainer(<TrainerFinances />)} />
 
-          {/* Vežbač */}
-          <Route path="/vezbac/onboarding" element={<AthleteOnboarding />} />
-          <Route path="/vezbac" element={<AthleteHome />} />
-          <Route path="/vezbac/trening" element={<AthleteWorkout />} />
-          <Route path="/vezbac/rezervacija" element={<AthleteBooking />} />
-          <Route path="/vezbac/napredak" element={<AthleteProgress />} />
-          <Route path="/vezbac/clanarina" element={<AthleteMembership />} />
+            {/* Vežbač — protected */}
+            <Route path="/vezbac/onboarding" element={athlete(<AthleteOnboarding />)} />
+            <Route path="/vezbac" element={athlete(<AthleteHome />)} />
+            <Route path="/vezbac/trening" element={athlete(<AthleteWorkout />)} />
+            <Route path="/vezbac/rezervacija" element={athlete(<AthleteBooking />)} />
+            <Route path="/vezbac/napredak" element={athlete(<AthleteProgress />)} />
+            <Route path="/vezbac/clanarina" element={athlete(<AthleteMembership />)} />
 
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
