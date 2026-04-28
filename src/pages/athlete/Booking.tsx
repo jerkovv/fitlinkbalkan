@@ -258,12 +258,25 @@ const Booking = () => {
                             {formatTime(s.start_time)} – {endTime}
                           </span>
                         </span>
-                        <span className="flex items-center gap-1.5">
-                          <Users className="h-3.5 w-3.5" />
-                          <span className="tnum font-semibold text-foreground">
-                            {s.booked_count} / {s.capacity}
+                        {showAttendees && s.booked_count > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => openAttendees(s)}
+                            className="flex items-center gap-1.5 hover:text-primary transition"
+                          >
+                            <Users className="h-3.5 w-3.5" />
+                            <span className="tnum font-semibold text-foreground underline-offset-4 hover:underline">
+                              {s.booked_count} / {s.capacity}
+                            </span>
+                          </button>
+                        ) : (
+                          <span className="flex items-center gap-1.5">
+                            <Users className="h-3.5 w-3.5" />
+                            <span className="tnum font-semibold text-foreground">
+                              {s.booked_count} / {s.capacity}
+                            </span>
                           </span>
-                        </span>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-2 text-[12.5px] text-muted-foreground mb-3">
