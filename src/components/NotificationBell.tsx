@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Bell, CalendarPlus, CalendarX, Dumbbell, MessageSquare, Check, IdCard, Apple, ClipboardList, AlertTriangle } from "lucide-react";
+import { Bell, CalendarPlus, CalendarX, Dumbbell, MessageSquare, Check, IdCard, Apple, ClipboardList, AlertTriangle, Megaphone } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +25,7 @@ const KIND_META: Record<
   message_from_trainer: { icon: MessageSquare,  tone: "text-[hsl(var(--session-indigo-fg))] bg-[hsl(var(--session-indigo-bg))]" },
   membership_expiring:  { icon: IdCard,         tone: "text-[hsl(var(--session-amber-fg))] bg-[hsl(var(--session-amber-bg))]" },
   membership_expired:   { icon: AlertTriangle,  tone: "text-[hsl(var(--session-rose-fg))] bg-[hsl(var(--session-rose-bg))]" },
+  broadcast:            { icon: Megaphone,      tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]" },
 };
 
 const formatRelative = (iso: string) => {
