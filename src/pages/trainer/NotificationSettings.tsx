@@ -51,11 +51,15 @@ const NotificationSettings = () => {
     setSaving(key);
     const { error } = await supabase
       .from("trainer_notification_prefs")
-      .upsert({ trainer_id: user.id, ...next, updated_at: new Date().toISOString() });
+      .upsert(
+        { trainer_id: user.id, ...next, updated_at: new Date().toISOString() },
+        { onConflict: "trainer_id" }
+      );
     setSaving(null);
     if (error) {
+      console.error("[notif prefs upsert]", error);
       setPrefs(prefs); // rollback
-      toast.error("Greška pri snimanju");
+      toast.error(error.message || "Greška pri snimanju");
     } else {
       toast.success(next[key] ? "Uključeno" : "Isključeno");
     }
