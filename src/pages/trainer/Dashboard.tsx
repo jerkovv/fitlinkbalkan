@@ -95,10 +95,7 @@ const Dashboard = () => {
         </Card>
 
         <div className="grid grid-cols-2 gap-3">
-          <Link
-            to="/trener/programi"
-            className="card-premium-hover p-4 flex flex-col gap-2"
-          >
+          <Link to="/trener/programi" className="card-premium-hover p-4 flex flex-col gap-2">
             <div className="h-10 w-10 rounded-xl bg-gradient-brand-soft flex items-center justify-center">
               <ClipboardList className="h-5 w-5 text-primary" strokeWidth={2.25} />
             </div>
@@ -107,10 +104,7 @@ const Dashboard = () => {
               <div className="text-[11px] text-muted-foreground">Treninzi</div>
             </div>
           </Link>
-          <Link
-            to="/trener/ishrana"
-            className="card-premium-hover p-4 flex flex-col gap-2"
-          >
+          <Link to="/trener/ishrana" className="card-premium-hover p-4 flex flex-col gap-2">
             <div className="h-10 w-10 rounded-xl bg-gradient-brand-soft flex items-center justify-center">
               <Apple className="h-5 w-5 text-primary" strokeWidth={2.25} />
             </div>
@@ -118,6 +112,31 @@ const Dashboard = () => {
               <div className="font-semibold text-sm tracking-tight">Ishrana</div>
               <div className="text-[11px] text-muted-foreground">Planovi</div>
             </div>
+          </Link>
+          <Link to="/trener/paketi" className="card-premium-hover p-4 flex flex-col gap-2">
+            <div className="h-10 w-10 rounded-xl bg-gradient-brand-soft flex items-center justify-center">
+              <Package className="h-5 w-5 text-primary" strokeWidth={2.25} />
+            </div>
+            <div>
+              <div className="font-semibold text-sm tracking-tight">Paketi</div>
+              <div className="text-[11px] text-muted-foreground">Članarine</div>
+            </div>
+          </Link>
+          <Link to="/trener/uplate" className="card-premium-hover p-4 flex flex-col gap-2 relative">
+            <div className="h-10 w-10 rounded-xl bg-gradient-brand-soft flex items-center justify-center">
+              <Wallet className="h-5 w-5 text-primary" strokeWidth={2.25} />
+            </div>
+            <div>
+              <div className="font-semibold text-sm tracking-tight">Uplate</div>
+              <div className="text-[11px] text-muted-foreground">
+                {pendingPayments > 0 ? `${pendingPayments} na čekanju` : "Zahtevi"}
+              </div>
+            </div>
+            {pendingPayments > 0 && (
+              <span className="absolute top-3 right-3 min-w-[20px] h-5 px-1.5 rounded-full bg-gradient-brand text-white text-[10px] font-bold flex items-center justify-center shadow-brand">
+                {pendingPayments}
+              </span>
+            )}
           </Link>
         </div>
 
