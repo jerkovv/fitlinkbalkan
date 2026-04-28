@@ -26,6 +26,7 @@ import TrainerProgramBuilderNew from "./pages/trainer/ProgramBuilderNew.tsx";
 import TrainerNutritionTemplates from "./pages/trainer/NutritionTemplates.tsx";
 import TrainerNutritionBuilder from "./pages/trainer/NutritionBuilder.tsx";
 import TrainerNotifications from "./pages/trainer/Notifications.tsx";
+import TrainerProfile from "./pages/trainer/Profile.tsx";
 
 import AthleteOnboarding from "./pages/athlete/Onboarding.tsx";
 import AthleteHome from "./pages/athlete/Home.tsx";
@@ -71,6 +72,7 @@ const App = () => (
             <Route path="/trener/ishrana" element={trainer(<TrainerNutritionTemplates />)} />
             <Route path="/trener/ishrana/:id" element={trainer(<TrainerNutritionBuilder />)} />
             <Route path="/trener/notifikacije" element={trainer(<TrainerNotifications />)} />
+            <Route path="/trener/profil" element={trainer(<TrainerProfile />)} />
 
             {/* Vežbač — protected */}
             <Route path="/vezbac/onboarding" element={athlete(<AthleteOnboarding />)} />
