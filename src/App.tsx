@@ -58,6 +58,7 @@ const App = () => (
             <Route path="/trener/vezbaci/:id" element={trainer(<TrainerAthleteProfile />)} />
             <Route path="/trener/program" element={trainer(<TrainerProgram />)} />
             <Route path="/trener/kalendar" element={trainer(<TrainerCalendar />)} />
+            <Route path="/trener/termini" element={trainer(<TrainerSessionSettings />)} />
             <Route path="/trener/uplata/:id" element={trainer(<TrainerPayment />)} />
             <Route path="/trener/finansije" element={trainer(<TrainerFinances />)} />
             <Route path="/trener/biblioteka" element={trainer(<TrainerExerciseLibrary />)} />
