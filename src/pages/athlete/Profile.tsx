@@ -31,6 +31,7 @@ const Profile = () => {
   const [birthYear, setBirthYear] = useState<string>("");
   const [gender, setGender] = useState<Gender | "">("");
   const [notes, setNotes] = useState("");
+  const [trainer, setTrainer] = useState<{ name: string; phone: string | null; email: string | null } | null>(null);
 
   useEffect(() => {
     if (!user) return;
