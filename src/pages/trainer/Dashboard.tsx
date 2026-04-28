@@ -1,43 +1,160 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Avatar, Card, Chip, SectionTitle, StatCard } from "@/components/ui-bits";
-import { Clock, ChevronRight, Plus, ClipboardList, Apple, Package, Wallet } from "lucide-react";
-import { trainerProfile, todaySessions } from "@/data/mock";
+import {
+  Clock, ChevronRight, ClipboardList, Apple, Package, Wallet,
+  Calendar as CalIcon, Users, Settings, Copy, Check,
+} from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import { NotificationBell } from "@/components/NotificationBell";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
-const statusChip = {
-  active: <Chip tone="success">Aktivno</Chip>,
-  confirmed: <Chip tone="info">Potvrđeno</Chip>,
-  pending: <Chip tone="warning">Čeka</Chip>,
+type SessionRow = {
+  id: string;
+  start_time: string;
+  type_name: string;
+  type_color: string;
+  status: string;
+  athlete_id: string;
+  athlete_name: string | null;
 };
+
+const monthNames = [
+  "Januar", "Februar", "Mart", "April", "Maj", "Jun",
+  "Jul", "Avgust", "Septembar", "Oktobar", "Novembar", "Decembar",
+];
+
+const fmtTime = (t: string) => t?.slice(0, 5) ?? "";
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const today = useMemo(() => new Date(), []);
+  const todayISO = useMemo(() => today.toISOString().slice(0, 10), [today]);
+
+  const [trainerName, setTrainerName] = useState<string>("");
+  const [studio, setStudio] = useState<string>("");
+  const [inviteCode, setInviteCode] = useState<string>("");
+  const [copied, setCopied] = useState(false);
+
+  const [activeAthletes, setActiveAthletes] = useState(0);
+  const [expiringSoon, setExpiringSoon] = useState(0);
   const [pendingPayments, setPendingPayments] = useState(0);
+  const [sessions, setSessions] = useState<SessionRow[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
-    supabase
-      .from("membership_purchases")
-      .select("id", { count: "exact", head: true })
-      .eq("trainer_id", user.id)
-      .eq("status", "pending")
-      .then(({ count }) => setPendingPayments(count ?? 0));
-  }, [user]);
+    let alive = true;
+
+    (async () => {
+      setLoading(true);
+
+      // Trener profil
+      const [{ data: profile }, { data: trainer }] = await Promise.all([
+        supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
+        supabase.from("trainers").select("studio_name, invite_code").eq("id", user.id).maybeSingle(),
+      ]);
+
+      if (!alive) return;
+      setTrainerName((profile as any)?.full_name?.split(" ")[0] ?? "treneru");
+      setStudio((trainer as any)?.studio_name ?? "Tvoj studio");
+      setInviteCode((trainer as any)?.invite_code ?? "");
+
+      // Vežbači
+      const { data: ath } = await supabase
+        .from("athletes")
+        .select("id")
+        .eq("trainer_id", user.id);
+      const athleteIds = (ath ?? []).map((a: any) => a.id);
+
+      // Članarine
+      const in14 = new Date();
+      in14.setDate(in14.getDate() + 14);
+      const in14ISO = in14.toISOString().slice(0, 10);
+
+      const [{ count: activeCount }, { count: expCount }, { count: pendCount }] = await Promise.all([
+        supabase
+          .from("memberships")
+          .select("id", { count: "exact", head: true })
+          .in("athlete_id", athleteIds.length ? athleteIds : ["00000000-0000-0000-0000-000000000000"])
+          .eq("status", "active"),
+        supabase
+          .from("memberships")
+          .select("id", { count: "exact", head: true })
+          .in("athlete_id", athleteIds.length ? athleteIds : ["00000000-0000-0000-0000-000000000000"])
+          .eq("status", "active")
+          .lte("ends_on", in14ISO)
+          .gte("ends_on", todayISO),
+        supabase
+          .from("membership_purchases")
+          .select("id", { count: "exact", head: true })
+          .eq("trainer_id", user.id)
+          .eq("status", "pending"),
+      ]);
+
+      if (!alive) return;
+      setActiveAthletes(activeCount ?? 0);
+      setExpiringSoon(expCount ?? 0);
+      setPendingPayments(pendCount ?? 0);
+
+      // Današnje sesije
+      const { data: book } = await supabase
+        .from("session_bookings")
+        .select("id, start_time, type_name, type_color, status, athlete_id")
+        .eq("trainer_id", user.id)
+        .eq("date", todayISO)
+        .neq("status", "canceled")
+        .order("start_time", { ascending: true });
+
+      const bookings = (book ?? []) as any[];
+      const aIds = Array.from(new Set(bookings.map((b) => b.athlete_id)));
+      const { data: profs } = aIds.length
+        ? await supabase.from("profiles").select("id, full_name").in("id", aIds)
+        : { data: [] as any[] };
+      const nameMap = new Map<string, string | null>(
+        (profs ?? []).map((p: any) => [p.id, p.full_name])
+      );
+
+      if (!alive) return;
+      setSessions(
+        bookings.map((b) => ({
+          id: b.id,
+          start_time: b.start_time,
+          type_name: b.type_name,
+          type_color: b.type_color,
+          status: b.status,
+          athlete_id: b.athlete_id,
+          athlete_name: nameMap.get(b.athlete_id) ?? "Vežbač",
+        }))
+      );
+      setLoading(false);
+    })();
+
+    return () => { alive = false; };
+  }, [user, todayISO]);
+
+  const copyInvite = async () => {
+    if (!inviteCode) return;
+    await navigator.clipboard.writeText(inviteCode);
+    setCopied(true);
+    toast.success("Invite kod kopiran");
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  const todayLabel = `${today.getDate()}. ${monthNames[today.getMonth()]}`;
 
   return (
     <>
       <PhoneShell
         hasBottomNav
-        eyebrow={`Dobro došao nazad`}
+        eyebrow="Dobro došao nazad"
         title={
           <h1 className="font-display text-[34px] leading-[1.05] font-bold tracking-tightest">
-            Zdravo, {trainerProfile.name}
+            Zdravo, {trainerName}
             <span className="text-gradient-brand"> 👋</span>
           </h1>
         }
@@ -49,52 +166,103 @@ const Dashboard = () => {
         }
       >
         <div className="grid grid-cols-2 gap-3">
-          <StatCard tone="brand" value="12" unit="članova" label="Aktivnih" />
-          <StatCard tone="warning" value="3" unit="ističu" label="Uskoro" />
+          <StatCard tone="brand" value={String(activeAthletes)} unit="članova" label="Aktivnih" />
+          <StatCard tone="warning" value={String(expiringSoon)} unit="ističu" label="≤ 14 dana" />
         </div>
 
+        {/* Today */}
         <section>
-          <SectionTitle action={<button className="text-[12px] font-semibold text-primary">Sve →</button>}>
-            Danas, 16. April
+          <SectionTitle
+            action={
+              <Link to="/trener/kalendar" className="text-[12px] font-semibold text-primary">
+                Kalendar →
+              </Link>
+            }
+          >
+            Danas, {todayLabel}
           </SectionTitle>
 
-          <ul className="space-y-2">
-            {todaySessions.map((s) => (
-              <li key={s.id}>
-                <Link
-                  to={`/trener/vezbaci/${s.id}`}
-                  className="flex items-center gap-3 card-premium-hover px-4 py-3.5"
-                >
-                  <div className="h-11 w-11 rounded-2xl bg-gradient-brand-soft text-primary-soft-foreground flex items-center justify-center">
-                    <Clock className="h-[18px] w-[18px]" strokeWidth={2} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[15px] font-semibold leading-tight tracking-tight">
-                      {s.time} · {s.athleteName}
+          {loading ? (
+            <Card className="p-6 text-center text-[13px] text-muted-foreground">Učitavanje…</Card>
+          ) : sessions.length === 0 ? (
+            <Card className="p-6 text-center">
+              <CalIcon className="h-8 w-8 mx-auto mb-2 text-muted-foreground/60" strokeWidth={1.5} />
+              <div className="text-[13.5px] font-medium">Danas nema zakazanih treninga</div>
+              <div className="text-[12px] text-muted-foreground mt-0.5">
+                Vežbači mogu da rezervišu termine iz kalendara
+              </div>
+            </Card>
+          ) : (
+            <ul className="space-y-2">
+              {sessions.map((s) => (
+                <li key={s.id}>
+                  <Link
+                    to={`/trener/vezbaci/${s.athlete_id}`}
+                    className="flex items-center gap-3 card-premium-hover px-4 py-3.5"
+                  >
+                    <div
+                      className="h-11 w-11 rounded-2xl flex items-center justify-center"
+                      style={{ background: `${s.type_color}22`, color: s.type_color }}
+                    >
+                      <Clock className="h-[18px] w-[18px]" strokeWidth={2} />
                     </div>
-                    <div className="text-[12.5px] text-muted-foreground mt-0.5">{s.workout}</div>
-                  </div>
-                  {statusChip[s.status]}
-                </Link>
-              </li>
-            ))}
-          </ul>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[15px] font-semibold leading-tight tracking-tight truncate">
+                        {fmtTime(s.start_time)} · {s.athlete_name}
+                      </div>
+                      <div className="text-[12.5px] text-muted-foreground mt-0.5 truncate">
+                        {s.type_name}
+                      </div>
+                    </div>
+                    <Chip tone="info">Zakazano</Chip>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
+        {/* Studio + invite */}
         <Card className="p-4 bg-gradient-brand-soft border-0">
           <div className="flex items-center gap-3">
-            <Avatar initials="MJ" tone="brand" size="md" />
+            <Avatar
+              initials={(studio || "S").slice(0, 2).toUpperCase()}
+              tone="brand"
+              size="md"
+            />
             <div className="flex-1 min-w-0">
-              <div className="text-[14px] font-semibold tracking-tight">{trainerProfile.studio}</div>
+              <div className="text-[14px] font-semibold tracking-tight truncate">{studio}</div>
               <div className="text-[12px] text-muted-foreground">
-                Tvoj invite kod: <span className="font-semibold text-foreground tracking-wider">{trainerProfile.inviteCode}</span>
+                Invite kod:{" "}
+                <span className="font-semibold text-foreground tracking-wider">
+                  {inviteCode || "—"}
+                </span>
               </div>
             </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            {inviteCode && (
+              <button
+                onClick={copyInvite}
+                className="h-9 w-9 rounded-xl bg-background/70 hover:bg-background flex items-center justify-center transition"
+                aria-label="Kopiraj invite kod"
+              >
+                {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
+              </button>
+            )}
           </div>
         </Card>
 
+        {/* Quick actions */}
+        <SectionTitle>Brze akcije</SectionTitle>
         <div className="grid grid-cols-2 gap-3">
+          <Link to="/trener/vezbaci" className="card-premium-hover p-4 flex flex-col gap-2">
+            <div className="h-10 w-10 rounded-xl bg-gradient-brand-soft flex items-center justify-center">
+              <Users className="h-5 w-5 text-primary" strokeWidth={2.25} />
+            </div>
+            <div>
+              <div className="font-semibold text-sm tracking-tight">Vežbači</div>
+              <div className="text-[11px] text-muted-foreground">Lista i pozivi</div>
+            </div>
+          </Link>
           <Link to="/trener/programi" className="card-premium-hover p-4 flex flex-col gap-2">
             <div className="h-10 w-10 rounded-xl bg-gradient-brand-soft flex items-center justify-center">
               <ClipboardList className="h-5 w-5 text-primary" strokeWidth={2.25} />
@@ -138,13 +306,26 @@ const Dashboard = () => {
               </span>
             )}
           </Link>
+          <Link to="/trener/termini" className="card-premium-hover p-4 flex flex-col gap-2">
+            <div className="h-10 w-10 rounded-xl bg-gradient-brand-soft flex items-center justify-center">
+              <Settings className="h-5 w-5 text-primary" strokeWidth={2.25} />
+            </div>
+            <div>
+              <div className="font-semibold text-sm tracking-tight">Termini</div>
+              <div className="text-[11px] text-muted-foreground">Podešavanja</div>
+            </div>
+          </Link>
         </div>
 
         <Link
-          to="/trener/program"
-          className="flex items-center justify-center gap-2 w-full rounded-2xl border border-dashed border-hairline hover:border-primary/40 hover:bg-primary-soft/40 py-4 text-[14px] font-semibold text-muted-foreground hover:text-primary-soft-foreground transition"
+          to="/trener/profil"
+          className="flex items-center justify-between rounded-2xl border border-hairline px-4 py-3 hover:border-primary/40 hover:bg-primary-soft/40 transition"
         >
-          <Plus className="h-4 w-4" /> Novi program
+          <div>
+            <div className="text-[13.5px] font-semibold tracking-tight">Tvoj profil</div>
+            <div className="text-[11.5px] text-muted-foreground">Studio, kontakt, naplata</div>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </Link>
       </PhoneShell>
       <BottomNav role="trainer" />
