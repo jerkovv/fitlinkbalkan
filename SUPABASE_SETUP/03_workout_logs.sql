@@ -126,7 +126,7 @@ BEGIN
   SELECT ap.id INTO v_program_id
   FROM assigned_programs ap
   WHERE ap.athlete_id = p_athlete_id
-  ORDER BY ap.created_at DESC
+  ORDER BY ap.assigned_at DESC
   LIMIT 1;
 
   IF v_program_id IS NULL THEN
