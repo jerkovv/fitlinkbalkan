@@ -17,6 +17,9 @@ import { toast } from "sonner";
 import { WorkoutSessionDetailDialog } from "@/components/WorkoutSessionDetailDialog";
 import { assignProgramToAthlete } from "@/lib/programAssignment";
 import { ProgressPhotos } from "@/components/ProgressPhotos";
+import { HealthMetricsCard } from "@/components/wearables/HealthMetricsCard";
+import { WearableTrendChart } from "@/components/wearables/WearableTrendChart";
+import { useWearableConnections } from "@/hooks/useWearableConnections";
 
 type AthleteData = {
   id: string;
