@@ -90,6 +90,13 @@ const initialsOf = (name: string | null) => {
 const AthleteProfile = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const { connections: wearableConns } = useWearableConnections(id);
+  const lastWearableSync = wearableConns
+    .map((c) => c.last_sync_at)
+    .filter(Boolean)
+    .sort()
+    .pop() as string | undefined;
+  const hasWearable = wearableConns.some((c) => c.status === "connected");
   const [loading, setLoading] = useState(true);
   const [athlete, setAthlete] = useState<AthleteData | null>(null);
   const [activePlan, setActivePlan] = useState<AssignedPlan | null>(null);
@@ -683,6 +690,46 @@ const AthleteProfile = () => {
 
       {/* Progress fotke (samo deljene) */}
       {id && <ProgressPhotos athleteId={id} canManage={false} sharedOnly />}
+
+      {/* Wearable insights */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Wearable
+            </div>
+            <div className="font-display text-lg font-bold tracking-tightest">
+              Zdravstveni podaci
+            </div>
+          </div>
+          {hasWearable && lastWearableSync && (
+            <div className="text-[11px] text-muted-foreground">
+              {(() => {
+                const diff = Date.now() - new Date(lastWearableSync).getTime();
+                const m = Math.floor(diff / 60000);
+                if (m < 60) return `Sinhronizovano pre ${Math.max(1, m)} min`;
+                const h = Math.floor(m / 60);
+                if (h < 24) return `Sinhronizovano pre ${h} h`;
+                return `Sinhronizovano pre ${Math.floor(h / 24)} d`;
+              })()}
+            </div>
+          )}
+        </div>
+
+        {hasWearable && id ? (
+          <>
+            <HealthMetricsCard userId={id} showConnectCta={false} />
+            <WearableTrendChart userId={id} dataType="heart_rate_resting" days={30} />
+            <WearableTrendChart userId={id} dataType="sleep_minutes" days={30} />
+          </>
+        ) : (
+          <Card className="p-4 text-center">
+            <div className="text-[12px] text-muted-foreground">
+              Vežbač još nije povezao uređaj
+            </div>
+          </Card>
+        )}
+      </section>
 
       {/* Workout history */}
       <section>
