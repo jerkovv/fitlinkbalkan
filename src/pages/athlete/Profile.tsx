@@ -12,8 +12,12 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, Save, UserRound, Phone, Mail, Gift, Copy, Share2, HelpCircle } from "lucide-react";
+import { Loader2, Save, UserRound, Phone, Mail, Gift, Copy, Share2, HelpCircle, Activity, ChevronRight } from "lucide-react";
 import { AthleteOnboardingTour } from "@/components/AthleteOnboardingTour";
+import { HealthMetricsCard } from "@/components/wearables/HealthMetricsCard";
+import { WearableTrendChart } from "@/components/wearables/WearableTrendChart";
+import { useWearableConnections } from "@/hooks/useWearableConnections";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 type Goal = "lose_weight" | "gain_muscle" | "endurance" | "mobility" | "general";
@@ -21,6 +25,8 @@ type Gender = "male" | "female" | "other";
 
 const Profile = () => {
   const { user } = useAuth();
+  const { connections } = useWearableConnections();
+  const hasConnection = connections.some((c) => c.status === "connected");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -219,6 +225,54 @@ const Profile = () => {
                 </div>
               </Card>
             )}
+
+            {/* Zdravstveni podaci (wearable) */}
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  WEARABLE
+                </div>
+                <Link
+                  to="/vezbac/integracije"
+                  className="text-[12px] font-semibold text-primary inline-flex items-center gap-0.5 hover:opacity-80"
+                >
+                  Povezani uređaji <ChevronRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+              <div className="font-display text-[20px] font-bold tracking-tightest leading-tight">
+                Zdravstveni podaci
+              </div>
+
+              {hasConnection ? (
+                <>
+                  <HealthMetricsCard />
+                  <WearableTrendChart
+                    dataType="heart_rate_resting"
+                    days={30}
+                    title="Puls u mirovanju, poslednjih 30 dana"
+                  />
+                </>
+              ) : (
+                <Link to="/vezbac/integracije" className="block">
+                  <Card className="p-4 bg-gradient-brand-soft border-0 hover:opacity-95 transition">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-2xl bg-gradient-brand text-primary-foreground flex items-center justify-center shadow-brand shrink-0">
+                        <Activity className="h-5 w-5" strokeWidth={2.25} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-display text-[15px] font-bold tracking-tight">
+                          Poveži sat ili narukvicu
+                        </div>
+                        <div className="text-[12px] text-muted-foreground">
+                          Apple Health, Fitbit, Garmin, Strava i još
+                        </div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </Card>
+                </Link>
+              )}
+            </section>
 
             <Card className="p-5 space-y-4">
               <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">

@@ -46,6 +46,7 @@ import AthleteNutrition from "./pages/athlete/Nutrition.tsx";
 import AthleteNotifications from "./pages/athlete/Notifications.tsx";
 import AthleteProfile from "./pages/athlete/Profile.tsx";
 import AthleteChat from "./pages/athlete/Chat.tsx";
+import AthleteIntegracije from "./pages/athlete/Integracije.tsx";
 
 const queryClient = new QueryClient();
 
@@ -100,6 +101,7 @@ const App = () => (
             <Route path="/vezbac/notifikacije" element={athlete(<AthleteNotifications />)} />
             <Route path="/vezbac/profil" element={athlete(<AthleteProfile />)} />
             <Route path="/vezbac/chat" element={athlete(<AthleteChat />)} />
+            <Route path="/vezbac/integracije" element={athlete(<AthleteIntegracije />)} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
