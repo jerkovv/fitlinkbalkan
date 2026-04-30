@@ -12,8 +12,12 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, Save, UserRound, Phone, Mail, Gift, Copy, Share2, HelpCircle } from "lucide-react";
+import { Loader2, Save, UserRound, Phone, Mail, Gift, Copy, Share2, HelpCircle, Activity, ChevronRight } from "lucide-react";
 import { AthleteOnboardingTour } from "@/components/AthleteOnboardingTour";
+import { HealthMetricsCard } from "@/components/wearables/HealthMetricsCard";
+import { WearableTrendChart } from "@/components/wearables/WearableTrendChart";
+import { useWearableConnections } from "@/hooks/useWearableConnections";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 type Goal = "lose_weight" | "gain_muscle" | "endurance" | "mobility" | "general";
@@ -21,6 +25,8 @@ type Gender = "male" | "female" | "other";
 
 const Profile = () => {
   const { user } = useAuth();
+  const { connections } = useWearableConnections();
+  const hasConnection = connections.some((c) => c.status === "connected");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
