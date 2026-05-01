@@ -1,7 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import { isNativeProvider, type Provider } from "@/lib/wearable/providers";
+import { type Provider } from "@/lib/wearable/providers";
+import {
+  isHealthKitAvailable,
+  requestHealthKitPermissions,
+  syncHealthKitData,
+} from "@/lib/wearable/healthkit";
 import { toast } from "sonner";
 
 export interface WearableConnection {
@@ -41,18 +46,27 @@ export const useWearableConnections = (userId?: string) => {
     mutationFn: async (provider: Provider) => {
       if (!user) throw new Error("Niste prijavljeni");
 
-      // TODO (Capacitor faza): za apple_health / health_connect pozvati nativni
-      // SDK preko Capacitor plugin-a (npr. @perfood/capacitor-healthkit ili
-      // capacitor-health-connect) i tražiti dozvole.
-      if (isNativeProvider(provider)) {
-        throw new Error(
-          "Nativna integracija još nije omogućena. Bićeš obavešten kad bude spremna.",
+      if (provider === "apple_health") {
+        if (!isHealthKitAvailable()) {
+          throw new Error("Apple Health dostupan u mobilnoj aplikaciji");
+        }
+        const res = await requestHealthKitPermissions();
+        if (!res.success) throw new Error("Dozvole za Apple Health odbijene");
+        const sync = await syncHealthKitData(user.id);
+        toast.success(
+          sync.synced > 0
+            ? `Povezano. Sinhronizovano ${sync.synced} zapisa.`
+            : "Povezano. Nema novih podataka za sinhronizaciju.",
         );
+        return;
+      }
+
+      if (provider === "health_connect") {
+        throw new Error("Health Connect stiže uskoro");
       }
 
       // TODO (OAuth faza): pozvati edge function `${provider}-authorize`
-      // koja vraća authorize URL, pa ga otvoriti u novom tabu / in-app browseru.
-      throw new Error("OAuth povezivanje stiže uskoro");
+      throw new Error("Uskoro dostupno");
     },
     onError: (e: any) => toast.error(e?.message ?? "Greška pri povezivanju"),
     onSuccess: () => refresh(),
@@ -76,8 +90,20 @@ export const useWearableConnections = (userId?: string) => {
   });
 
   const syncNow = useMutation({
-    mutationFn: async (_provider: Provider) => {
-      // TODO: pozvati edge function `wearable-sync` sa provider parametrom
+    mutationFn: async (provider: Provider) => {
+      if (!user) throw new Error("Niste prijavljeni");
+      if (provider === "apple_health") {
+        if (!isHealthKitAvailable()) {
+          throw new Error("Apple Health dostupan u mobilnoj aplikaciji");
+        }
+        const res = await syncHealthKitData(user.id);
+        toast.success(
+          res.synced > 0
+            ? `Sinhronizovano ${res.synced} zapisa`
+            : "Nema novih podataka",
+        );
+        return;
+      }
       throw new Error("Sinhronizacija stiže uskoro");
     },
     onError: (e: any) => toast.error(e?.message ?? "Greška pri sinhronizaciji"),
