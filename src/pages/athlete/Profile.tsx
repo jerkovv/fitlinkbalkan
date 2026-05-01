@@ -275,6 +275,23 @@ const Profile = () => {
               )}
             </section>
 
+            {hasConnection && (
+              <section className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    Treninzi sa sata
+                  </div>
+                  <Link
+                    to="/vezbac/treninzi"
+                    className="text-[12px] font-semibold text-primary inline-flex items-center gap-0.5 hover:opacity-80"
+                  >
+                    Vidi sve <ChevronRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+                <WorkoutsList limit={5} />
+              </section>
+            )}
+
             <Card className="p-5 space-y-4">
               <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 Osnovno
