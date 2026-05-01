@@ -16,6 +16,7 @@ import { Loader2, Save, UserRound, Phone, Mail, Gift, Copy, Share2, HelpCircle, 
 import { AthleteOnboardingTour } from "@/components/AthleteOnboardingTour";
 import { HealthMetricsCard } from "@/components/wearables/HealthMetricsCard";
 import { WearableTrendChart } from "@/components/wearables/WearableTrendChart";
+import { WorkoutsList } from "@/components/wearables/WorkoutsList";
 import { useWearableConnections } from "@/hooks/useWearableConnections";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -273,6 +274,23 @@ const Profile = () => {
                 </Link>
               )}
             </section>
+
+            {hasConnection && (
+              <section className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    Treninzi sa sata
+                  </div>
+                  <Link
+                    to="/vezbac/treninzi"
+                    className="text-[12px] font-semibold text-primary inline-flex items-center gap-0.5 hover:opacity-80"
+                  >
+                    Vidi sve <ChevronRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+                <WorkoutsList limit={5} />
+              </section>
+            )}
 
             <Card className="p-5 space-y-4">
               <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
