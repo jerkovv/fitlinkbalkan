@@ -20,6 +20,7 @@ import { ProgressPhotos } from "@/components/ProgressPhotos";
 import { HealthMetricsCard } from "@/components/wearables/HealthMetricsCard";
 import { WearableTrendChart } from "@/components/wearables/WearableTrendChart";
 import { useWearableConnections } from "@/hooks/useWearableConnections";
+import { WorkoutsList } from "@/components/wearables/WorkoutsList";
 
 type AthleteData = {
   id: string;
@@ -721,6 +722,12 @@ const AthleteProfile = () => {
             <HealthMetricsCard userId={id} showConnectCta={false} />
             <WearableTrendChart userId={id} dataType="heart_rate_resting" days={30} />
             <WearableTrendChart userId={id} dataType="sleep_minutes" days={30} />
+            <div className="pt-1">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground mb-2">
+                Treninzi sa sata
+              </div>
+              <WorkoutsList userId={id} limit={10} />
+            </div>
           </>
         ) : (
           <Card className="p-4 text-center">
