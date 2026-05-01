@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Heart, Moon, Footprints, Battery, ArrowUp, ArrowDown, Minus } from "lucide-react";
+import { Heart, Moon, Footprints, Battery, Activity, Flame, ArrowUp, ArrowDown, Minus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { Card } from "@/components/ui-bits";
@@ -32,6 +32,27 @@ const tiles: Array<{
   higherIsBetter: boolean;
 }> = [
   {
+    type: "heart_rate_avg",
+    label: "Prosecan puls",
+    icon: Heart,
+    format: (v) => ({ value: Math.round(v).toString(), unit: "bpm" }),
+    higherIsBetter: false,
+  },
+  {
+    type: "heart_rate_max",
+    label: "Max puls",
+    icon: Activity,
+    format: (v) => ({ value: Math.round(v).toString(), unit: "bpm" }),
+    higherIsBetter: false,
+  },
+  {
+    type: "workout_duration",
+    label: "Trening",
+    icon: Flame,
+    format: (v) => ({ value: Math.round(v).toString(), unit: "min" }),
+    higherIsBetter: true,
+  },
+  {
     type: "heart_rate_resting",
     label: "Puls u mirovanju",
     icon: Heart,
@@ -54,6 +75,13 @@ const tiles: Array<{
     label: "Koraci",
     icon: Footprints,
     format: (v) => ({ value: Math.round(v).toLocaleString("sr-RS"), unit: "" }),
+    higherIsBetter: true,
+  },
+  {
+    type: "calories_active",
+    label: "Kalorije",
+    icon: Flame,
+    format: (v) => ({ value: Math.round(v).toString(), unit: "kcal" }),
     higherIsBetter: true,
   },
   {
@@ -93,7 +121,7 @@ export const HealthMetricsCard = ({ userId, showConnectCta = true }: Props) => {
   }
 
   const byType = new Map((data ?? []).map((m) => [m.data_type, m]));
-  const visible = tiles.filter((t) => byType.has(t.type));
+  const visible = tiles.filter((t) => byType.has(t.type)).slice(0, 4);
 
   if (visible.length === 0) {
     return (
