@@ -104,6 +104,28 @@ export async function syncHealthKitData(userId: string) {
   }
 
   // Treninzi, sa pulsom
+  let userMaxHR = 180;
+  try {
+    const { data: hrCfg } = await supabase
+      .from('user_hr_config' as any)
+      .select('max_hr')
+      .eq('user_id', userId)
+      .maybeSingle();
+    const cfgMax = (hrCfg as any)?.max_hr;
+    if (cfgMax && Number(cfgMax) > 0) {
+      userMaxHR = Number(cfgMax);
+    } else {
+      const { data: ath } = await supabase
+        .from('athletes')
+        .select('birth_year')
+        .eq('id', userId)
+        .maybeSingle();
+      userMaxHR = computeMaxHR((ath as any)?.birth_year ?? null);
+    }
+  } catch (e) {
+    console.warn('Max HR lookup failed, using fallback', e);
+  }
+
   try {
     const wk = await Health.queryWorkouts({
       startDate,
@@ -112,7 +134,7 @@ export async function syncHealthKitData(userId: string) {
       includeRoute: false,
       includeSteps: false,
     });
-    wk.workouts?.forEach((w) => {
+    for (const w of wk.workouts ?? []) {
       const day = w.startDate.slice(0, 10);
       records.push({
         user_id: userId,
@@ -124,15 +146,27 @@ export async function syncHealthKitData(userId: string) {
         recorded_at: w.startDate,
         source_id: 'apple_health:workout:' + (w.id ?? `${w.startDate}-${w.endDate}`),
       });
-      if (w.heartRate?.length) {
-        const bpms = w.heartRate.map((h) => h.bpm);
-        const avg = bpms.reduce((a, b) => a + b, 0) / bpms.length;
-        const max = Math.max(...bpms);
+
+      const hrSeries: HRSample[] = (w.heartRate ?? [])
+        .map((h: any) => ({
+          ts: h.timestamp ?? h.startDate ?? w.startDate,
+          bpm: Number(h.bpm),
+        }))
+        .filter((s) => Number.isFinite(s.bpm) && s.bpm > 0);
+
+      let avg: number | null = null;
+      let max: number | null = null;
+      let min: number | null = null;
+      if (hrSeries.length) {
+        const bpms = hrSeries.map((h) => h.bpm);
+        avg = Math.round(bpms.reduce((a, b) => a + b, 0) / bpms.length);
+        max = Math.max(...bpms);
+        min = Math.min(...bpms);
         records.push({
           user_id: userId,
           provider: 'apple_health',
           data_type: 'heart_rate_avg',
-          value: Math.round(avg),
+          value: avg,
           unit: 'bpm',
           recorded_for: day,
           recorded_at: w.startDate,
@@ -142,14 +176,66 @@ export async function syncHealthKitData(userId: string) {
           user_id: userId,
           provider: 'apple_health',
           data_type: 'heart_rate_max',
-          value: Math.round(max),
+          value: max,
           unit: 'bpm',
           recorded_for: day,
           recorded_at: w.startDate,
           source_id: 'apple_health:hr-max:' + (w.id ?? w.startDate),
         });
       }
-    });
+
+      // Upsert wearable_workout_details + zones (best-effort)
+      try {
+        const sourceId = w.id ?? `${w.startDate}-${w.endDate}`;
+        const detailRow: any = {
+          user_id: userId,
+          provider: 'apple_health',
+          source_id: sourceId,
+          workout_type: (w as any).workoutType ?? (w as any).type ?? 'other',
+          started_at: w.startDate,
+          ended_at: w.endDate,
+          duration_seconds: w.duration ? Math.round(w.duration) : null,
+          total_distance_m: (w as any).distance ?? null,
+          total_calories: (w as any).totalEnergy ?? (w as any).calories ?? null,
+          active_calories: (w as any).activeEnergy ?? (w as any).activeCalories ?? null,
+          hr_avg: avg,
+          hr_max: max,
+          hr_min: min,
+          hr_series: hrSeries,
+          splits: null,
+          metadata: null,
+        };
+        const { data: detRow, error: detErr } = await supabase
+          .from('wearable_workout_details' as any)
+          .upsert(detailRow, { onConflict: 'user_id,provider,source_id' })
+          .select('id')
+          .single();
+        if (detErr) {
+          console.warn('Workout detail upsert failed', detErr);
+        } else if (detRow && hrSeries.length) {
+          const workoutId = (detRow as any).id;
+          const zones = computeZones(hrSeries, userMaxHR);
+          await supabase
+            .from('wearable_workout_zones' as any)
+            .delete()
+            .eq('workout_id', workoutId);
+          if (zones.some((z) => z.seconds_in_zone > 0)) {
+            await supabase.from('wearable_workout_zones' as any).insert(
+              zones.map((z) => ({
+                workout_id: workoutId,
+                zone: z.zone,
+                zone_name: z.zone_name,
+                min_bpm: z.min_bpm,
+                max_bpm: z.max_bpm,
+                seconds_in_zone: z.seconds_in_zone,
+              })) as any,
+            );
+          }
+        }
+      } catch (e) {
+        console.warn('Zones computation failed for workout', e);
+      }
+    }
   } catch (e) {
     console.warn('Workouts sync failed', e);
   }
