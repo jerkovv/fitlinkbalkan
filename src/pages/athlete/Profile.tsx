@@ -248,9 +248,14 @@ const Profile = () => {
                 <>
                   <HealthMetricsCard />
                   <WearableTrendChart
-                    dataType="heart_rate_resting"
+                    dataType="heart_rate_avg"
                     days={30}
-                    title="Puls u mirovanju, poslednjih 30 dana"
+                    title="Prosečan puls, poslednjih 30 dana"
+                  />
+                  <WearableTrendChart
+                    dataType="workout_duration"
+                    days={30}
+                    title="Trajanje treninga, poslednjih 30 dana"
                   />
                 </>
               ) : (

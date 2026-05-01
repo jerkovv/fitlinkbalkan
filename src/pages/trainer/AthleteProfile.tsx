@@ -720,8 +720,8 @@ const AthleteProfile = () => {
         {hasWearable && id ? (
           <>
             <HealthMetricsCard userId={id} showConnectCta={false} />
-            <WearableTrendChart userId={id} dataType="heart_rate_resting" days={30} />
-            <WearableTrendChart userId={id} dataType="sleep_minutes" days={30} />
+            <WearableTrendChart userId={id} dataType="heart_rate_avg" days={30} title="Prosečan puls, poslednjih 30 dana" />
+            <WearableTrendChart userId={id} dataType="workout_duration" days={30} title="Trajanje treninga, poslednjih 30 dana" />
             <div className="pt-1">
               <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground mb-2">
                 Treninzi sa sata

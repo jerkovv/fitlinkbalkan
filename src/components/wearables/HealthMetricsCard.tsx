@@ -33,7 +33,7 @@ const tiles: Array<{
 }> = [
   {
     type: "heart_rate_avg",
-    label: "Prosecan puls",
+    label: "Prosečan puls",
     icon: Heart,
     format: (v) => ({ value: Math.round(v).toString(), unit: "bpm" }),
     higherIsBetter: false,
@@ -197,7 +197,7 @@ export const HealthMetricsCard = ({ userId, showConnectCta = true }: Props) => {
                   >
                     {Math.abs(diff!).toFixed(diff! < 1 && diff! > -1 ? 1 : 0)}
                   </span>
-                  <span className="text-muted-foreground">vs juče</span>
+                  <span className="text-muted-foreground">vs prethodno</span>
                 </>
               )}
             </div>
