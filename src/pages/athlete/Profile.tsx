@@ -16,6 +16,7 @@ import { Loader2, Save, UserRound, Phone, Mail, Gift, Copy, Share2, HelpCircle, 
 import { AthleteOnboardingTour } from "@/components/AthleteOnboardingTour";
 import { HealthMetricsCard } from "@/components/wearables/HealthMetricsCard";
 import { WearableTrendChart } from "@/components/wearables/WearableTrendChart";
+import { WorkoutsList } from "@/components/wearables/WorkoutsList";
 import { useWearableConnections } from "@/hooks/useWearableConnections";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
