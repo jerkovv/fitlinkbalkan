@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Health, type HealthPermission } from 'capacitor-health';
 import { supabase } from '@/lib/supabase';
+import { computeMaxHR, computeZones, type HRSample } from '@/lib/wearable/hrZones';
 
 export const isHealthKitAvailable = () => {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
