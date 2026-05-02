@@ -211,6 +211,106 @@ const ActiveWorkout = () => {
     };
   }, [sessionId]);
 
+  /* ------------------------- Trainer messages (incoming) ------------------------- */
+  type TrainerMessage = {
+    id: string;
+    message: string;
+    message_type: "text" | "encouragement" | "warning" | string;
+    sent_at: string;
+  };
+  const [incomingMessage, setIncomingMessage] = useState<TrainerMessage | null>(null);
+
+  useEffect(() => {
+    if (!user || !sessionId) return;
+    const channel = supabase
+      .channel(`live-msg:${sessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "workout_live_messages",
+          filter: `session_log_id=eq.${sessionId}`,
+        },
+        (payload) => {
+          const row = payload.new as any;
+          if (!row || row.athlete_id !== user.id) return;
+          const msg: TrainerMessage = {
+            id: row.id,
+            message: row.message,
+            message_type: row.message_type ?? "text",
+            sent_at: row.sent_at ?? new Date().toISOString(),
+          };
+          setIncomingMessage(msg);
+          triggerHaptic();
+          // Mark as read
+          supabase
+            .from("workout_live_messages" as any)
+            .update({ read_at: new Date().toISOString() } as any)
+            .eq("id", row.id)
+            .then(() => undefined);
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, sessionId]);
+
+  // Auto-dismiss banner after 8s
+  useEffect(() => {
+    if (!incomingMessage) return;
+    const id = setTimeout(() => setIncomingMessage(null), 8000);
+    return () => clearTimeout(id);
+  }, [incomingMessage]);
+
+  /* ------------------------- Live state heartbeat (every 15s) ------------------------- */
+  const cleanupLiveStateRef = useRef(false);
+
+  useEffect(() => {
+    if (!sessionId || !user || !day || !day.exercises?.length) return;
+    let stopped = false;
+    const upsert = async () => {
+      if (stopped) return;
+      const ex = day.exercises[exerciseIdx];
+      if (!ex) return;
+      await supabase.from("workout_live_state" as any).upsert(
+        {
+          session_log_id: sessionId,
+          athlete_id: user.id,
+          current_exercise_idx: exerciseIdx,
+          current_exercise_name: ex.exercise.name,
+          current_set_number: setNumber,
+          current_hr: liveHr,
+          total_completed_sets: completedSets.length,
+          last_heartbeat: new Date().toISOString(),
+        } as any,
+        { onConflict: "session_log_id" } as any,
+      );
+    };
+    upsert();
+    const id = setInterval(upsert, 15000);
+    return () => {
+      stopped = true;
+      clearInterval(id);
+    };
+  }, [sessionId, user, day, exerciseIdx, setNumber, liveHr, completedSets.length]);
+
+  // Cleanup on unmount: remove live state row
+  useEffect(() => {
+    return () => {
+      if (sessionId && !cleanupLiveStateRef.current) {
+        cleanupLiveStateRef.current = true;
+        supabase
+          .from("workout_live_state" as any)
+          .delete()
+          .eq("session_log_id", sessionId)
+          .then(() => undefined);
+      }
+    };
+  }, [sessionId]);
+
+
   /* ------------------------- Derived ------------------------- */
   const exercises = day?.exercises ?? [];
   const current = exercises[exerciseIdx];
