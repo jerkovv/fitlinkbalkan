@@ -252,6 +252,9 @@ export async function syncHealthKitData(userId: string) {
           console.warn('Workout detail upsert failed', detErr);
         } else if (detRow) {
           workoutsSynced += 1;
+          if (!existingWorkoutSourceIds.has(sourceId)) {
+            newWorkouts += 1;
+          }
           if (hrSeries.length) {
             const workoutId = (detRow as any).id;
             const zones = computeZones(hrSeries, userMaxHR);
