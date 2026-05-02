@@ -354,8 +354,15 @@ export async function syncHealthKitData(userId: string) {
 
   console.log('HealthKit sync', {
     records: records.length,
+    newRecords,
     workouts: workoutsSynced,
+    newWorkouts,
     ms: Date.now() - t0,
   });
-  return { synced: records.length, workouts: workoutsSynced };
+  return {
+    synced: records.length,
+    newRecords,
+    workouts: workoutsSynced,
+    newWorkouts,
+  };
 }
