@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, X, Heart, Check, ChevronRight } from "lucide-react";
+import { Loader2, X, Heart, Check, ChevronRight, MessageCircle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -211,6 +211,106 @@ const ActiveWorkout = () => {
     };
   }, [sessionId]);
 
+  /* ------------------------- Trainer messages (incoming) ------------------------- */
+  type TrainerMessage = {
+    id: string;
+    message: string;
+    message_type: "text" | "encouragement" | "warning" | string;
+    sent_at: string;
+  };
+  const [incomingMessage, setIncomingMessage] = useState<TrainerMessage | null>(null);
+
+  useEffect(() => {
+    if (!user || !sessionId) return;
+    const channel = supabase
+      .channel(`live-msg:${sessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "workout_live_messages",
+          filter: `session_log_id=eq.${sessionId}`,
+        },
+        (payload) => {
+          const row = payload.new as any;
+          if (!row || row.athlete_id !== user.id) return;
+          const msg: TrainerMessage = {
+            id: row.id,
+            message: row.message,
+            message_type: row.message_type ?? "text",
+            sent_at: row.sent_at ?? new Date().toISOString(),
+          };
+          setIncomingMessage(msg);
+          triggerHaptic();
+          // Mark as read
+          supabase
+            .from("workout_live_messages" as any)
+            .update({ read_at: new Date().toISOString() } as any)
+            .eq("id", row.id)
+            .then(() => undefined);
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, sessionId]);
+
+  // Auto-dismiss banner after 8s
+  useEffect(() => {
+    if (!incomingMessage) return;
+    const id = setTimeout(() => setIncomingMessage(null), 8000);
+    return () => clearTimeout(id);
+  }, [incomingMessage]);
+
+  /* ------------------------- Live state heartbeat (every 15s) ------------------------- */
+  const cleanupLiveStateRef = useRef(false);
+
+  useEffect(() => {
+    if (!sessionId || !user || !day || !day.exercises?.length) return;
+    let stopped = false;
+    const upsert = async () => {
+      if (stopped) return;
+      const ex = day.exercises[exerciseIdx];
+      if (!ex) return;
+      await supabase.from("workout_live_state" as any).upsert(
+        {
+          session_log_id: sessionId,
+          athlete_id: user.id,
+          current_exercise_idx: exerciseIdx,
+          current_exercise_name: ex.exercise.name,
+          current_set_number: setNumber,
+          current_hr: liveHr,
+          total_completed_sets: completedSets.length,
+          last_heartbeat: new Date().toISOString(),
+        } as any,
+        { onConflict: "session_log_id" } as any,
+      );
+    };
+    upsert();
+    const id = setInterval(upsert, 15000);
+    return () => {
+      stopped = true;
+      clearInterval(id);
+    };
+  }, [sessionId, user, day, exerciseIdx, setNumber, liveHr, completedSets.length]);
+
+  // Cleanup on unmount: remove live state row
+  useEffect(() => {
+    return () => {
+      if (sessionId && !cleanupLiveStateRef.current) {
+        cleanupLiveStateRef.current = true;
+        supabase
+          .from("workout_live_state" as any)
+          .delete()
+          .eq("session_log_id", sessionId)
+          .then(() => undefined);
+      }
+    };
+  }, [sessionId]);
+
+
   /* ------------------------- Derived ------------------------- */
   const exercises = day?.exercises ?? [];
   const current = exercises[exerciseIdx];
@@ -328,6 +428,8 @@ const ActiveWorkout = () => {
       toast.error(error.message);
       return;
     }
+    cleanupLiveStateRef.current = true;
+    await supabase.from("workout_live_state" as any).delete().eq("session_log_id", sessionId);
     nav(`/vezbac/trening/zavrsen/${sessionId}`, { replace: true });
   }, [sessionId, finishing, nav]);
 
@@ -349,6 +451,8 @@ const ActiveWorkout = () => {
   const confirmCancel = async () => {
     if (sessionId) {
       await supabase.rpc("cancel_workout_session", { p_session_id: sessionId } as any);
+      cleanupLiveStateRef.current = true;
+      await supabase.from("workout_live_state" as any).delete().eq("session_log_id", sessionId);
     }
     setCloseOpen(false);
     nav("/vezbac");
@@ -425,6 +529,45 @@ const ActiveWorkout = () => {
             />
           </div>
         </div>
+
+        {incomingMessage && (
+          <div className="px-4 pt-3">
+            <div
+              className={cn(
+                "rounded-2xl border px-4 py-3 flex items-start gap-3 shadow-xs animate-fade-in",
+                incomingMessage.message_type === "warning" &&
+                  "bg-destructive-soft border-destructive/30 text-destructive-soft-foreground",
+                incomingMessage.message_type === "encouragement" &&
+                  "bg-success-soft border-success/30 text-success-soft-foreground",
+                incomingMessage.message_type !== "warning" &&
+                  incomingMessage.message_type !== "encouragement" &&
+                  "bg-primary-soft border-primary/30 text-primary-soft-foreground",
+              )}
+              role="status"
+              aria-live="polite"
+            >
+              <div className="h-9 w-9 rounded-full bg-gradient-brand text-white inline-flex items-center justify-center shrink-0">
+                <MessageCircle className="h-4 w-4" strokeWidth={2.4} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[10px] font-bold uppercase tracking-[0.14em] opacity-80">
+                  Trener:
+                </div>
+                <div className="text-[14px] font-semibold leading-snug mt-0.5">
+                  {incomingMessage.message}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIncomingMessage(null)}
+                aria-label="Zatvori"
+                className="h-7 w-7 rounded-full inline-flex items-center justify-center hover:bg-black/5 transition active:scale-95"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="px-4 pt-4 space-y-5">
           <ExerciseHeader

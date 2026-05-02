@@ -10,6 +10,7 @@ import {
 import { UserMenu } from "@/components/UserMenu";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ChatBell } from "@/components/ChatBell";
+import { ActiveAthletesList } from "@/components/trainer/ActiveAthletesList";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -167,6 +168,8 @@ const Dashboard = () => {
           </div>
         }
       >
+        <ActiveAthletesList />
+
         <div className="grid grid-cols-2 gap-3">
           <StatCard tone="brand" value={String(activeAthletes)} unit="članova" label="Aktivnih" />
           <StatCard tone="warning" value={String(expiringSoon)} unit="ističu" label="≤ 14 dana" />
