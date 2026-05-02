@@ -2,14 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-/* FITLINK — Premium Design System v6
+/* FITLINK - Premium Design System v6
    Light, Apple-minimal. Violet-led palette (less feminine than v2).
    Primary = royal violet, gradient finishes with magenta accent only.
    All colors HSL only. */
 
 @layer base {
   :root {
-    /* Surfaces — neutral cool gray (no magenta tint) */
+    /* Surfaces - neutral cool gray (no magenta tint) */
     --background: 240 12% 98%;
     --foreground: 240 18% 10%;
     --surface: 0 0% 100%;
@@ -23,7 +23,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 18% 10%;
 
-    /* Brand — royal violet → indigo (magenta only as gradient tail) */
+    /* Brand - royal violet to indigo (magenta only as gradient tail) */
     --brand-1: 268 80% 56%;             /* royal violet primary */
     --brand-2: 252 80% 58%;             /* indigo middle */
     --brand-3: 322 78% 60%;             /* magenta tail accent */
@@ -33,7 +33,7 @@
     --primary-soft: 268 85% 96%;
     --primary-soft-foreground: 268 65% 40%;
 
-    /* Trener role — royal violet (primary) */
+    /* Trener role - royal violet (primary) */
     --trainer: 268 80% 56%;
     --trainer-soft: 268 85% 96%;
     --trainer-soft-foreground: 268 65% 40%;
