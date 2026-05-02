@@ -140,7 +140,7 @@ export const RestTimer = ({ targetSeconds, onDone, subtitle }: RestTimerProps) =
         <button
           onClick={() => {
             setTarget((t) => t + 30);
-            setRemaining((r) => r + 30);
+            firedRef.current = false;
           }}
           className="flex-1 h-12 rounded-2xl bg-surface border border-hairline text-[14px] font-semibold inline-flex items-center justify-center gap-1.5 active:scale-95 transition"
         >
@@ -149,7 +149,7 @@ export const RestTimer = ({ targetSeconds, onDone, subtitle }: RestTimerProps) =
         <button
           onClick={() => {
             setTarget((t) => t + 60);
-            setRemaining((r) => r + 60);
+            firedRef.current = false;
           }}
           className="flex-1 h-12 rounded-2xl bg-surface border border-hairline text-[14px] font-semibold inline-flex items-center justify-center gap-1.5 active:scale-95 transition"
         >
