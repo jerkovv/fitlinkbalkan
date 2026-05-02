@@ -126,6 +126,7 @@ export async function syncHealthKitData(userId: string) {
     console.warn('Max HR lookup failed, using fallback', e);
   }
 
+  let workoutsSynced = 0;
   try {
     const wk = await Health.queryWorkouts({
       startDate,
@@ -184,7 +185,7 @@ export async function syncHealthKitData(userId: string) {
         });
       }
 
-      // Upsert wearable_workout_details + zones (best-effort)
+      // Upsert wearable_workout_details + zones, uvek, nezavisno od wearable_data
       try {
         const sourceId = w.id ?? `${w.startDate}-${w.endDate}`;
         const detailRow: any = {
@@ -212,24 +213,27 @@ export async function syncHealthKitData(userId: string) {
           .single();
         if (detErr) {
           console.warn('Workout detail upsert failed', detErr);
-        } else if (detRow && hrSeries.length) {
-          const workoutId = (detRow as any).id;
-          const zones = computeZones(hrSeries, userMaxHR);
-          await supabase
-            .from('wearable_workout_zones' as any)
-            .delete()
-            .eq('workout_id', workoutId);
-          if (zones.some((z) => z.seconds_in_zone > 0)) {
-            await supabase.from('wearable_workout_zones' as any).insert(
-              zones.map((z) => ({
-                workout_id: workoutId,
-                zone: z.zone,
-                zone_name: z.zone_name,
-                min_bpm: z.min_bpm,
-                max_bpm: z.max_bpm,
-                seconds_in_zone: z.seconds_in_zone,
-              })) as any,
-            );
+        } else if (detRow) {
+          workoutsSynced += 1;
+          if (hrSeries.length) {
+            const workoutId = (detRow as any).id;
+            const zones = computeZones(hrSeries, userMaxHR);
+            await supabase
+              .from('wearable_workout_zones' as any)
+              .delete()
+              .eq('workout_id', workoutId);
+            if (zones.some((z) => z.seconds_in_zone > 0)) {
+              await supabase.from('wearable_workout_zones' as any).insert(
+                zones.map((z) => ({
+                  workout_id: workoutId,
+                  zone: z.zone,
+                  zone_name: z.zone_name,
+                  min_bpm: z.min_bpm,
+                  max_bpm: z.max_bpm,
+                  seconds_in_zone: z.seconds_in_zone,
+                })) as any,
+              );
+            }
           }
         }
       } catch (e) {
@@ -240,42 +244,25 @@ export async function syncHealthKitData(userId: string) {
     console.warn('Workouts sync failed', e);
   }
 
-  if (records.length === 0) {
-    await supabase.from('wearable_connections' as any).upsert(
-      {
+  // Upsert wearable_data ako ima zapisa
+  if (records.length > 0) {
+    const { error } = await supabase
+      .from('wearable_data' as any)
+      .upsert(records, {
+        onConflict: 'user_id,provider,data_type,recorded_for,source_id',
+      });
+    if (error) {
+      console.error('Supabase upsert failed', error);
+      await supabase.from('wearable_sync_logs' as any).insert({
         user_id: userId,
         provider: 'apple_health',
-        status: 'connected',
-        last_sync_at: new Date().toISOString(),
-      } as any,
-      { onConflict: 'user_id,provider' },
-    );
-    await supabase.from('wearable_sync_logs' as any).insert({
-      user_id: userId,
-      provider: 'apple_health',
-      status: 'success',
-      records_synced: 0,
-      finished_at: new Date().toISOString(),
-    } as any);
-    return { synced: 0 };
-  }
-
-  const { error } = await supabase
-    .from('wearable_data' as any)
-    .upsert(records, {
-      onConflict: 'user_id,provider,data_type,recorded_for,source_id',
-    });
-  if (error) {
-    console.error('Supabase upsert failed', error);
-    await supabase.from('wearable_sync_logs' as any).insert({
-      user_id: userId,
-      provider: 'apple_health',
-      status: 'error',
-      records_synced: 0,
-      error_message: error.message,
-      finished_at: new Date().toISOString(),
-    } as any);
-    throw error;
+        status: 'error',
+        records_synced: 0,
+        error_message: error.message,
+        finished_at: new Date().toISOString(),
+      } as any);
+      throw error;
+    }
   }
 
   await supabase.from('wearable_connections' as any).upsert(
@@ -297,6 +284,10 @@ export async function syncHealthKitData(userId: string) {
     finished_at: new Date().toISOString(),
   } as any);
 
-  console.log('HealthKit sync', { records: records.length, ms: Date.now() - t0 });
-  return { synced: records.length };
+  console.log('HealthKit sync', {
+    records: records.length,
+    workouts: workoutsSynced,
+    ms: Date.now() - t0,
+  });
+  return { synced: records.length, workouts: workoutsSynced };
 }

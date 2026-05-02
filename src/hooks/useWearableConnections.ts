@@ -53,10 +53,13 @@ export const useWearableConnections = (userId?: string) => {
         const res = await requestHealthKitPermissions();
         if (!res.success) throw new Error("Dozvole za Apple Health odbijene");
         const sync = await syncHealthKitData(user.id);
+        const wk = (sync as any).workouts ?? 0;
         toast.success(
-          sync.synced > 0
-            ? `Povezano. Sinhronizovano ${sync.synced} zapisa.`
-            : "Povezano. Nema novih podataka za sinhronizaciju.",
+          wk > 0
+            ? `Povezano. Sinhronizovano ${wk} treninga.`
+            : sync.synced > 0
+              ? `Povezano. Sinhronizovano ${sync.synced} zapisa.`
+              : "Povezano. Nema novih podataka za sinhronizaciju.",
         );
         return;
       }
@@ -97,10 +100,13 @@ export const useWearableConnections = (userId?: string) => {
           throw new Error("Apple Health dostupan u mobilnoj aplikaciji");
         }
         const res = await syncHealthKitData(user.id);
+        const wk = (res as any).workouts ?? 0;
         toast.success(
-          res.synced > 0
-            ? `Sinhronizovano ${res.synced} zapisa`
-            : "Nema novih podataka",
+          wk > 0
+            ? `Sinhronizovano ${wk} treninga`
+            : res.synced > 0
+              ? `Sinhronizovano ${res.synced} zapisa`
+              : "Nema novih podataka",
         );
         return;
       }
