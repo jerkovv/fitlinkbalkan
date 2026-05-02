@@ -144,6 +144,8 @@
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: 'cv11', 'ss01', 'ss03';
     text-rendering: optimizeLegibility;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   h1, h2, h3, h4, .font-display {
@@ -222,8 +224,10 @@
   /* Mobile shell */
   .phone-shell {
     @apply mx-auto w-full max-w-[440px] min-h-screen relative bg-background;
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .phone-shell-header {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
   }
 
   /* Tabular nums for timers */
