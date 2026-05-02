@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, X, Check, ChevronRight, MessageCircle } from "lucide-react";
+import { Loader2, X, Check, ChevronRight, MessageCircle, Heart } from "lucide-react";
+import { getHrColor } from "@/lib/workout/hrZone";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -503,6 +504,20 @@ const ActiveWorkout = () => {
               <div className="text-[13px] font-bold text-foreground truncate">
                 Vežba {exerciseIdx + 1} od {exercises.length} · Serija {setNumber} od {setsForCurrent}
               </div>
+            </div>
+            <div
+              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full bg-surface border border-hairline shrink-0"
+              style={{ color: liveHr && liveHr > 0 ? getHrColor(liveHr) : undefined }}
+              aria-label="Trenutni puls"
+            >
+              <Heart
+                className={cn("h-3.5 w-3.5", liveHr && liveHr > 0 && "animate-pulse")}
+                strokeWidth={2.4}
+                fill={liveHr && liveHr > 0 ? "currentColor" : "none"}
+              />
+              <span className="text-[13px] font-bold tnum leading-none">
+                {liveHr && liveHr > 0 ? liveHr : "-"}
+              </span>
             </div>
           </div>
           <div className="h-1 bg-surface-2">

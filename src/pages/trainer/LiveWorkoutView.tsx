@@ -303,42 +303,38 @@ const LiveWorkoutView = () => {
             </div>
           </Card>
 
-          {/* Big HR display - hidden when no live HR */}
-          {hr != null && hr > 0 && (
+          {/* Big HR display */}
+          <div
+            className="card-premium p-5 flex items-center gap-4 transition-colors"
+            style={{ background: hr != null && hr > 0 ? `${hrColor}1A` : undefined }}
+          >
             <div
-              className="card-premium p-5 flex items-center gap-4 transition-colors"
-              style={{ background: `${hrColor}1A` }}
+              className={`h-16 w-16 rounded-2xl inline-flex items-center justify-center shrink-0 ${hr != null && hr > 0 ? "animate-pulse" : ""}`}
+              style={{ background: hrColor }}
             >
-              <div
-                className="h-16 w-16 rounded-2xl inline-flex items-center justify-center shrink-0 animate-pulse"
-                style={{ background: hrColor }}
-              >
-                <Heart className="h-7 w-7 text-white" strokeWidth={2.4} fill="white" />
+              <Heart className="h-7 w-7 text-white" strokeWidth={2.4} fill="white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                Puls
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                  Puls
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="font-display text-[40px] font-bold tracking-tightest leading-none tnum">
-                    {hr}
-                  </span>
-                  <span className="text-[12px] font-semibold text-muted-foreground">bpm</span>
-                </div>
-                <div
-                  className="text-[12px] font-semibold mt-1"
-                  style={{ color: hrColor }}
-                >
-                  Zona: {ZONE_LABEL[zone]}
-                </div>
+              <div className="flex items-baseline gap-2">
+                <span className="font-display text-[40px] font-bold tracking-tightest leading-none tnum">
+                  {hr != null && hr > 0 ? hr : "-"}
+                </span>
+                <span className="text-[12px] font-semibold text-muted-foreground">bpm</span>
+              </div>
+              <div
+                className="text-[12px] font-semibold mt-1"
+                style={{ color: hrColor }}
+              >
+                Zona: {ZONE_LABEL[zone]}
               </div>
             </div>
-          )}
+          </div>
 
-          {/* HR mini chart - hidden when no HR data */}
-          {((session.hr_series as any)?.length ?? 0) > 0 && (
-            <HrMiniChart points={(session.hr_series as any) ?? []} />
-          )}
+          {/* HR mini chart */}
+          <HrMiniChart points={(session.hr_series as any) ?? []} />
 
           {/* Quick messages */}
           <Card className="p-4">
