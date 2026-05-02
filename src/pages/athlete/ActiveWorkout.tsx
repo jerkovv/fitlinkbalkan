@@ -84,13 +84,13 @@ const ActiveWorkout = () => {
   const [loading, setLoading] = useState(true);
   const [day, setDay] = useState<DayFull | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [startedAt, setStartedAt] = useState<Date | null>(null);
+  const [startedAt, currentSetStartedAt] = useState<Date | null>(null);
   const [now, setNow] = useState<Date>(new Date());
 
   const [exerciseIdx, setExerciseIdx] = useState(0);
   const [setNumber, setSetNumber] = useState(1);
   const [completedSets, setCompletedSets] = useState<CompletedSet[]>([]);
-  const [setStartedAt, setSetStartedAt] = useState<Date>(new Date());
+  const [currentSetStartedAt, setSetStartedAt] = useState<Date>(new Date());
 
   const [resting, setResting] = useState<{ seconds: number; subtitle: string } | null>(null);
   const [closeOpen, setCloseOpen] = useState(false);
@@ -144,7 +144,7 @@ const ActiveWorkout = () => {
       }
       setSessionId(sid as unknown as string);
       const t = new Date();
-      setStartedAt(t);
+      currentSetStartedAt(t);
       setSetStartedAt(t);
       setLoading(false);
     })();
@@ -243,7 +243,7 @@ const ActiveWorkout = () => {
       const nowTs = new Date();
       const restEst = Math.max(
         0,
-        Math.round((nowTs.getTime() - setStartedAt.getTime()) / 1000)
+        Math.round((nowTs.getTime() - currentSetStartedAt.getTime()) / 1000)
       );
 
       const { error } = await supabase.from("set_logs").insert({
@@ -255,7 +255,7 @@ const ActiveWorkout = () => {
         rpe: data.rpe,
         notes: data.notes,
         done: true,
-        started_at: setStartedAt.toISOString(),
+        started_at: currentSetStartedAt.toISOString(),
         completed_at: nowTs.toISOString(),
         actual_rest_seconds: restEst,
       } as any);
@@ -302,7 +302,7 @@ const ActiveWorkout = () => {
       setResting({ seconds: restSec, subtitle: nextSubtitle });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [current, sessionId, setNumber, setStartedAt, exerciseIdx, exercises]
+    [current, sessionId, setNumber, currentSetStartedAt, exerciseIdx, exercises]
   );
 
   const finishWorkout = useCallback(async () => {
