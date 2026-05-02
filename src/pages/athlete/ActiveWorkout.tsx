@@ -19,7 +19,6 @@ import { cn } from "@/lib/utils";
 import { ExerciseHeader } from "@/components/workout/ExerciseHeader";
 import { SetLogger } from "@/components/workout/SetLogger";
 import { RestTimer } from "@/components/workout/RestTimer";
-import { getCurrentHeartRate } from "@/lib/wearable/healthkit";
 
 type DayExercise = {
   /** id of assigned_program_exercises row (used for set_logs.exercise_id per spec) */
@@ -192,23 +191,26 @@ const ActiveWorkout = () => {
     };
   }, []);
 
-  /* ------------------------- Live HR poll ------------------------- */
+  /* ------------------------- Live HR (push/subscribe) ------------------------- */
   useEffect(() => {
     if (!sessionId) return;
-    let stopped = false;
-    const poll = async () => {
-      const bpm = await getCurrentHeartRate();
-      if (stopped) return;
-      if (bpm != null && Number.isFinite(bpm)) {
+
+    let cleanup: (() => void) | null = null;
+    let cancelled = false;
+
+    (async () => {
+      const { startLiveHRMonitoring } = await import("@/lib/wearable/healthkit");
+      if (cancelled) return;
+
+      cleanup = await startLiveHRMonitoring((bpm) => {
         setLiveHr(bpm);
         hrSeriesRef.current.push({ ts: new Date().toISOString(), bpm });
-      }
-    };
-    poll();
-    const id = setInterval(poll, 10000);
+      });
+    })();
+
     return () => {
-      stopped = true;
-      clearInterval(id);
+      cancelled = true;
+      if (cleanup) cleanup();
     };
   }, [sessionId]);
 

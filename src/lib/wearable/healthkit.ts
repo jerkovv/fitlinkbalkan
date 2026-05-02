@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { Health, type HealthPermission } from 'capacitor-health';
+import { HealthKitLive } from 'capacitor-healthkit-live';
 import { supabase } from '@/lib/supabase';
 import { computeMaxHR, computeZones, type HRSample } from '@/lib/wearable/hrZones';
 
@@ -368,68 +369,73 @@ export async function syncHealthKitData(userId: string) {
 }
 
 export async function getCurrentHeartRate(): Promise<number | null> {
-  console.log('[HR-DEBUG] getCurrentHeartRate called via queryWorkouts');
+  console.log('[HR-DEBUG] getCurrentHeartRate called (HealthKitLive plugin)');
   if (!isHealthKitAvailable()) {
     console.log('[HR-DEBUG] Not iOS native');
     return null;
   }
 
   try {
-    const endDate = new Date().toISOString();
-    const startDate = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const avail = await HealthKitLive.isAvailable();
+    console.log('[HR-DEBUG] isAvailable:', JSON.stringify(avail));
+    if (!avail.available) return null;
 
-    const result = await Health.queryWorkouts({
-      startDate,
-      endDate,
-      includeHeartRate: true,
-      includeRoute: false,
-      includeSteps: false,
-    });
+    const auth = await HealthKitLive.requestAuthorization();
+    console.log('[HR-DEBUG] requestAuthorization:', JSON.stringify(auth));
+    if (!auth.granted) return null;
 
-    const workouts = result?.workouts ?? [];
-    console.log('[HR-DEBUG] Found', workouts.length, 'workouts in last 10 min');
+    const result = await HealthKitLive.getCurrentHeartRate();
+    console.log('[HR-DEBUG] getCurrentHeartRate result:', JSON.stringify(result));
 
-    if (workouts.length === 0) {
-      console.log('[HR-DEBUG] No recent workouts - is Apple Watch tracking?');
+    const bpm = result?.bpm;
+    if (bpm == null || !Number.isFinite(bpm) || bpm < 30 || bpm > 220) {
+      console.log('[HR-DEBUG] Invalid bpm:', bpm);
       return null;
     }
-
-    const allSamples: Array<{ ts: number; bpm: number }> = [];
-    for (const w of workouts) {
-      const hrArr = (w as any).heartRate;
-      if (Array.isArray(hrArr)) {
-        for (const hr of hrArr) {
-          const bpm = Number(hr.bpm);
-          const tsRaw = hr.timestamp ?? hr.startDate ?? w.startDate;
-          const ts = new Date(tsRaw).getTime();
-          if (Number.isFinite(bpm) && bpm > 30 && bpm < 220 && Number.isFinite(ts)) {
-            allSamples.push({ ts, bpm });
-          }
-        }
-      }
-    }
-
-    console.log('[HR-DEBUG] Total HR samples:', allSamples.length);
-
-    if (allSamples.length === 0) {
-      console.log('[HR-DEBUG] Workouts found but no HR samples');
-      return null;
-    }
-
-    allSamples.sort((a, b) => b.ts - a.ts);
-    const latest = allSamples[0];
-    const ageSec = Math.round((Date.now() - latest.ts) / 1000);
-
-    console.log('[HR-DEBUG] Latest sample:', latest.bpm, 'bpm,', ageSec, 'sec ago');
-
-    if (ageSec > 300) {
-      console.log('[HR-DEBUG] Sample too old (>5 min)');
-      return null;
-    }
-
-    return Math.round(latest.bpm);
+    return Math.round(bpm);
   } catch (error) {
     console.error('[HR-DEBUG] EXCEPTION:', error);
     return null;
+  }
+}
+
+export async function startLiveHRMonitoring(
+  onUpdate: (bpm: number) => void,
+): Promise<() => void> {
+  console.log('[HR-DEBUG] startLiveHRMonitoring called');
+  if (!isHealthKitAvailable()) {
+    return () => {};
+  }
+
+  try {
+    const auth = await HealthKitLive.requestAuthorization();
+    if (!auth.granted) {
+      console.warn('[HR-DEBUG] Auth denied');
+      return () => {};
+    }
+
+    const listener = await HealthKitLive.addListener('heartRateUpdate', (data: any) => {
+      const bpm = Number(data.bpm);
+      console.log('[HR-DEBUG] heartRateUpdate event:', bpm);
+      if (Number.isFinite(bpm) && bpm > 30 && bpm < 220) {
+        onUpdate(Math.round(bpm));
+      }
+    });
+
+    await HealthKitLive.startHeartRateMonitoring();
+    console.log('[HR-DEBUG] Live HR monitoring started');
+
+    return async () => {
+      try {
+        await listener.remove();
+        await HealthKitLive.stopHeartRateMonitoring();
+        console.log('[HR-DEBUG] Live HR monitoring stopped');
+      } catch (e) {
+        console.warn('[HR-DEBUG] Stop monitoring error:', e);
+      }
+    };
+  } catch (error) {
+    console.error('[HR-DEBUG] startLiveHRMonitoring exception:', error);
+    return () => {};
   }
 }

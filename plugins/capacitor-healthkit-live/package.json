@@ -1,0 +1,33 @@
+{
+  "name": "capacitor-healthkit-live",
+  "version": "0.0.1",
+  "description": "Live Apple HealthKit heart-rate monitoring plugin for Capacitor 8 (FitLink internal).",
+  "main": "dist/esm/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "type": "module",
+  "files": [
+    "dist/",
+    "ios/Sources",
+    "Package.swift"
+  ],
+  "author": "FitLink",
+  "license": "MIT",
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "npm run clean && tsc",
+    "watch": "tsc --watch"
+  },
+  "devDependencies": {
+    "@capacitor/core": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "@capacitor/core": ">=8.0.0"
+  },
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    }
+  }
+}
