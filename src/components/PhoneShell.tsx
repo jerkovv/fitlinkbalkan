@@ -26,38 +26,39 @@ export const PhoneShell = ({
 }: PhoneShellProps) => {
   return (
     <div className={`phone-shell ${hasBottomNav ? "pb-36" : "pb-10"} animate-fade-in`}>
-
-      {/* Top bar - back + right action */}
-      {(back || rightSlot) && (
-        <div className="flex items-center justify-between px-6 pt-1">
-          {back ? (
-            <Link
-              to={back}
-              aria-label="Nazad"
-              className="-ml-2 inline-flex h-10 w-10 items-center justify-center rounded-full hover:bg-surface-2 transition active:scale-95"
-            >
-              <ChevronLeft className="h-5 w-5" strokeWidth={2.25} />
-            </Link>
-          ) : <span />}
-          {rightSlot}
-        </div>
-      )}
-
-      {/* Large Apple-style title */}
-      <header className="px-6 pt-2 pb-3">
-        {eyebrow && (
-          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-1.5">
-            {eyebrow}
+      <div className="phone-shell-sticky">
+        {/* Top bar - back + right action */}
+        {(back || rightSlot) && (
+          <div className="flex items-center justify-between px-6 pt-1">
+            {back ? (
+              <Link
+                to={back}
+                aria-label="Nazad"
+                className="-ml-2 inline-flex h-10 w-10 items-center justify-center rounded-full hover:bg-surface-2 transition active:scale-95"
+              >
+                <ChevronLeft className="h-5 w-5" strokeWidth={2.25} />
+              </Link>
+            ) : <span />}
+            {rightSlot}
           </div>
         )}
-        {typeof title === "string" ? (
-          <h1 className="font-display text-[34px] leading-[1.1] font-bold tracking-tightest">
-            {title}
-          </h1>
-        ) : (
-          title
-        )}
-      </header>
+
+        {/* Large Apple-style title */}
+        <header className="px-6 pt-2 pb-3">
+          {eyebrow && (
+            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-1.5">
+              {eyebrow}
+            </div>
+          )}
+          {typeof title === "string" ? (
+            <h1 className="font-display text-[34px] leading-[1.1] font-bold tracking-tightest">
+              {title}
+            </h1>
+          ) : (
+            title
+          )}
+        </header>
+      </div>
 
       <main className="px-6 space-y-4">{children}</main>
     </div>
