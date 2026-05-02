@@ -428,6 +428,8 @@ const ActiveWorkout = () => {
       toast.error(error.message);
       return;
     }
+    cleanupLiveStateRef.current = true;
+    await supabase.from("workout_live_state" as any).delete().eq("session_log_id", sessionId);
     nav(`/vezbac/trening/zavrsen/${sessionId}`, { replace: true });
   }, [sessionId, finishing, nav]);
 
