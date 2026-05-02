@@ -34,29 +34,36 @@ const Stepper = ({
 }) => {
   const dec = () => onChange(Math.max(min, +(value - step).toFixed(2)));
   const inc = () => onChange(Math.min(max, +(value + step).toFixed(2)));
+  const display = Number.isFinite(value)
+    ? value % 1 === 0
+      ? value.toString()
+      : value.toFixed(1)
+    : "0";
   return (
-    <div className="flex items-center gap-2 w-full">
+    <div className="flex items-center justify-between gap-2 bg-surface-2 rounded-2xl p-2">
       <button
         type="button"
         onClick={dec}
-        className="h-11 w-11 rounded-2xl bg-surface border border-hairline flex items-center justify-center active:scale-95 transition shrink-0"
+        aria-label="Smanji"
+        className="h-12 w-12 rounded-xl bg-surface border border-hairline active:scale-95 transition flex items-center justify-center shrink-0"
       >
-        <Minus className="h-4 w-4" />
+        <Minus className="h-5 w-5" strokeWidth={2.5} />
       </button>
-      <div className="flex-1 min-w-0 h-14 rounded-2xl bg-surface-2 flex items-baseline justify-center gap-1 px-2">
-        <span className="font-display text-[34px] font-bold tracking-tightest tnum text-foreground leading-none truncate">
-          {Number.isFinite(value) ? value : 0}
-        </span>
-        {suffix && (
-          <span className="text-[12px] text-muted-foreground font-semibold shrink-0">{suffix}</span>
-        )}
+      <div className="flex-1 text-center min-w-0 px-1">
+        <div className="font-display text-[36px] font-bold leading-none tracking-tight tnum text-foreground inline-flex items-baseline gap-1 justify-center">
+          <span>{display}</span>
+          {suffix && (
+            <span className="text-[12px] text-muted-foreground font-semibold">{suffix}</span>
+          )}
+        </div>
       </div>
       <button
         type="button"
         onClick={inc}
-        className="h-11 w-11 rounded-2xl bg-surface border border-hairline flex items-center justify-center active:scale-95 transition shrink-0"
+        aria-label="Povecaj"
+        className="h-12 w-12 rounded-xl bg-surface border border-hairline active:scale-95 transition flex items-center justify-center shrink-0"
       >
-        <Plus className="h-4 w-4" />
+        <Plus className="h-5 w-5" strokeWidth={2.5} />
       </button>
     </div>
   );
