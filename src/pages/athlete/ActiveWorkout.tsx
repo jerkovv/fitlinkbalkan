@@ -84,13 +84,13 @@ const ActiveWorkout = () => {
   const [loading, setLoading] = useState(true);
   const [day, setDay] = useState<DayFull | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [startedAt, currentSetStartedAt] = useState<Date | null>(null);
+  const [startedAt, setStartedAt] = useState<Date | null>(null);
   const [now, setNow] = useState<Date>(new Date());
 
   const [exerciseIdx, setExerciseIdx] = useState(0);
   const [setNumber, setSetNumber] = useState(1);
   const [completedSets, setCompletedSets] = useState<CompletedSet[]>([]);
-  const [currentSetStartedAt, setSetStartedAt] = useState<Date>(new Date());
+  const [currentSetStartedAt, setCurrentSetStartedAt] = useState<Date>(new Date());
 
   const [resting, setResting] = useState<{ seconds: number; subtitle: string } | null>(null);
   const [closeOpen, setCloseOpen] = useState(false);
