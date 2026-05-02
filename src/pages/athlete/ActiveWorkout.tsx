@@ -144,8 +144,8 @@ const ActiveWorkout = () => {
       }
       setSessionId(sid as unknown as string);
       const t = new Date();
-      currentSetStartedAt(t);
-      setSetStartedAt(t);
+      setCurrentSetStartedAt(t);
+      setCurrentSetStartedAt(t);
       setLoading(false);
     })();
     return () => {
@@ -343,7 +343,7 @@ const ActiveWorkout = () => {
     } else {
       setSetNumber((s) => s + 1);
     }
-    setSetStartedAt(new Date());
+    setCurrentSetStartedAt(new Date());
   };
 
   const confirmCancel = async () => {
