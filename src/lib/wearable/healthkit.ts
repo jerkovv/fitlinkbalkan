@@ -369,7 +369,11 @@ export async function getCurrentHeartRate(): Promise<number | null> {
   }
 
   try {
-    const { HealthKitLive } = await import('capacitor-healthkit-live' as any);
+    const HealthKitLive = (globalThis as any).Capacitor?.Plugins?.HealthKitLive;
+    if (!HealthKitLive) {
+      console.log('[HR-DEBUG] HealthKitLive plugin not registered, returning null');
+      return null;
+    }
 
     console.log('[HR-DEBUG] Calling HealthKitLive.isAvailable()');
     const availResult = await HealthKitLive.isAvailable();
