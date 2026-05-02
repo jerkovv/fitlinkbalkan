@@ -38,6 +38,7 @@ import TrainerChatThread from "./pages/trainer/ChatThread.tsx";
 
 import AthleteHome from "./pages/athlete/Home.tsx";
 import AthleteWorkout from "./pages/athlete/ActiveWorkout.tsx";
+import AthleteWorkoutSummary from "./pages/athlete/WorkoutSummary.tsx";
 import AthleteWorkoutHome from "./pages/athlete/WorkoutHome.tsx";
 import AthleteBooking from "./pages/athlete/Booking.tsx";
 import AthleteProgress from "./pages/athlete/Progress.tsx";
@@ -94,6 +95,8 @@ const App = () => (
             {/* Vežbač — protected */}
             <Route path="/vezbac" element={athlete(<AthleteHome />)} />
             <Route path="/vezbac/trening" element={athlete(<AthleteWorkoutHome />)} />
+            <Route path="/vezbac/trening/aktivan/:dayId" element={athlete(<AthleteWorkout />)} />
+            <Route path="/vezbac/trening/zavrsen/:sessionId" element={athlete(<AthleteWorkoutSummary />)} />
             <Route path="/vezbac/trening/:dayId" element={athlete(<AthleteWorkout />)} />
             <Route path="/vezbac/rezervacija" element={athlete(<AthleteBooking />)} />
             <Route path="/vezbac/napredak" element={athlete(<AthleteProgress />)} />

@@ -366,3 +366,11 @@ export async function syncHealthKitData(userId: string) {
     newWorkouts,
   };
 }
+
+/**
+ * Stub: live heart-rate sample for active workout HUD.
+ * TODO: implement via HealthKit observer query / live HKAnchoredObjectQuery.
+ */
+export async function getCurrentHeartRate(): Promise<number | null> {
+  return null;
+}
