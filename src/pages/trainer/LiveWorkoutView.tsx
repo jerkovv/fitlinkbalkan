@@ -5,8 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { Card } from "@/components/ui-bits";
 import { QuickMessagePanel } from "@/components/trainer/QuickMessagePanel";
-import { getHrColor, getHrZone, formatDuration } from "@/lib/workout/hrZone";
-import { cn } from "@/lib/utils";
+import { getHrColor, getHrZone } from "@/lib/workout/hrZone";
 
 type LiveState = {
   session_log_id: string;
