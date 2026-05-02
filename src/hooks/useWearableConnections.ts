@@ -100,10 +100,13 @@ export const useWearableConnections = (userId?: string) => {
           throw new Error("Apple Health dostupan u mobilnoj aplikaciji");
         }
         const res = await syncHealthKitData(user.id);
+        const wk = (res as any).workouts ?? 0;
         toast.success(
-          res.synced > 0
-            ? `Sinhronizovano ${res.synced} zapisa`
-            : "Nema novih podataka",
+          wk > 0
+            ? `Sinhronizovano ${wk} treninga`
+            : res.synced > 0
+              ? `Sinhronizovano ${res.synced} zapisa`
+              : "Nema novih podataka",
         );
         return;
       }
