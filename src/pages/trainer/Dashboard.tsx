@@ -10,6 +10,7 @@ import {
 import { UserMenu } from "@/components/UserMenu";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ChatBell } from "@/components/ChatBell";
+import { ActiveAthletesList } from "@/components/trainer/ActiveAthletesList";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
