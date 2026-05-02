@@ -332,7 +332,7 @@ const LiveWorkoutView = () => {
                 Zona: {ZONE_LABEL[zone]}
               </div>
             </div>
-          </Card>
+          </div>
 
           {/* HR mini chart */}
           <HrMiniChart points={(session.hr_series as any) ?? []} />
