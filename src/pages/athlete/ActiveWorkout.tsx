@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, X, Heart, Check, ChevronRight, MessageCircle } from "lucide-react";
+import { Loader2, X, Check, ChevronRight, MessageCircle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
