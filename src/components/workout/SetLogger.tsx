@@ -40,17 +40,17 @@ const Stepper = ({
       : value.toFixed(1)
     : "0";
   return (
-    <div className="flex items-center justify-between gap-1 bg-surface-2 rounded-2xl px-2 py-2">
+    <div className="flex items-center justify-between gap-2">
       <button
         type="button"
         onClick={dec}
         aria-label="Smanji"
-        className="h-11 w-11 rounded-xl bg-surface border border-hairline active:scale-95 transition flex items-center justify-center shrink-0"
+        className="h-12 w-12 rounded-2xl bg-surface border border-hairline active:scale-95 transition flex items-center justify-center shrink-0"
       >
         <Minus className="h-4 w-4" strokeWidth={2.5} />
       </button>
-      <div className="flex-1 min-w-0 text-center px-2 overflow-hidden">
-        <div className="font-display text-[20px] font-bold leading-none tracking-tight tnum text-foreground whitespace-nowrap">
+      <div className="flex-1 text-center min-w-0">
+        <div className="font-display text-[28px] font-bold leading-none tracking-tight tnum text-foreground whitespace-nowrap">
           {display}
           {suffix && (
             <span className="text-[12px] text-muted-foreground font-semibold ml-1">{suffix}</span>
@@ -61,7 +61,7 @@ const Stepper = ({
         type="button"
         onClick={inc}
         aria-label="Povecaj"
-        className="h-11 w-11 rounded-xl bg-surface border border-hairline active:scale-95 transition flex items-center justify-center shrink-0"
+        className="h-12 w-12 rounded-2xl bg-surface border border-hairline active:scale-95 transition flex items-center justify-center shrink-0"
       >
         <Plus className="h-4 w-4" strokeWidth={2.5} />
       </button>
