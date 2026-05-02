@@ -53,7 +53,6 @@ export async function syncHealthKitData(userId: string) {
   const { startDate, endDate } = dayBuckets(7);
   const records: any[] = [];
 
-  // Steps, agregirano po danu
   try {
     const stepsRes = await Health.queryAggregated({
       startDate,
@@ -78,7 +77,6 @@ export async function syncHealthKitData(userId: string) {
     console.warn('Steps sync failed', e);
   }
 
-  // Aktivne kalorije, po danu
   try {
     const calRes = await Health.queryAggregated({
       startDate,
@@ -103,7 +101,6 @@ export async function syncHealthKitData(userId: string) {
     console.warn('Active calories sync failed', e);
   }
 
-  // Treninzi, sa pulsom
   let userMaxHR = 180;
   try {
     const { data: hrCfg } = await supabase
@@ -128,7 +125,6 @@ export async function syncHealthKitData(userId: string) {
 
   let workoutsSynced = 0;
   let newWorkouts = 0;
-  // Postojeci source_id-evi pre upserta, da bismo razlikovali nove od azuriranih
   const existingWorkoutSourceIds = new Set<string>();
   try {
     const { data: existingDet } = await supabase
@@ -200,7 +196,6 @@ export async function syncHealthKitData(userId: string) {
         });
       }
 
-      // Upsert wearable_workout_details + zones, uvek, nezavisno od wearable_data
       try {
         const sourceId = w.id ?? `${w.startDate}-${w.endDate}`;
         const detailRow: any = {
@@ -284,10 +279,8 @@ export async function syncHealthKitData(userId: string) {
     console.warn('Workouts sync failed', e);
   }
 
-  // Upsert wearable_data ako ima zapisa
   let newRecords = 0;
   if (records.length > 0) {
-    // Prebroj postojece kljuceve pre upserta
     const keys = records.map((r) => ({
       data_type: r.data_type,
       recorded_for: r.recorded_for,
@@ -367,66 +360,6 @@ export async function syncHealthKitData(userId: string) {
   };
 }
 
-/**
- * Live heart-rate sample for active workout HUD.
- * Queries HealthKit for the most recent heart rate sample within the last 2 minutes.
- * Requires Apple Watch with active workout (workout updates HR every few seconds).
- */
 export async function getCurrentHeartRate(): Promise<number | null> {
-  if (!isHealthKitAvailable()) return null;
-
-  try {
-    const endDate = new Date().toISOString();
-    const startDate = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-
-    let samples: any[] = [];
-
-    // Try queryHKitSampleType first (capacitor-health iOS specific)
-    try {
-      const result: any = await (Health as any).queryHKitSampleType({
-        sampleName: 'heartRate',
-        startDate,
-        endDate,
-        limit: 5,
-      });
-      samples = result?.resultData ?? result?.samples ?? result?.data ?? [];
-    } catch (innerErr) {
-      // Fallback to generic query
-      try {
-        const result: any = await (Health as any).query({
-          startDate,
-          endDate,
-          dataType: 'heart-rate',
-          limit: 5,
-        });
-        samples = result?.resultData ?? result?.samples ?? result?.data ?? [];
-      } catch (fallbackErr) {
-        console.warn('[HR] Both query methods failed', innerErr, fallbackErr);
-        return null;
-      }
-    }
-
-    if (!Array.isArray(samples) || samples.length === 0) {
-      return null;
-    }
-
-    const sorted = [...samples].sort((a: any, b: any) => {
-      const aTime = new Date(a.endDate ?? a.startDate ?? a.timestamp ?? 0).getTime();
-      const bTime = new Date(b.endDate ?? b.startDate ?? b.timestamp ?? 0).getTime();
-      return bTime - aTime;
-    });
-
-    const latest = sorted[0];
-    const bpm = Number(latest.value ?? latest.bpm ?? 0);
-
-    if (!Number.isFinite(bpm) || bpm < 30 || bpm > 220) {
-      return null;
-    }
-
-    console.log('[HR] Live sample:', bpm, 'at', latest.endDate ?? latest.startDate);
-    return Math.round(bpm);
-  } catch (error) {
-    console.warn('[HR] Live query failed', error);
-    return null;
-  }
+  return null;
 }
