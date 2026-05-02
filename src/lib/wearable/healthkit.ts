@@ -53,6 +53,7 @@ export async function syncHealthKitData(userId: string) {
   const { startDate, endDate } = dayBuckets(7);
   const records: any[] = [];
 
+  // Steps, agregirano po danu
   try {
     const stepsRes = await Health.queryAggregated({
       startDate,
@@ -77,6 +78,7 @@ export async function syncHealthKitData(userId: string) {
     console.warn('Steps sync failed', e);
   }
 
+  // Aktivne kalorije, po danu
   try {
     const calRes = await Health.queryAggregated({
       startDate,
@@ -101,6 +103,7 @@ export async function syncHealthKitData(userId: string) {
     console.warn('Active calories sync failed', e);
   }
 
+  // Treninzi, sa pulsom
   let userMaxHR = 180;
   try {
     const { data: hrCfg } = await supabase
@@ -125,6 +128,7 @@ export async function syncHealthKitData(userId: string) {
 
   let workoutsSynced = 0;
   let newWorkouts = 0;
+  // Postojeci source_id-evi pre upserta, da bismo razlikovali nove od azuriranih
   const existingWorkoutSourceIds = new Set<string>();
   try {
     const { data: existingDet } = await supabase
@@ -196,6 +200,7 @@ export async function syncHealthKitData(userId: string) {
         });
       }
 
+      // Upsert wearable_workout_details + zones, uvek, nezavisno od wearable_data
       try {
         const sourceId = w.id ?? `${w.startDate}-${w.endDate}`;
         const detailRow: any = {
@@ -279,8 +284,10 @@ export async function syncHealthKitData(userId: string) {
     console.warn('Workouts sync failed', e);
   }
 
+  // Upsert wearable_data ako ima zapisa
   let newRecords = 0;
   if (records.length > 0) {
+    // Prebroj postojece kljuceve pre upserta
     const keys = records.map((r) => ({
       data_type: r.data_type,
       recorded_for: r.recorded_for,
@@ -361,48 +368,66 @@ export async function syncHealthKitData(userId: string) {
 }
 
 export async function getCurrentHeartRate(): Promise<number | null> {
-  console.log('[HR-DEBUG] getCurrentHeartRate called');
-
+  console.log('[HR-DEBUG] getCurrentHeartRate called via queryWorkouts');
   if (!isHealthKitAvailable()) {
-    console.log('[HR-DEBUG] Not on iOS native, returning null');
+    console.log('[HR-DEBUG] Not iOS native');
     return null;
   }
 
   try {
-    const HealthKitLive = (globalThis as any).Capacitor?.Plugins?.HealthKitLive;
-    if (!HealthKitLive) {
-      console.log('[HR-DEBUG] HealthKitLive plugin not registered, returning null');
+    const endDate = new Date().toISOString();
+    const startDate = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+
+    const result = await Health.queryWorkouts({
+      startDate,
+      endDate,
+      includeHeartRate: true,
+      includeRoute: false,
+      includeSteps: false,
+    });
+
+    const workouts = result?.workouts ?? [];
+    console.log('[HR-DEBUG] Found', workouts.length, 'workouts in last 10 min');
+
+    if (workouts.length === 0) {
+      console.log('[HR-DEBUG] No recent workouts - is Apple Watch tracking?');
       return null;
     }
 
-    console.log('[HR-DEBUG] Calling HealthKitLive.isAvailable()');
-    const availResult = await HealthKitLive.isAvailable();
-    console.log('[HR-DEBUG] isAvailable result:', JSON.stringify(availResult));
-    if (!availResult.available) {
-      console.log('[HR-DEBUG] HealthKit not available, returning null');
+    const allSamples: Array<{ ts: number; bpm: number }> = [];
+    for (const w of workouts) {
+      const hrArr = (w as any).heartRate;
+      if (Array.isArray(hrArr)) {
+        for (const hr of hrArr) {
+          const bpm = Number(hr.bpm);
+          const tsRaw = hr.timestamp ?? hr.startDate ?? w.startDate;
+          const ts = new Date(tsRaw).getTime();
+          if (Number.isFinite(bpm) && bpm > 30 && bpm < 220 && Number.isFinite(ts)) {
+            allSamples.push({ ts, bpm });
+          }
+        }
+      }
+    }
+
+    console.log('[HR-DEBUG] Total HR samples:', allSamples.length);
+
+    if (allSamples.length === 0) {
+      console.log('[HR-DEBUG] Workouts found but no HR samples');
       return null;
     }
 
-    console.log('[HR-DEBUG] Calling HealthKitLive.requestAuthorization()');
-    const authResult = await HealthKitLive.requestAuthorization();
-    console.log('[HR-DEBUG] requestAuthorization result:', JSON.stringify(authResult));
-    if (!authResult.granted) {
-      console.log('[HR-DEBUG] Auth not granted, returning null');
+    allSamples.sort((a, b) => b.ts - a.ts);
+    const latest = allSamples[0];
+    const ageSec = Math.round((Date.now() - latest.ts) / 1000);
+
+    console.log('[HR-DEBUG] Latest sample:', latest.bpm, 'bpm,', ageSec, 'sec ago');
+
+    if (ageSec > 300) {
+      console.log('[HR-DEBUG] Sample too old (>5 min)');
       return null;
     }
 
-    console.log('[HR-DEBUG] Calling HealthKitLive.getCurrentHeartRate()');
-    const hrResult = await HealthKitLive.getCurrentHeartRate();
-    console.log('[HR-DEBUG] getCurrentHeartRate result:', JSON.stringify(hrResult));
-
-    const bpm = hrResult.bpm;
-    if (bpm == null || !Number.isFinite(bpm) || bpm < 30 || bpm > 220) {
-      console.log('[HR-DEBUG] Invalid bpm:', bpm, 'returning null');
-      return null;
-    }
-
-    console.log('[HR-DEBUG] SUCCESS, returning bpm:', bpm);
-    return Math.round(bpm);
+    return Math.round(latest.bpm);
   } catch (error) {
     console.error('[HR-DEBUG] EXCEPTION:', error);
     return null;
