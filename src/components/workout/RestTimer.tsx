@@ -87,7 +87,6 @@ export const RestTimer = ({ targetSeconds, onDone, subtitle }: RestTimerProps) =
   const circ = 2 * Math.PI * radius;
   const pct = target > 0 ? remaining / target : 0;
   const offset = circ * (1 - pct);
-  const elapsed = Math.max(0, target - remaining);
 
   return (
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-md flex flex-col items-center justify-center px-6">
