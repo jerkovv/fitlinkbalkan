@@ -451,6 +451,8 @@ const ActiveWorkout = () => {
   const confirmCancel = async () => {
     if (sessionId) {
       await supabase.rpc("cancel_workout_session", { p_session_id: sessionId } as any);
+      cleanupLiveStateRef.current = true;
+      await supabase.from("workout_live_state" as any).delete().eq("session_log_id", sessionId);
     }
     setCloseOpen(false);
     nav("/vezbac");
