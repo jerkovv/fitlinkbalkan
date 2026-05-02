@@ -361,5 +361,46 @@ export async function syncHealthKitData(userId: string) {
 }
 
 export async function getCurrentHeartRate(): Promise<number | null> {
-  return null;
+  console.log('[HR-DEBUG] getCurrentHeartRate called');
+
+  if (!isHealthKitAvailable()) {
+    console.log('[HR-DEBUG] Not on iOS native, returning null');
+    return null;
+  }
+
+  try {
+    const { HealthKitLive } = await import('capacitor-healthkit-live' as any);
+
+    console.log('[HR-DEBUG] Calling HealthKitLive.isAvailable()');
+    const availResult = await HealthKitLive.isAvailable();
+    console.log('[HR-DEBUG] isAvailable result:', JSON.stringify(availResult));
+    if (!availResult.available) {
+      console.log('[HR-DEBUG] HealthKit not available, returning null');
+      return null;
+    }
+
+    console.log('[HR-DEBUG] Calling HealthKitLive.requestAuthorization()');
+    const authResult = await HealthKitLive.requestAuthorization();
+    console.log('[HR-DEBUG] requestAuthorization result:', JSON.stringify(authResult));
+    if (!authResult.granted) {
+      console.log('[HR-DEBUG] Auth not granted, returning null');
+      return null;
+    }
+
+    console.log('[HR-DEBUG] Calling HealthKitLive.getCurrentHeartRate()');
+    const hrResult = await HealthKitLive.getCurrentHeartRate();
+    console.log('[HR-DEBUG] getCurrentHeartRate result:', JSON.stringify(hrResult));
+
+    const bpm = hrResult.bpm;
+    if (bpm == null || !Number.isFinite(bpm) || bpm < 30 || bpm > 220) {
+      console.log('[HR-DEBUG] Invalid bpm:', bpm, 'returning null');
+      return null;
+    }
+
+    console.log('[HR-DEBUG] SUCCESS, returning bpm:', bpm);
+    return Math.round(bpm);
+  } catch (error) {
+    console.error('[HR-DEBUG] EXCEPTION:', error);
+    return null;
+  }
 }
