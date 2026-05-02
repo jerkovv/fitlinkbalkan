@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, X, Heart, Check, ChevronRight, MessageCircle } from "lucide-react";
+import { Loader2, X, Check, ChevronRight, MessageCircle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -328,13 +328,6 @@ const ActiveWorkout = () => {
     return found ? { reps: found.reps, weight_kg: found.weight_kg } : null;
   };
 
-  const hrZoneClass = useMemo(() => {
-    if (liveHr == null) return "bg-surface-2 text-muted-foreground";
-    if (liveHr < 110) return "bg-success-soft text-success-soft-foreground";
-    if (liveHr < 140) return "bg-warning-soft text-warning-soft-foreground";
-    if (liveHr < 165) return "bg-primary-soft text-primary";
-    return "bg-destructive/15 text-destructive";
-  }, [liveHr]);
 
   /* ------------------------- Handlers ------------------------- */
   const handleSetComplete = useCallback(
@@ -510,16 +503,6 @@ const ActiveWorkout = () => {
               <div className="text-[13px] font-bold text-foreground truncate">
                 Vežba {exerciseIdx + 1} od {exercises.length} · Serija {setNumber} od {setsForCurrent}
               </div>
-            </div>
-            <div
-              className={cn(
-                "h-10 px-3 rounded-full inline-flex items-center gap-1.5 text-[13px] font-bold tnum",
-                hrZoneClass
-              )}
-              aria-label="Srčani puls"
-            >
-              <Heart className="h-3.5 w-3.5" strokeWidth={2.4} />
-              {liveHr ?? "—"}
             </div>
           </div>
           <div className="h-1 bg-surface-2">
