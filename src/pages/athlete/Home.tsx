@@ -131,7 +131,7 @@ const Home = () => {
             <div className="h-9 w-36 rounded-full bg-muted" />
           </Card>
         ) : next ? (
-          <Link to={`/vezbac/trening/${next.day_id}`} className="block">
+          <Link to={`/vezbac/trening/aktivan/${next.day_id}`} className="block">
             <Card className="p-5 bg-gradient-brand text-white border-0 shadow-brand relative overflow-hidden">
               <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
               <div className="relative">
