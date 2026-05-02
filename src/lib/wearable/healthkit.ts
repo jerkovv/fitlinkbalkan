@@ -368,9 +368,65 @@ export async function syncHealthKitData(userId: string) {
 }
 
 /**
- * Stub: live heart-rate sample for active workout HUD.
- * TODO: implement via HealthKit observer query / live HKAnchoredObjectQuery.
+ * Live heart-rate sample for active workout HUD.
+ * Queries HealthKit for the most recent heart rate sample within the last 2 minutes.
+ * Requires Apple Watch with active workout (workout updates HR every few seconds).
  */
 export async function getCurrentHeartRate(): Promise<number | null> {
-  return null;
+  if (!isHealthKitAvailable()) return null;
+
+  try {
+    const endDate = new Date().toISOString();
+    const startDate = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+
+    let samples: any[] = [];
+
+    // Try queryHKitSampleType first (capacitor-health iOS specific)
+    try {
+      const result: any = await (Health as any).queryHKitSampleType({
+        sampleName: 'heartRate',
+        startDate,
+        endDate,
+        limit: 5,
+      });
+      samples = result?.resultData ?? result?.samples ?? result?.data ?? [];
+    } catch (innerErr) {
+      // Fallback to generic query
+      try {
+        const result: any = await (Health as any).query({
+          startDate,
+          endDate,
+          dataType: 'heart-rate',
+          limit: 5,
+        });
+        samples = result?.resultData ?? result?.samples ?? result?.data ?? [];
+      } catch (fallbackErr) {
+        console.warn('[HR] Both query methods failed', innerErr, fallbackErr);
+        return null;
+      }
+    }
+
+    if (!Array.isArray(samples) || samples.length === 0) {
+      return null;
+    }
+
+    const sorted = [...samples].sort((a: any, b: any) => {
+      const aTime = new Date(a.endDate ?? a.startDate ?? a.timestamp ?? 0).getTime();
+      const bTime = new Date(b.endDate ?? b.startDate ?? b.timestamp ?? 0).getTime();
+      return bTime - aTime;
+    });
+
+    const latest = sorted[0];
+    const bpm = Number(latest.value ?? latest.bpm ?? 0);
+
+    if (!Number.isFinite(bpm) || bpm < 30 || bpm > 220) {
+      return null;
+    }
+
+    console.log('[HR] Live sample:', bpm, 'at', latest.endDate ?? latest.startDate);
+    return Math.round(bpm);
+  } catch (error) {
+    console.warn('[HR] Live query failed', error);
+    return null;
+  }
 }
