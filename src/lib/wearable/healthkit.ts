@@ -127,6 +127,21 @@ export async function syncHealthKitData(userId: string) {
   }
 
   let workoutsSynced = 0;
+  let newWorkouts = 0;
+  // Postojeci source_id-evi pre upserta, da bismo razlikovali nove od azuriranih
+  const existingWorkoutSourceIds = new Set<string>();
+  try {
+    const { data: existingDet } = await supabase
+      .from('wearable_workout_details' as any)
+      .select('source_id')
+      .eq('user_id', userId)
+      .eq('provider', 'apple_health');
+    (existingDet ?? []).forEach((r: any) => {
+      if (r?.source_id) existingWorkoutSourceIds.add(r.source_id);
+    });
+  } catch (e) {
+    console.warn('Existing workout source_ids fetch failed', e);
+  }
   try {
     const wk = await Health.queryWorkouts({
       startDate,
