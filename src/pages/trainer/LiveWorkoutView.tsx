@@ -320,7 +320,7 @@ const LiveWorkoutView = () => {
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="font-display text-[40px] font-bold tracking-tightest leading-none tnum">
-                  {hr ?? "—"}
+                  {hr ?? "-"}
                 </span>
                 <span className="text-[12px] font-semibold text-muted-foreground">bpm</span>
               </div>
