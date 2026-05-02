@@ -217,7 +217,7 @@ export async function syncHealthKitData(userId: string) {
               (w as any).calories ??
               null;
             if (total != null && Number.isFinite(Number(total))) {
-              return Math.round(Number(total) * 0.8);
+              return Math.round(Number(total) * 0.85);
             }
             return null;
           })(),
