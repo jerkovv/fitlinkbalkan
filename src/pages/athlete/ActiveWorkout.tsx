@@ -511,16 +511,6 @@ const ActiveWorkout = () => {
                 Vežba {exerciseIdx + 1} od {exercises.length} · Serija {setNumber} od {setsForCurrent}
               </div>
             </div>
-            <div
-              className={cn(
-                "h-10 px-3 rounded-full inline-flex items-center gap-1.5 text-[13px] font-bold tnum",
-                hrZoneClass
-              )}
-              aria-label="Srčani puls"
-            >
-              <Heart className="h-3.5 w-3.5" strokeWidth={2.4} />
-              {liveHr ?? "—"}
-            </div>
           </div>
           <div className="h-1 bg-surface-2">
             <div
