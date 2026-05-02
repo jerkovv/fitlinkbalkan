@@ -197,8 +197,30 @@ export async function syncHealthKitData(userId: string) {
           ended_at: w.endDate,
           duration_seconds: w.duration ? Math.round(w.duration) : null,
           total_distance_m: (w as any).distance ?? null,
-          total_calories: (w as any).totalEnergy ?? (w as any).calories ?? null,
-          active_calories: (w as any).activeEnergy ?? (w as any).activeCalories ?? null,
+          total_calories:
+            (w as any).totalEnergyBurned ??
+            (w as any).totalEnergy ??
+            (w as any).calories ??
+            null,
+          active_calories: (() => {
+            const active =
+              (w as any).activeEnergyBurned ??
+              (w as any).activeEnergy ??
+              (w as any).activeCalories ??
+              null;
+            if (active != null && Number.isFinite(Number(active))) {
+              return Number(active);
+            }
+            const total =
+              (w as any).totalEnergyBurned ??
+              (w as any).totalEnergy ??
+              (w as any).calories ??
+              null;
+            if (total != null && Number.isFinite(Number(total))) {
+              return Math.round(Number(total) * 0.8);
+            }
+            return null;
+          })(),
           hr_avg: avg,
           hr_max: max,
           hr_min: min,
