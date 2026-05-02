@@ -168,6 +168,8 @@ const Dashboard = () => {
           </div>
         }
       >
+        <ActiveAthletesList />
+
         <div className="grid grid-cols-2 gap-3">
           <StatCard tone="brand" value={String(activeAthletes)} unit="članova" label="Aktivnih" />
           <StatCard tone="warning" value={String(expiringSoon)} unit="ističu" label="≤ 14 dana" />
