@@ -223,8 +223,9 @@
   /* Mobile shell */
   .phone-shell {
     @apply mx-auto w-full max-w-[440px] min-h-screen relative bg-background;
-    padding-top: calc(env(safe-area-inset-top, 20px) + 12px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     -ms-overflow-style: none;
   }
@@ -232,8 +233,17 @@
     display: none;
   }
 
+  /* Sticky top header for PhoneShell pages */
+  .phone-shell-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: hsl(var(--background));
+    padding-top: calc(env(safe-area-inset-top, 20px) + 12px);
+  }
+
   .phone-shell-header {
-    /* safe-area handled on .phone-shell - keep this class as no-op for compatibility */
+    /* legacy no-op */
   }
 
   /* Tabular nums for timers */
