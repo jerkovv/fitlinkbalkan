@@ -328,13 +328,6 @@ const ActiveWorkout = () => {
     return found ? { reps: found.reps, weight_kg: found.weight_kg } : null;
   };
 
-  const hrZoneClass = useMemo(() => {
-    if (liveHr == null) return "bg-surface-2 text-muted-foreground";
-    if (liveHr < 110) return "bg-success-soft text-success-soft-foreground";
-    if (liveHr < 140) return "bg-warning-soft text-warning-soft-foreground";
-    if (liveHr < 165) return "bg-primary-soft text-primary";
-    return "bg-destructive/15 text-destructive";
-  }, [liveHr]);
 
   /* ------------------------- Handlers ------------------------- */
   const handleSetComplete = useCallback(
