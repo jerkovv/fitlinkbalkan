@@ -224,6 +224,11 @@
     @apply mx-auto w-full max-w-[440px] min-h-screen relative bg-background;
     padding-top: calc(env(safe-area-inset-top, 20px) + 12px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .phone-shell::-webkit-scrollbar {
+    display: none;
   }
 
   .phone-shell-header {
