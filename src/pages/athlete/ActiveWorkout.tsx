@@ -144,7 +144,7 @@ const ActiveWorkout = () => {
       }
       setSessionId(sid as unknown as string);
       const t = new Date();
-      setCurrentSetStartedAt(t);
+      setStartedAt(t);
       setCurrentSetStartedAt(t);
       setLoading(false);
     })();
