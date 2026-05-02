@@ -135,12 +135,16 @@ export const useWearableConnections = (userId?: string) => {
           }
         }
         const wk = (res as any).workouts ?? 0;
+        const newWk = (res as any).newWorkouts ?? 0;
+        const newRec = (res as any).newRecords ?? 0;
         toast.success(
-          wk > 0
-            ? `Sinhronizovano ${wk} treninga`
-            : res.synced > 0
-              ? `Sinhronizovano ${res.synced} zapisa`
-              : "Nema novih podataka",
+          newWk > 0
+            ? `Sinhronizovano ${newWk} novih treninga`
+            : newRec > 0
+              ? `Sinhronizovano ${newRec} novih zapisa`
+              : wk > 0
+                ? `Nema novih treninga (${wk} postojećih ažurirano)`
+                : "Nema novih podataka",
         );
         return;
       }
