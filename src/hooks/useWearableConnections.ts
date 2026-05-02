@@ -70,12 +70,16 @@ export const useWearableConnections = (userId?: string) => {
           }
         }
         const wk = (sync as any).workouts ?? 0;
+        const newWk = (sync as any).newWorkouts ?? 0;
+        const newRec = (sync as any).newRecords ?? 0;
         toast.success(
-          wk > 0
-            ? `Povezano. Sinhronizovano ${wk} treninga.`
-            : sync.synced > 0
-              ? `Povezano. Sinhronizovano ${sync.synced} zapisa.`
-              : "Povezano. Nema novih podataka za sinhronizaciju.",
+          newWk > 0
+            ? `Povezano. Sinhronizovano ${newWk} novih treninga.`
+            : newRec > 0
+              ? `Povezano. Sinhronizovano ${newRec} novih zapisa.`
+              : wk > 0
+                ? `Povezano. Nema novih treninga (${wk} postojećih ažurirano).`
+                : "Povezano. Nema novih podataka za sinhronizaciju.",
         );
         return;
       }
