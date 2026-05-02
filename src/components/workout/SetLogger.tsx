@@ -40,20 +40,20 @@ const Stepper = ({
       : value.toFixed(1)
     : "0";
   return (
-    <div className="flex items-center justify-between gap-2 bg-surface-2 rounded-2xl p-2">
+    <div className="flex items-center justify-between gap-1 bg-surface-2 rounded-2xl px-2 py-2">
       <button
         type="button"
         onClick={dec}
         aria-label="Smanji"
-        className="h-12 w-12 rounded-xl bg-surface border border-hairline active:scale-95 transition flex items-center justify-center shrink-0"
+        className="h-11 w-11 rounded-xl bg-surface border border-hairline active:scale-95 transition flex items-center justify-center shrink-0"
       >
-        <Minus className="h-5 w-5" strokeWidth={2.5} />
+        <Minus className="h-4 w-4" strokeWidth={2.5} />
       </button>
-      <div className="flex-1 text-center min-w-0 px-1">
-        <div className="font-display text-[36px] font-bold leading-none tracking-tight tnum text-foreground inline-flex items-baseline gap-1 justify-center">
-          <span>{display}</span>
+      <div className="flex-1 min-w-0 text-center px-2 overflow-hidden">
+        <div className="font-display text-[32px] font-bold leading-none tracking-tight tnum text-foreground whitespace-nowrap">
+          {display}
           {suffix && (
-            <span className="text-[12px] text-muted-foreground font-semibold">{suffix}</span>
+            <span className="text-[12px] text-muted-foreground font-semibold ml-1">{suffix}</span>
           )}
         </div>
       </div>
@@ -61,9 +61,9 @@ const Stepper = ({
         type="button"
         onClick={inc}
         aria-label="Povecaj"
-        className="h-12 w-12 rounded-xl bg-surface border border-hairline active:scale-95 transition flex items-center justify-center shrink-0"
+        className="h-11 w-11 rounded-xl bg-surface border border-hairline active:scale-95 transition flex items-center justify-center shrink-0"
       >
-        <Plus className="h-5 w-5" strokeWidth={2.5} />
+        <Plus className="h-4 w-4" strokeWidth={2.5} />
       </button>
     </div>
   );
