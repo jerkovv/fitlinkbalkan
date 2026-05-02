@@ -95,7 +95,7 @@
     --shadow-success: 0 8px 24px -8px hsl(152 65% 38% / 0.35);
     --shadow-glow: 0 0 60px hsl(268 80% 56% / 0.18);
 
-    /* Session type colors (booking) — soft bg + strong fg */
+    /* Session type colors (booking) - soft bg + strong fg */
     --session-violet-bg: 268 100% 97%;   --session-violet-fg: 268 75% 45%;
     --session-indigo-bg: 240 100% 97%;   --session-indigo-fg: 240 75% 50%;
     --session-emerald-bg: 152 70% 95%;   --session-emerald-fg: 152 70% 32%;
@@ -154,7 +154,7 @@
     font-weight: 800;
   }
 
-  /* Editorial sport eyebrow — uppercase tracked label */
+  /* Editorial sport eyebrow - uppercase tracked label */
   .eyebrow {
     font-family: 'Inter Tight', 'Inter', system-ui, sans-serif;
     text-transform: uppercase;
@@ -191,7 +191,7 @@
   .shadow-success  { box-shadow: var(--shadow-success); }
   .shadow-glow     { box-shadow: var(--shadow-glow); }
 
-  /* Premium card — surface with hairline ring */
+  /* Premium card - surface with hairline ring */
   .card-premium {
     @apply bg-surface rounded-xl;
     box-shadow:
@@ -208,7 +208,7 @@
     transform: translateY(-1px);
   }
 
-  /* Plasma card — glowing accent border */
+  /* Plasma card - glowing accent border */
   .card-plasma {
     @apply bg-surface rounded-xl relative overflow-hidden;
     box-shadow:
