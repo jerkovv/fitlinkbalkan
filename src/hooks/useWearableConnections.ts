@@ -50,9 +50,25 @@ export const useWearableConnections = (userId?: string) => {
         if (!isHealthKitAvailable()) {
           throw new Error("Apple Health dostupan u mobilnoj aplikaciji");
         }
-        const res = await requestHealthKitPermissions();
-        if (!res.success) throw new Error("Dozvole za Apple Health odbijene");
-        const sync = await syncHealthKitData(user.id);
+        const perm = await requestHealthKitPermissions();
+        if (!perm.success) {
+          throw new Error("Dozvole za Apple Health odbijene");
+        }
+        let sync;
+        try {
+          sync = await syncHealthKitData(user.id);
+        } catch (err: any) {
+          const msg = String(err?.message ?? err ?? "");
+          if (/not determined|authorization/i.test(msg)) {
+            const retry = await requestHealthKitPermissions();
+            if (!retry.success) {
+              throw new Error("Dozvole za Apple Health odbijene");
+            }
+            sync = await syncHealthKitData(user.id);
+          } else {
+            throw err;
+          }
+        }
         const wk = (sync as any).workouts ?? 0;
         toast.success(
           wk > 0
@@ -99,7 +115,21 @@ export const useWearableConnections = (userId?: string) => {
         if (!isHealthKitAvailable()) {
           throw new Error("Apple Health dostupan u mobilnoj aplikaciji");
         }
-        const res = await syncHealthKitData(user.id);
+        let res;
+        try {
+          res = await syncHealthKitData(user.id);
+        } catch (err: any) {
+          const msg = String(err?.message ?? err ?? "");
+          if (/not determined|authorization/i.test(msg)) {
+            const perm = await requestHealthKitPermissions();
+            if (!perm.success) {
+              throw new Error("Dozvole za Apple Health odbijene");
+            }
+            res = await syncHealthKitData(user.id);
+          } else {
+            throw err;
+          }
+        }
         const wk = (res as any).workouts ?? 0;
         toast.success(
           wk > 0
