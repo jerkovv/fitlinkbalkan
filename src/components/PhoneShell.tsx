@@ -27,9 +27,9 @@ export const PhoneShell = ({
   return (
     <div className={`phone-shell ${hasBottomNav ? "pb-32" : "pb-10"} animate-fade-in`}>
 
-      {/* Top bar — back + right action */}
+      {/* Top bar - back + right action */}
       {(back || rightSlot) && (
-        <div className="flex items-center justify-between px-6 pt-3">
+        <div className="phone-shell-header flex items-center justify-between px-6">
           {back ? (
             <Link
               to={back}
@@ -44,7 +44,7 @@ export const PhoneShell = ({
       )}
 
       {/* Large Apple-style title */}
-      <header className="px-6 pt-3 pb-5">
+      <header className={`${back || rightSlot ? "pt-3" : "phone-shell-header"} px-6 pb-5`}>
         {eyebrow && (
           <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-1.5">
             {eyebrow}

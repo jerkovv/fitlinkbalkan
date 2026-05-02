@@ -2,14 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-/* FITLINK — Premium Design System v6
+/* FITLINK - Premium Design System v6
    Light, Apple-minimal. Violet-led palette (less feminine than v2).
    Primary = royal violet, gradient finishes with magenta accent only.
    All colors HSL only. */
 
 @layer base {
   :root {
-    /* Surfaces — neutral cool gray (no magenta tint) */
+    /* Surfaces - neutral cool gray (no magenta tint) */
     --background: 240 12% 98%;
     --foreground: 240 18% 10%;
     --surface: 0 0% 100%;
@@ -23,7 +23,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 18% 10%;
 
-    /* Brand — royal violet → indigo (magenta only as gradient tail) */
+    /* Brand - royal violet to indigo (magenta only as gradient tail) */
     --brand-1: 268 80% 56%;             /* royal violet primary */
     --brand-2: 252 80% 58%;             /* indigo middle */
     --brand-3: 322 78% 60%;             /* magenta tail accent */
@@ -33,12 +33,12 @@
     --primary-soft: 268 85% 96%;
     --primary-soft-foreground: 268 65% 40%;
 
-    /* Trener role — royal violet (primary) */
+    /* Trener role - royal violet (primary) */
     --trainer: 268 80% 56%;
     --trainer-soft: 268 85% 96%;
     --trainer-soft-foreground: 268 65% 40%;
 
-    /* Athlete role — deep violet (sibling, NOT pink) */
+    /* Athlete role - deep violet (sibling, NOT pink) */
     --athlete: 252 80% 60%;
     --athlete-soft: 252 85% 96%;
     --athlete-soft-foreground: 252 70% 42%;
@@ -73,9 +73,9 @@
     --input: 240 10% 89%;
     --ring: 268 80% 56%;
 
-    --radius: 1rem;                     /* 16px — sharper than v2's 18 */
+    --radius: 1rem;                     /* 16px - sharper than v2's 18 */
 
-    /* Gradients — violet → indigo → magenta tail */
+    /* Gradients - violet to indigo to magenta tail */
     --gradient-brand: linear-gradient(135deg, hsl(268 80% 56%) 0%, hsl(252 80% 58%) 55%, hsl(322 78% 60%) 100%);
     --gradient-brand-soft: linear-gradient(135deg, hsl(268 100% 97%) 0%, hsl(252 100% 97%) 55%, hsl(322 100% 97%) 100%);
     --gradient-trainer: linear-gradient(135deg, hsl(268 80% 58%), hsl(252 82% 60%));
@@ -84,7 +84,7 @@
     --gradient-dark: linear-gradient(135deg, hsl(268 60% 14%), hsl(252 70% 12%));
     --gradient-hero: radial-gradient(ellipse at top, hsl(268 100% 96%) 0%, hsl(240 12% 98%) 60%);
 
-    /* Shadows — Apple-style multi-layer */
+    /* Shadows - Apple-style multi-layer */
     --shadow-xs: 0 1px 2px hsl(268 30% 20% / 0.04);
     --shadow-sm: 0 1px 2px hsl(268 30% 20% / 0.04), 0 2px 6px hsl(268 30% 20% / 0.04);
     --shadow-md: 0 4px 8px -2px hsl(268 30% 20% / 0.06), 0 12px 24px -6px hsl(268 30% 20% / 0.08);
@@ -95,7 +95,7 @@
     --shadow-success: 0 8px 24px -8px hsl(152 65% 38% / 0.35);
     --shadow-glow: 0 0 60px hsl(268 80% 56% / 0.18);
 
-    /* Session type colors (booking) — soft bg + strong fg */
+    /* Session type colors (booking) - soft bg + strong fg */
     --session-violet-bg: 268 100% 97%;   --session-violet-fg: 268 75% 45%;
     --session-indigo-bg: 240 100% 97%;   --session-indigo-fg: 240 75% 50%;
     --session-emerald-bg: 152 70% 95%;   --session-emerald-fg: 152 70% 32%;
@@ -144,6 +144,8 @@
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: 'cv11', 'ss01', 'ss03';
     text-rendering: optimizeLegibility;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   h1, h2, h3, h4, .font-display {
@@ -152,7 +154,7 @@
     font-weight: 800;
   }
 
-  /* Editorial sport eyebrow — uppercase tracked label */
+  /* Editorial sport eyebrow - uppercase tracked label */
   .eyebrow {
     font-family: 'Inter Tight', 'Inter', system-ui, sans-serif;
     text-transform: uppercase;
@@ -189,7 +191,7 @@
   .shadow-success  { box-shadow: var(--shadow-success); }
   .shadow-glow     { box-shadow: var(--shadow-glow); }
 
-  /* Premium card — surface with hairline ring */
+  /* Premium card - surface with hairline ring */
   .card-premium {
     @apply bg-surface rounded-xl;
     box-shadow:
@@ -206,7 +208,7 @@
     transform: translateY(-1px);
   }
 
-  /* Plasma card — glowing accent border */
+  /* Plasma card - glowing accent border */
   .card-plasma {
     @apply bg-surface rounded-xl relative overflow-hidden;
     box-shadow:
@@ -222,8 +224,10 @@
   /* Mobile shell */
   .phone-shell {
     @apply mx-auto w-full max-w-[440px] min-h-screen relative bg-background;
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .phone-shell-header {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
   }
 
   /* Tabular nums for timers */
