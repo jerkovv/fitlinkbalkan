@@ -49,11 +49,11 @@ const Stepper = ({
       >
         <Minus className="h-4 w-4" strokeWidth={2.5} />
       </button>
-      <div className="flex-1 text-center min-w-0">
-        <div className="font-display text-[28px] font-bold leading-none tracking-tight tnum text-foreground whitespace-nowrap">
+      <div className="flex-1 text-center px-1 min-w-0">
+        <div className="font-display text-[18px] font-semibold leading-none tracking-tight tnum text-foreground whitespace-nowrap">
           {display}
           {suffix && (
-            <span className="text-[12px] text-muted-foreground font-semibold ml-1">{suffix}</span>
+            <span className="text-[11px] text-muted-foreground font-semibold ml-1">{suffix}</span>
           )}
         </div>
       </div>
