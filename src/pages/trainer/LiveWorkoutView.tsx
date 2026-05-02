@@ -305,8 +305,8 @@ const LiveWorkoutView = () => {
           </Card>
 
           {/* Big HR display */}
-          <Card
-            className={cn("p-5 flex items-center gap-4 transition-colors")}
+          <div
+            className="card-premium p-5 flex items-center gap-4 transition-colors"
             style={{ background: `${hrColor}1A` }}
           >
             <div
