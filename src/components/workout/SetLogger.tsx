@@ -39,22 +39,22 @@ const Stepper = ({
       <button
         type="button"
         onClick={dec}
-        className="h-12 w-12 rounded-2xl bg-surface border border-hairline flex items-center justify-center active:scale-95 transition shrink-0"
+        className="h-11 w-11 rounded-2xl bg-surface border border-hairline flex items-center justify-center active:scale-95 transition shrink-0"
       >
         <Minus className="h-4 w-4" />
       </button>
-      <div className="flex-1 h-12 rounded-2xl bg-surface-2 flex items-baseline justify-center gap-1">
-        <span className="font-display text-[28px] font-bold tracking-tightest tnum text-foreground leading-none">
+      <div className="flex-1 min-w-0 h-14 rounded-2xl bg-surface-2 flex items-baseline justify-center gap-1 px-2">
+        <span className="font-display text-[34px] font-bold tracking-tightest tnum text-foreground leading-none truncate">
           {Number.isFinite(value) ? value : 0}
         </span>
         {suffix && (
-          <span className="text-[12px] text-muted-foreground font-semibold">{suffix}</span>
+          <span className="text-[12px] text-muted-foreground font-semibold shrink-0">{suffix}</span>
         )}
       </div>
       <button
         type="button"
         onClick={inc}
-        className="h-12 w-12 rounded-2xl bg-surface border border-hairline flex items-center justify-center active:scale-95 transition shrink-0"
+        className="h-11 w-11 rounded-2xl bg-surface border border-hairline flex items-center justify-center active:scale-95 transition shrink-0"
       >
         <Plus className="h-4 w-4" />
       </button>

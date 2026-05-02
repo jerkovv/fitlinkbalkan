@@ -50,35 +50,43 @@ const playDing = () => {
 
 export const RestTimer = ({ targetSeconds, onDone, subtitle }: RestTimerProps) => {
   const [target, setTarget] = useState(targetSeconds);
-  const [remaining, setRemaining] = useState(targetSeconds);
+  const [elapsed, setElapsed] = useState(0);
   const firedRef = useRef(false);
+  const onDoneRef = useRef(onDone);
+
+  useEffect(() => {
+    onDoneRef.current = onDone;
+  }, [onDone]);
 
   useEffect(() => {
     setTarget(targetSeconds);
-    setRemaining(targetSeconds);
+    setElapsed(0);
     firedRef.current = false;
   }, [targetSeconds]);
 
   useEffect(() => {
-    if (remaining <= 0) {
-      if (!firedRef.current) {
-        firedRef.current = true;
-        triggerHaptic();
-        playDing();
-        const t = setTimeout(() => onDone(), 500);
-        return () => clearTimeout(t);
-      }
-      return;
-    }
-    const id = setInterval(() => setRemaining((r) => Math.max(0, r - 1)), 1000);
+    const id = setInterval(() => {
+      setElapsed((e) => e + 1);
+    }, 1000);
     return () => clearInterval(id);
-  }, [remaining, onDone]);
+  }, []);
+
+  const remaining = Math.max(0, target - elapsed);
+
+  useEffect(() => {
+    if (remaining <= 0 && !firedRef.current) {
+      firedRef.current = true;
+      triggerHaptic();
+      playDing();
+      const t = setTimeout(() => onDoneRef.current(), 500);
+      return () => clearTimeout(t);
+    }
+  }, [remaining]);
 
   const radius = 110;
   const circ = 2 * Math.PI * radius;
   const pct = target > 0 ? remaining / target : 0;
   const offset = circ * (1 - pct);
-  const elapsed = Math.max(0, target - remaining);
 
   return (
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-md flex flex-col items-center justify-center px-6">
@@ -132,7 +140,7 @@ export const RestTimer = ({ targetSeconds, onDone, subtitle }: RestTimerProps) =
         <button
           onClick={() => {
             setTarget((t) => t + 30);
-            setRemaining((r) => r + 30);
+            firedRef.current = false;
           }}
           className="flex-1 h-12 rounded-2xl bg-surface border border-hairline text-[14px] font-semibold inline-flex items-center justify-center gap-1.5 active:scale-95 transition"
         >
@@ -141,7 +149,7 @@ export const RestTimer = ({ targetSeconds, onDone, subtitle }: RestTimerProps) =
         <button
           onClick={() => {
             setTarget((t) => t + 60);
-            setRemaining((r) => r + 60);
+            firedRef.current = false;
           }}
           className="flex-1 h-12 rounded-2xl bg-surface border border-hairline text-[14px] font-semibold inline-flex items-center justify-center gap-1.5 active:scale-95 transition"
         >
