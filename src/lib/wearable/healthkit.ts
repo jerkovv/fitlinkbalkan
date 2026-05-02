@@ -127,6 +127,21 @@ export async function syncHealthKitData(userId: string) {
   }
 
   let workoutsSynced = 0;
+  let newWorkouts = 0;
+  // Postojeci source_id-evi pre upserta, da bismo razlikovali nove od azuriranih
+  const existingWorkoutSourceIds = new Set<string>();
+  try {
+    const { data: existingDet } = await supabase
+      .from('wearable_workout_details' as any)
+      .select('source_id')
+      .eq('user_id', userId)
+      .eq('provider', 'apple_health');
+    (existingDet ?? []).forEach((r: any) => {
+      if (r?.source_id) existingWorkoutSourceIds.add(r.source_id);
+    });
+  } catch (e) {
+    console.warn('Existing workout source_ids fetch failed', e);
+  }
   try {
     const wk = await Health.queryWorkouts({
       startDate,
@@ -217,7 +232,7 @@ export async function syncHealthKitData(userId: string) {
               (w as any).calories ??
               null;
             if (total != null && Number.isFinite(Number(total))) {
-              return Math.round(Number(total) * 0.8);
+              return Math.round(Number(total) * 0.85);
             }
             return null;
           })(),
@@ -237,6 +252,9 @@ export async function syncHealthKitData(userId: string) {
           console.warn('Workout detail upsert failed', detErr);
         } else if (detRow) {
           workoutsSynced += 1;
+          if (!existingWorkoutSourceIds.has(sourceId)) {
+            newWorkouts += 1;
+          }
           if (hrSeries.length) {
             const workoutId = (detRow as any).id;
             const zones = computeZones(hrSeries, userMaxHR);
@@ -267,7 +285,35 @@ export async function syncHealthKitData(userId: string) {
   }
 
   // Upsert wearable_data ako ima zapisa
+  let newRecords = 0;
   if (records.length > 0) {
+    // Prebroj postojece kljuceve pre upserta
+    const keys = records.map((r) => ({
+      data_type: r.data_type,
+      recorded_for: r.recorded_for,
+      source_id: r.source_id,
+    }));
+    const dataTypes = Array.from(new Set(keys.map((k) => k.data_type)));
+    const dates = Array.from(new Set(keys.map((k) => k.recorded_for)));
+    const existingKeys = new Set<string>();
+    try {
+      const { data: existingData } = await supabase
+        .from('wearable_data' as any)
+        .select('data_type,recorded_for,source_id')
+        .eq('user_id', userId)
+        .eq('provider', 'apple_health')
+        .in('data_type', dataTypes)
+        .in('recorded_for', dates);
+      (existingData ?? []).forEach((r: any) => {
+        existingKeys.add(`${r.data_type}|${r.recorded_for}|${r.source_id ?? ''}`);
+      });
+    } catch (e) {
+      console.warn('Existing wearable_data keys fetch failed', e);
+    }
+    newRecords = records.filter(
+      (r) => !existingKeys.has(`${r.data_type}|${r.recorded_for}|${r.source_id ?? ''}`),
+    ).length;
+
     const { error } = await supabase
       .from('wearable_data' as any)
       .upsert(records, {
@@ -302,14 +348,21 @@ export async function syncHealthKitData(userId: string) {
     user_id: userId,
     provider: 'apple_health',
     status: 'success',
-    records_synced: records.length,
+    records_synced: newRecords,
     finished_at: new Date().toISOString(),
   } as any);
 
   console.log('HealthKit sync', {
     records: records.length,
+    newRecords,
     workouts: workoutsSynced,
+    newWorkouts,
     ms: Date.now() - t0,
   });
-  return { synced: records.length, workouts: workoutsSynced };
+  return {
+    synced: records.length,
+    newRecords,
+    workouts: workoutsSynced,
+    newWorkouts,
+  };
 }
