@@ -50,7 +50,7 @@ const Stepper = ({
         <Minus className="h-4 w-4" strokeWidth={2.5} />
       </button>
       <div className="flex-1 min-w-0 text-center px-2 overflow-hidden">
-        <div className="font-display text-[24px] font-bold leading-none tracking-tight tnum text-foreground whitespace-nowrap">
+        <div className="font-display text-[20px] font-bold leading-none tracking-tight tnum text-foreground whitespace-nowrap">
           {display}
           {suffix && (
             <span className="text-[12px] text-muted-foreground font-semibold ml-1">{suffix}</span>
