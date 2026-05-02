@@ -26,15 +26,6 @@ export const PhoneShell = ({
 }: PhoneShellProps) => {
   return (
     <div className={`phone-shell ${hasBottomNav ? "pb-32" : "pb-10"} animate-fade-in`}>
-      {/* Status bar */}
-      <div className="flex items-center justify-between px-6 pt-4 pb-1 text-[11px] font-semibold text-foreground/60 tnum">
-        <span>9:41</span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-foreground/60" />
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-foreground/60" />
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-foreground/60" />
-        </span>
-      </div>
 
       {/* Top bar — back + right action */}
       {(back || rightSlot) && (

@@ -222,6 +222,8 @@
   /* Mobile shell */
   .phone-shell {
     @apply mx-auto w-full max-w-[440px] min-h-screen relative bg-background;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   /* Tabular nums for timers */
