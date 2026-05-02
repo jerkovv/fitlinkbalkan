@@ -25,11 +25,11 @@ export const PhoneShell = ({
   children,
 }: PhoneShellProps) => {
   return (
-    <div className={`phone-shell ${hasBottomNav ? "pb-32" : "pb-10"} animate-fade-in`}>
+    <div className={`phone-shell ${hasBottomNav ? "pb-36" : "pb-10"} animate-fade-in`}>
 
       {/* Top bar - back + right action */}
       {(back || rightSlot) && (
-        <div className="phone-shell-header flex items-center justify-between px-6">
+        <div className="flex items-center justify-between px-6 pt-1">
           {back ? (
             <Link
               to={back}
@@ -44,7 +44,7 @@ export const PhoneShell = ({
       )}
 
       {/* Large Apple-style title */}
-      <header className={`${back || rightSlot ? "pt-3" : "phone-shell-header"} px-6 pb-5`}>
+      <header className="px-6 pt-2 pb-3">
         {eyebrow && (
           <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-1.5">
             {eyebrow}
@@ -59,7 +59,7 @@ export const PhoneShell = ({
         )}
       </header>
 
-      <main className="px-6 space-y-5">{children}</main>
+      <main className="px-6 space-y-4">{children}</main>
     </div>
   );
 };

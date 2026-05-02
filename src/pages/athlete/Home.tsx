@@ -123,9 +123,13 @@ const Home = () => {
           </div>
         )}
         {loading ? (
-          <div className="flex justify-center py-16">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
+          <Card className="p-5 border-0 relative overflow-hidden bg-muted/40 animate-pulse min-h-[196px]">
+            <div className="h-3 w-24 rounded bg-muted mb-3" />
+            <div className="h-7 w-2/3 rounded bg-muted mb-2" />
+            <div className="h-3 w-1/2 rounded bg-muted mb-5" />
+            <div className="h-3 w-1/3 rounded bg-muted mb-5" />
+            <div className="h-9 w-36 rounded-full bg-muted" />
+          </Card>
         ) : next ? (
           <Link to={`/vezbac/trening/${next.day_id}`} className="block">
             <Card className="p-5 bg-gradient-brand text-white border-0 shadow-brand relative overflow-hidden">
