@@ -151,7 +151,8 @@ const ProgramBuilder = () => {
 
   const filteredLib = useMemo(() => {
     if (!libQuery) return library;
-    return library.filter((l) => l.name.toLowerCase().includes(libQuery.toLowerCase()));
+    const q = libQuery.toLowerCase();
+    return library.filter((l) => l.name.toLowerCase().includes(q) || (l.name_en?.toLowerCase().includes(q)));
   }, [library, libQuery]);
 
   const openAssign = async () => {
