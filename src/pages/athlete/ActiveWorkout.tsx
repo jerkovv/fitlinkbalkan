@@ -32,6 +32,7 @@ type DayExercise = {
   exercise_id: string;
   exercise: {
     name: string;
+    name_en: string | null;
     primary_muscle: string | null;
     video_url: string | null;
     thumbnail_url: string | null;
@@ -282,7 +283,7 @@ const ActiveWorkout = () => {
           session_log_id: sessionId,
           athlete_id: user.id,
           current_exercise_idx: exerciseIdx,
-          current_exercise_name: ex.exercise.name,
+          current_exercise_name: ex.exercise.name_en?.trim() || ex.exercise.name,
           current_set_number: setNumber,
           current_hr: liveHr,
           total_completed_sets: completedSets.length,
@@ -391,8 +392,10 @@ const ActiveWorkout = () => {
         ? current.rest_seconds
         : 60;
 
+      const nextEx = exercises[exerciseIdx + 1]?.exercise;
+      const nextName = nextEx ? (nextEx.name_en?.trim() || nextEx.name) : "";
       const nextSubtitle = isLastSetOfExercise
-        ? `Sledeća vežba: ${exercises[exerciseIdx + 1]?.exercise.name ?? ""}`
+        ? `Sledeća vežba: ${nextName}`
         : `Sledeća serija ${setNumber + 1} od ${current.sets}`;
 
       setResting({ seconds: restSec, subtitle: nextSubtitle });
@@ -572,6 +575,7 @@ const ActiveWorkout = () => {
         <div className="px-4 pt-4 space-y-5">
           <ExerciseHeader
             name={current.exercise.name}
+            nameEn={current.exercise.name_en}
             primaryMuscle={current.exercise.primary_muscle}
             thumbnailUrl={current.exercise.thumbnail_url}
             videoUrl={current.exercise.video_url}

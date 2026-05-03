@@ -19,6 +19,7 @@ import { VideoModal } from "@/components/VideoModal";
 type Exercise = {
   id: string;
   name: string;
+  name_en: string | null;
   description: string | null;
   instructions: string | null;
   primary_muscle: string;
@@ -104,7 +105,10 @@ const ExerciseLibrary = () => {
       if (muscleFilter !== "all" && ex.primary_muscle !== muscleFilter) return false;
       if (scopeFilter === "global" && !ex.is_global) return false;
       if (scopeFilter === "mine" && (ex.is_global || ex.created_by !== user?.id)) return false;
-      if (query && !ex.name.toLowerCase().includes(query.toLowerCase())) return false;
+      if (query) {
+        const q = query.toLowerCase();
+        if (!ex.name.toLowerCase().includes(q) && !(ex.name_en?.toLowerCase().includes(q))) return false;
+      }
       return true;
     });
   }, [items, muscleFilter, scopeFilter, query, user?.id]);
@@ -298,7 +302,10 @@ const ExerciseLibrary = () => {
                 <Dumbbell className="h-5 w-5 text-primary" strokeWidth={2.25} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-semibold text-sm truncate">{ex.name}</div>
+                <div className="font-semibold text-sm truncate">{ex.name_en?.trim() || ex.name}</div>
+                {ex.name_en && ex.name_en.trim() && ex.name_en.trim() !== ex.name && (
+                  <div className="text-[11px] text-muted-foreground truncate">{ex.name}</div>
+                )}
                 <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
                   <span>{muscleLabel(ex.primary_muscle)}</span>
                   <span className="opacity-50">•</span>
@@ -325,8 +332,11 @@ const ExerciseLibrary = () => {
                   <div className="h-12 w-12 rounded-xl bg-gradient-brand-soft flex items-center justify-center">
                     <Dumbbell className="h-5 w-5 text-primary" strokeWidth={2.25} />
                   </div>
-                  <div>
-                    <DialogTitle className="text-left">{selected.name}</DialogTitle>
+                  <div className="min-w-0">
+                    <DialogTitle className="text-left">{selected.name_en?.trim() || selected.name}</DialogTitle>
+                    {selected.name_en && selected.name_en.trim() && selected.name_en.trim() !== selected.name && (
+                      <div className="text-[12px] text-muted-foreground mt-0.5 text-left">{selected.name}</div>
+                    )}
                     <div className="text-xs text-muted-foreground mt-0.5">
                       {selected.is_global ? "Globalna vežba" : "Moja vežba"}
                     </div>

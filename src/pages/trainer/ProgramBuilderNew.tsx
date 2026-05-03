@@ -24,9 +24,9 @@ type Exercise = {
   weight_kg: number | null;
   rest_seconds: number | null;
   notes: string | null;
-  exercises: { name: string; primary_muscle: string } | null;
+  exercises: { name: string; name_en: string | null; primary_muscle: string } | null;
 };
-type LibExercise = { id: string; name: string; primary_muscle: string; equipment: string };
+type LibExercise = { id: string; name: string; name_en: string | null; primary_muscle: string; equipment: string };
 type Athlete = { id: string; full_name: string | null; email: string };
 
 const ProgramBuilder = () => {
@@ -66,7 +66,7 @@ const ProgramBuilder = () => {
       const dayIds = dList.map((d: any) => d.id);
       const { data: exs } = await supabase
         .from("program_template_exercises")
-        .select("*, exercises(name, primary_muscle)")
+        .select("*, exercises(name, name_en, primary_muscle)")
         .in("day_id", dayIds)
         .order("position");
       const grouped: Record<string, Exercise[]> = {};
@@ -86,7 +86,7 @@ const ProgramBuilder = () => {
   const loadLibrary = async () => {
     const { data } = await supabase
       .from("exercises")
-      .select("id, name, primary_muscle, equipment")
+      .select("id, name, name_en, primary_muscle, equipment")
       .order("name");
     setLibrary((data as any) ?? []);
   };
@@ -151,7 +151,8 @@ const ProgramBuilder = () => {
 
   const filteredLib = useMemo(() => {
     if (!libQuery) return library;
-    return library.filter((l) => l.name.toLowerCase().includes(libQuery.toLowerCase()));
+    const q = libQuery.toLowerCase();
+    return library.filter((l) => l.name.toLowerCase().includes(q) || (l.name_en?.toLowerCase().includes(q)));
   }, [library, libQuery]);
 
   const openAssign = async () => {
@@ -268,7 +269,10 @@ const ProgramBuilder = () => {
                         <div className="flex items-start gap-2">
                           <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <div className="font-semibold text-sm truncate">{ex.exercises?.name ?? "—"}</div>
+                            <div className="font-semibold text-sm truncate">{ex.exercises?.name_en?.trim() || ex.exercises?.name || "—"}</div>
+                            {ex.exercises?.name_en && ex.exercises.name_en.trim() && ex.exercises.name_en.trim() !== ex.exercises.name && (
+                              <div className="text-[11px] text-muted-foreground truncate">{ex.exercises.name}</div>
+                            )}
                             <div className="text-[11px] text-muted-foreground capitalize">{ex.exercises?.primary_muscle?.replace("_", " ")}</div>
                           </div>
                           <button
@@ -388,7 +392,10 @@ const ProgramBuilder = () => {
                   <Dumbbell className="h-4 w-4 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm truncate">{l.name}</div>
+                  <div className="font-semibold text-sm truncate">{l.name_en?.trim() || l.name}</div>
+                  {l.name_en && l.name_en.trim() && l.name_en.trim() !== l.name && (
+                    <div className="text-[11px] text-muted-foreground truncate">{l.name}</div>
+                  )}
                   <div className="text-[11px] text-muted-foreground capitalize">{l.primary_muscle.replace("_", " ")}</div>
                 </div>
               </button>

@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface ExerciseHeaderProps {
   name: string;
+  nameEn?: string | null;
   primaryMuscle?: string | null;
   thumbnailUrl?: string | null;
   videoUrl?: string | null;
@@ -14,12 +15,15 @@ const isImage = (url: string) => /\.(png|jpe?g|gif|webp|avif)(\?|$)/i.test(url);
 
 export const ExerciseHeader = ({
   name,
+  nameEn,
   primaryMuscle,
   thumbnailUrl,
   videoUrl,
   instructions,
 }: ExerciseHeaderProps) => {
   const [instructionsOpen, setInstructionsOpen] = useState(false);
+  const primary = nameEn?.trim() || name;
+  const showSecondary = !!(nameEn && nameEn.trim() && name && nameEn.trim() !== name);
 
   const media = videoUrl || thumbnailUrl || null;
 
@@ -51,14 +55,19 @@ export const ExerciseHeader = ({
         )}
       </div>
 
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <h2 className="font-display text-[28px] leading-[1.05] font-bold tracking-tightest text-foreground">
-          {name}
+          {primary}
         </h2>
+        {showSecondary && (
+          <p className="text-[14px] text-muted-foreground">{name}</p>
+        )}
         {primaryMuscle && (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary-soft text-primary text-[11px] font-semibold uppercase tracking-[0.12em]">
-            {primaryMuscle}
-          </span>
+          <div className="pt-1.5">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary-soft text-primary text-[11px] font-semibold uppercase tracking-[0.12em]">
+              {primaryMuscle}
+            </span>
+          </div>
         )}
       </div>
 
