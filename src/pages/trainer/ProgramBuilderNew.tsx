@@ -269,7 +269,10 @@ const ProgramBuilder = () => {
                         <div className="flex items-start gap-2">
                           <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <div className="font-semibold text-sm truncate">{ex.exercises?.name ?? "—"}</div>
+                            <div className="font-semibold text-sm truncate">{ex.exercises?.name_en?.trim() || ex.exercises?.name || "—"}</div>
+                            {ex.exercises?.name_en && ex.exercises.name_en.trim() && ex.exercises.name_en.trim() !== ex.exercises.name && (
+                              <div className="text-[11px] text-muted-foreground truncate">{ex.exercises.name}</div>
+                            )}
                             <div className="text-[11px] text-muted-foreground capitalize">{ex.exercises?.primary_muscle?.replace("_", " ")}</div>
                           </div>
                           <button
