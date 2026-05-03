@@ -55,14 +55,19 @@ export const ExerciseHeader = ({
         )}
       </div>
 
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <h2 className="font-display text-[28px] leading-[1.05] font-bold tracking-tightest text-foreground">
-          {name}
+          {primary}
         </h2>
+        {showSecondary && (
+          <p className="text-[14px] text-muted-foreground">{name}</p>
+        )}
         {primaryMuscle && (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary-soft text-primary text-[11px] font-semibold uppercase tracking-[0.12em]">
-            {primaryMuscle}
-          </span>
+          <div className="pt-1.5">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary-soft text-primary text-[11px] font-semibold uppercase tracking-[0.12em]">
+              {primaryMuscle}
+            </span>
+          </div>
         )}
       </div>
 
