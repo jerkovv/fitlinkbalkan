@@ -392,7 +392,10 @@ const ProgramBuilder = () => {
                   <Dumbbell className="h-4 w-4 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm truncate">{l.name}</div>
+                  <div className="font-semibold text-sm truncate">{l.name_en?.trim() || l.name}</div>
+                  {l.name_en && l.name_en.trim() && l.name_en.trim() !== l.name && (
+                    <div className="text-[11px] text-muted-foreground truncate">{l.name}</div>
+                  )}
                   <div className="text-[11px] text-muted-foreground capitalize">{l.primary_muscle.replace("_", " ")}</div>
                 </div>
               </button>
