@@ -19,6 +19,7 @@ import { VideoModal } from "@/components/VideoModal";
 type Exercise = {
   id: string;
   name: string;
+  name_en: string | null;
   description: string | null;
   instructions: string | null;
   primary_muscle: string;
