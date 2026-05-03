@@ -58,21 +58,32 @@ export const ExerciseHeader = ({
   const showSecondary = !!(nameEn && nameEn.trim() && name && nameEn.trim() !== name);
 
   const media = videoUrl || thumbnailUrl || null;
+  const embed = videoUrl ? toEmbedUrl(videoUrl) : null;
+  const isDirectImage = media ? isImage(media) : false;
 
   return (
     <div className="space-y-3">
       <div className="relative w-full aspect-[16/10] rounded-3xl overflow-hidden bg-surface-2 border border-hairline">
-        {media && isVideo(media) ? (
+        {embed && embed.type === "video" ? (
           <video
-            src={media}
+            src={embed.src}
             autoPlay
             loop
             muted
             playsInline
             preload="auto"
-            className="absolute inset-0 w-full h-full object-cover"
+            controls={false}
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none"
           />
-        ) : media && (isImage(media) || media === thumbnailUrl) ? (
+        ) : embed && (embed.type === "youtube" || embed.type === "vimeo") ? (
+          <iframe
+            src={buildLoopEmbed(embed)}
+            title={name}
+            allow="autoplay; encrypted-media; picture-in-picture"
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            frameBorder={0}
+          />
+        ) : media && (isDirectImage || media === thumbnailUrl) ? (
           <img
             src={media}
             alt={name}
