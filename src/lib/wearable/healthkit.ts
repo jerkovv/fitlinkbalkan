@@ -1,6 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { Health, type HealthPermission } from 'capacitor-health';
-import { HealthKitLive } from 'capacitor-healthkit-live';
+
 import { supabase } from '@/lib/supabase';
 import { computeMaxHR, computeZones, type HRSample } from '@/lib/wearable/hrZones';
 
