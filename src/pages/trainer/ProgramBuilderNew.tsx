@@ -24,9 +24,9 @@ type Exercise = {
   weight_kg: number | null;
   rest_seconds: number | null;
   notes: string | null;
-  exercises: { name: string; primary_muscle: string } | null;
+  exercises: { name: string; name_en: string | null; primary_muscle: string } | null;
 };
-type LibExercise = { id: string; name: string; primary_muscle: string; equipment: string };
+type LibExercise = { id: string; name: string; name_en: string | null; primary_muscle: string; equipment: string };
 type Athlete = { id: string; full_name: string | null; email: string };
 
 const ProgramBuilder = () => {
