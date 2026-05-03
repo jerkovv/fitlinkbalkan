@@ -1,6 +1,13 @@
 import { Capacitor } from '@capacitor/core';
 import { Health, type HealthPermission } from 'capacitor-health';
-import { HealthKitLive } from 'capacitor-healthkit-live';
+const HealthKitLive: any = (globalThis as any).Capacitor?.Plugins?.HealthKitLive ?? {
+  isAvailable: async () => ({ available: false }),
+  requestAuthorization: async () => ({ granted: false }),
+  getCurrentHeartRate: async () => ({ bpm: null }),
+  addListener: async () => ({ remove: async () => {} }),
+  startHeartRateMonitoring: async () => {},
+  stopHeartRateMonitoring: async () => {},
+};
 import { supabase } from '@/lib/supabase';
 import { computeMaxHR, computeZones, type HRSample } from '@/lib/wearable/hrZones';
 

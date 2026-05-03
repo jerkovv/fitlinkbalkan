@@ -374,14 +374,25 @@ const ExerciseLibrary = () => {
                 )}
 
                 {selected.video_url && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => setVideoOpenFor(selected)}
-                  >
-                    <PlayCircle className="h-4 w-4 mr-2" /> Pogledaj demonstraciju
-                  </Button>
+                  <div className="w-full aspect-video rounded-2xl overflow-hidden bg-surface-2">
+                    {/\.(png|jpe?g|gif|webp|avif)(\?|$)/i.test(selected.video_url) ? (
+                      <img
+                        src={selected.video_url}
+                        alt={selected.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <video
+                        src={selected.video_url}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        preload="auto"
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                  </div>
                 )}
               </div>
             </>

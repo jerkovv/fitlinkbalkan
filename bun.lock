@@ -41,6 +41,7 @@
         "@supabase/supabase-js": "^2.105.0",
         "@tanstack/react-query": "^5.83.0",
         "capacitor-health": "^8.1.0",
+        "capacitor-healthkit-live": "file:plugins/capacitor-healthkit-live",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "cmdk": "^1.1.1",
@@ -587,6 +588,8 @@
     "caniuse-lite": ["caniuse-lite@1.0.30001727", "", {}, "sha512-pB68nIHmbN6L/4C6MH1DokyR3bYqFwjaSs/sWDHGj4CTcFtQUQMuJftVwWkXq7mNWOybD3KhUv3oWHoGxgP14Q=="],
 
     "capacitor-health": ["capacitor-health@8.1.0", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-2GLbAwbtjuSYmVtRyN4TG4BigNnbXXZ0oUHvgXS/UYLvjpa1J+7HNbn3u10VIXCUB79V6UPVcnRyVJPrFBSoTA=="],
+
+    "capacitor-healthkit-live": ["capacitor-healthkit-live@file:plugins/capacitor-healthkit-live", { "devDependencies": { "@capacitor/core": "^8.0.0", "typescript": "^5.0.0" }, "peerDependencies": { "@capacitor/core": ">=8.0.0" } }],
 
     "chai": ["chai@5.3.3", "", { "dependencies": { "assertion-error": "^2.0.1", "check-error": "^2.1.1", "deep-eql": "^5.0.1", "loupe": "^3.1.0", "pathval": "^2.0.0" } }, "sha512-4zNhdJD/iOjSH0A05ea+Ke6MU5mmpQcbQsSOkgdaUMJ9zTlDTD/GYlwohmIE2u0gaxHYiVHEn1Fw9mZ/ktJWgw=="],
 

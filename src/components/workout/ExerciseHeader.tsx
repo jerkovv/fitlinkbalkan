@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { PlayCircle, ChevronDown, ChevronUp, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface ExerciseHeaderProps {
   name: string;
@@ -10,6 +9,9 @@ interface ExerciseHeaderProps {
   instructions?: string | null;
 }
 
+const isVideo = (url: string) => /\.(mp4|webm|ogg|mov)(\?|$)/i.test(url);
+const isImage = (url: string) => /\.(png|jpe?g|gif|webp|avif)(\?|$)/i.test(url);
+
 export const ExerciseHeader = ({
   name,
   primaryMuscle,
@@ -17,22 +19,26 @@ export const ExerciseHeader = ({
   videoUrl,
   instructions,
 }: ExerciseHeaderProps) => {
-  const [videoOpen, setVideoOpen] = useState(false);
   const [instructionsOpen, setInstructionsOpen] = useState(false);
+
+  const media = videoUrl || thumbnailUrl || null;
 
   return (
     <div className="space-y-3">
-      <button
-        type="button"
-        onClick={() => videoUrl && setVideoOpen(true)}
-        className={cn(
-          "relative w-full aspect-[16/10] rounded-3xl overflow-hidden bg-surface-2 border border-hairline group",
-          !videoUrl && "cursor-default"
-        )}
-      >
-        {thumbnailUrl ? (
+      <div className="relative w-full aspect-[16/10] rounded-3xl overflow-hidden bg-surface-2 border border-hairline">
+        {media && isVideo(media) ? (
+          <video
+            src={media}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : media && (isImage(media) || media === thumbnailUrl) ? (
           <img
-            src={thumbnailUrl}
+            src={media}
             alt={name}
             className="absolute inset-0 w-full h-full object-cover"
           />
@@ -43,17 +49,7 @@ export const ExerciseHeader = ({
             </span>
           </div>
         )}
-        {videoUrl && (
-          <>
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="h-16 w-16 rounded-full bg-white/95 text-foreground flex items-center justify-center shadow-xl group-active:scale-95 transition">
-                <PlayCircle className="h-8 w-8" strokeWidth={2} />
-              </div>
-            </div>
-          </>
-        )}
-      </button>
+      </div>
 
       <div className="space-y-1.5">
         <h2 className="font-display text-[28px] leading-[1.05] font-bold tracking-tightest text-foreground">
@@ -85,26 +81,6 @@ export const ExerciseHeader = ({
               {instructions}
             </p>
           )}
-        </div>
-      )}
-
-      {videoOpen && videoUrl && (
-        <div className="fixed inset-0 z-[60] bg-black flex flex-col">
-          <button
-            type="button"
-            onClick={() => setVideoOpen(false)}
-            aria-label="Zatvori"
-            className="absolute top-6 right-6 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur text-white flex items-center justify-center"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          <video
-            src={videoUrl}
-            controls
-            autoPlay
-            playsInline
-            className="w-full h-full object-contain bg-black"
-          />
         </div>
       )}
     </div>
