@@ -86,7 +86,7 @@ const ProgramBuilder = () => {
   const loadLibrary = async () => {
     const { data } = await supabase
       .from("exercises")
-      .select("id, name, primary_muscle, equipment")
+      .select("id, name, name_en, primary_muscle, equipment")
       .order("name");
     setLibrary((data as any) ?? []);
   };
