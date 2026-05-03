@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { toEmbedUrl } from "@/lib/videoEmbed";
 
 interface ExerciseHeaderProps {
   name: string;
@@ -10,8 +11,39 @@ interface ExerciseHeaderProps {
   instructions?: string | null;
 }
 
-const isVideo = (url: string) => /\.(mp4|webm|ogg|mov)(\?|$)/i.test(url);
 const isImage = (url: string) => /\.(png|jpe?g|gif|webp|avif)(\?|$)/i.test(url);
+
+const buildLoopEmbed = (
+  embed: { type: "youtube" | "vimeo" | "video" | "iframe"; src: string },
+): string => {
+  try {
+    const u = new URL(embed.src);
+    if (embed.type === "youtube") {
+      const id = u.pathname.split("/").pop();
+      u.searchParams.set("autoplay", "1");
+      u.searchParams.set("mute", "1");
+      u.searchParams.set("loop", "1");
+      u.searchParams.set("controls", "0");
+      u.searchParams.set("modestbranding", "1");
+      u.searchParams.set("playsinline", "1");
+      u.searchParams.set("rel", "0");
+      u.searchParams.set("showinfo", "0");
+      if (id) u.searchParams.set("playlist", id);
+      return u.toString();
+    }
+    if (embed.type === "vimeo") {
+      u.searchParams.set("autoplay", "1");
+      u.searchParams.set("muted", "1");
+      u.searchParams.set("loop", "1");
+      u.searchParams.set("background", "1");
+      u.searchParams.set("controls", "0");
+      return u.toString();
+    }
+    return embed.src;
+  } catch {
+    return embed.src;
+  }
+};
 
 export const ExerciseHeader = ({
   name,
@@ -26,21 +58,32 @@ export const ExerciseHeader = ({
   const showSecondary = !!(nameEn && nameEn.trim() && name && nameEn.trim() !== name);
 
   const media = videoUrl || thumbnailUrl || null;
+  const embed = videoUrl ? toEmbedUrl(videoUrl) : null;
+  const isDirectImage = media ? isImage(media) : false;
 
   return (
     <div className="space-y-3">
       <div className="relative w-full aspect-[16/10] rounded-3xl overflow-hidden bg-surface-2 border border-hairline">
-        {media && isVideo(media) ? (
+        {embed && embed.type === "video" ? (
           <video
-            src={media}
+            src={embed.src}
             autoPlay
             loop
             muted
             playsInline
             preload="auto"
-            className="absolute inset-0 w-full h-full object-cover"
+            controls={false}
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none"
           />
-        ) : media && (isImage(media) || media === thumbnailUrl) ? (
+        ) : embed && (embed.type === "youtube" || embed.type === "vimeo") ? (
+          <iframe
+            src={buildLoopEmbed(embed)}
+            title={name}
+            allow="autoplay; encrypted-media; picture-in-picture"
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            frameBorder={0}
+          />
+        ) : media && (isDirectImage || media === thumbnailUrl) ? (
           <img
             src={media}
             alt={name}
