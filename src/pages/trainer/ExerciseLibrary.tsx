@@ -332,8 +332,11 @@ const ExerciseLibrary = () => {
                   <div className="h-12 w-12 rounded-xl bg-gradient-brand-soft flex items-center justify-center">
                     <Dumbbell className="h-5 w-5 text-primary" strokeWidth={2.25} />
                   </div>
-                  <div>
-                    <DialogTitle className="text-left">{selected.name}</DialogTitle>
+                  <div className="min-w-0">
+                    <DialogTitle className="text-left">{selected.name_en?.trim() || selected.name}</DialogTitle>
+                    {selected.name_en && selected.name_en.trim() && selected.name_en.trim() !== selected.name && (
+                      <div className="text-[12px] text-muted-foreground mt-0.5 text-left">{selected.name}</div>
+                    )}
                     <div className="text-xs text-muted-foreground mt-0.5">
                       {selected.is_global ? "Globalna vežba" : "Moja vežba"}
                     </div>
