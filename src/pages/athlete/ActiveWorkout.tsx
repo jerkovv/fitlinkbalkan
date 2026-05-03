@@ -32,6 +32,7 @@ type DayExercise = {
   exercise_id: string;
   exercise: {
     name: string;
+    name_en: string | null;
     primary_muscle: string | null;
     video_url: string | null;
     thumbnail_url: string | null;
