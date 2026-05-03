@@ -105,7 +105,10 @@ const ExerciseLibrary = () => {
       if (muscleFilter !== "all" && ex.primary_muscle !== muscleFilter) return false;
       if (scopeFilter === "global" && !ex.is_global) return false;
       if (scopeFilter === "mine" && (ex.is_global || ex.created_by !== user?.id)) return false;
-      if (query && !ex.name.toLowerCase().includes(query.toLowerCase())) return false;
+      if (query) {
+        const q = query.toLowerCase();
+        if (!ex.name.toLowerCase().includes(q) && !(ex.name_en?.toLowerCase().includes(q))) return false;
+      }
       return true;
     });
   }, [items, muscleFilter, scopeFilter, query, user?.id]);
