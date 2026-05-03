@@ -299,7 +299,10 @@ const ExerciseLibrary = () => {
                 <Dumbbell className="h-5 w-5 text-primary" strokeWidth={2.25} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-semibold text-sm truncate">{ex.name}</div>
+                <div className="font-semibold text-sm truncate">{ex.name_en?.trim() || ex.name}</div>
+                {ex.name_en && ex.name_en.trim() && ex.name_en.trim() !== ex.name && (
+                  <div className="text-[11px] text-muted-foreground truncate">{ex.name}</div>
+                )}
                 <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
                   <span>{muscleLabel(ex.primary_muscle)}</span>
                   <span className="opacity-50">•</span>
