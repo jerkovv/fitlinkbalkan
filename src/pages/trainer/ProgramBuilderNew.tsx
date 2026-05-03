@@ -66,7 +66,7 @@ const ProgramBuilder = () => {
       const dayIds = dList.map((d: any) => d.id);
       const { data: exs } = await supabase
         .from("program_template_exercises")
-        .select("*, exercises(name, primary_muscle)")
+        .select("*, exercises(name, name_en, primary_muscle)")
         .in("day_id", dayIds)
         .order("position");
       const grouped: Record<string, Exercise[]> = {};
