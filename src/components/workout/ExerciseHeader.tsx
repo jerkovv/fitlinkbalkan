@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface ExerciseHeaderProps {
   name: string;
+  nameEn?: string | null;
   primaryMuscle?: string | null;
   thumbnailUrl?: string | null;
   videoUrl?: string | null;
