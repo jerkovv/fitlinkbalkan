@@ -15,12 +15,15 @@ const isImage = (url: string) => /\.(png|jpe?g|gif|webp|avif)(\?|$)/i.test(url);
 
 export const ExerciseHeader = ({
   name,
+  nameEn,
   primaryMuscle,
   thumbnailUrl,
   videoUrl,
   instructions,
 }: ExerciseHeaderProps) => {
   const [instructionsOpen, setInstructionsOpen] = useState(false);
+  const primary = nameEn?.trim() || name;
+  const showSecondary = !!(nameEn && nameEn.trim() && name && nameEn.trim() !== name);
 
   const media = videoUrl || thumbnailUrl || null;
 
