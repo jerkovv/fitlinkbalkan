@@ -392,8 +392,10 @@ const ActiveWorkout = () => {
         ? current.rest_seconds
         : 60;
 
+      const nextEx = exercises[exerciseIdx + 1]?.exercise;
+      const nextName = nextEx ? (nextEx.name_en?.trim() || nextEx.name) : "";
       const nextSubtitle = isLastSetOfExercise
-        ? `Sledeća vežba: ${exercises[exerciseIdx + 1]?.exercise.name ?? ""}`
+        ? `Sledeća vežba: ${nextName}`
         : `Sledeća serija ${setNumber + 1} od ${current.sets}`;
 
       setResting({ seconds: restSec, subtitle: nextSubtitle });
