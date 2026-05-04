@@ -390,6 +390,24 @@ const ActiveWorkout = () => {
       const isLastExercise = exerciseIdx >= exercises.length - 1;
 
       if (isLastSetOfExercise && isLastExercise) {
+        liveStateRef.current = "completed";
+        if (user) {
+          await supabase.from("workout_live_state" as any).upsert(
+            {
+              session_log_id: sessionId,
+              athlete_id: user.id,
+              current_exercise_idx: exerciseIdx,
+              current_exercise_name: current.exercise.name_en?.trim() || current.exercise.name,
+              current_set_number: setNumber,
+              total_sets: current.sets ?? null,
+              current_hr: liveHr,
+              current_state: "completed",
+              total_completed_sets: completedSets.length + 1,
+              last_heartbeat: new Date().toISOString(),
+            } as any,
+            { onConflict: "session_log_id" } as any,
+          );
+        }
         await finishWorkout();
         return;
       }
@@ -403,6 +421,26 @@ const ActiveWorkout = () => {
       const nextSubtitle = isLastSetOfExercise
         ? `Sledeća vežba: ${nextName}`
         : `Sledeća serija ${setNumber + 1} od ${current.sets}`;
+
+      // Mark as resting in live state for watch app
+      liveStateRef.current = "rest";
+      if (user) {
+        await supabase.from("workout_live_state" as any).upsert(
+          {
+            session_log_id: sessionId,
+            athlete_id: user.id,
+            current_exercise_idx: exerciseIdx,
+            current_exercise_name: current.exercise.name_en?.trim() || current.exercise.name,
+            current_set_number: setNumber,
+            total_sets: current.sets ?? null,
+            current_hr: liveHr,
+            current_state: "rest",
+            total_completed_sets: completedSets.length + 1,
+            last_heartbeat: new Date().toISOString(),
+          } as any,
+          { onConflict: "session_log_id" } as any,
+        );
+      }
 
       setResting({ seconds: restSec, subtitle: nextSubtitle });
     },
