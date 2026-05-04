@@ -268,6 +268,18 @@ const ActiveWorkout = () => {
     return () => clearTimeout(id);
   }, [incomingMessage]);
 
+  /* ------------------------- Watch button events (realtime) ------------------------- */
+  // Refovi da bi subscription handler uvek imao najsvezije handler-e i state,
+  // bez potrebe da se kanal re-subscribe-uje na svaki render.
+  const handleSetCompleteRef = useRef<((data: { reps: number; weight_kg: number; rpe: number | null; notes: string | null }) => void | Promise<void>) | null>(null);
+  const handleRestDoneRef = useRef<(() => void) | null>(null);
+  const restingRef = useRef<{ seconds: number; subtitle: string } | null>(null);
+  const currentRef = useRef<DayExercise | null>(null);
+
+  useEffect(() => {
+    restingRef.current = resting;
+  }, [resting]);
+
   /* ------------------------- Live state heartbeat (every 15s) ------------------------- */
   const cleanupLiveStateRef = useRef(false);
   // Track current state ('active' | 'rest' | 'completed') driven by UI events
