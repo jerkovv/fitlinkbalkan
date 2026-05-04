@@ -57,6 +57,8 @@ type CompletedSet = {
 
 type HRPoint = { ts: string; bpm: number };
 
+type LiveStateOverride = "active" | "rest" | "completed";
+
 const triggerHaptic = async () => {
   try {
     const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
@@ -103,6 +105,10 @@ const ActiveWorkout = () => {
 
   // Wake lock
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+
+  // Live state ref - sluzi da znamo trenutno state ('active' | 'rest' | 'completed')
+  // za sledeci heartbeat upsert. Menja se SAMO iz handler-a.
+  const liveStateRef = useRef<LiveStateOverride>("active");
 
   /* ------------------------- Init: start session + load day ------------------------- */
   useEffect(() => {
@@ -268,45 +274,34 @@ const ActiveWorkout = () => {
     return () => clearTimeout(id);
   }, [incomingMessage]);
 
-  /* ------------------------- Watch button events (realtime) ------------------------- */
-  // Refovi da bi subscription handler uvek imao najsvezije handler-e i state,
-  // bez potrebe da se kanal re-subscribe-uje na svaki render.
-  const handleSetCompleteRef = useRef<((data: { reps: number; weight_kg: number; rpe: number | null; notes: string | null }) => void | Promise<void>) | null>(null);
-  const handleRestDoneRef = useRef<(() => void) | null>(null);
-  const restingRef = useRef<{ seconds: number; subtitle: string } | null>(null);
-  const currentRef = useRef<DayExercise | null>(null);
-
-  useEffect(() => {
-    restingRef.current = resting;
-  }, [resting]);
-
   /* ------------------------- Live state heartbeat (every 15s) ------------------------- */
   const cleanupLiveStateRef = useRef(false);
-  // Track current state ('active' | 'rest' | 'completed') driven by UI events
-  const liveStateRef = useRef<"active" | "rest" | "completed">("active");
 
   useEffect(() => {
     if (!sessionId || !user || !day || !day.exercises?.length) return;
     let stopped = false;
-    // NOTE: ne diramo liveStateRef ovde - njime upravljaju samo handleSetComplete / handleRestDone.
-    // Heartbeat samo refleksuje trenutno stanje koje su handler-i postavili.
     const upsert = async () => {
       if (stopped) return;
       const ex = day.exercises[exerciseIdx];
       if (!ex) return;
+      
+      const payload = {
+        session_log_id: sessionId,
+        athlete_id: user.id,
+        current_exercise_idx: exerciseIdx,
+        current_exercise_name: ex.exercise.name_en?.trim() || ex.exercise.name,
+        current_set_number: setNumber,
+        total_sets: ex.sets,                     // <-- KLJUČNI FIX: pravilan broj setova
+        current_state: liveStateRef.current,     // <-- NOVO: 'active' | 'rest' | 'completed'
+        current_hr: liveHr,
+        total_completed_sets: completedSets.length,
+        last_heartbeat: new Date().toISOString(),
+      };
+      
+      console.log("UPSERT workout_live_state:", payload);
+      
       await supabase.from("workout_live_state" as any).upsert(
-        {
-          session_log_id: sessionId,
-          athlete_id: user.id,
-          current_exercise_idx: exerciseIdx,
-          current_exercise_name: ex.exercise.name_en?.trim() || ex.exercise.name,
-          current_set_number: setNumber,
-          total_sets: ex.sets ?? null,
-          current_hr: liveHr,
-          current_state: liveStateRef.current,
-          total_completed_sets: completedSets.length,
-          last_heartbeat: new Date().toISOString(),
-        } as any,
+        payload as any,
         { onConflict: "session_log_id" } as any,
       );
     };
@@ -316,7 +311,7 @@ const ActiveWorkout = () => {
       stopped = true;
       clearInterval(id);
     };
-  }, [sessionId, user, day, exerciseIdx, setNumber, liveHr, completedSets.length, resting]);
+  }, [sessionId, user, day, exerciseIdx, setNumber, liveHr, completedSets.length]);
 
   // Cleanup on unmount: remove live state row
   useEffect(() => {
@@ -349,6 +344,41 @@ const ActiveWorkout = () => {
     );
     return found ? { reps: found.reps, weight_kg: found.weight_kg } : null;
   };
+
+  /* ------------------------- Helper: pisi state odmah u bazu (bez 15s cekanja) ------------------------- */
+  const writeLiveState = useCallback(
+    async (overrides: {
+      exerciseIdx?: number;
+      setNumber?: number;
+      state: LiveStateOverride;
+    }) => {
+      if (!sessionId || !user || !day) return;
+      const targetIdx = overrides.exerciseIdx ?? exerciseIdx;
+      const ex = day.exercises[targetIdx];
+      if (!ex) return;
+      
+      const payload = {
+        session_log_id: sessionId,
+        athlete_id: user.id,
+        current_exercise_idx: targetIdx,
+        current_exercise_name: ex.exercise.name_en?.trim() || ex.exercise.name,
+        current_set_number: overrides.setNumber ?? setNumber,
+        total_sets: ex.sets,
+        current_state: overrides.state,
+        current_hr: liveHr,
+        total_completed_sets: completedSets.length,
+        last_heartbeat: new Date().toISOString(),
+      };
+      
+      console.log("UPSERT workout_live_state (immediate):", payload);
+      
+      await supabase.from("workout_live_state" as any).upsert(
+        payload as any,
+        { onConflict: "session_log_id" } as any,
+      );
+    },
+    [sessionId, user, day, exerciseIdx, setNumber, liveHr, completedSets.length]
+  );
 
 
   /* ------------------------- Handlers ------------------------- */
@@ -402,24 +432,9 @@ const ActiveWorkout = () => {
       const isLastExercise = exerciseIdx >= exercises.length - 1;
 
       if (isLastSetOfExercise && isLastExercise) {
+        // Trening završen
         liveStateRef.current = "completed";
-        if (user) {
-          await supabase.from("workout_live_state" as any).upsert(
-            {
-              session_log_id: sessionId,
-              athlete_id: user.id,
-              current_exercise_idx: exerciseIdx,
-              current_exercise_name: current.exercise.name_en?.trim() || current.exercise.name,
-              current_set_number: setNumber,
-              total_sets: current.sets ?? null,
-              current_hr: liveHr,
-              current_state: "completed",
-              total_completed_sets: completedSets.length + 1,
-              last_heartbeat: new Date().toISOString(),
-            } as any,
-            { onConflict: "session_log_id" } as any,
-          );
-        }
+        await writeLiveState({ state: "completed" });
         await finishWorkout();
         return;
       }
@@ -434,40 +449,27 @@ const ActiveWorkout = () => {
         ? `Sledeća vežba: ${nextName}`
         : `Sledeća serija ${setNumber + 1} od ${current.sets}`;
 
-      // Mark as resting in live state for watch app.
-      // Ako je poslednji set ove vezbe -> u upsert idu podaci SLEDECE vezbe (idx+1, set 1, njen total_sets).
-      // Ako nije poslednji set -> ostaje ista vezba, samo current_set_number = setNumber + 1.
+      // Pisi rest state odmah u bazu
       liveStateRef.current = "rest";
-      if (user) {
-        const nextExerciseRow = isLastSetOfExercise ? exercises[exerciseIdx + 1] : current;
-        const nextIdx = isLastSetOfExercise ? exerciseIdx + 1 : exerciseIdx;
-        const nextSetNum = isLastSetOfExercise ? 1 : setNumber + 1;
-        const nextTotalSets = nextExerciseRow?.sets ?? null;
-        const nextDisplayName = nextExerciseRow
-          ? (nextExerciseRow.exercise.name_en?.trim() || nextExerciseRow.exercise.name)
-          : (current.exercise.name_en?.trim() || current.exercise.name);
-
-        await supabase.from("workout_live_state" as any).upsert(
-          {
-            session_log_id: sessionId,
-            athlete_id: user.id,
-            current_exercise_idx: nextIdx,
-            current_exercise_name: nextDisplayName,
-            current_set_number: nextSetNum,
-            total_sets: nextTotalSets,
-            current_hr: liveHr,
-            current_state: "rest",
-            total_completed_sets: completedSets.length + 1,
-            last_heartbeat: new Date().toISOString(),
-          } as any,
-          { onConflict: "session_log_id" } as any,
-        );
+      if (isLastSetOfExercise) {
+        // Sledeca vezba, set 1
+        await writeLiveState({
+          exerciseIdx: exerciseIdx + 1,
+          setNumber: 1,
+          state: "rest",
+        });
+      } else {
+        // Ista vezba, sledeci set
+        await writeLiveState({
+          setNumber: setNumber + 1,
+          state: "rest",
+        });
       }
 
       setResting({ seconds: restSec, subtitle: nextSubtitle });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [current, sessionId, setNumber, currentSetStartedAt, exerciseIdx, exercises]
+    [current, sessionId, setNumber, currentSetStartedAt, exerciseIdx, exercises, writeLiveState]
   );
 
   const finishWorkout = useCallback(async () => {
@@ -498,127 +500,36 @@ const ActiveWorkout = () => {
     nav(`/vezbac/trening/zavrsen/${sessionId}`, { replace: true });
   }, [sessionId, finishing, nav]);
 
-  const handleRestDone = () => {
+  const handleRestDone = useCallback(() => {
     setResting(null);
     if (!current) return;
-
-    // Izracunaj NOVU poziciju (vezba/set) na koju idemo posle rest-a
-    const advancingExercise = setNumber >= current.sets;
-    const newIdx = advancingExercise && exerciseIdx < exercises.length - 1 ? exerciseIdx + 1 : exerciseIdx;
-    const newSetNum = advancingExercise ? 1 : setNumber + 1;
-    const newExerciseRow = exercises[newIdx] ?? current;
-    const newDisplayName = newExerciseRow.exercise.name_en?.trim() || newExerciseRow.exercise.name;
-    const newTotalSets = newExerciseRow.sets ?? null;
-
-    // Back to active state for watch app - sa podacima vezbe na koju upravo prelazimo
-    liveStateRef.current = "active";
-    if (sessionId && user) {
-      supabase
-        .from("workout_live_state" as any)
-        .upsert(
-          {
-            session_log_id: sessionId,
-            athlete_id: user.id,
-            current_exercise_idx: newIdx,
-            current_exercise_name: newDisplayName,
-            current_set_number: newSetNum,
-            total_sets: newTotalSets,
-            current_hr: liveHr,
-            current_state: "active",
-            total_completed_sets: completedSets.length,
-            last_heartbeat: new Date().toISOString(),
-          } as any,
-          { onConflict: "session_log_id" } as any,
-        )
-        .then(() => undefined);
-    }
-
-    if (advancingExercise) {
+    
+    let newIdx = exerciseIdx;
+    let newSetNum = setNumber;
+    
+    if (setNumber >= current.sets) {
+      // advance to next exercise
       if (exerciseIdx < exercises.length - 1) {
-        setExerciseIdx((i) => i + 1);
-        setSetNumber(1);
+        newIdx = exerciseIdx + 1;
+        newSetNum = 1;
+        setExerciseIdx(newIdx);
+        setSetNumber(newSetNum);
       }
     } else {
-      setSetNumber((s) => s + 1);
+      newSetNum = setNumber + 1;
+      setSetNumber(newSetNum);
     }
+    
     setCurrentSetStartedAt(new Date());
-  };
-
-  // Sync ref-ovi koje koristi watch_button_events subscription
-  useEffect(() => {
-    handleSetCompleteRef.current = handleSetComplete;
-  }, [handleSetComplete]);
-  useEffect(() => {
-    handleRestDoneRef.current = handleRestDone;
-  });
-  useEffect(() => {
-    currentRef.current = current ?? null;
-  }, [current]);
-
-  /* ------------------------- Watch button events subscription ------------------------- */
-  useEffect(() => {
-    if (!user || !sessionId) return;
-    let active = true;
-
-    const processEvent = async (row: any) => {
-      if (!active || !row) return;
-      // Ignorisi stare event-e (>30s) da ne reagujemo na zaostavstinu
-      const createdMs = row.created_at ? new Date(row.created_at).getTime() : Date.now();
-      if (Date.now() - createdMs > 30_000) {
-        // svejedno obrisi da ne zatrpava tabelu
-        await supabase.from("watch_button_events" as any).delete().eq("id", row.id);
-        return;
-      }
-
-      const type = row.event_type as string;
-      try {
-        if (type === "complete_set") {
-          // Watch nema unos reps/weight - koristimo planirane vrednosti iz programa
-          const ex = currentRef.current;
-          if (ex && !restingRef.current) {
-            await handleSetCompleteRef.current?.({
-              reps: ex.reps ?? 0,
-              weight_kg: ex.weight_kg ?? 0,
-              rpe: null,
-              notes: null,
-            });
-          }
-        } else if (type === "skip_rest") {
-          if (restingRef.current) {
-            handleRestDoneRef.current?.();
-          }
-        } else if (type === "extend_rest_30s") {
-          if (restingRef.current) {
-            setResting((prev) => (prev ? { ...prev, seconds: prev.seconds + 30 } : prev));
-          }
-        }
-      } finally {
-        await supabase.from("watch_button_events" as any).delete().eq("id", row.id);
-      }
-    };
-
-    const channel = supabase
-      .channel(`watch-btn:${user.id}:${sessionId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "watch_button_events",
-          filter: `athlete_id=eq.${user.id}`,
-        },
-        (payload) => {
-          processEvent(payload.new as any);
-        },
-      )
-      .subscribe();
-
-    return () => {
-      active = false;
-      supabase.removeChannel(channel);
-    };
-  }, [user, sessionId]);
-
+    
+    // Pisi active state odmah
+    liveStateRef.current = "active";
+    writeLiveState({
+      exerciseIdx: newIdx,
+      setNumber: newSetNum,
+      state: "active",
+    });
+  }, [current, exerciseIdx, setNumber, exercises.length, writeLiveState]);
 
   const confirmCancel = async () => {
     if (sessionId) {
@@ -629,6 +540,92 @@ const ActiveWorkout = () => {
     setCloseOpen(false);
     nav("/vezbac");
   };
+
+  /* ------------------------- Watch button events (Watch -> iPhone) ------------------------- */
+  // Refs koji uvek pokazuju na najsvezi handler (da subscription ne treba ponovo)
+  const handleSetCompleteRef = useRef(handleSetComplete);
+  const handleRestDoneRef = useRef(handleRestDone);
+  const restingRef = useRef(resting);
+  const currentRef = useRef(current);
+  
+  useEffect(() => { handleSetCompleteRef.current = handleSetComplete; }, [handleSetComplete]);
+  useEffect(() => { handleRestDoneRef.current = handleRestDone; }, [handleRestDone]);
+  useEffect(() => { restingRef.current = resting; }, [resting]);
+  useEffect(() => { currentRef.current = current; }, [current]);
+
+  useEffect(() => {
+    if (!user || !sessionId) return;
+    
+    console.log("Subscribing to watch_button_events for athlete_id:", user.id);
+    
+    const channel = supabase
+      .channel(`watch-events:${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "watch_button_events",
+          filter: `athlete_id=eq.${user.id}`,
+        },
+        async (payload) => {
+          const event = payload.new as any;
+          console.log("WATCH EVENT received:", event);
+          
+          if (!event || !event.id) return;
+          
+          // Ignorisi stare event-ove (>30s)
+          const eventAge = Date.now() - new Date(event.created_at).getTime();
+          if (eventAge > 30000) {
+            console.log("Watch event too old, ignoring and deleting");
+            await supabase.from("watch_button_events" as any).delete().eq("id", event.id);
+            return;
+          }
+          
+          // Procesiraj event prema tipu
+          try {
+            if (event.event_type === "complete_set") {
+              if (restingRef.current) {
+                console.log("Watch complete_set ignored - currently resting");
+              } else {
+                const cur = currentRef.current;
+                if (cur) {
+                  await handleSetCompleteRef.current({
+                    reps: cur.reps ?? 10,
+                    weight_kg: cur.weight_kg ?? 0,
+                    rpe: null,
+                    notes: null,
+                  });
+                }
+              }
+            } else if (event.event_type === "skip_rest") {
+              if (restingRef.current) {
+                handleRestDoneRef.current();
+              } else {
+                console.log("Watch skip_rest ignored - not currently resting");
+              }
+            } else if (event.event_type === "extend_rest_30s") {
+              if (restingRef.current) {
+                setResting((prev) => prev ? { ...prev, seconds: prev.seconds + 30 } : prev);
+              }
+            }
+          } catch (err) {
+            console.error("Error processing watch event:", err);
+          }
+          
+          // Obrisi event iz baze
+          await supabase.from("watch_button_events" as any).delete().eq("id", event.id);
+        },
+      )
+      .subscribe((status) => {
+        console.log("watch_button_events subscription status:", status);
+      });
+    
+    return () => {
+      console.log("Unsubscribing from watch_button_events");
+      supabase.removeChannel(channel);
+    };
+  }, [user, sessionId]);
 
   /* ------------------------- Render ------------------------- */
   if (loading) {
@@ -771,7 +768,7 @@ const ActiveWorkout = () => {
                 Cilj reps
               </div>
               <div className="font-display text-[22px] font-bold tracking-tightest tnum mt-0.5">
-                {current.reps ?? "—"}
+                {current.reps ?? "-"}
               </div>
             </div>
             <div className="rounded-2xl bg-surface border border-hairline p-3 text-center">
@@ -779,7 +776,7 @@ const ActiveWorkout = () => {
                 Cilj kg
               </div>
               <div className="font-display text-[22px] font-bold tracking-tightest tnum mt-0.5">
-                {current.weight_kg ?? "—"}
+                {current.weight_kg ?? "-"}
               </div>
             </div>
           </div>
@@ -824,7 +821,7 @@ const ActiveWorkout = () => {
                     ) : (
                       <span className="text-muted-foreground">
                         {" · cilj "}
-                        {current.reps ?? "—"} × {current.weight_kg ?? "—"} kg
+                        {current.reps ?? "-"} × {current.weight_kg ?? "-"} kg
                       </span>
                     )}
                   </div>
