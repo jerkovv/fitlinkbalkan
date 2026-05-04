@@ -130,7 +130,10 @@ final class SupabaseClient {
     func extendRest(token: String, extraSeconds: Int = 30) async throws -> Bool {
         return try await pressButton(token: token, rpcName: "watch_press_extend_button")
     }
-    
+    @discardableResult
+    func finishWorkout(token: String) async throws -> Bool {
+        return try await pressButton(token: token, rpcName: "watch_press_finish_button")
+    }
     private func pressButton(token: String, rpcName: String) async throws -> Bool {
         let body: [String: String] = ["p_token": token]
         let data = try await callRPC(functionName: rpcName, body: body)

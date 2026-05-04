@@ -31,11 +31,12 @@ struct ContentView: View {
                 idleView
                 
             case .activeWorkout:
-                ActiveWorkoutView(
-                    workout: currentWorkout,
-                    heartRate: $heartRate,
-                    onCompleteSet: handleCompleteSet
-                )
+               ActiveWorkoutView(
+    workout: currentWorkout,
+    heartRate: $heartRate,
+    onCompleteSet: handleCompleteSet,
+    onFinishWorkout: handleFinishWorkout
+)
                 
             case .rest:
                 RestTimerView(
@@ -315,7 +316,18 @@ struct ContentView: View {
     }
     
     // MARK: - Watch akcije
-    
+    private func handleFinishWorkout() {
+        WKInterfaceDevice.current().play(.success)
+        
+        Task {
+            do {
+                try await SupabaseClient.shared.finishWorkout(token: pairingToken)
+                print("Watch button: finish_workout sent to iPhone")
+            } catch {
+                print("Finish workout error: \(error.localizedDescription)")
+            }
+        }
+    }
     private func handleCompleteSet() {
         WKInterfaceDevice.current().play(.success)
         

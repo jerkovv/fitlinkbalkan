@@ -18,6 +18,9 @@ struct ActiveWorkoutView: View {
     let workout: ActiveWorkout
     @Binding var heartRate: Int
     let onCompleteSet: () -> Void
+    let onFinishWorkout: () -> Void
+    
+    @State private var showingFinishConfirm: Bool = false
     
     private var zone: HRZone {
         HRZone.zone(for: heartRate)
@@ -37,6 +40,14 @@ struct ActiveWorkoutView: View {
             .padding(.horizontal, 6)
             .padding(.vertical, 4)
         }
+        .alert("Završiti trening?", isPresented: $showingFinishConfirm) {
+            Button("Otkaži", role: .cancel) { }
+            Button("Da, završi", role: .destructive) {
+                onFinishWorkout()
+            }
+        } message: {
+            Text("Da li si siguran?")
+        }
     }
     
     private var exerciseHeader: some View {
@@ -54,6 +65,11 @@ struct ActiveWorkoutView: View {
                 .minimumScaleFactor(0.8)
         }
         .padding(.top, 2)
+        .onLongPressGesture(minimumDuration: 1.0) {
+            // Long-press na header = otvori finish workout dialog
+            WKInterfaceDevice.current().play(.notification)
+            showingFinishConfirm = true
+        }
     }
     
     private var heartRateDisplay: some View {
@@ -163,6 +179,7 @@ struct ActiveWorkoutView: View {
     ActiveWorkoutView(
         workout: .mock,
         heartRate: .constant(142),
-        onCompleteSet: { print("Set completed") }
+        onCompleteSet: { print("Set completed") },
+        onFinishWorkout: { print("Finish workout") }
     )
 }
