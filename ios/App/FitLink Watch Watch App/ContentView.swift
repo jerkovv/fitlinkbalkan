@@ -206,6 +206,10 @@ struct ContentView: View {
             realtimeClient.onWorkoutStateChange = { row in
                 handleRealtimeUpdate(row)
             }
+            realtimeClient.onWorkoutDeleted = {
+                print("Workout deleted from server - showing completed screen")
+                handleWorkoutDeleted()
+            }
             realtimeClient.connect(userId: context.userId)
             
         } catch {
@@ -218,6 +222,25 @@ struct ContentView: View {
     }
     
     // MARK: - Realtime sync
+    
+    private func handleWorkoutDeleted() {
+        // Trening je obrisan iz baze (verovatno završen) - prikaži "Bravo!" screen
+        // ako već nismo u completed state-u
+        if currentState != .completed && currentState != .idle {
+            stopMockHRSimulation()
+            WKInterfaceDevice.current().play(.success)
+            currentState = .completed
+            
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 2_500_000_000)
+                if currentState == .completed {
+                    currentState = .idle
+                    currentWorkout = .mock
+                    lastServerSignature = ""
+                }
+            }
+        }
+    }
     
     private func handleRealtimeUpdate(_ row: WorkoutLiveStateRow) {
         guard let exerciseName = row.currentExerciseName,

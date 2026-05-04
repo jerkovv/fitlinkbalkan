@@ -27,6 +27,7 @@ struct WorkoutLiveStateRow: Decodable {
 final class SupabaseRealtimeClient: ObservableObject {
     
     var onWorkoutStateChange: ((WorkoutLiveStateRow) -> Void)?
+    var onWorkoutDeleted: (() -> Void)?  // <-- NOVO: callback za DELETE event
     
     @Published private(set) var isConnected: Bool = false
     
@@ -167,21 +168,47 @@ final class SupabaseRealtimeClient: ObservableObject {
                     return
                 }
                 
+                // Provera u nested payload.data formatu (standard supabase format)
                 if let payloadData = payload["data"] as? [String: Any] {
                     let eventType = payloadData["type"] as? String ?? "UNKNOWN"
                     print("Realtime: \(eventType) on workout_live_state")
+                    
+                    // KLJUČNO: handle DELETE kao "trening završen"
+                    if eventType == "DELETE" {
+                        print("Realtime: DELETE detected, treating as workout completed")
+                        onWorkoutDeleted?()
+                        return
+                    }
                     
                     if let recordDict = payloadData["record"] as? [String: Any] {
                         parseAndNotify(recordDict)
                     }
                 }
+                // Provera u flat payload formatu (alternative format)
                 else if let recordDict = payload["record"] as? [String: Any] {
                     let eventType = payload["type"] as? String ?? "UNKNOWN"
                     print("Realtime: \(eventType) on workout_live_state (direct)")
+                    
+                    if eventType == "DELETE" {
+                        print("Realtime: DELETE detected (direct), treating as workout completed")
+                        onWorkoutDeleted?()
+                        return
+                    }
+                    
                     parseAndNotify(recordDict)
                 }
+                // DELETE event mozda dolazi BEZ record polja - samo old_record
+                else if let payloadData = payload["data"] as? [String: Any],
+                        payloadData["type"] as? String == "DELETE" {
+                    print("Realtime: DELETE detected (no record), treating as workout completed")
+                    onWorkoutDeleted?()
+                }
+                else if payload["type"] as? String == "DELETE" {
+                    print("Realtime: DELETE detected (flat, no record), treating as workout completed")
+                    onWorkoutDeleted?()
+                }
                 else {
-                    print("Realtime: nepoznat postgres_changes format")
+                    print("Realtime: nepoznat postgres_changes format - keys: \(payload.keys.sorted())")
                 }
             }
             else if event == "phx_reply" {
