@@ -270,10 +270,14 @@ const ActiveWorkout = () => {
 
   /* ------------------------- Live state heartbeat (every 15s) ------------------------- */
   const cleanupLiveStateRef = useRef(false);
+  // Track current state ('active' | 'rest' | 'completed') driven by UI events
+  const liveStateRef = useRef<"active" | "rest" | "completed">("active");
 
   useEffect(() => {
     if (!sessionId || !user || !day || !day.exercises?.length) return;
     let stopped = false;
+    // Sync state with resting flag (covers external transitions)
+    liveStateRef.current = resting ? "rest" : liveStateRef.current === "completed" ? "completed" : "active";
     const upsert = async () => {
       if (stopped) return;
       const ex = day.exercises[exerciseIdx];
@@ -285,7 +289,9 @@ const ActiveWorkout = () => {
           current_exercise_idx: exerciseIdx,
           current_exercise_name: ex.exercise.name_en?.trim() || ex.exercise.name,
           current_set_number: setNumber,
+          total_sets: ex.sets ?? null,
           current_hr: liveHr,
+          current_state: liveStateRef.current,
           total_completed_sets: completedSets.length,
           last_heartbeat: new Date().toISOString(),
         } as any,
@@ -298,7 +304,7 @@ const ActiveWorkout = () => {
       stopped = true;
       clearInterval(id);
     };
-  }, [sessionId, user, day, exerciseIdx, setNumber, liveHr, completedSets.length]);
+  }, [sessionId, user, day, exerciseIdx, setNumber, liveHr, completedSets.length, resting]);
 
   // Cleanup on unmount: remove live state row
   useEffect(() => {
