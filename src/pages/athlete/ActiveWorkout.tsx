@@ -422,17 +422,27 @@ const ActiveWorkout = () => {
         ? `Sledeća vežba: ${nextName}`
         : `Sledeća serija ${setNumber + 1} od ${current.sets}`;
 
-      // Mark as resting in live state for watch app
+      // Mark as resting in live state for watch app.
+      // Ako je poslednji set ove vezbe -> u upsert idu podaci SLEDECE vezbe (idx+1, set 1, njen total_sets).
+      // Ako nije poslednji set -> ostaje ista vezba, samo current_set_number = setNumber + 1.
       liveStateRef.current = "rest";
       if (user) {
+        const nextExerciseRow = isLastSetOfExercise ? exercises[exerciseIdx + 1] : current;
+        const nextIdx = isLastSetOfExercise ? exerciseIdx + 1 : exerciseIdx;
+        const nextSetNum = isLastSetOfExercise ? 1 : setNumber + 1;
+        const nextTotalSets = nextExerciseRow?.sets ?? null;
+        const nextDisplayName = nextExerciseRow
+          ? (nextExerciseRow.exercise.name_en?.trim() || nextExerciseRow.exercise.name)
+          : (current.exercise.name_en?.trim() || current.exercise.name);
+
         await supabase.from("workout_live_state" as any).upsert(
           {
             session_log_id: sessionId,
             athlete_id: user.id,
-            current_exercise_idx: exerciseIdx,
-            current_exercise_name: current.exercise.name_en?.trim() || current.exercise.name,
-            current_set_number: setNumber,
-            total_sets: current.sets ?? null,
+            current_exercise_idx: nextIdx,
+            current_exercise_name: nextDisplayName,
+            current_set_number: nextSetNum,
+            total_sets: nextTotalSets,
             current_hr: liveHr,
             current_state: "rest",
             total_completed_sets: completedSets.length + 1,
