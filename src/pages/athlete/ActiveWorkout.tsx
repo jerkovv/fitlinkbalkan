@@ -544,6 +544,82 @@ const ActiveWorkout = () => {
     setCurrentSetStartedAt(new Date());
   };
 
+  // Sync ref-ovi koje koristi watch_button_events subscription
+  useEffect(() => {
+    handleSetCompleteRef.current = handleSetComplete;
+  }, [handleSetComplete]);
+  useEffect(() => {
+    handleRestDoneRef.current = handleRestDone;
+  });
+  useEffect(() => {
+    currentRef.current = current ?? null;
+  }, [current]);
+
+  /* ------------------------- Watch button events subscription ------------------------- */
+  useEffect(() => {
+    if (!user || !sessionId) return;
+    let active = true;
+
+    const processEvent = async (row: any) => {
+      if (!active || !row) return;
+      // Ignorisi stare event-e (>30s) da ne reagujemo na zaostavstinu
+      const createdMs = row.created_at ? new Date(row.created_at).getTime() : Date.now();
+      if (Date.now() - createdMs > 30_000) {
+        // svejedno obrisi da ne zatrpava tabelu
+        await supabase.from("watch_button_events" as any).delete().eq("id", row.id);
+        return;
+      }
+
+      const type = row.event_type as string;
+      try {
+        if (type === "complete_set") {
+          // Watch nema unos reps/weight - koristimo planirane vrednosti iz programa
+          const ex = currentRef.current;
+          if (ex && !restingRef.current) {
+            await handleSetCompleteRef.current?.({
+              reps: ex.reps ?? 0,
+              weight_kg: ex.weight_kg ?? 0,
+              rpe: null,
+              notes: null,
+            });
+          }
+        } else if (type === "skip_rest") {
+          if (restingRef.current) {
+            handleRestDoneRef.current?.();
+          }
+        } else if (type === "extend_rest_30s") {
+          if (restingRef.current) {
+            setResting((prev) => (prev ? { ...prev, seconds: prev.seconds + 30 } : prev));
+          }
+        }
+      } finally {
+        await supabase.from("watch_button_events" as any).delete().eq("id", row.id);
+      }
+    };
+
+    const channel = supabase
+      .channel(`watch-btn:${user.id}:${sessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "watch_button_events",
+          filter: `athlete_id=eq.${user.id}`,
+        },
+        (payload) => {
+          processEvent(payload.new as any);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+    };
+  }, [user, sessionId]);
+
+
   const confirmCancel = async () => {
     if (sessionId) {
       await supabase.rpc("cancel_workout_session", { p_session_id: sessionId } as any);
