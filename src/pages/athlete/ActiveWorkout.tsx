@@ -479,6 +479,28 @@ const ActiveWorkout = () => {
   const handleRestDone = () => {
     setResting(null);
     if (!current) return;
+    // Back to active state for watch app
+    liveStateRef.current = "active";
+    if (sessionId && user) {
+      supabase
+        .from("workout_live_state" as any)
+        .upsert(
+          {
+            session_log_id: sessionId,
+            athlete_id: user.id,
+            current_exercise_idx: exerciseIdx,
+            current_exercise_name: current.exercise.name_en?.trim() || current.exercise.name,
+            current_set_number: setNumber,
+            total_sets: current.sets ?? null,
+            current_hr: liveHr,
+            current_state: "active",
+            total_completed_sets: completedSets.length,
+            last_heartbeat: new Date().toISOString(),
+          } as any,
+          { onConflict: "session_log_id" } as any,
+        )
+        .then(() => undefined);
+    }
     if (setNumber >= current.sets) {
       // advance to next exercise
       if (exerciseIdx < exercises.length - 1) {
