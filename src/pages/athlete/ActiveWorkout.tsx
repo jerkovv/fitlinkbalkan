@@ -276,8 +276,8 @@ const ActiveWorkout = () => {
   useEffect(() => {
     if (!sessionId || !user || !day || !day.exercises?.length) return;
     let stopped = false;
-    // Sync state with resting flag (covers external transitions)
-    liveStateRef.current = resting ? "rest" : liveStateRef.current === "completed" ? "completed" : "active";
+    // NOTE: ne diramo liveStateRef ovde - njime upravljaju samo handleSetComplete / handleRestDone.
+    // Heartbeat samo refleksuje trenutno stanje koje su handler-i postavili.
     const upsert = async () => {
       if (stopped) return;
       const ex = day.exercises[exerciseIdx];
@@ -422,17 +422,27 @@ const ActiveWorkout = () => {
         ? `Sledeća vežba: ${nextName}`
         : `Sledeća serija ${setNumber + 1} od ${current.sets}`;
 
-      // Mark as resting in live state for watch app
+      // Mark as resting in live state for watch app.
+      // Ako je poslednji set ove vezbe -> u upsert idu podaci SLEDECE vezbe (idx+1, set 1, njen total_sets).
+      // Ako nije poslednji set -> ostaje ista vezba, samo current_set_number = setNumber + 1.
       liveStateRef.current = "rest";
       if (user) {
+        const nextExerciseRow = isLastSetOfExercise ? exercises[exerciseIdx + 1] : current;
+        const nextIdx = isLastSetOfExercise ? exerciseIdx + 1 : exerciseIdx;
+        const nextSetNum = isLastSetOfExercise ? 1 : setNumber + 1;
+        const nextTotalSets = nextExerciseRow?.sets ?? null;
+        const nextDisplayName = nextExerciseRow
+          ? (nextExerciseRow.exercise.name_en?.trim() || nextExerciseRow.exercise.name)
+          : (current.exercise.name_en?.trim() || current.exercise.name);
+
         await supabase.from("workout_live_state" as any).upsert(
           {
             session_log_id: sessionId,
             athlete_id: user.id,
-            current_exercise_idx: exerciseIdx,
-            current_exercise_name: current.exercise.name_en?.trim() || current.exercise.name,
-            current_set_number: setNumber,
-            total_sets: current.sets ?? null,
+            current_exercise_idx: nextIdx,
+            current_exercise_name: nextDisplayName,
+            current_set_number: nextSetNum,
+            total_sets: nextTotalSets,
             current_hr: liveHr,
             current_state: "rest",
             total_completed_sets: completedSets.length + 1,
@@ -479,7 +489,16 @@ const ActiveWorkout = () => {
   const handleRestDone = () => {
     setResting(null);
     if (!current) return;
-    // Back to active state for watch app
+
+    // Izracunaj NOVU poziciju (vezba/set) na koju idemo posle rest-a
+    const advancingExercise = setNumber >= current.sets;
+    const newIdx = advancingExercise && exerciseIdx < exercises.length - 1 ? exerciseIdx + 1 : exerciseIdx;
+    const newSetNum = advancingExercise ? 1 : setNumber + 1;
+    const newExerciseRow = exercises[newIdx] ?? current;
+    const newDisplayName = newExerciseRow.exercise.name_en?.trim() || newExerciseRow.exercise.name;
+    const newTotalSets = newExerciseRow.sets ?? null;
+
+    // Back to active state for watch app - sa podacima vezbe na koju upravo prelazimo
     liveStateRef.current = "active";
     if (sessionId && user) {
       supabase
@@ -488,10 +507,10 @@ const ActiveWorkout = () => {
           {
             session_log_id: sessionId,
             athlete_id: user.id,
-            current_exercise_idx: exerciseIdx,
-            current_exercise_name: current.exercise.name_en?.trim() || current.exercise.name,
-            current_set_number: setNumber,
-            total_sets: current.sets ?? null,
+            current_exercise_idx: newIdx,
+            current_exercise_name: newDisplayName,
+            current_set_number: newSetNum,
+            total_sets: newTotalSets,
             current_hr: liveHr,
             current_state: "active",
             total_completed_sets: completedSets.length,
@@ -501,8 +520,8 @@ const ActiveWorkout = () => {
         )
         .then(() => undefined);
     }
-    if (setNumber >= current.sets) {
-      // advance to next exercise
+
+    if (advancingExercise) {
       if (exerciseIdx < exercises.length - 1) {
         setExerciseIdx((i) => i + 1);
         setSetNumber(1);
