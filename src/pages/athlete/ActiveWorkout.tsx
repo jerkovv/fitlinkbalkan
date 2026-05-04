@@ -21,14 +21,12 @@ import { SetLogger } from "@/components/workout/SetLogger";
 import { RestTimer } from "@/components/workout/RestTimer";
 
 type DayExercise = {
-  /** id of assigned_program_exercises row (used for set_logs.exercise_id per spec) */
   id: string;
   position: number;
   sets: number;
   reps: number | null;
   weight_kg: number | null;
   rest_seconds: number | null;
-  /** Source exercise library id (for reference) */
   exercise_id: string;
   exercise: {
     name: string;
@@ -106,8 +104,7 @@ const ActiveWorkout = () => {
   // Wake lock
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
-  // Live state ref - sluzi da znamo trenutno state ('active' | 'rest' | 'completed')
-  // za sledeci heartbeat upsert. Menja se SAMO iz handler-a.
+  // Live state ref
   const liveStateRef = useRef<LiveStateOverride>("active");
 
   /* ------------------------- Init: start session + load day ------------------------- */
@@ -253,7 +250,6 @@ const ActiveWorkout = () => {
           };
           setIncomingMessage(msg);
           triggerHaptic();
-          // Mark as read
           supabase
             .from("workout_live_messages" as any)
             .update({ read_at: new Date().toISOString() } as any)
@@ -291,8 +287,8 @@ const ActiveWorkout = () => {
         current_exercise_idx: exerciseIdx,
         current_exercise_name: ex.exercise.name_en?.trim() || ex.exercise.name,
         current_set_number: setNumber,
-        total_sets: ex.sets,                     // <-- KLJUČNI FIX: pravilan broj setova
-        current_state: liveStateRef.current,     // <-- NOVO: 'active' | 'rest' | 'completed'
+        total_sets: ex.sets,
+        current_state: liveStateRef.current,
         current_hr: liveHr,
         total_completed_sets: completedSets.length,
         last_heartbeat: new Date().toISOString(),
@@ -345,7 +341,7 @@ const ActiveWorkout = () => {
     return found ? { reps: found.reps, weight_kg: found.weight_kg } : null;
   };
 
-  /* ------------------------- Helper: pisi state odmah u bazu (bez 15s cekanja) ------------------------- */
+  /* ------------------------- Helper: pisi state odmah u bazu ------------------------- */
   const writeLiveState = useCallback(
     async (overrides: {
       exerciseIdx?: number;
@@ -427,12 +423,10 @@ const ActiveWorkout = () => {
         ];
       });
 
-      // Decide next state
       const isLastSetOfExercise = setNumber >= current.sets;
       const isLastExercise = exerciseIdx >= exercises.length - 1;
 
       if (isLastSetOfExercise && isLastExercise) {
-        // Trening završen
         liveStateRef.current = "completed";
         await writeLiveState({ state: "completed" });
         await finishWorkout();
@@ -449,17 +443,14 @@ const ActiveWorkout = () => {
         ? `Sledeća vežba: ${nextName}`
         : `Sledeća serija ${setNumber + 1} od ${current.sets}`;
 
-      // Pisi rest state odmah u bazu
       liveStateRef.current = "rest";
       if (isLastSetOfExercise) {
-        // Sledeca vezba, set 1
         await writeLiveState({
           exerciseIdx: exerciseIdx + 1,
           setNumber: 1,
           state: "rest",
         });
       } else {
-        // Ista vezba, sledeci set
         await writeLiveState({
           setNumber: setNumber + 1,
           state: "rest",
@@ -475,6 +466,36 @@ const ActiveWorkout = () => {
   const finishWorkout = useCallback(async () => {
     if (!sessionId || finishing) return;
     setFinishing(true);
+    
+    // KLJUČNO: Postavi current_state = 'completed' PRE delete-a
+    // Tako Watch dobija realtime event i može da prikaže "Bravo!" screen
+    if (user && day) {
+      const ex = day.exercises[exerciseIdx];
+      if (ex) {
+        console.log("UPSERT workout_live_state (finish - completed):", {
+          session_log_id: sessionId,
+          current_state: "completed",
+        });
+        await supabase.from("workout_live_state" as any).upsert(
+          {
+            session_log_id: sessionId,
+            athlete_id: user.id,
+            current_exercise_idx: exerciseIdx,
+            current_exercise_name: ex.exercise.name_en?.trim() || ex.exercise.name,
+            current_set_number: setNumber,
+            total_sets: ex.sets,
+            current_state: "completed",
+            current_hr: liveHr,
+            total_completed_sets: completedSets.length,
+            last_heartbeat: new Date().toISOString(),
+          } as any,
+          { onConflict: "session_log_id" } as any,
+        );
+        // Daj Watch-u 1.5s da prikaže "Bravo!" screen pre delete-a
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+    }
+    
     const series = hrSeriesRef.current;
     const bpms = series.map((p) => p.bpm).filter((n) => Number.isFinite(n));
     const avg = bpms.length ? Math.round(bpms.reduce((a, b) => a + b, 0) / bpms.length) : null;
@@ -498,7 +519,7 @@ const ActiveWorkout = () => {
     cleanupLiveStateRef.current = true;
     await supabase.from("workout_live_state" as any).delete().eq("session_log_id", sessionId);
     nav(`/vezbac/trening/zavrsen/${sessionId}`, { replace: true });
-  }, [sessionId, finishing, nav]);
+  }, [sessionId, finishing, nav, user, day, exerciseIdx, setNumber, liveHr, completedSets.length]);
 
   const handleRestDone = useCallback(() => {
     setResting(null);
@@ -508,7 +529,6 @@ const ActiveWorkout = () => {
     let newSetNum = setNumber;
     
     if (setNumber >= current.sets) {
-      // advance to next exercise
       if (exerciseIdx < exercises.length - 1) {
         newIdx = exerciseIdx + 1;
         newSetNum = 1;
@@ -522,7 +542,6 @@ const ActiveWorkout = () => {
     
     setCurrentSetStartedAt(new Date());
     
-    // Pisi active state odmah
     liveStateRef.current = "active";
     writeLiveState({
       exerciseIdx: newIdx,
@@ -542,7 +561,6 @@ const ActiveWorkout = () => {
   };
 
   /* ------------------------- Watch button events (Watch -> iPhone) ------------------------- */
-  // Refs koji uvek pokazuju na najsvezi handler (da subscription ne treba ponovo)
   const handleSetCompleteRef = useRef(handleSetComplete);
   const handleRestDoneRef = useRef(handleRestDone);
   const restingRef = useRef(resting);
@@ -574,7 +592,6 @@ const ActiveWorkout = () => {
           
           if (!event || !event.id) return;
           
-          // Ignorisi stare event-ove (>30s)
           const eventAge = Date.now() - new Date(event.created_at).getTime();
           if (eventAge > 30000) {
             console.log("Watch event too old, ignoring and deleting");
@@ -582,7 +599,6 @@ const ActiveWorkout = () => {
             return;
           }
           
-          // Procesiraj event prema tipu
           try {
             if (event.event_type === "complete_set") {
               if (restingRef.current) {
@@ -613,7 +629,6 @@ const ActiveWorkout = () => {
             console.error("Error processing watch event:", err);
           }
           
-          // Obrisi event iz baze
           await supabase.from("watch_button_events" as any).delete().eq("id", event.id);
         },
       )
