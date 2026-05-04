@@ -276,8 +276,8 @@ const ActiveWorkout = () => {
   useEffect(() => {
     if (!sessionId || !user || !day || !day.exercises?.length) return;
     let stopped = false;
-    // Sync state with resting flag (covers external transitions)
-    liveStateRef.current = resting ? "rest" : liveStateRef.current === "completed" ? "completed" : "active";
+    // NOTE: ne diramo liveStateRef ovde - njime upravljaju samo handleSetComplete / handleRestDone.
+    // Heartbeat samo refleksuje trenutno stanje koje su handler-i postavili.
     const upsert = async () => {
       if (stopped) return;
       const ex = day.exercises[exerciseIdx];
