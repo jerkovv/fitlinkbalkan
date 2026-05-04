@@ -170,7 +170,7 @@ struct ContentView: View {
         if isLoading { return "Povezivanje..." }
         if let error = connectionError { return error }
         if !isPaired { return "Nije povezano" }
-        if !realtimeClient.isConnected { return "Realtime offline" }
+        if !realtimeClient.isConnected { return "Veza prekinuta" }
         return "Povezano"
     }
     
@@ -210,6 +210,9 @@ struct ContentView: View {
                 print("Workout deleted from server - showing completed screen")
                 handleWorkoutDeleted()
             }
+            
+            // Postavi token pre connect-a (polling klijent koristi token za svaki request)
+            realtimeClient.setToken(pairingToken)
             realtimeClient.connect(userId: context.userId)
             
         } catch {

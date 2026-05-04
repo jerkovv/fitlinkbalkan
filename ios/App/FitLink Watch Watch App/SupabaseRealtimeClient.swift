@@ -23,263 +23,216 @@ struct WorkoutLiveStateRow: Decodable {
     }
 }
 
+// Response struct za watch_poll_state RPC
+private struct PollStateResponse: Decodable {
+    let success: Bool
+    let userId: String?
+    let workout: PolledWorkout?
+    
+    enum CodingKeys: String, CodingKey {
+        case success
+        case userId = "user_id"
+        case workout
+    }
+}
+
+private struct PolledWorkout: Decodable {
+    let sessionId: String?
+    let currentExerciseName: String?
+    let currentSetNumber: Int?
+    let totalSets: Int?
+    let currentState: String?
+    let currentHr: Int?
+    
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+        case currentExerciseName = "current_exercise_name"
+        case currentSetNumber = "current_set_number"
+        case totalSets = "total_sets"
+        case currentState = "current_state"
+        case currentHr = "current_hr"
+    }
+}
+
+// Klasa zadrzava ISTO IME i ISTI API kao stari WebSocket klijent
+// Razlika: unutra koristi REST polling umesto WebSocket-a
 @MainActor
 final class SupabaseRealtimeClient: ObservableObject {
     
+    // Public API - isti kao pre, ContentView se ne menja
     var onWorkoutStateChange: ((WorkoutLiveStateRow) -> Void)?
-    var onWorkoutDeleted: (() -> Void)?  // <-- NOVO: callback za DELETE event
+    var onWorkoutDeleted: (() -> Void)?
     
     @Published private(set) var isConnected: Bool = false
     
-    private var webSocketTask: URLSessionWebSocketTask?
-    private var pingTimer: Timer?
-    private var reconnectTask: Task<Void, Never>?
-    private var userId: String?
-    private var refCounter: Int = 0
+    // Polling logika
+    private var pollTimer: Timer?
+    private var pairingToken: String?
+    private var lastWorkoutSignature: String = ""
+    private var lastHadWorkout: Bool = false
+    private var pollInterval: TimeInterval = 2.0  // 2 sekunde
+    private var consecutiveErrors: Int = 0
     
-    private var realtimeURL: URL {
-        let host = SupabaseConfig.url
-            .replacingOccurrences(of: "https://", with: "")
-            .replacingOccurrences(of: "http://", with: "")
-        let urlString = "wss://\(host)/realtime/v1/websocket?apikey=\(SupabaseConfig.anonKey)&vsn=1.0.0"
-        return URL(string: urlString)!
-    }
+    private let session: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 8
+        config.timeoutIntervalForResource = 12
+        config.waitsForConnectivity = true
+        return URLSession(configuration: config)
+    }()
     
+    private let decoder = JSONDecoder()
+    
+    // Public API: connect prima userId za kompatibilnost, ali interno koristi token
     func connect(userId: String) {
-        self.userId = userId
-        
-        disconnect()
-        
-        let session = URLSession.shared
-        webSocketTask = session.webSocketTask(with: realtimeURL)
-        webSocketTask?.resume()
-        
-        listen()
-        
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 500_000_000)
-            sendJoinMessage(userId: userId)
-        }
-        
-        startPingTimer()
-        
-        isConnected = true
+        // userId nam ne treba ovde, ali zadrzavamo signature
+        // Token se setuje preko setToken(_:) pre connect-a
+        startPolling()
     }
     
     func disconnect() {
-        pingTimer?.invalidate()
-        pingTimer = nil
-        reconnectTask?.cancel()
-        reconnectTask = nil
-        webSocketTask?.cancel(with: .normalClosure, reason: nil)
-        webSocketTask = nil
+        pollTimer?.invalidate()
+        pollTimer = nil
         isConnected = false
     }
     
-    private func nextRef() -> String {
-        refCounter += 1
-        return String(refCounter)
+    // Novi metod - postavi token pre connect-a
+    func setToken(_ token: String) {
+        self.pairingToken = token
     }
     
-    private func sendJoinMessage(userId: String) {
-        let topic = "realtime:fitlink-watch-\(userId)"
-        let ref = nextRef()
+    private func startPolling() {
+        pollTimer?.invalidate()
+        consecutiveErrors = 0
         
-        let joinPayload: [String: Any] = [
-            "topic": topic,
-            "event": "phx_join",
-            "payload": [
-                "config": [
-                    "broadcast": [
-                        "self": false,
-                        "ack": false
-                    ],
-                    "presence": [
-                        "key": ""
-                    ],
-                    "postgres_changes": [
-                        [
-                            "event": "*",
-                            "schema": "public",
-                            "table": "workout_live_state",
-                            "filter": "athlete_id=eq.\(userId)"
-                        ]
-                    ]
-                ]
-            ],
-            "ref": ref,
-            "join_ref": ref
-        ]
+        // Prvi poll odmah
+        Task { @MainActor in
+            await pollOnce()
+        }
         
-        guard let data = try? JSONSerialization.data(withJSONObject: joinPayload),
-              let jsonString = String(data: data, encoding: .utf8) else {
-            print("Realtime: failed to serialize join message")
+        // Setup periodicno
+        pollTimer = Timer.scheduledTimer(withTimeInterval: pollInterval, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                await self?.pollOnce()
+            }
+        }
+    }
+    
+    private func pollOnce() async {
+        guard let token = pairingToken else {
+            print("Polling: no token, skipping")
             return
         }
         
-        print("Realtime: sending join for topic \(topic)")
-        
-        webSocketTask?.send(.string(jsonString)) { error in
-            if let error = error {
-                print("Realtime: send join failed: \(error.localizedDescription)")
-            } else {
-                print("Realtime: join request sent")
-            }
-        }
-    }
-    
-    private func listen() {
-        webSocketTask?.receive { [weak self] result in
-            guard let self = self else { return }
-            
-            switch result {
-            case .success(let message):
-                Task { @MainActor in
-                    self.handleMessage(message)
-                    self.listen()
-                }
-                
-            case .failure(let error):
-                print("Realtime: receive error: \(error.localizedDescription)")
-                Task { @MainActor in
-                    self.isConnected = false
-                    self.scheduleReconnect()
-                }
-            }
-        }
-    }
-    
-    private func handleMessage(_ message: URLSessionWebSocketTask.Message) {
-        guard case .string(let text) = message,
-              let data = text.data(using: .utf8) else { return }
-        
         do {
-            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            let response = try await callPollState(token: token)
+            
+            // Reset error counter na uspeh
+            if consecutiveErrors > 0 {
+                print("Polling: recovered after \(consecutiveErrors) errors")
+                consecutiveErrors = 0
+            }
+            
+            isConnected = true
+            
+            guard response.success else {
+                print("Polling: server returned success=false")
                 return
             }
             
-            let event = json["event"] as? String ?? "unknown"
-            
-            print("Realtime RAW: event=\(event)")
-            
-            if event == "postgres_changes" {
-                guard let payload = json["payload"] as? [String: Any] else {
-                    print("Realtime: postgres_changes bez payload-a")
-                    return
+            // Workout state changed?
+            if let workout = response.workout {
+                handleWorkoutPolled(workout)
+                lastHadWorkout = true
+            } else {
+                // Nema workout-a sad, a pre je bilo - znaci trening je zavrsen
+                if lastHadWorkout {
+                    print("Polling: workout disappeared, treating as completed")
+                    onWorkoutDeleted?()
+                    lastHadWorkout = false
+                    lastWorkoutSignature = ""
                 }
+            }
+            
+        } catch {
+            consecutiveErrors += 1
+            print("Polling: error #\(consecutiveErrors): \(error.localizedDescription)")
+            
+            // Posle 3 greske, smatra se da nismo povezani
+            if consecutiveErrors >= 3 {
+                isConnected = false
+            }
+            
+            // Posle 5 gresaka, povecaj interval (rate limit / spore mreze)
+            if consecutiveErrors >= 5 && pollInterval < 10 {
+                pollInterval = min(pollInterval * 1.5, 10.0)
+                print("Polling: backing off to \(pollInterval)s")
                 
-                // Provera u nested payload.data formatu (standard supabase format)
-                if let payloadData = payload["data"] as? [String: Any] {
-                    let eventType = payloadData["type"] as? String ?? "UNKNOWN"
-                    print("Realtime: \(eventType) on workout_live_state")
-                    
-                    // KLJUČNO: handle DELETE kao "trening završen"
-                    if eventType == "DELETE" {
-                        print("Realtime: DELETE detected, treating as workout completed")
-                        onWorkoutDeleted?()
-                        return
-                    }
-                    
-                    if let recordDict = payloadData["record"] as? [String: Any] {
-                        parseAndNotify(recordDict)
+                // Restart timer sa novim interval-om
+                pollTimer?.invalidate()
+                pollTimer = Timer.scheduledTimer(withTimeInterval: pollInterval, repeats: true) { [weak self] _ in
+                    Task { @MainActor in
+                        await self?.pollOnce()
                     }
                 }
-                // Provera u flat payload formatu (alternative format)
-                else if let recordDict = payload["record"] as? [String: Any] {
-                    let eventType = payload["type"] as? String ?? "UNKNOWN"
-                    print("Realtime: \(eventType) on workout_live_state (direct)")
-                    
-                    if eventType == "DELETE" {
-                        print("Realtime: DELETE detected (direct), treating as workout completed")
-                        onWorkoutDeleted?()
-                        return
-                    }
-                    
-                    parseAndNotify(recordDict)
-                }
-                // DELETE event mozda dolazi BEZ record polja - samo old_record
-                else if let payloadData = payload["data"] as? [String: Any],
-                        payloadData["type"] as? String == "DELETE" {
-                    print("Realtime: DELETE detected (no record), treating as workout completed")
-                    onWorkoutDeleted?()
-                }
-                else if payload["type"] as? String == "DELETE" {
-                    print("Realtime: DELETE detected (flat, no record), treating as workout completed")
-                    onWorkoutDeleted?()
-                }
-                else {
-                    print("Realtime: nepoznat postgres_changes format - keys: \(payload.keys.sorted())")
-                }
-            }
-            else if event == "phx_reply" {
-                if let payload = json["payload"] as? [String: Any],
-                   let status = payload["status"] as? String {
-                    print("Realtime: phx_reply status=\(status)")
-                    if status == "error", let response = payload["response"] {
-                        print("Realtime: ERROR response: \(response)")
-                    }
-                }
-            }
-            else if event == "system" {
-                if let payload = json["payload"] as? [String: Any],
-                   let status = payload["status"] as? String {
-                    print("Realtime: system status=\(status)")
-                }
-            }
-            else {
-                print("Realtime: unhandled event '\(event)'")
-            }
-        } catch {
-            print("Realtime: parse error: \(error.localizedDescription)")
-        }
-    }
-    
-    private func parseAndNotify(_ recordDict: [String: Any]) {
-        do {
-            let data = try JSONSerialization.data(withJSONObject: recordDict)
-            let row = try JSONDecoder().decode(WorkoutLiveStateRow.self, from: data)
-            onWorkoutStateChange?(row)
-        } catch {
-            print("Realtime: decode row error: \(error.localizedDescription)")
-        }
-    }
-    
-    private func startPingTimer() {
-        pingTimer?.invalidate()
-        pingTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.sendHeartbeat()
             }
         }
     }
     
-    private func sendHeartbeat() {
-        let heartbeat: [String: Any] = [
-            "topic": "phoenix",
-            "event": "heartbeat",
-            "payload": [:],
-            "ref": nextRef()
-        ]
+    private func handleWorkoutPolled(_ workout: PolledWorkout) {
+        guard let exerciseName = workout.currentExerciseName,
+              let setNumber = workout.currentSetNumber,
+              let totalSets = workout.totalSets,
+              let state = workout.currentState else {
+            return
+        }
         
-        guard let data = try? JSONSerialization.data(withJSONObject: heartbeat),
-              let jsonString = String(data: data, encoding: .utf8) else { return }
+        let signature = "\(exerciseName)|\(setNumber)|\(state)"
         
-        webSocketTask?.send(.string(jsonString)) { error in
-            if let error = error {
-                print("Realtime: heartbeat failed: \(error.localizedDescription)")
-            }
+        // Dedup - ne baljaj UI ako se nista nije promenilo
+        if signature == lastWorkoutSignature {
+            return
         }
+        lastWorkoutSignature = signature
+        
+        print("Poll update: \(exerciseName) - SET \(setNumber)/\(totalSets) [\(state)]")
+        
+        let row = WorkoutLiveStateRow(
+            sessionLogId: workout.sessionId,
+            athleteId: nil,
+            currentExerciseName: exerciseName,
+            currentSetNumber: setNumber,
+            totalSets: totalSets,
+            currentState: state,
+            currentHr: workout.currentHr,
+            totalCompletedSets: nil
+        )
+        
+        onWorkoutStateChange?(row)
     }
     
-    private func scheduleReconnect() {
-        reconnectTask?.cancel()
-        reconnectTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 3_000_000_000)
-            
-            if !Task.isCancelled, let userId = self.userId {
-                print("Realtime: reconnecting...")
-                self.connect(userId: userId)
-            }
+    private func callPollState(token: String) async throws -> PollStateResponse {
+        let url = SupabaseConfig.rpcURL(for: "watch_poll_state")
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(SupabaseConfig.anonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(SupabaseConfig.anonKey)", forHTTPHeaderField: "Authorization")
+        
+        let body = ["p_token": token]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
         }
+        
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw URLError(.init(rawValue: httpResponse.statusCode))
+        }
+        
+        return try decoder.decode(PollStateResponse.self, from: data)
     }
 }
