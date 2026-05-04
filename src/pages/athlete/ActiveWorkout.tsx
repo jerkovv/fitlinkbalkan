@@ -489,7 +489,16 @@ const ActiveWorkout = () => {
   const handleRestDone = () => {
     setResting(null);
     if (!current) return;
-    // Back to active state for watch app
+
+    // Izracunaj NOVU poziciju (vezba/set) na koju idemo posle rest-a
+    const advancingExercise = setNumber >= current.sets;
+    const newIdx = advancingExercise && exerciseIdx < exercises.length - 1 ? exerciseIdx + 1 : exerciseIdx;
+    const newSetNum = advancingExercise ? 1 : setNumber + 1;
+    const newExerciseRow = exercises[newIdx] ?? current;
+    const newDisplayName = newExerciseRow.exercise.name_en?.trim() || newExerciseRow.exercise.name;
+    const newTotalSets = newExerciseRow.sets ?? null;
+
+    // Back to active state for watch app - sa podacima vezbe na koju upravo prelazimo
     liveStateRef.current = "active";
     if (sessionId && user) {
       supabase
@@ -498,10 +507,10 @@ const ActiveWorkout = () => {
           {
             session_log_id: sessionId,
             athlete_id: user.id,
-            current_exercise_idx: exerciseIdx,
-            current_exercise_name: current.exercise.name_en?.trim() || current.exercise.name,
-            current_set_number: setNumber,
-            total_sets: current.sets ?? null,
+            current_exercise_idx: newIdx,
+            current_exercise_name: newDisplayName,
+            current_set_number: newSetNum,
+            total_sets: newTotalSets,
             current_hr: liveHr,
             current_state: "active",
             total_completed_sets: completedSets.length,
@@ -511,8 +520,8 @@ const ActiveWorkout = () => {
         )
         .then(() => undefined);
     }
-    if (setNumber >= current.sets) {
-      // advance to next exercise
+
+    if (advancingExercise) {
       if (exerciseIdx < exercises.length - 1) {
         setExerciseIdx((i) => i + 1);
         setSetNumber(1);
