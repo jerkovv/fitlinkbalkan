@@ -1,6 +1,8 @@
-import { Bookmark, Check, Play } from "lucide-react";
+import { useState } from "react";
+import { Bookmark, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { MUSCLE_LABELS } from "@/lib/muscleGroups";
+import { MUSCLE_LABELS, type MuscleGroupId } from "@/lib/muscleGroups";
+import { MuscleGroupIcon } from "./MuscleGroupIcon";
 
 export type PickerExercise = {
   id: string;
@@ -22,6 +24,14 @@ type Props = {
   variant?: "grid" | "row";
 };
 
+const Placeholder = ({ muscle }: { muscle: string }) => (
+  <div className="absolute inset-0 bg-gradient-brand-soft flex items-center justify-center">
+    <div className="opacity-60 text-primary">
+      <MuscleGroupIcon muscle={muscle as MuscleGroupId} active />
+    </div>
+  </div>
+);
+
 export const ExerciseCard = ({
   exercise,
   selected,
@@ -31,11 +41,13 @@ export const ExerciseCard = ({
   index = 0,
   variant = "grid",
 }: Props) => {
+  const [imgFailed, setImgFailed] = useState(false);
   const primaryName = exercise.name_en?.trim() || exercise.name;
   const subtitle =
     exercise.description?.trim() ||
     MUSCLE_LABELS[exercise.primary_muscle] ||
     exercise.primary_muscle;
+  const showImage = !!exercise.thumbnail_url && !imgFailed;
 
   if (variant === "row") {
     return (
@@ -49,19 +61,16 @@ export const ExerciseCard = ({
         )}
       >
         <div className="h-16 w-16 rounded-lg bg-surface-2 relative shrink-0 overflow-hidden">
-          {exercise.thumbnail_url ? (
+          {showImage ? (
             <img
-              src={exercise.thumbnail_url}
+              src={exercise.thumbnail_url!}
               alt={primaryName}
               loading="lazy"
+              onError={() => setImgFailed(true)}
               className="object-cover w-full h-full"
             />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="h-9 w-9 rounded-full bg-foreground/10 backdrop-blur-md border border-foreground/15 flex items-center justify-center">
-                <Play size={14} className="text-foreground" fill="currentColor" />
-              </div>
-            </div>
+            <Placeholder muscle={exercise.primary_muscle} />
           )}
         </div>
         <div className="flex-1 min-w-0 text-left">
@@ -91,19 +100,16 @@ export const ExerciseCard = ({
       style={{ animationDelay: `${Math.min(index * 20, 200)}ms` }}
     >
       <div className="aspect-square w-full bg-surface-2 relative">
-        {exercise.thumbnail_url ? (
+        {showImage ? (
           <img
-            src={exercise.thumbnail_url}
+            src={exercise.thumbnail_url!}
             alt={primaryName}
             loading="lazy"
+            onError={() => setImgFailed(true)}
             className="object-cover w-full h-full"
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="h-[38px] w-[38px] rounded-full bg-foreground/10 backdrop-blur-md border border-foreground/15 flex items-center justify-center">
-              <Play size={14} className="text-foreground" fill="currentColor" />
-            </div>
-          </div>
+          <Placeholder muscle={exercise.primary_muscle} />
         )}
 
         {selected && (
