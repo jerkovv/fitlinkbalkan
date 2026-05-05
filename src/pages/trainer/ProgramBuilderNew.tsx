@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { assignProgramToAthlete } from "@/lib/programAssignment";
@@ -10,9 +10,10 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Plus, Loader2, Dumbbell, Search, Trash2, GripVertical, ChevronDown, ChevronUp, UserPlus, Check,
+  Plus, Loader2, Dumbbell, Trash2, GripVertical, ChevronDown, ChevronUp, UserPlus, Check,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ExercisePickerSheet } from "@/components/exercises/ExercisePickerSheet";
 
 type Day = { id: string; day_number: number; name: string; notes: string | null };
 type Exercise = {
@@ -26,7 +27,6 @@ type Exercise = {
   notes: string | null;
   exercises: { name: string; name_en: string | null; primary_muscle: string } | null;
 };
-type LibExercise = { id: string; name: string; name_en: string | null; primary_muscle: string; equipment: string };
 type Athlete = { id: string; full_name: string | null; email: string };
 
 const ProgramBuilder = () => {
@@ -41,10 +41,8 @@ const ProgramBuilder = () => {
   const [addDayOpen, setAddDayOpen] = useState(false);
   const [newDayName, setNewDayName] = useState("");
 
-  // Add exercise dialog
+  // Add exercise picker
   const [pickerDayId, setPickerDayId] = useState<string | null>(null);
-  const [library, setLibrary] = useState<LibExercise[]>([]);
-  const [libQuery, setLibQuery] = useState("");
 
   // Assign dialog
   const [assignOpen, setAssignOpen] = useState(false);
@@ -83,14 +81,6 @@ const ProgramBuilder = () => {
 
   useEffect(() => { load(); }, [templateId]);
 
-  const loadLibrary = async () => {
-    const { data } = await supabase
-      .from("exercises")
-      .select("id, name, name_en, primary_muscle, equipment")
-      .order("name");
-    setLibrary((data as any) ?? []);
-  };
-
   const handleAddDay = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!templateId) return;
@@ -115,26 +105,8 @@ const ProgramBuilder = () => {
     load();
   };
 
-  const openExercisePicker = async (dayId: string) => {
+  const openExercisePicker = (dayId: string) => {
     setPickerDayId(dayId);
-    if (library.length === 0) await loadLibrary();
-  };
-
-  const addExerciseToDay = async (exerciseId: string) => {
-    if (!pickerDayId) return;
-    const currentList = exByDay[pickerDayId] ?? [];
-    const { error } = await supabase.from("program_template_exercises").insert({
-      day_id: pickerDayId,
-      exercise_id: exerciseId,
-      position: currentList.length + 1,
-      sets: 3,
-      reps: "10",
-      rest_seconds: 90,
-    } as any);
-    if (error) { toast.error(error.message); return; }
-    setPickerDayId(null);
-    setLibQuery("");
-    load();
   };
 
   const updateExercise = async (exId: string, patch: Partial<Exercise>) => {
@@ -149,11 +121,6 @@ const ProgramBuilder = () => {
     load();
   };
 
-  const filteredLib = useMemo(() => {
-    if (!libQuery) return library;
-    const q = libQuery.toLowerCase();
-    return library.filter((l) => l.name.toLowerCase().includes(q) || (l.name_en?.toLowerCase().includes(q)));
-  }, [library, libQuery]);
 
   const openAssign = async () => {
     setAssignOpen(true);
@@ -368,41 +335,13 @@ const ProgramBuilder = () => {
       </Dialog>
 
       {/* Exercise Picker */}
-      <Dialog open={!!pickerDayId} onOpenChange={(o) => !o && setPickerDayId(null)}>
-        <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
-          <DialogHeader><DialogTitle>Izaberi vežbu</DialogTitle></DialogHeader>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={libQuery}
-              onChange={(e) => setLibQuery(e.target.value)}
-              placeholder="Pretraži..."
-              className="pl-9"
-              autoFocus
-            />
-          </div>
-          <div className="overflow-y-auto flex-1 space-y-1 -mx-1 px-1">
-            {filteredLib.map((l) => (
-              <button
-                key={l.id}
-                onClick={() => addExerciseToDay(l.id)}
-                className="w-full text-left p-3 rounded-lg hover:bg-surface-2 flex items-center gap-3 transition"
-              >
-                <div className="h-9 w-9 rounded-lg bg-gradient-brand-soft flex items-center justify-center shrink-0">
-                  <Dumbbell className="h-4 w-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm truncate">{l.name_en?.trim() || l.name}</div>
-                  {l.name_en && l.name_en.trim() && l.name_en.trim() !== l.name && (
-                    <div className="text-[11px] text-muted-foreground truncate">{l.name}</div>
-                  )}
-                  <div className="text-[11px] text-muted-foreground capitalize">{l.primary_muscle.replace("_", " ")}</div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ExercisePickerSheet
+        open={!!pickerDayId}
+        dayId={pickerDayId}
+        dayName={days.find((d) => d.id === pickerDayId)?.name ?? ""}
+        onClose={() => setPickerDayId(null)}
+        onAdded={() => { setPickerDayId(null); load(); }}
+      />
 
       {/* Assign Dialog */}
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
