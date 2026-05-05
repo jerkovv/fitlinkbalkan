@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code worktrees (izolovani radni prostori za AI agente)
+.claude/worktrees/

@@ -9,20 +9,27 @@ struct ContentView: View {
         case completed
     }
     
-    // PRIVREMENO: hardcoded token za testiranje
-    private let pairingToken = "b57d21268a2652edc10280a4a7074d324a90832d5a48ed25"
-    
+    @StateObject private var phoneSession = WatchPhoneSession.shared
+
+    // FALLBACK za development. Ukloniti pre App Store launch-a.
+    // Ako pairing preko WCSession nije stigao (bug, prvi launch, dev test),
+    // koristi hardcoded token za apgrejdpremium2 nalog da Watch i dalje radi.
+    private var effectiveToken: String {
+        phoneSession.pairingToken ?? "b57d21268a2652edc10280a4a7074d324a90832d5a48ed25"
+    }
+
     @State private var currentState: AppState = .idle
     @State private var isPaired: Bool = false
     @State private var isLoading: Bool = false
     @State private var connectionError: String?
     @State private var currentWorkout: ActiveWorkout = .mock
     @State private var heartRate: Int = 0
-    @State private var hrTimer: Timer?
     @State private var hrSendCounter: Int = 0
     @State private var lastServerSignature: String = ""
-    
+    @State private var lastConnectedToken: String? = nil
+
     @StateObject private var realtimeClient = SupabaseRealtimeClient()
+    @StateObject private var healthKit = HealthKitManager.shared
     
     var body: some View {
         Group {
@@ -31,12 +38,11 @@ struct ContentView: View {
                 idleView
                 
             case .activeWorkout:
-               ActiveWorkoutView(
-    workout: currentWorkout,
-    heartRate: $heartRate,
-    onCompleteSet: handleCompleteSet,
-    onFinishWorkout: handleFinishWorkout
-)
+                ActiveWorkoutView(
+                    workout: currentWorkout,
+                    heartRate: $heartRate,
+                    onCompleteSet: handleCompleteSet
+                )
                 
             case .rest:
                 RestTimerView(
@@ -54,11 +60,24 @@ struct ContentView: View {
             }
         }
         .task {
+            lastConnectedToken = effectiveToken
             await initializeConnection()
+        }
+        .onChange(of: phoneSession.pairingToken) { _ in
+            // Token primljen sa iPhone-a (login, refresh) ili obrisan (logout).
+            // Reconnect samo ako se efektivni token zaista promenio.
+            let newToken = effectiveToken
+            guard newToken != lastConnectedToken else { return }
+            lastConnectedToken = newToken
+            print("[ContentView] Token changed - reconnecting (paired: \(phoneSession.pairingToken != nil))")
+            Task {
+                realtimeClient.disconnect()
+                await initializeConnection()
+            }
         }
         .onDisappear {
             realtimeClient.disconnect()
-            stopMockHRSimulation()
+            stopHealthKitWorkout()
         }
     }
     
@@ -170,8 +189,18 @@ struct ContentView: View {
     private var statusText: String {
         if isLoading { return "Povezivanje..." }
         if let error = connectionError { return error }
-        if !isPaired { return "Nije povezano" }
+        if !isPaired {
+            // Bez pravog tokena i bez fallback-a (kad fallback bude uklonjen u prod)
+            if phoneSession.pairingToken == nil && effectiveToken.isEmpty {
+                return "Uloguj se na iPhone-u"
+            }
+            return "Nije povezano"
+        }
         if !realtimeClient.isConnected { return "Veza prekinuta" }
+        // Paired i konektovano - ali koristimo fallback token (dev)
+        if phoneSession.pairingToken == nil {
+            return "Dev mode"
+        }
         return "Povezano"
     }
     
@@ -181,8 +210,13 @@ struct ContentView: View {
         isLoading = true
         connectionError = nil
         
+        // Zatraži HealthKit dozvolu odmah na pokretanju
+        if !healthKit.isAuthorized {
+            _ = await healthKit.requestAuthorization()
+        }
+        
         do {
-            let context = try await SupabaseClient.shared.getUserContext(token: pairingToken)
+            let context = try await SupabaseClient.shared.getUserContext(token: effectiveToken)
             
             guard let context = context else {
                 isPaired = false
@@ -212,8 +246,7 @@ struct ContentView: View {
                 handleWorkoutDeleted()
             }
             
-            // Postavi token pre connect-a (polling klijent koristi token za svaki request)
-            realtimeClient.setToken(pairingToken)
+            realtimeClient.setToken(effectiveToken)
             realtimeClient.connect(userId: context.userId)
             
         } catch {
@@ -228,10 +261,8 @@ struct ContentView: View {
     // MARK: - Realtime sync
     
     private func handleWorkoutDeleted() {
-        // Trening je obrisan iz baze (verovatno završen) - prikaži "Bravo!" screen
-        // ako već nismo u completed state-u
         if currentState != .completed && currentState != .idle {
-            stopMockHRSimulation()
+            stopHealthKitWorkout()
             WKInterfaceDevice.current().play(.success)
             currentState = .completed
             
@@ -290,14 +321,14 @@ struct ContentView: View {
         switch state {
         case "active":
             currentState = .activeWorkout
-            startMockHRSimulation()
+            startHealthKitWorkout()
             
         case "rest":
             currentState = .rest
-            startMockHRSimulation()
+            startHealthKitWorkout()
             
         case "completed":
-            stopMockHRSimulation()
+            stopHealthKitWorkout()
             WKInterfaceDevice.current().play(.success)
             currentState = .completed
             
@@ -316,24 +347,13 @@ struct ContentView: View {
     }
     
     // MARK: - Watch akcije
-    private func handleFinishWorkout() {
-        WKInterfaceDevice.current().play(.success)
-        
-        Task {
-            do {
-                try await SupabaseClient.shared.finishWorkout(token: pairingToken)
-                print("Watch button: finish_workout sent to iPhone")
-            } catch {
-                print("Finish workout error: \(error.localizedDescription)")
-            }
-        }
-    }
+    
     private func handleCompleteSet() {
         WKInterfaceDevice.current().play(.success)
         
         Task {
             do {
-                try await SupabaseClient.shared.completeSet(token: pairingToken)
+                try await SupabaseClient.shared.completeSet(token: effectiveToken)
                 print("Watch button: complete_set sent to iPhone")
             } catch {
                 print("Complete set error: \(error.localizedDescription)")
@@ -344,7 +364,7 @@ struct ContentView: View {
     private func handleRestComplete() {
         Task {
             do {
-                try await SupabaseClient.shared.skipRest(token: pairingToken)
+                try await SupabaseClient.shared.skipRest(token: effectiveToken)
                 print("Watch button: skip_rest (auto) sent to iPhone")
             } catch {
                 print("Rest complete error: \(error.localizedDescription)")
@@ -357,7 +377,7 @@ struct ContentView: View {
         
         Task {
             do {
-                try await SupabaseClient.shared.skipRest(token: pairingToken)
+                try await SupabaseClient.shared.skipRest(token: effectiveToken)
                 print("Watch button: skip_rest sent to iPhone")
             } catch {
                 print("Skip rest error: \(error.localizedDescription)")
@@ -365,22 +385,31 @@ struct ContentView: View {
         }
     }
     
-    // MARK: - Mock HR simulator
+    // MARK: - HealthKit
     
-    private func startMockHRSimulation() {
-        hrTimer?.invalidate()
-        hrSendCounter = 0
+    private func startHealthKitWorkout() {
+        guard !healthKit.isWorkoutActive else { return }
         
-        hrTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            DispatchQueue.main.async {
-                if currentState == .rest {
-                    heartRate = Int.random(in: 90...115)
-                } else if currentState == .activeWorkout {
-                    heartRate = Int.random(in: 125...155)
+        Task {
+            // Ako nema dozvole, pokušaj ponovo
+            if !healthKit.isAuthorized {
+                let granted = await healthKit.requestAuthorization()
+                if !granted {
+                    print("HealthKit dozvola odbijena")
+                    return
                 }
+            }
+            
+            // Pokreni workout session - HR ce se automatski citati
+            healthKit.startWorkoutSession()
+            
+            // Listener za HR update-ove
+            healthKit.onHeartRateUpdate = { bpm in
+                heartRate = bpm
                 
+                // Salji u bazu svake 5 update-a (~5 sekundi)
                 hrSendCounter += 1
-                if hrSendCounter >= 5 && heartRate > 0 {
+                if hrSendCounter >= 5 {
                     hrSendCounter = 0
                     Task {
                         await sendHeartRateToServer()
@@ -390,9 +419,9 @@ struct ContentView: View {
         }
     }
     
-    private func stopMockHRSimulation() {
-        hrTimer?.invalidate()
-        hrTimer = nil
+    private func stopHealthKitWorkout() {
+        healthKit.stopWorkoutSession()
+        healthKit.onHeartRateUpdate = nil
         heartRate = 0
         hrSendCounter = 0
     }
@@ -402,7 +431,7 @@ struct ContentView: View {
         
         do {
             try await SupabaseClient.shared.updateHeartRate(
-                token: pairingToken,
+                token: effectiveToken,
                 heartRate: heartRate
             )
         } catch {

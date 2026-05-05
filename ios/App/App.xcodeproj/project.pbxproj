@@ -43,6 +43,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0207A7722FA9F67400C553C5 /* WatchSyncPlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WatchSyncPlugin.m; sourceTree = "<group>"; };
+		0207A7732FA9F67400C553C5 /* WatchSyncPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSyncPlugin.swift; sourceTree = "<group>"; };
+		0207A7762FA9F67D00C553C5 /* FitLink Watch Watch App-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "FitLink Watch Watch App-Bridging-Header.h"; sourceTree = "<group>"; };
 		02193B812FA4B445006184E4 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		0273F2012FA8C25F008EF96F /* FitLink Watch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "FitLink Watch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
@@ -102,6 +105,8 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
+				0207A7722FA9F67400C553C5 /* WatchSyncPlugin.m */,
+				0207A7732FA9F67400C553C5 /* WatchSyncPlugin.swift */,
 				02193B812FA4B445006184E4 /* App.entitlements */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
@@ -111,6 +116,7 @@
 				504EC3131FED79650016851F /* Info.plist */,
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
+				0207A7762FA9F67D00C553C5 /* FitLink Watch Watch App-Bridging-Header.h */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -122,7 +128,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 0273F20F2FA8C260008EF96F /* Build configuration list for PBXNativeTarget "FitLink Watch Watch App" */;
 			buildPhases = (
-				0273F1FD2FA8C25F008EF96F /* Sources */,
 				0273F1FE2FA8C25F008EF96F /* Frameworks */,
 				0273F1FF2FA8C25F008EF96F /* Resources */,
 			);
@@ -174,6 +179,7 @@
 				TargetAttributes = {
 					0273F2002FA8C25F008EF96F = {
 						CreatedOnToolsVersion = 26.4.1;
+						LastSwiftMigration = 2640;
 					};
 					504EC3031FED79650016851F = {
 						CreatedOnToolsVersion = 9.2;
@@ -228,13 +234,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		0273F1FD2FA8C25F008EF96F /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		504EC3001FED79650016851F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -280,13 +279,21 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
+				CODE_SIGN_ENTITLEMENTS = "FitLink Watch Watch App/FitLink Watch Watch App.entitlements";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 7;
+				DEVELOPMENT_TEAM = 385537A359;
 				ENABLE_PREVIEWS = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "FitLink-Watch-Watch-App-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "FitLink Watch";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "FitLink koristi puls sa Apple Watch-a za pracenje intenziteta treninga.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "FitLink cuva tvoje treninge u Health aplikaciji.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "FitLink koristi senzore za pracenje aktivnosti tokom treninga.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = rs.fitlink.app;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -299,6 +306,7 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = rs.fitlink.app.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -306,6 +314,8 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "App/FitLink Watch Watch App-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
@@ -320,13 +330,21 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
+				CODE_SIGN_ENTITLEMENTS = "FitLink Watch Watch App/FitLink Watch Watch App.entitlements";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 7;
+				DEVELOPMENT_TEAM = 385537A359;
 				ENABLE_PREVIEWS = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "FitLink-Watch-Watch-App-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "FitLink Watch";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "FitLink koristi puls sa Apple Watch-a za pracenje intenziteta treninga.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "FitLink cuva tvoje treninge u Health aplikaciji.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "FitLink koristi senzore za pracenje aktivnosti tokom treninga.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = rs.fitlink.app;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -338,12 +356,14 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = rs.fitlink.app.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "App/FitLink Watch Watch App-Bridging-Header.h";
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
@@ -482,7 +502,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 7;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -507,7 +527,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 7;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
