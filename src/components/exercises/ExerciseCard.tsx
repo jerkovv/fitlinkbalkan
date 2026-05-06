@@ -143,12 +143,17 @@ export const ExerciseCard = ({
           </div>
         )}
       </div>
-      <div className="p-3">
-        <div className="text-sm font-semibold tracking-tight line-clamp-1">
-          {primaryName}
+      <div className="p-3 space-y-1">
+        <div className="text-sm font-semibold tracking-tight line-clamp-2 leading-snug">
+          {exercise.name}
         </div>
-        <div className="text-xs text-muted-foreground font-medium mt-0.5 line-clamp-1">
-          {subtitle}
+        {exercise.name_en && (
+          <div className="text-xs text-muted-foreground line-clamp-1">
+            {exercise.name_en}
+          </div>
+        )}
+        <div className="text-[11px] text-muted-foreground/70 font-medium pt-0.5 capitalize">
+          {MUSCLE_LABELS[exercise.primary_muscle as MuscleGroupId] || exercise.primary_muscle}
         </div>
       </div>
     </button>
