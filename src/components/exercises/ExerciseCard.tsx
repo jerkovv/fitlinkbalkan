@@ -100,12 +100,12 @@ export const ExerciseCard = ({
     <button
       onClick={() => onToggleSelect(exercise.id)}
       className={cn(
-        "card-premium-hover rounded-xl overflow-hidden relative text-left animate-fade-in active:scale-[0.98] transition-transform",
+        "card-premium-hover rounded-xl overflow-hidden relative text-left animate-fade-in active:scale-[0.98] transition-transform block w-full",
         selected && "ring-2 ring-primary"
       )}
       style={{ animationDelay: `${Math.min(index * 20, 200)}ms` }}
     >
-      <div className="aspect-square w-full bg-surface-2 relative">
+      <div className="aspect-square w-full bg-surface-2 relative overflow-hidden">
         {showImage ? (
           <img
             src={exercise.thumbnail_url!}
