@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { forwardRef, useState } from "react";
 import { Bookmark, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MUSCLE_LABELS, type MuscleGroupId } from "@/lib/muscleGroups";
