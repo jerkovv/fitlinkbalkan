@@ -24,13 +24,19 @@ type Props = {
   variant?: "grid" | "row";
 };
 
-const Placeholder = ({ muscle }: { muscle: string }) => (
-  <div className="absolute inset-0 bg-gradient-brand-soft flex items-center justify-center">
-    <div className="opacity-60 text-primary">
-      <MuscleGroupIcon muscle={muscle as MuscleGroupId} active />
+const Placeholder = forwardRef<HTMLDivElement, { muscle: string }>(
+  ({ muscle }, ref) => (
+    <div
+      ref={ref}
+      className="absolute inset-0 bg-gradient-brand-soft flex items-center justify-center"
+    >
+      <div className="opacity-60 text-primary">
+        <MuscleGroupIcon muscle={muscle as MuscleGroupId} active />
+      </div>
     </div>
-  </div>
+  )
 );
+Placeholder.displayName = "Placeholder";
 
 export const ExerciseCard = ({
   exercise,
