@@ -105,14 +105,14 @@ export const ExerciseCard = ({
       )}
       style={{ animationDelay: `${Math.min(index * 20, 200)}ms` }}
     >
-      <div className="aspect-square w-full bg-surface-2 relative overflow-hidden">
+      <div className="aspect-[3/2] w-full bg-surface-2 relative overflow-hidden">
         {showImage ? (
           <img
             src={exercise.thumbnail_url!}
             alt={primaryName}
             loading="lazy"
             onError={() => setImgFailed(true)}
-            className="object-cover w-full h-full"
+            className="w-full h-full object-contain"
           />
         ) : (
           <Placeholder muscle={exercise.primary_muscle} />
