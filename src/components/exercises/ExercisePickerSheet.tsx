@@ -121,72 +121,75 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, onClose, onAdded }: 
         {/* Muscle strip */}
         <MuscleGroupStrip active={muscle} onChange={setMuscle} />
 
-        {/* Section title */}
-        <div className="px-5 py-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-bold tracking-tighter truncate">
-            {sectionTitle}
-          </h3>
-          {!isLoading && !isError && (
-            <span className="text-xs text-muted-foreground tnum shrink-0 ml-3">
-              {exercises.length} vežbi
-            </span>
-          )}
-        </div>
+        {/* Scroll area */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {/* Section title */}
+          <div className="px-5 py-3 flex items-center justify-between">
+            <h3 className="font-display text-base font-bold tracking-tighter truncate">
+              {sectionTitle}
+            </h3>
+            {!isLoading && !isError && (
+              <span className="text-xs text-muted-foreground tnum shrink-0 ml-3">
+                {exercises.length} vežbi
+              </span>
+            )}
+          </div>
 
-        {/* Grid */}
-        <div className="grid grid-cols-2 gap-3 px-4 pb-32 overflow-y-auto flex-1 relative">
-          {isLoading &&
-            Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="rounded-xl overflow-hidden">
-                <div className="aspect-square bg-surface-2 animate-pulse" />
-                <div className="p-3 space-y-2">
-                  <div className="h-3 bg-surface-2 animate-pulse rounded" />
-                  <div className="h-2 w-2/3 bg-surface-2 animate-pulse rounded" />
+          {/* Grid */}
+          <div className="grid grid-cols-2 gap-3 px-4 pb-32">
+            {isLoading &&
+              Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="rounded-xl overflow-hidden">
+                  <div className="aspect-square bg-surface-2 animate-pulse" />
+                  <div className="p-3 space-y-2">
+                    <div className="h-3 bg-surface-2 animate-pulse rounded" />
+                    <div className="h-2 w-2/3 bg-surface-2 animate-pulse rounded" />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
 
-          {!isLoading && isError && (
-            <div className="col-span-2 flex flex-col items-center justify-center py-16 text-center">
-              <div className="bg-gradient-brand-soft rounded-2xl p-3">
-                <AlertCircle size={32} className="text-primary" />
+            {!isLoading && isError && (
+              <div className="col-span-2 flex flex-col items-center justify-center py-16 text-center">
+                <div className="bg-gradient-brand-soft rounded-2xl p-3">
+                  <AlertCircle size={32} className="text-primary" />
+                </div>
+                <h4 className="font-display text-base font-bold tracking-tighter mt-3">
+                  Greška pri učitavanju
+                </h4>
+                <Button variant="ghost" className="mt-3" onClick={() => refetch()}>
+                  Pokušaj ponovo
+                </Button>
               </div>
-              <h4 className="font-display text-base font-bold tracking-tighter mt-3">
-                Greška pri učitavanju
-              </h4>
-              <Button variant="ghost" className="mt-3" onClick={() => refetch()}>
-                Pokušaj ponovo
-              </Button>
-            </div>
-          )}
+            )}
 
-          {!isLoading && !isError && exercises.length === 0 && (
-            <div className="col-span-2 flex flex-col items-center justify-center py-16 text-center">
-              <div className="bg-gradient-brand-soft rounded-2xl p-3">
-                <Dumbbell size={32} className="text-primary" />
+            {!isLoading && !isError && exercises.length === 0 && (
+              <div className="col-span-2 flex flex-col items-center justify-center py-16 text-center">
+                <div className="bg-gradient-brand-soft rounded-2xl p-3">
+                  <Dumbbell size={32} className="text-primary" />
+                </div>
+                <h4 className="font-display text-base font-bold tracking-tighter mt-3">
+                  Nema vežbi
+                </h4>
+                <p className="text-sm text-muted-foreground mt-1 px-8">
+                  Izaberi drugu mišićnu grupu ili promeni filtere
+                </p>
               </div>
-              <h4 className="font-display text-base font-bold tracking-tighter mt-3">
-                Nema vežbi
-              </h4>
-              <p className="text-sm text-muted-foreground mt-1 px-8">
-                Izaberi drugu mišićnu grupu ili promeni filtere
-              </p>
-            </div>
-          )}
+            )}
 
-          {!isLoading &&
-            !isError &&
-            exercises.map((ex, i) => (
-              <ExerciseCard
-                key={ex.id}
-                exercise={ex}
-                selected={selected.has(ex.id)}
-                bookmarked={isBookmarked(ex.id)}
-                onToggleSelect={handleToggleSelect}
-                onToggleBookmark={toggleBookmark}
-                index={i}
-              />
-            ))}
+            {!isLoading &&
+              !isError &&
+              exercises.map((ex, i) => (
+                <ExerciseCard
+                  key={ex.id}
+                  exercise={ex}
+                  selected={selected.has(ex.id)}
+                  bookmarked={isBookmarked(ex.id)}
+                  onToggleSelect={handleToggleSelect}
+                  onToggleBookmark={toggleBookmark}
+                  index={i}
+                />
+              ))}
+          </div>
         </div>
 
         <SelectionActionBar
