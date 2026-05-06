@@ -112,7 +112,7 @@ export const ExerciseCard = ({
             alt={primaryName}
             loading="lazy"
             onError={() => setImgFailed(true)}
-            className="w-full h-full object-contain p-3"
+            className="w-full h-full object-contain"
           />
         ) : (
           <Placeholder muscle={exercise.primary_muscle} />
