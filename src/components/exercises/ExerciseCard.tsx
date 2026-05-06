@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { forwardRef, useState } from "react";
 import { Bookmark, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MUSCLE_LABELS, type MuscleGroupId } from "@/lib/muscleGroups";
@@ -24,13 +24,19 @@ type Props = {
   variant?: "grid" | "row";
 };
 
-const Placeholder = ({ muscle }: { muscle: string }) => (
-  <div className="absolute inset-0 bg-gradient-brand-soft flex items-center justify-center">
-    <div className="opacity-60 text-primary">
-      <MuscleGroupIcon muscle={muscle as MuscleGroupId} active />
+const Placeholder = forwardRef<HTMLDivElement, { muscle: string }>(
+  ({ muscle }, ref) => (
+    <div
+      ref={ref}
+      className="absolute inset-0 bg-gradient-brand-soft flex items-center justify-center"
+    >
+      <div className="opacity-60 text-primary">
+        <MuscleGroupIcon muscle={muscle as MuscleGroupId} active />
+      </div>
     </div>
-  </div>
+  )
 );
+Placeholder.displayName = "Placeholder";
 
 export const ExerciseCard = ({
   exercise,
@@ -94,12 +100,12 @@ export const ExerciseCard = ({
     <button
       onClick={() => onToggleSelect(exercise.id)}
       className={cn(
-        "card-premium-hover rounded-xl overflow-hidden relative text-left animate-fade-in active:scale-[0.98] transition-transform",
+        "card-premium-hover rounded-xl overflow-hidden relative text-left animate-fade-in active:scale-[0.98] transition-transform block w-full",
         selected && "ring-2 ring-primary"
       )}
       style={{ animationDelay: `${Math.min(index * 20, 200)}ms` }}
     >
-      <div className="aspect-square w-full bg-surface-2 relative">
+      <div className="aspect-square w-full bg-surface-2 relative overflow-hidden">
         {showImage ? (
           <img
             src={exercise.thumbnail_url!}
