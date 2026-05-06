@@ -48,6 +48,10 @@ export const ExerciseSearchSheet = ({ open, onOpenChange, selected, onToggleSele
         side="bottom"
         className="h-[80dvh] w-full max-w-[440px] mx-auto rounded-t-3xl p-0 flex flex-col"
       >
+        <SheetTitle className="sr-only">Pretraga vežbi</SheetTitle>
+        <SheetDescription className="sr-only">
+          Pretraži biblioteku vežbi po nazivu
+        </SheetDescription>
         <div className="px-5 pt-4 pb-2">
           <h2 className="font-display text-lg font-bold tracking-tighter">Pretraga vežbi</h2>
         </div>
