@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -70,6 +70,10 @@ export const ExerciseFilterSheet = ({ open, onOpenChange, value, onApply }: Prop
         side="bottom"
         className="h-auto max-h-[80dvh] w-full max-w-[440px] mx-auto rounded-t-3xl p-0 flex flex-col"
       >
+        <SheetTitle className="sr-only">Filteri vežbi</SheetTitle>
+        <SheetDescription className="sr-only">
+          Filtriraj vežbe po opremi i kategoriji
+        </SheetDescription>
         <div className="px-5 pt-4 pb-2">
           <h2 className="font-display text-lg font-bold tracking-tighter">Filteri</h2>
         </div>
