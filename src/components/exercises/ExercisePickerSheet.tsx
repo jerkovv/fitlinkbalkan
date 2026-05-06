@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { AlertCircle, Dumbbell, Search, SlidersHorizontal, X } from "lucide-react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { MUSCLE_GROUPS, MUSCLE_LABELS, type MuscleGroupId } from "@/lib/muscleGroups";
 import { MuscleGroupStrip } from "./MuscleGroupStrip";
