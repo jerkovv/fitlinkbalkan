@@ -87,6 +87,10 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, onClose, onAdded }: 
         side="bottom"
         className="h-[100dvh] w-full max-w-[440px] mx-auto rounded-t-3xl p-0 flex flex-col [&>button]:hidden"
       >
+        <SheetTitle className="sr-only">Dodaj vežbe</SheetTitle>
+        <SheetDescription className="sr-only">
+          Izaberi vežbe iz biblioteke i dodaj ih u trening dan
+        </SheetDescription>
         {/* Header */}
         <div className="h-14 shrink-0 bg-background border-b border-hairline px-4 flex items-center gap-2">
           <button
