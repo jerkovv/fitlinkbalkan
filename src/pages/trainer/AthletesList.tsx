@@ -80,6 +80,8 @@ const AthletesList = () => {
   const [pending, setPending] = useState<PendingInvite[]>([]);
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [inviteToDelete, setInviteToDelete] = useState<PendingInvite | null>(null);
+  const [deletingInvite, setDeletingInvite] = useState(false);
 
   const load = async () => {
     if (!user) return;
