@@ -5,7 +5,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Avatar, Chip } from "@/components/ui-bits";
-import { Search, ChevronRight, Loader2, UserPlus, Mail, Loader, Clock, RefreshCw } from "lucide-react";
+import { Search, ChevronRight, Loader2, UserPlus, Mail, Loader, Clock, RefreshCw, Trash2 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -76,6 +80,8 @@ const AthletesList = () => {
   const [pending, setPending] = useState<PendingInvite[]>([]);
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [inviteToDelete, setInviteToDelete] = useState<PendingInvite | null>(null);
+  const [deletingInvite, setDeletingInvite] = useState(false);
 
   const load = async () => {
     if (!user) return;
@@ -258,6 +264,22 @@ const AthletesList = () => {
     }
   };
 
+  const confirmDeleteInvite = async () => {
+    if (!inviteToDelete) return;
+    setDeletingInvite(true);
+    try {
+      const { error } = await supabase.from("invites").delete().eq("id", inviteToDelete.id);
+      if (error) throw error;
+      toast.success("Pozivnica obrisana");
+      setInviteToDelete(null);
+      await load();
+    } catch (e: any) {
+      toast.error(e.message ?? "Greška pri brisanju pozivnice");
+    } finally {
+      setDeletingInvite(false);
+    }
+  };
+
   return (
     <>
       <PhoneShell hasBottomNav title="Vežbači" eyebrow={`${rows.length} ukupno`}>
@@ -374,6 +396,14 @@ const AthletesList = () => {
                             <RefreshCw className="h-4 w-4" />
                           )}
                         </button>
+                        <button
+                          onClick={() => setInviteToDelete(p)}
+                          className="h-9 w-9 rounded-full bg-destructive/10 hover:bg-destructive/20 text-destructive flex items-center justify-center transition"
+                          title="Obriši pozivnicu"
+                          aria-label="Obriši pozivnicu"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </li>
                     );
                   })}
@@ -446,6 +476,27 @@ const AthletesList = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!inviteToDelete} onOpenChange={(o) => !o && setInviteToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Obrisati pozivnicu?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Pozivnica za {inviteToDelete?.full_name ?? inviteToDelete?.email} biće trajno obrisana.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingInvite}>Otkaži</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); confirmDeleteInvite(); }}
+              disabled={deletingInvite}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingInvite ? "Brisanje..." : "Obriši"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

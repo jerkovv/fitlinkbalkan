@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { PhoneShell } from "@/components/PhoneShell";
@@ -8,10 +8,14 @@ import { Avatar, Card, Chip } from "@/components/ui-bits";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Apple, ClipboardList, Wallet, MessageSquare, Phone, Loader2, Plus, X, Check,
-  Dumbbell, Activity, Scale, ChevronRight,
+  Dumbbell, Activity, Scale, ChevronRight, UserMinus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { WorkoutSessionDetailDialog } from "@/components/WorkoutSessionDetailDialog";
@@ -91,6 +95,28 @@ const initialsOf = (name: string | null) => {
 const AthleteProfile = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [removeOpen, setRemoveOpen] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  const confirmRemoveAthlete = async () => {
+    if (!id) return;
+    setRemoving(true);
+    try {
+      const { error } = await supabase
+        .from("athletes")
+        .update({ trainer_id: null })
+        .eq("id", id);
+      if (error) throw error;
+      toast.success("Vežbač uklonjen");
+      setRemoveOpen(false);
+      navigate("/trener/vezbaci");
+    } catch (e: any) {
+      toast.error(e.message ?? "Greška pri uklanjanju");
+    } finally {
+      setRemoving(false);
+    }
+  };
   const { connections: wearableConns } = useWearableConnections(id);
   const lastWearableSync = wearableConns
     .map((c) => c.last_sync_at)
@@ -1012,6 +1038,37 @@ const AthleteProfile = () => {
         open={!!openSessionId}
         onOpenChange={(o) => !o && setOpenSessionId(null)}
       />
+
+      <section className="pt-2">
+        <button
+          onClick={() => setRemoveOpen(true)}
+          className="w-full flex items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 hover:bg-destructive/10 text-destructive py-3.5 text-[13.5px] font-semibold transition"
+        >
+          <UserMinus className="h-4 w-4" />
+          Ukloni vežbača
+        </button>
+      </section>
+
+      <AlertDialog open={removeOpen} onOpenChange={setRemoveOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ukloniti vežbača?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {athlete?.full_name ?? "Vežbač"} će biti uklonjen sa tvog spiska. Njegova istorija treninga i nalog se čuvaju. Možeš ga ponovo dodati pozivnicom kasnije.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removing}>Otkaži</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); confirmRemoveAthlete(); }}
+              disabled={removing}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {removing ? "Uklanjanje..." : "Ukloni vežbača"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PhoneShell>
   );
 };
