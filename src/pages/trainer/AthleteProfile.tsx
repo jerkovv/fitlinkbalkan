@@ -1,17 +1,22 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { PhoneShell } from "@/components/PhoneShell";
+import { SendMessageToAttribute as _x } from "@/components/SendMessageToAthlete" /* placeholder removed */;
 import { SendMessageToAthlete } from "@/components/SendMessageToAthlete";
 import { Avatar, Card, Chip } from "@/components/ui-bits";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Apple, ClipboardList, Wallet, MessageSquare, Phone, Loader2, Plus, X, Check,
-  Dumbbell, Activity, Scale, ChevronRight,
+  Dumbbell, Activity, Scale, ChevronRight, UserMinus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { WorkoutSessionDetailDialog } from "@/components/WorkoutSessionDetailDialog";
