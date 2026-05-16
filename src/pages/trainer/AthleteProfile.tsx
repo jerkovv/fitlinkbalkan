@@ -1038,6 +1038,37 @@ const AthleteProfile = () => {
         open={!!openSessionId}
         onOpenChange={(o) => !o && setOpenSessionId(null)}
       />
+
+      <section className="pt-2">
+        <button
+          onClick={() => setRemoveOpen(true)}
+          className="w-full flex items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 hover:bg-destructive/10 text-destructive py-3.5 text-[13.5px] font-semibold transition"
+        >
+          <UserMinus className="h-4 w-4" />
+          Ukloni vežbača
+        </button>
+      </section>
+
+      <AlertDialog open={removeOpen} onOpenChange={setRemoveOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ukloniti vežbača?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {athlete?.full_name ?? "Vežbač"} će biti uklonjen sa tvog spiska. Njegova istorija treninga i nalog se čuvaju. Možeš ga ponovo dodati pozivnicom kasnije.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removing}>Otkaži</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); confirmRemoveAthlete(); }}
+              disabled={removing}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {removing ? "Uklanjanje..." : "Ukloni vežbača"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PhoneShell>
   );
 };
