@@ -264,7 +264,21 @@ const AthletesList = () => {
     }
   };
 
-  return (
+  const confirmDeleteInvite = async () => {
+    if (!inviteToDelete) return;
+    setDeletingInvite(true);
+    try {
+      const { error } = await supabase.from("invites").delete().eq("id", inviteToDelete.id);
+      if (error) throw error;
+      toast.success("Pozivnica obrisana");
+      setInviteToDelete(null);
+      await load();
+    } catch (e: any) {
+      toast.error(e.message ?? "Greška pri brisanju pozivnice");
+    } finally {
+      setDeletingInvite(false);
+    }
+  };
     <>
       <PhoneShell hasBottomNav title="Vežbači" eyebrow={`${rows.length} ukupno`}>
         {/* Search */}
