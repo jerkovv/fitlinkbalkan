@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { AlertCircle, Dumbbell, Search, SlidersHorizontal, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AlertCircle, Dumbbell, Loader2, Search, SlidersHorizontal, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { MUSCLE_GROUPS, MUSCLE_LABELS, type MuscleGroupId } from "@/lib/muscleGroups";
@@ -8,7 +8,7 @@ import { ExerciseCard } from "./ExerciseCard";
 import { SelectionActionBar } from "./SelectionActionBar";
 import { ExerciseSearchSheet } from "./ExerciseSearchSheet";
 import { ExerciseFilterSheet, type FilterState } from "./ExerciseFilterSheet";
-import { useExercises } from "@/hooks/useExercises";
+import { useInfiniteExercises, useExercisesCount } from "@/hooks/useInfiniteExercises";
 import { useExerciseBookmarks } from "@/hooks/useExerciseBookmarks";
 import { useAddExercisesToDay } from "@/hooks/useAddExercisesToDay";
 import { cn } from "@/lib/utils";
@@ -33,14 +33,41 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, onClose, onAdded }: 
   });
 
   const showFavorites = muscle === "favorites";
-  const { data: exercises = [], isLoading, isError, refetch } = useExercises({
+  const queryFilters = {
     muscleGroup: showFavorites ? null : muscle,
     showFavorites,
     equipment: filters.equipment,
     categories: filters.categories,
     onlyMine: filters.onlyMine,
     searchQuery: "",
-  });
+  };
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteExercises(queryFilters);
+  const { data: totalCount } = useExercisesCount(queryFilters);
+  const exercises = useMemo(() => data?.pages.flat() ?? [], [data]);
+
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasNextPage) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { rootMargin: "300px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, exercises.length]);
 
   const { isBookmarked, toggle: toggleBookmark } = useExerciseBookmarks();
 
@@ -134,7 +161,7 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, onClose, onAdded }: 
             </h3>
             {!isLoading && !isError && (
               <span className="text-xs text-muted-foreground tnum shrink-0 ml-3">
-                {exercises.length} vežbi
+                {totalCount ?? exercises.length} vežbi
               </span>
             )}
           </div>
@@ -193,7 +220,26 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, onClose, onAdded }: 
                   index={i}
                 />
               ))}
+
+            {isFetchingNextPage &&
+              Array.from({ length: 2 }).map((_, i) => (
+                <div key={`sk-${i}`} className="rounded-xl overflow-hidden">
+                  <div className="aspect-[3/2] bg-surface-2 animate-pulse" />
+                  <div className="p-3 space-y-2">
+                    <div className="h-3 bg-surface-2 animate-pulse rounded" />
+                    <div className="h-2 w-2/3 bg-surface-2 animate-pulse rounded" />
+                  </div>
+                </div>
+              ))}
           </div>
+
+          {hasNextPage && !isError && (
+            <div ref={sentinelRef} className="h-10 flex items-center justify-center">
+              {isFetchingNextPage && (
+                <Loader2 size={18} className="animate-spin text-muted-foreground" />
+              )}
+            </div>
+          )}
         </div>
 
         <SelectionActionBar
