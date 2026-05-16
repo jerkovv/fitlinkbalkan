@@ -53,6 +53,22 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, onClose, onAdded }: 
   const { data: totalCount } = useExercisesCount(queryFilters);
   const exercises = useMemo(() => data?.pages.flat() ?? [], [data]);
 
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasNextPage) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { rootMargin: "300px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, exercises.length]);
+
   const { isBookmarked, toggle: toggleBookmark } = useExerciseBookmarks();
 
   const { mutate: addExercises, isPending } = useAddExercisesToDay({
