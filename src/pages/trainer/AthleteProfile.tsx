@@ -95,6 +95,28 @@ const initialsOf = (name: string | null) => {
 const AthleteProfile = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [removeOpen, setRemoveOpen] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  const confirmRemoveAthlete = async () => {
+    if (!id) return;
+    setRemoving(true);
+    try {
+      const { error } = await supabase
+        .from("athletes")
+        .update({ trainer_id: null })
+        .eq("id", id);
+      if (error) throw error;
+      toast.success("Vežbač uklonjen");
+      setRemoveOpen(false);
+      navigate("/trener/vezbaci");
+    } catch (e: any) {
+      toast.error(e.message ?? "Greška pri uklanjanju");
+    } finally {
+      setRemoving(false);
+    }
+  };
   const { connections: wearableConns } = useWearableConnections(id);
   const lastWearableSync = wearableConns
     .map((c) => c.last_sync_at)
