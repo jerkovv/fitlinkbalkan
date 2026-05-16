@@ -3,7 +3,6 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { PhoneShell } from "@/components/PhoneShell";
-import { SendMessageToAttribute as _x } from "@/components/SendMessageToAthlete" /* placeholder removed */;
 import { SendMessageToAthlete } from "@/components/SendMessageToAthlete";
 import { Avatar, Card, Chip } from "@/components/ui-bits";
 import {
