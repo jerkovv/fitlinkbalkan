@@ -145,7 +145,7 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, onClose, onAdded }: 
             </h3>
             {!isLoading && !isError && (
               <span className="text-xs text-muted-foreground tnum shrink-0 ml-3">
-                {exercises.length} vežbi
+                {totalCount ?? exercises.length} vežbi
               </span>
             )}
           </div>
