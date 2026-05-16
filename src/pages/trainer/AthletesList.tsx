@@ -476,6 +476,27 @@ const AthletesList = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!inviteToDelete} onOpenChange={(o) => !o && setInviteToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Obrisati pozivnicu?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Pozivnica za {inviteToDelete?.full_name ?? inviteToDelete?.email} biće trajno obrisana.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingInvite}>Otkaži</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); confirmDeleteInvite(); }}
+              disabled={deletingInvite}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingInvite ? "Brisanje..." : "Obriši"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
