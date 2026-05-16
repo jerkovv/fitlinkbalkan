@@ -396,6 +396,14 @@ const AthletesList = () => {
                             <RefreshCw className="h-4 w-4" />
                           )}
                         </button>
+                        <button
+                          onClick={() => setInviteToDelete(p)}
+                          className="h-9 w-9 rounded-full bg-destructive/10 hover:bg-destructive/20 text-destructive flex items-center justify-center transition"
+                          title="Obriši pozivnicu"
+                          aria-label="Obriši pozivnicu"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </li>
                     );
                   })}
