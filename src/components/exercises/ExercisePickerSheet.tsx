@@ -204,7 +204,26 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, onClose, onAdded }: 
                   index={i}
                 />
               ))}
+
+            {isFetchingNextPage &&
+              Array.from({ length: 2 }).map((_, i) => (
+                <div key={`sk-${i}`} className="rounded-xl overflow-hidden">
+                  <div className="aspect-[3/2] bg-surface-2 animate-pulse" />
+                  <div className="p-3 space-y-2">
+                    <div className="h-3 bg-surface-2 animate-pulse rounded" />
+                    <div className="h-2 w-2/3 bg-surface-2 animate-pulse rounded" />
+                  </div>
+                </div>
+              ))}
           </div>
+
+          {hasNextPage && !isError && (
+            <div ref={sentinelRef} className="h-10 flex items-center justify-center">
+              {isFetchingNextPage && (
+                <Loader2 size={18} className="animate-spin text-muted-foreground" />
+              )}
+            </div>
+          )}
         </div>
 
         <SelectionActionBar
