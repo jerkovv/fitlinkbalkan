@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { AlertCircle, Dumbbell, Search, SlidersHorizontal, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AlertCircle, Dumbbell, Loader2, Search, SlidersHorizontal, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { MUSCLE_GROUPS, MUSCLE_LABELS, type MuscleGroupId } from "@/lib/muscleGroups";
@@ -8,7 +8,7 @@ import { ExerciseCard } from "./ExerciseCard";
 import { SelectionActionBar } from "./SelectionActionBar";
 import { ExerciseSearchSheet } from "./ExerciseSearchSheet";
 import { ExerciseFilterSheet, type FilterState } from "./ExerciseFilterSheet";
-import { useExercises } from "@/hooks/useExercises";
+import { useInfiniteExercises, useExercisesCount } from "@/hooks/useInfiniteExercises";
 import { useExerciseBookmarks } from "@/hooks/useExerciseBookmarks";
 import { useAddExercisesToDay } from "@/hooks/useAddExercisesToDay";
 import { cn } from "@/lib/utils";
