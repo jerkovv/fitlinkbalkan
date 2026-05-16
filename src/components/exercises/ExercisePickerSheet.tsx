@@ -33,14 +33,25 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, onClose, onAdded }: 
   });
 
   const showFavorites = muscle === "favorites";
-  const { data: exercises = [], isLoading, isError, refetch } = useExercises({
+  const queryFilters = {
     muscleGroup: showFavorites ? null : muscle,
     showFavorites,
     equipment: filters.equipment,
     categories: filters.categories,
     onlyMine: filters.onlyMine,
     searchQuery: "",
-  });
+  };
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteExercises(queryFilters);
+  const { data: totalCount } = useExercisesCount(queryFilters);
+  const exercises = useMemo(() => data?.pages.flat() ?? [], [data]);
 
   const { isBookmarked, toggle: toggleBookmark } = useExerciseBookmarks();
 
