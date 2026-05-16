@@ -279,6 +279,8 @@ const AthletesList = () => {
       setDeletingInvite(false);
     }
   };
+
+  return (
     <>
       <PhoneShell hasBottomNav title="Vežbači" eyebrow={`${rows.length} ukupno`}>
         {/* Search */}
