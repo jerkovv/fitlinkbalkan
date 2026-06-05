@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'FitLink',
   webDir: 'dist',
   ios: {
-    contentInset: 'always',
+    contentInset: 'never',
     backgroundColor: '#ffffff'
   },
   android: {
