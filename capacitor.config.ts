@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'FitLink',
   webDir: 'dist',
   ios: {
-    contentInset: 'always',
+    contentInset: 'never',
     backgroundColor: '#ffffff'
   },
   android: {
@@ -20,9 +20,9 @@ const config: CapacitorConfig = {
       androidScaleType: 'CENTER_CROP'
     },
     StatusBar: {
-      overlaysWebView: false,
+      overlaysWebView: true,
       style: 'dark',
-      backgroundColor: '#ffffff'
+      backgroundColor: '#ffffff00'
     }
   }
 };

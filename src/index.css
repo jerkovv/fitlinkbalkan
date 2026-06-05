@@ -222,8 +222,9 @@
 
   /* Mobile shell */
   .phone-shell {
-    @apply mx-auto w-full max-w-[440px] min-h-screen relative bg-background;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    @apply mx-auto w-full max-w-[440px] relative bg-background;
+    min-height: 100dvh;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 96px);
     overscroll-behavior-y: contain;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
@@ -239,7 +240,7 @@
     top: 0;
     z-index: 30;
     background: hsl(var(--background));
-    padding-top: calc(env(safe-area-inset-top, 20px) + 12px);
+    padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
   }
 
   .phone-shell-header {
