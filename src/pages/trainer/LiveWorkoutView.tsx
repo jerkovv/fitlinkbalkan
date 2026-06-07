@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ChevronLeft, Heart, Loader2, Activity } from "lucide-react";
+import { ChevronLeft, Heart, Loader2, Activity, Pause } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { Card } from "@/components/ui-bits";
 import { QuickMessagePanel } from "@/components/trainer/QuickMessagePanel";
-import { getHrColor, getHrZone } from "@/lib/workout/hrZone";
+import { getHrColor, getZoneVar } from "@/lib/workout/hrZone";
 
 type LiveState = {
   session_log_id: string;
@@ -17,6 +17,8 @@ type LiveState = {
   current_hr: number | null;
   total_completed_sets: number | null;
   last_heartbeat: string | null;
+  current_state: string | null;
+  rest_ends_at: string | null;
 };
 
 type SessionRow = {
@@ -25,14 +27,6 @@ type SessionRow = {
   started_at: string;
   is_active: boolean;
   hr_series: { ts: string; bpm: number }[] | null;
-};
-
-const ZONE_LABEL: Record<string, string> = {
-  rest: "Mirovanje",
-  easy: "Lagano",
-  moderate: "Umereno",
-  hard: "Intenzivno",
-  max: "Maks",
 };
 
 const HrMiniChart = ({ points }: { points: { ts: string; bpm: number }[] }) => {
@@ -82,6 +76,10 @@ const LiveWorkoutView = () => {
   const nav = useNavigate();
 
   const [state, setState] = useState<LiveState | null>(null);
+  // Broj zone (1-5) iz servera. Tabela workout_live_state nema zonu - racuna se
+  // u get_active_athletes_for_trainer (puls / efektivni max iz konfiga/godina),
+  // pa zonu citamo iz te RPC za ovog vezbaca. null = ne prikazuj zonu.
+  const [hrZone, setHrZone] = useState<number | null>(null);
   const [session, setSession] = useState<SessionRow | null>(null);
   const [athleteName, setAthleteName] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -134,14 +132,35 @@ const LiveWorkoutView = () => {
     setState((data as any) ?? null);
   };
 
+  // Serverski broj zone za ovog vezbaca (ista RPC kao lista aktivnih). Server
+  // racuna zonu istom logikom kao sat, pa se slazu. Osvezava se kad se promeni
+  // puls (realtime) jer zona prati puls.
+  const fetchZone = async () => {
+    if (!athleteId) return;
+    const { data } = await supabase.rpc("get_active_athletes_for_trainer" as any);
+    const row = ((data as any[]) ?? []).find((r) => r.athlete_id === athleteId);
+    setHrZone(row?.hr_zone ?? null);
+  };
+
   useEffect(() => {
     if (!user || !athleteId) return;
     (async () => {
-      await Promise.all([fetchSession(), fetchLiveState()]);
+      await Promise.all([fetchSession(), fetchLiveState(), fetchZone()]);
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, athleteId]);
+
+  // Zona prati puls: kad realtime promeni current_hr, osvezi zonu sa servera.
+  // Nema pulsa -> nema zone (bez RPC i bez praznog prikaza).
+  useEffect(() => {
+    if (state?.current_hr == null) {
+      setHrZone(null);
+      return;
+    }
+    fetchZone();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.current_hr, athleteId]);
 
   // Realtime subscriptions
   useEffect(() => {
@@ -237,8 +256,29 @@ const LiveWorkoutView = () => {
   }
 
   const hr = state?.current_hr ?? null;
-  const hrColor = getHrColor(hr);
-  const zone = getHrZone(hr);
+  // Boja iz FitLink rampe (brand tokeni) kad imamo serversku zonu; inace
+  // fallback na puls-baziranu boju. Bez hardkodiranog hex-a.
+  const zoneVar = getZoneVar(hrZone);
+  const hrColor = zoneVar ? `hsl(var(${zoneVar}))` : getHrColor(hr);
+  const hrColorSoft =
+    hr != null && hr > 0
+      ? zoneVar
+        ? `hsl(var(${zoneVar}) / 0.1)`
+        : `${getHrColor(hr)}1A`
+      : undefined;
+
+  // Odmor: odbrojavanje iz rest_ends_at sa servera, tika svake sekunde preko
+  // `now` (isti tick kao stoperica). Kad istekne (<=0) tretiramo kao aktivno -
+  // server takodje vrati current_state na active. Smirena sky boja iz tokena.
+  const restEndsMs = state?.rest_ends_at ? new Date(state.rest_ends_at).getTime() : null;
+  const restRemainingMs = restEndsMs != null ? restEndsMs - now : 0;
+  const isResting = state?.current_state === "rest" && restRemainingMs > 0;
+  const restLabel = (() => {
+    const total = Math.max(0, Math.ceil(restRemainingMs / 1000));
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  })();
 
   return (
     <div className="min-h-screen bg-background">
@@ -258,10 +298,27 @@ const LiveWorkoutView = () => {
             </button>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
-                <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-success-soft-foreground">
-                  Trenira sad
-                </span>
+                {isResting ? (
+                  <>
+                    <span
+                      className="h-2 w-2 rounded-full"
+                      style={{ background: "hsl(var(--session-sky-fg))" }}
+                    />
+                    <span
+                      className="text-[10px] font-bold uppercase tracking-[0.16em]"
+                      style={{ color: "hsl(var(--session-sky-fg))" }}
+                    >
+                      Na odmoru
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
+                    <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-success-soft-foreground">
+                      Trenira sad
+                    </span>
+                  </>
+                )}
               </div>
               <div className="text-[15px] font-bold leading-tight truncate">{athleteName}</div>
             </div>
@@ -272,6 +329,43 @@ const LiveWorkoutView = () => {
         </div>
 
         <div className="px-4 pt-4 space-y-4">
+          {/* Odmor: jasna ali smirena oznaka sa odbrojavanjem (sky tokeni). */}
+          {isResting && (
+            <div
+              className="rounded-2xl px-4 py-3 flex items-center gap-3"
+              style={{ background: "hsl(var(--session-sky-bg))" }}
+            >
+              <div
+                className="h-11 w-11 rounded-xl inline-flex items-center justify-center shrink-0"
+                style={{ background: "hsl(var(--session-sky-fg) / 0.12)" }}
+              >
+                <Pause
+                  className="h-5 w-5"
+                  strokeWidth={2.4}
+                  fill="currentColor"
+                  style={{ color: "hsl(var(--session-sky-fg))" }}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div
+                  className="text-[10px] font-bold uppercase tracking-[0.16em]"
+                  style={{ color: "hsl(var(--session-sky-fg))" }}
+                >
+                  Odmor
+                </div>
+                <div className="text-[13px] text-muted-foreground leading-tight">
+                  Vežbač se odmara
+                </div>
+              </div>
+              <div
+                className="font-display text-[28px] font-bold tracking-tight tnum leading-none"
+                style={{ color: "hsl(var(--session-sky-fg))" }}
+              >
+                {restLabel}
+              </div>
+            </div>
+          )}
+
           {/* Hero card: current exercise */}
           <Card className="p-5 space-y-3">
             <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
@@ -306,7 +400,7 @@ const LiveWorkoutView = () => {
           {/* Big HR display */}
           <div
             className="card-premium p-5 flex items-center gap-4 transition-colors"
-            style={{ background: hr != null && hr > 0 ? `${hrColor}1A` : undefined }}
+            style={{ background: hrColorSoft }}
           >
             <div
               className={`h-16 w-16 rounded-2xl inline-flex items-center justify-center shrink-0 ${hr != null && hr > 0 ? "animate-pulse" : ""}`}
@@ -324,12 +418,14 @@ const LiveWorkoutView = () => {
                 </span>
                 <span className="text-[12px] font-semibold text-muted-foreground">bpm</span>
               </div>
-              <div
-                className="text-[12px] font-semibold mt-1"
-                style={{ color: hrColor }}
-              >
-                Zona: {ZONE_LABEL[zone]}
-              </div>
+              {hrZone != null && zoneVar && (
+                <div
+                  className="text-[12px] font-semibold mt-1"
+                  style={{ color: `hsl(var(${zoneVar}))` }}
+                >
+                  Zona {hrZone}
+                </div>
+              )}
             </div>
           </div>
 

@@ -21,6 +21,24 @@ export const getHrZone = (bpm: number | null | undefined): HrZone => {
 
 export const getHrColor = (bpm: number | null | undefined) => HR_ZONE_COLOR[getHrZone(bpm)];
 
+// FitLink zone ramp iz brand tokena (NE hardkodirani hex). Mapira serversku
+// zonu pulsa 1-5 na CSS varijable, ista rampa kao na satu:
+// Z1 indigo, Z2 brand violet, Z3 magenta, Z4 amber, Z5 crvena.
+export const HR_ZONE_VAR: Record<number, string> = {
+  1: "--brand-2",      // indigo
+  2: "--brand-1",      // brand violet
+  3: "--brand-3",      // magenta
+  4: "--warning",      // amber
+  5: "--destructive",  // crvena
+};
+
+// Vraca naziv CSS varijable za datu zonu (1-5) ili null ako zona nije validna.
+// Koristi se kao hsl(var(<token>)) i hsl(var(<token>) / alpha) za soft pozadinu.
+export const getZoneVar = (zone: number | null | undefined): string | null => {
+  if (zone == null) return null;
+  return HR_ZONE_VAR[zone] ?? null;
+};
+
 export const formatDuration = (ms: number) => {
   const total = Math.max(0, Math.floor(ms / 1000));
   const h = Math.floor(total / 3600);
