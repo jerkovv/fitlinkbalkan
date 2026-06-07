@@ -8,7 +8,7 @@ import { getHrColor, formatDuration } from "@/lib/workout/hrZone";
 
 type ActiveAthlete = {
   athlete_id: string;
-  full_name: string | null;
+  athlete_name: string | null;
   session_log_id: string;
   started_at: string;
   current_exercise_idx: number | null;
@@ -85,7 +85,7 @@ export const ActiveAthletesList = () => {
       <ul className="space-y-2">
         {athletes.map((a) => {
           const elapsed = a.started_at ? now - new Date(a.started_at).getTime() : 0;
-          const initials = (a.full_name ?? "??").slice(0, 2).toUpperCase();
+          const initials = (a.athlete_name ?? "??").slice(0, 2).toUpperCase();
           const hrColor = getHrColor(a.current_hr);
           const exerciseLabel = a.current_exercise_name
             ? `${a.current_exercise_name} · Serija ${a.current_set_number ?? 1}`
@@ -106,7 +106,7 @@ export const ActiveAthletesList = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-[15px] font-semibold leading-tight tracking-tight truncate">
-                      {a.full_name ?? "Vežbač"}
+                      {a.athlete_name ?? "Vežbač"}
                     </span>
                     <span className="text-[11px] font-semibold text-success-soft-foreground tnum shrink-0">
                       trenira {formatDuration(elapsed)}
