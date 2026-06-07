@@ -5,6 +5,7 @@ import { SectionTitle } from "@/components/ui-bits";
 import { cn } from "@/lib/utils";
 import { Clock, Users, User, Check, Loader2, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { friendlyDbError } from "@/lib/dbError";
 import { useAuth } from "@/hooks/useAuth";
 import {
   sessionColorClasses, dateToWeekday, toIsoDate, formatTime, addMinutesToTime,
@@ -142,7 +143,7 @@ const Booking = () => {
       p_session_type_id: s.session_type_id,
     });
     setActingKey(null);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyDbError(error)); return; }
     toast.success("Termin rezervisan");
     loadDay();
   };
@@ -207,9 +208,9 @@ const Booking = () => {
                   key={d.toISOString()}
                   onClick={() => setSelectedDate(d)}
                   className={cn(
-                    "shrink-0 w-[68px] py-3 rounded-2xl text-center transition border",
+                    "shrink-0 w-[68px] py-3 rounded-2xl overflow-hidden text-center transition border",
                     active
-                      ? "bg-gradient-brand text-primary-foreground shadow-brand border-transparent"
+                      ? "bg-gradient-brand bg-clip-padding text-primary-foreground shadow-brand border-transparent"
                       : "bg-surface border-hairline hover:border-primary/30 text-foreground",
                   )}
                 >

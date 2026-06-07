@@ -12,6 +12,7 @@ import {
   FullScreenSheetFooter,
 } from "@/components/ui/full-screen-sheet";
 import { supabase } from "@/lib/supabase";
+import { friendlyDbError } from "@/lib/dbError";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, Plus, Pencil, Trash2, Package } from "lucide-react";
 import { toast } from "sonner";
@@ -92,7 +93,7 @@ const Packages = () => {
       ? await supabase.from("membership_packages").update(payload).eq("id", editing.id)
       : await supabase.from("membership_packages").insert(payload);
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(friendlyDbError(error));
     toast.success(editing ? "Sačuvano" : "Paket dodat");
     setOpen(false);
     load();

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import { friendlyDbError } from "@/lib/dbError";
 import { useAuth } from "@/hooks/useAuth";
 import { PhoneShell } from "@/components/PhoneShell";
 import { Button } from "@/components/ui/button";
@@ -77,7 +78,7 @@ const ProgramTemplates = () => {
       level: level || null,
     } as any);
     setSubmitting(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyDbError(error)); return; }
     toast.success("Program kreiran");
     setOpen(false);
     setName(""); setDescription(""); setGoal(""); setLevel("");

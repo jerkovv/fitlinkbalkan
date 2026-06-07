@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Card, Chip } from "@/components/ui-bits";
@@ -46,10 +46,24 @@ const monthNames = [
   "Jul", "Avgust", "Septembar", "Oktobar", "Novembar", "Decembar",
 ];
 
+// Parsira YYYY-MM-DD u lokalni Date (bez UTC pomeraja), inace null.
+const parseDateParam = (raw: string | null): Date | null => {
+  if (!raw) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
 const Calendar = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const today = useMemo(() => new Date(), []);
-  const [selectedDate, setSelectedDate] = useState<Date>(today);
+  // Ako notifikacija prosledi ?date=YYYY-MM-DD (slot_date termina), otvori
+  // kalendar na taj dan; inace na danasnji.
+  const [selectedDate, setSelectedDate] = useState<Date>(
+    () => parseDateParam(searchParams.get("date")) ?? today,
+  );
   const [slots, setSlots] = useState<Slot[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [athletes, setAthletes] = useState<AthleteOpt[]>([]);
@@ -345,36 +359,40 @@ const Calendar = () => {
       <Dialog open={!!openSlot} onOpenChange={(v) => !v && setOpenSlot(null)}>
         <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2.5 text-left">
               {openSlot && (
                 <span
                   className={cn(
-                    "h-2 w-2 rounded-full",
-                    sessionColorClasses(openSlot.type_color).dot,
+                    "h-9 w-9 rounded-xl flex items-center justify-center shrink-0",
+                    sessionColorClasses(openSlot.type_color).bg,
+                    sessionColorClasses(openSlot.type_color).fg,
                   )}
-                />
+                >
+                  <CalIcon className="h-[18px] w-[18px]" strokeWidth={2.25} />
+                </span>
               )}
-              {openSlot?.type_name}
+              <span className="font-display">{openSlot?.type_name}</span>
             </DialogTitle>
           </DialogHeader>
 
           {openSlot && (() => {
             const slotBookings = bookingsForSlot(openSlot);
             const endTime = addMinutesToTime(formatTime(openSlot.start_time), openSlot.duration_min);
+            const colors = sessionColorClasses(openSlot.type_color);
             return (
               <div className="space-y-4 overflow-y-auto">
                 <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="bg-surface-2 rounded-xl p-2.5">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Vreme</div>
-                    <div className="font-display font-bold text-[14px] tnum">{formatTime(openSlot.start_time)}–{endTime}</div>
+                  <div className="bg-surface-2 border border-hairline rounded-xl p-2.5">
+                    <div className="text-[9.5px] font-semibold uppercase tracking-wider text-muted-foreground">Vreme</div>
+                    <div className="font-display font-bold text-[13px] tnum mt-0.5">{formatTime(openSlot.start_time)}-{endTime}</div>
                   </div>
-                  <div className="bg-surface-2 rounded-xl p-2.5">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Učesnika</div>
-                    <div className="font-display font-bold text-[14px] tnum">{slotBookings.length}/{openSlot.capacity}</div>
+                  <div className="bg-surface-2 border border-hairline rounded-xl p-2.5">
+                    <div className="text-[9.5px] font-semibold uppercase tracking-wider text-muted-foreground">Učesnika</div>
+                    <div className="font-display font-bold text-[15px] tnum mt-0.5">{slotBookings.length}/{openSlot.capacity}</div>
                   </div>
-                  <div className="bg-surface-2 rounded-xl p-2.5">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Trajanje</div>
-                    <div className="font-display font-bold text-[14px] tnum">{openSlot.duration_min}m</div>
+                  <div className="bg-surface-2 border border-hairline rounded-xl p-2.5">
+                    <div className="text-[9.5px] font-semibold uppercase tracking-wider text-muted-foreground">Trajanje</div>
+                    <div className="font-display font-bold text-[15px] tnum mt-0.5">{openSlot.duration_min}m</div>
                   </div>
                 </div>
 
@@ -392,10 +410,10 @@ const Calendar = () => {
                           className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-surface-2"
                         >
                           <Link
-                            to={`/trener/vezbac/${b.athlete_id}`}
+                            to={`/trener/vezbaci/${b.athlete_id}`}
                             className="flex items-center gap-2.5 flex-1 min-w-0 hover:text-primary transition"
                           >
-                            <div className="h-8 w-8 rounded-full bg-gradient-brand-soft flex items-center justify-center text-[11px] font-bold text-primary shrink-0">
+                            <div className={cn("h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0", colors.bg, colors.fg)}>
                               {(athleteName(b.athlete_id)[0] ?? "?").toUpperCase()}
                             </div>
                             <span className="font-semibold text-[13px] truncate">
@@ -416,13 +434,15 @@ const Calendar = () => {
                 </div>
 
                 {!openSlot.is_canceled && openSlot.template_id && (
-                  <Button
-                    variant="outline"
-                    className="w-full text-destructive hover:bg-destructive-soft"
-                    onClick={() => cancelSlot(openSlot)}
-                  >
-                    <Ban className="h-3.5 w-3.5 mr-1.5" /> Otkaži termin za ovaj dan
-                  </Button>
+                  <div className="pt-3 border-t border-hairline">
+                    <Button
+                      variant="outline"
+                      className="w-full text-destructive hover:bg-destructive-soft"
+                      onClick={() => cancelSlot(openSlot)}
+                    >
+                      <Ban className="h-3.5 w-3.5 mr-1.5" /> Otkaži termin za ovaj dan
+                    </Button>
+                  </div>
                 )}
               </div>
             );

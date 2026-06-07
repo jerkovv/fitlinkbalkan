@@ -129,7 +129,12 @@ export const NotificationBell = () => {
           )}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[340px] p-0 overflow-hidden">
+      <DropdownMenuContent
+        align="end"
+        sideOffset={8}
+        collisionPadding={12}
+        className="w-[calc(100vw-24px)] max-w-[360px] p-0 overflow-hidden"
+      >
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="font-semibold text-[14px] tracking-tight">Notifikacije</div>
           {unreadCount > 0 && (
