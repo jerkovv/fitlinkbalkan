@@ -72,6 +72,13 @@ private struct PolledWorkout: Decodable {
     // Poslednja poruka trenera za sesiju (može null). Ide zasebnim kanalom,
     // mimo dedupa stanja, da promena samo poruke ne bude odbačena.
     let trainerMessage: TrainerMessage?
+    // Zone pulsa: efektivni max puls, broj zone 1-5 i naziv (sve može null).
+    // Ide zasebnim kanalom (kao poruka) jer se menja svaki tick, mimo dedupa.
+    let hrMax: Int?
+    let hrZone: Int?
+    let hrZoneName: String?
+    // Apsolutni pocetak treninga, epoch ms - za proteklo vreme na zonskom ekranu.
+    let startedAtMs: Double?
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
@@ -82,7 +89,21 @@ private struct PolledWorkout: Decodable {
         case currentHr = "current_hr"
         case restEndsAtMs = "rest_ends_at_ms"
         case trainerMessage = "trainer_message"
+        case hrMax = "hr_max"
+        case hrZone = "hr_zone"
+        case hrZoneName = "hr_zone_name"
+        case startedAtMs = "started_at_ms"
     }
+}
+
+// Snapshot zona pulsa za zonski ekran (assemblira se iz poll-a, ne dekoduje se
+// direktno). Ide na svaki tick - zonski prikaz je uvek svež, bez dedupa.
+struct HeartRateZoneInfo: Equatable {
+    let currentHr: Int?
+    let hrMax: Int?
+    let zone: Int?
+    let zoneName: String?
+    let startedAtMs: Double?
 }
 
 // Klasa zadrzava ISTO IME i ISTI API kao stari WebSocket klijent
@@ -96,6 +117,8 @@ final class SupabaseRealtimeClient: ObservableObject {
     // Okida se kad poll donese trainer_message (na SVAKI tick gde poruka postoji,
     // mimo dedupa stanja). ContentView dedupuje po id - vibrira/prikazuje jednom.
     var onTrainerMessage: ((TrainerMessage) -> Void)?
+    // Okida se na SVAKI poll dok ima treninga - zonski ekran je uvek svež.
+    var onHeartRateZone: ((HeartRateZoneInfo) -> Void)?
     // Okida se na svaki poll tick - ContentView ga koristi da retry-uje
     // handshake dok je identitet nesiguran (telefon bio nedostupan).
     var onPollTick: (() -> Void)?
@@ -187,6 +210,14 @@ final class SupabaseRealtimeClient: ObservableObject {
                 if let trainerMessage = workout.trainerMessage {
                     onTrainerMessage?(trainerMessage)
                 }
+                // Zone pulsa takodje mimo dedupa - menjaju se svaki tick.
+                onHeartRateZone?(HeartRateZoneInfo(
+                    currentHr: workout.currentHr,
+                    hrMax: workout.hrMax,
+                    zone: workout.hrZone,
+                    zoneName: workout.hrZoneName,
+                    startedAtMs: workout.startedAtMs
+                ))
                 handleWorkoutPolled(workout, serverNowMs: response.serverNowMs)
                 lastHadWorkout = true
             } else {

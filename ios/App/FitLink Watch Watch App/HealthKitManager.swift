@@ -11,6 +11,10 @@ final class HealthKitManager: NSObject, ObservableObject {
     private let healthStore = HKHealthStore()
     
     @Published var currentHeartRate: Int = 0
+    // Prosecan puls i aktivne kalorije - iz live statistike workout buildera.
+    // Bez nove dozvole: heartRate i activeEnergyBurned su vec u typesToRead.
+    @Published var averageHeartRate: Int = 0
+    @Published var activeCalories: Int = 0
     @Published var isAuthorized: Bool = false
     @Published var isWorkoutActive: Bool = false
     
@@ -77,6 +81,10 @@ final class HealthKitManager: NSObject, ObservableObject {
             workoutSession?.delegate = self
             workoutBuilder?.delegate = self
             
+            // Reset agregata na pocetku nove sesije.
+            averageHeartRate = 0
+            activeCalories = 0
+
             let startDate = Date()
             workoutSession?.startActivity(with: startDate)
             workoutBuilder?.beginCollection(withStart: startDate) { success, error in
@@ -118,6 +126,8 @@ final class HealthKitManager: NSObject, ObservableObject {
         
         isWorkoutActive = false
         currentHeartRate = 0
+        averageHeartRate = 0
+        activeCalories = 0
     }
 }
 
@@ -158,23 +168,36 @@ extension HealthKitManager: HKLiveWorkoutBuilderDelegate {
     nonisolated func workoutBuilder(_ workoutBuilder: HKLiveWorkoutBuilder, didCollectDataOf collectedTypes: Set<HKSampleType>) {
         for type in collectedTypes {
             guard let quantityType = type as? HKQuantityType else { continue }
-            
+
             if quantityType == HKObjectType.quantityType(forIdentifier: .heartRate) {
                 let statistics = workoutBuilder.statistics(for: quantityType)
-                
+                let hrUnit = HKUnit.count().unitDivided(by: HKUnit.minute())
+
                 if let mostRecent = statistics?.mostRecentQuantity() {
-                    let unit = HKUnit.count().unitDivided(by: HKUnit.minute())
-                    let bpm = Int(mostRecent.doubleValue(for: unit))
+                    let bpm = Int(mostRecent.doubleValue(for: hrUnit))
 
                     // HealthKit povremeno vraća 0 kad optički sensor izgubi
                     // kontakt (pokret, znoj). Drži poslednju validnu vrednost
                     // umesto da treperi UI na praznu.
-                    guard bpm > 0 else { return }
+                    guard bpm > 0 else { continue }
+
+                    // Prosek za ceo trening (averageQuantity nad agregatom sesije).
+                    let avg = statistics?.averageQuantity().map { Int($0.doubleValue(for: hrUnit)) } ?? 0
 
                     Task { @MainActor in
                         self.currentHeartRate = bpm
+                        if avg > 0 { self.averageHeartRate = avg }
                         self.onHeartRateUpdate?(bpm)
-                        print("HealthKit: HR updated to \(bpm) BPM")
+                        print("HealthKit: HR \(bpm) BPM, avg \(avg)")
+                    }
+                }
+            } else if quantityType == HKObjectType.quantityType(forIdentifier: .activeEnergyBurned) {
+                // Aktivne kalorije: kumulativni zbir od pocetka sesije.
+                let statistics = workoutBuilder.statistics(for: quantityType)
+                if let sum = statistics?.sumQuantity() {
+                    let kcal = Int(sum.doubleValue(for: HKUnit.kilocalorie()))
+                    Task { @MainActor in
+                        self.activeCalories = kcal
                     }
                 }
             }
