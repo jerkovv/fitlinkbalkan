@@ -25,3 +25,9 @@ dist-ssr
 
 # Claude Code worktrees (izolovani radni prostori za AI agente)
 .claude/worktrees/
+
+# Supabase CLI privremeni fajlovi
+supabase/.temp/
+
+# Xcode per-user stanje
+**/xcuserdata/
