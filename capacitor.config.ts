@@ -1,11 +1,12 @@
 import { CapacitorConfig } from '@capacitor/cli';
+import { KeyboardResize } from '@capacitor/keyboard';
 
 const config: CapacitorConfig = {
   appId: 'rs.fitlink.app',
   appName: 'FitLink',
   webDir: 'dist',
   ios: {
-    contentInset: 'always',
+    contentInset: 'never',
     backgroundColor: '#ffffff'
   },
   android: {
@@ -23,6 +24,9 @@ const config: CapacitorConfig = {
       overlaysWebView: false,
       style: 'dark',
       backgroundColor: '#ffffff'
+    },
+    Keyboard: {
+      resize: KeyboardResize.None
     }
   }
 };
