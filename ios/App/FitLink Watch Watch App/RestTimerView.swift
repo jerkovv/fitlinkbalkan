@@ -11,7 +11,7 @@ struct RestTimerView: View {
     @Binding var heartRate: Int
     let onComplete: () -> Void
     let onSkip: () -> Void
-    // Sat → telefon: +30 ide kroz server (Ruta A, watch_button_events).
+    // +30 ide direktno u motor (watch_extend_rest), kao complete i skip.
     let onAddRest: (Int) -> Void
 
     // ARHITEKTURA (bez kasnjenja od jednog ciklusa):
@@ -45,9 +45,11 @@ struct RestTimerView: View {
     }
 
     // Racuna se iz ZIVOG prop-a restEndsAt (+ optimistic) i now. Uvek svez.
+    // ceil (.up), ne round: na startu pun broj sekundi, a nulu pogodi tacno na
+    // kraju. Isto pravilo kao na telefonu, da se prikazi slazu.
     private var secondsRemaining: Int {
         guard let end = effectiveEnd else { return 0 }
-        return max(0, Int(end.timeIntervalSince(serverNow()).rounded()))
+        return max(0, Int(end.timeIntervalSince(serverNow()).rounded(.up)))
     }
 
     private var progress: Double {

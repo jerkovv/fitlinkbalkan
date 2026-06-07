@@ -50,8 +50,10 @@ const playDing = () => {
   }
 };
 
+// ceil (ne round/floor): na startu pokaže pun broj sekundi, a nulu pogodi tačno
+// na kraju. Isto pravilo kao na satu, da se prikazi slažu.
 const remainingFrom = (endsAt: number) =>
-  Math.max(0, Math.round((endsAt - Date.now()) / 1000));
+  Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
 
 export const RestTimer = ({ endsAt, onDone, subtitle, onAddSeconds }: RestTimerProps) => {
   // Tick samo da forsira re-render; remaining se UVEK racuna iz endsAt - now,

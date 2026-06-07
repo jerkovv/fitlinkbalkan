@@ -70,7 +70,7 @@ struct ContentView: View {
         }
         // Vidljiva build oznaka - cisto za potvrdu da sat dobija nove build-ove.
         .overlay(alignment: .bottomTrailing) {
-            Text("build T9")
+            Text("build T10")
                 .font(.system(size: 9, weight: .bold))
                 .foregroundColor(.white.opacity(0.55))
                 .padding(.trailing, 4)
@@ -489,15 +489,19 @@ struct ContentView: View {
         }
     }
 
-    // Sat → telefon: +30. Telefon je jedini izvor istine - upise novi
-    // apsolutni rest_ends_at, koji se vrati kroz poll i zameni optimisticki bump.
-    // Fire-and-forget jednom po tapu (BEZ retry-a) da se ne ubaci dupli event.
+    // +30 ide direktno u motor (watch_extend_rest), kao complete i skip. Server
+    // doda sekunde na rest_ends_at i vrati kroz poll; sat ima optimisticki bump
+    // kroz effectiveEnd. Bez watch_button_events - radi i kad telefon spava.
     private func handleAddRest(_ seconds: Int) {
         Task {
-            guard let token = effectiveToken else { return }
+            guard let token = effectiveToken, let sessionId = currentSessionId else { return }
             do {
-                try await SupabaseClient.shared.extendRest(token: token, extraSeconds: seconds)
-                print("Watch button: extend_rest (+\(seconds)) sent to iPhone")
+                try await SupabaseClient.shared.engineExtendRest(
+                    token: token, sessionId: sessionId, seconds: seconds
+                )
+                print("Watch engine: extend_rest (+\(seconds)) [session \(sessionId)]")
+            } catch SupabaseError.sessionEnded {
+                await MainActor.run { handleWorkoutDeleted() }
             } catch {
                 print("Extend rest error: \(error.localizedDescription)")
             }

@@ -144,10 +144,6 @@ final class SupabaseClient {
     }
     
     @discardableResult
-    func extendRest(token: String, extraSeconds: Int = 30) async throws -> Bool {
-        return try await pressButton(token: token, rpcName: "watch_press_extend_button")
-    }
-    @discardableResult
     func finishWorkout(token: String) async throws -> Bool {
         return try await pressButton(token: token, rpcName: "watch_press_finish_button")
     }
@@ -181,6 +177,15 @@ final class SupabaseClient {
     func engineFinishWorkout(token: String, sessionId: String) async throws -> Bool {
         let body: [String: Any] = ["p_token": token, "p_session_id": sessionId]
         return try await callEngine(rpcName: "watch_finish_workout", body: body)
+    }
+
+    @discardableResult
+    func engineExtendRest(token: String, sessionId: String, seconds: Int = 30) async throws -> Bool {
+        // +30 sada ide kroz motor (server doda p_seconds na rest_ends_at samo ako je
+        // current_state rest). Radi i kad telefon spava. Prikaz prati poll; sat ima
+        // optimisticki bump kroz effectiveEnd. not_in_rest -> success=false (bez throw).
+        let body: [String: Any] = ["p_token": token, "p_session_id": sessionId, "p_seconds": seconds]
+        return try await callEngine(rpcName: "watch_extend_rest", body: body)
     }
 
     // Zajednicki decode za engine RPC-ove. Server vraca jsonb sa bar success/error

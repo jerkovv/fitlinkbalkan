@@ -465,26 +465,25 @@ const ActiveWorkout = () => {
     };
   }, [sessionId, liveHr, finished]);
 
-  /* ------------------------- Helper: produži odmor (+30, privremeno rest-only upis) ------------------------- */
+  /* ------------------------- Helper: produži odmor (+30 kroz motor) ------------------------- */
   const handleAddRest = useCallback(
     async (extraSeconds: number) => {
       const p = posRef.current;
       if (!sessionId || !p || !p.restEndsAtMs) return;
-      const newClientEnd = p.restEndsAtMs + extraSeconds * 1000;
 
+      // Optimistički bump prikaza; poll uskladi sa serverskim rest_ends_at.
+      const newClientEnd = p.restEndsAtMs + extraSeconds * 1000;
       lastActionAtRef.current = Date.now();
       setPos((prev) => (prev ? { ...prev, restEndsAtMs: newClientEnd } : prev));
 
-      // Samo polje rest_ends_at (NIJE pozicija). Apsolutno serversko vreme = klijent + offset.
-      const serverEnd = new Date(newClientEnd + clockOffsetRef.current);
-      await supabase
-        .from("workout_live_state" as any)
-        .update({
-          rest_ends_at: serverEnd.toISOString(),
-          last_heartbeat: new Date().toISOString(),
-        } as any)
-        .eq("session_log_id", sessionId);
+      // +30 ide u motor (athlete_extend_rest doda sekunde samo ako je state rest),
+      // isti izvor istine kao sat. Nema više direktnog upisa rest_ends_at.
+      const { error } = await supabase.rpc("athlete_extend_rest", {
+        p_session_id: sessionId,
+        p_seconds: extraSeconds,
+      } as any);
       lastActionAtRef.current = Date.now();
+      if (error) toast.error(error.message);
     },
     [sessionId]
   );
@@ -544,12 +543,17 @@ const ActiveWorkout = () => {
       const nextIdx = isLastSet ? p.exerciseIdx + 1 : p.exerciseIdx;
       const nextSet = isLastSet ? 1 : p.setNumber + 1;
       const nextEx = day.exercises[nextIdx];
+      // Kraj odmora računamo kao serverNow + trajanje (serverNow = Date.now + offset),
+      // pa vratimo u KLIJENT epohu (kao i poll: serverRestMs - offset). Tako se
+      // optimistički kraj poklopi sa serverskim i nema skoka kad poll stigne.
+      const serverNowMs = Date.now() + clockOffsetRef.current;
+      const serverRestEndMs = serverNowMs + restSec * 1000;
       setPos({
         exerciseIdx: nextIdx,
         setNumber: nextSet,
         totalSets: nextEx?.sets ?? p.totalSets,
         state: "rest",
-        restEndsAtMs: Date.now() + restSec * 1000,
+        restEndsAtMs: serverRestEndMs - clockOffsetRef.current,
         startedAtMs: p.startedAtMs,
         currentHr: p.currentHr,
       });
@@ -606,60 +610,6 @@ const ActiveWorkout = () => {
     setCloseOpen(false);
     nav("/vezbac");
   };
-
-  /* ------------------------- Watch button events (samo +30) ------------------------- */
-  // Sat sada zove engine direktno (complete/skip), pa ih telefon NE obrađuje ovde.
-  // Ostaje samo extend_rest_30s jer +30 i dalje ide preko watch_button_events.
-  const handleAddRestRef = useRef(handleAddRest);
-  const processedEventIdsRef = useRef<Set<string>>(new Set());
-  useEffect(() => { handleAddRestRef.current = handleAddRest; }, [handleAddRest]);
-
-  useEffect(() => {
-    if (!user || !sessionId) return;
-
-    const channel = supabase
-      .channel(`watch-events:${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "watch_button_events",
-          filter: `athlete_id=eq.${user.id}`,
-        },
-        async (payload) => {
-          const event = payload.new as any;
-          if (!event || !event.id) return;
-
-          if (processedEventIdsRef.current.has(event.id)) return;
-          processedEventIdsRef.current.add(event.id);
-
-          const eventAge = Date.now() - new Date(event.created_at).getTime();
-          if (eventAge > 30000) {
-            await supabase.from("watch_button_events" as any).delete().eq("id", event.id);
-            return;
-          }
-
-          try {
-            if (event.event_type === "extend_rest_30s") {
-              if (posRef.current?.state === "rest") {
-                handleAddRestRef.current(30);
-              }
-            }
-            // complete_set / skip_rest: sat ih sada šalje direktno motoru, ignorišemo.
-          } catch (err) {
-            console.error("Error processing watch event:", err);
-          }
-
-          await supabase.from("watch_button_events" as any).delete().eq("id", event.id);
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, sessionId]);
 
   /* ------------------------- Render ------------------------- */
   if (loading || !pos) {
