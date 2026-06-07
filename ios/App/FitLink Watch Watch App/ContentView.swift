@@ -57,7 +57,8 @@ struct ContentView: View {
                     totalSets: currentWorkout.totalSets,
                     heartRate: $heartRate,
                     onComplete: handleRestComplete,
-                    onSkip: handleRestSkip
+                    onSkip: handleRestSkip,
+                    onAddRest: handleAddRest
                 )
                 
             case .completed:
@@ -66,7 +67,7 @@ struct ContentView: View {
         }
         // Vidljiva build oznaka - cisto za potvrdu da sat dobija nove build-ove.
         .overlay(alignment: .bottomTrailing) {
-            Text("build T3")
+            Text("build T6")
                 .font(.system(size: 9, weight: .bold))
                 .foregroundColor(.white.opacity(0.55))
                 .padding(.trailing, 4)
@@ -441,6 +442,21 @@ struct ContentView: View {
                 print("Watch button: skip_rest sent to iPhone")
             } catch {
                 print("Skip rest error: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    // Sat → telefon: +30. Telefon je jedini izvor istine - upise novi
+    // apsolutni rest_ends_at, koji se vrati kroz poll i zameni optimisticki bump.
+    // Fire-and-forget jednom po tapu (BEZ retry-a) da se ne ubaci dupli event.
+    private func handleAddRest(_ seconds: Int) {
+        Task {
+            guard let token = effectiveToken else { return }
+            do {
+                try await SupabaseClient.shared.extendRest(token: token, extraSeconds: seconds)
+                print("Watch button: extend_rest (+\(seconds)) sent to iPhone")
+            } catch {
+                print("Extend rest error: \(error.localizedDescription)")
             }
         }
     }

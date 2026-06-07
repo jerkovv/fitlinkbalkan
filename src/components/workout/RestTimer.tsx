@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Plus, SkipForward } from "lucide-react";
 
 interface RestTimerProps {
-  /** Target rest in seconds. */
-  targetSeconds: number;
+  /** Apsolutni kraj odmora (epoch ms). Prikaz = endsAt - now, jedini izvor istine. */
+  endsAt: number;
   /** Called when timer reaches 0 OR user presses Preskoci. */
   onDone: () => void;
   /** Optional title above timer (e.g. "Sledeca serija 2 od 4"). */
@@ -50,9 +50,15 @@ const playDing = () => {
   }
 };
 
-export const RestTimer = ({ targetSeconds, onDone, subtitle, onAddSeconds }: RestTimerProps) => {
-  const [target, setTarget] = useState(targetSeconds);
-  const [elapsed, setElapsed] = useState(0);
+const remainingFrom = (endsAt: number) =>
+  Math.max(0, Math.round((endsAt - Date.now()) / 1000));
+
+export const RestTimer = ({ endsAt, onDone, subtitle, onAddSeconds }: RestTimerProps) => {
+  // Tick samo da forsira re-render; remaining se UVEK racuna iz endsAt - now,
+  // pa promena endsAt (+30 sa telefona ili sata) odmah i glatko pomeri prikaz.
+  const [, setTick] = useState(0);
+  // Prsten: maksimum koji raste na produzenje, nikad ne skace unazad.
+  const [maxSeconds, setMaxSeconds] = useState(() => Math.max(1, remainingFrom(endsAt)));
   const firedRef = useRef(false);
   const onDoneRef = useRef(onDone);
 
@@ -60,20 +66,21 @@ export const RestTimer = ({ targetSeconds, onDone, subtitle, onAddSeconds }: Res
     onDoneRef.current = onDone;
   }, [onDone]);
 
+  // Novi ili produzen odmor: re-arm "done" i po potrebi povecaj prsten.
   useEffect(() => {
-    setTarget(targetSeconds);
-    setElapsed(0);
     firedRef.current = false;
-  }, [targetSeconds]);
+    setMaxSeconds((m) => Math.max(m, remainingFrom(endsAt), 1));
+  }, [endsAt]);
 
   useEffect(() => {
     const id = setInterval(() => {
-      setElapsed((e) => e + 1);
+      setTick((t) => t + 1);
     }, 1000);
     return () => clearInterval(id);
   }, []);
 
-  const remaining = Math.max(0, target - elapsed);
+  const remaining = remainingFrom(endsAt);
+  const elapsed = Math.max(0, maxSeconds - remaining);
 
   useEffect(() => {
     if (remaining <= 0 && !firedRef.current) {
@@ -87,7 +94,7 @@ export const RestTimer = ({ targetSeconds, onDone, subtitle, onAddSeconds }: Res
 
   const radius = 110;
   const circ = 2 * Math.PI * radius;
-  const pct = target > 0 ? remaining / target : 0;
+  const pct = maxSeconds > 0 ? remaining / maxSeconds : 0;
   const offset = circ * (1 - pct);
 
   return (
@@ -133,7 +140,7 @@ export const RestTimer = ({ targetSeconds, onDone, subtitle, onAddSeconds }: Res
             {fmt(remaining)}
           </span>
           <span className="text-[12px] text-muted-foreground mt-2 tnum">
-            {fmt(elapsed)} / {fmt(target)}
+            {fmt(elapsed)} / {fmt(maxSeconds)}
           </span>
         </div>
       </div>
@@ -141,7 +148,7 @@ export const RestTimer = ({ targetSeconds, onDone, subtitle, onAddSeconds }: Res
       <div className="flex items-center gap-3 mt-10 w-full max-w-[360px]">
         <button
           onClick={() => {
-            setTarget((t) => t + 30);
+            // Parent upise novi rest_ends_at; prikaz prati endsAt (jedini izvor).
             firedRef.current = false;
             onAddSeconds?.(30);
           }}
@@ -151,7 +158,6 @@ export const RestTimer = ({ targetSeconds, onDone, subtitle, onAddSeconds }: Res
         </button>
         <button
           onClick={() => {
-            setTarget((t) => t + 60);
             firedRef.current = false;
             onAddSeconds?.(60);
           }}

@@ -93,7 +93,9 @@ const ActiveWorkout = () => {
   const [completedSets, setCompletedSets] = useState<CompletedSet[]>([]);
   const [currentSetStartedAt, setCurrentSetStartedAt] = useState<Date>(new Date());
 
-  const [resting, setResting] = useState<{ seconds: number; subtitle: string } | null>(null);
+  // endsAt = apsolutni kraj odmora (epoch ms). Prikaz racuna remaining = endsAt - now,
+  // pa +30 sa BILO kog uredjaja (telefon ili sat preko baze) glatko pomeri prikaz.
+  const [resting, setResting] = useState<{ endsAt: number; subtitle: string } | null>(null);
   const [closeOpen, setCloseOpen] = useState(false);
   const [finishing, setFinishing] = useState(false);
 
@@ -284,20 +286,28 @@ const ActiveWorkout = () => {
     let stopped = false;
     const upsert = async () => {
       if (stopped) return;
-      const ex = day.exercises[exerciseIdx];
+
+      // Flap fix: tokom odmora writeLiveState upisuje TARGET (sledeću) seriju,
+      // a React setNumber/exerciseIdx se ne pomeraju dok rest ne završi. Da se
+      // dva pisca ne svađaju oko current_set_number, heartbeat koristi ISTI
+      // izvor istine — restTargetRef — dok smo u rest stanju.
+      const isResting = liveStateRef.current === "rest";
+      const target = restTargetRef.current;
+      const liveExIdx = isResting && target ? target.exerciseIdx : exerciseIdx;
+      const liveSetNum = isResting && target ? target.setNumber : setNumber;
+      const ex = day.exercises[liveExIdx];
       if (!ex) return;
 
-      const restEndsAt =
-        liveStateRef.current === "rest"
-          ? restEndsAtRef.current?.toISOString() ?? null
-          : null;
+      const restEndsAt = isResting
+        ? restEndsAtRef.current?.toISOString() ?? null
+        : null;
 
       const payload = {
         session_log_id: sessionId,
         athlete_id: user.id,
-        current_exercise_idx: exerciseIdx,
+        current_exercise_idx: liveExIdx,
         current_exercise_name: ex.exercise.name_en?.trim() || ex.exercise.name,
-        current_set_number: setNumber,
+        current_set_number: liveSetNum,
         total_sets: ex.sets,
         current_state: liveStateRef.current,
         current_hr: liveHr,
@@ -410,6 +420,9 @@ const ActiveWorkout = () => {
         state: "rest",
         restEndsAt: newEnd,
       });
+      // Pomeri i lokalni prikaz na telefonu (jedini izvor prikaza je endsAt).
+      // Vazi i za +30 sa telefona i za watch event koji zove ovaj isti helper.
+      setResting((prev) => (prev ? { ...prev, endsAt: newEnd.getTime() } : prev));
     },
     [writeLiveState]
   );
@@ -504,7 +517,7 @@ const ActiveWorkout = () => {
         });
       }
 
-      setResting({ seconds: restSec, subtitle: nextSubtitle });
+      setResting({ endsAt: restEnd.getTime(), subtitle: nextSubtitle });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [current, sessionId, setNumber, currentSetStartedAt, exerciseIdx, exercises, writeLiveState]
@@ -620,6 +633,9 @@ const ActiveWorkout = () => {
   const handleRestDoneRef = useRef(handleRestDone);
   const handleAddRestRef = useRef(handleAddRest);
   const restingRef = useRef(resting);
+  // Idempotencija: isti watch_button_events red ne sme da se primeni dvaput
+  // (realtime ume da isporuci duplikat). Bez ovoga bi extend_rest_30s dodao +60.
+  const processedEventIdsRef = useRef<Set<string>>(new Set());
   const currentRef = useRef(current);
 
   useEffect(() => { handleSetCompleteRef.current = handleSetComplete; }, [handleSetComplete]);
@@ -648,14 +664,22 @@ const ActiveWorkout = () => {
           console.log("WATCH EVENT received:", event);
           
           if (!event || !event.id) return;
-          
+
+          // Primeni svaki event tacno jednom. Realtime ume da isporuci isti red
+          // dvaput; bez ove brane bi +30 postao +60.
+          if (processedEventIdsRef.current.has(event.id)) {
+            console.log("Watch event already processed, skipping:", event.id);
+            return;
+          }
+          processedEventIdsRef.current.add(event.id);
+
           const eventAge = Date.now() - new Date(event.created_at).getTime();
           if (eventAge > 30000) {
             console.log("Watch event too old, ignoring and deleting");
             await supabase.from("watch_button_events" as any).delete().eq("id", event.id);
             return;
           }
-          
+
           try {
             if (event.event_type === "complete_set") {
               if (restingRef.current) {
@@ -679,8 +703,9 @@ const ActiveWorkout = () => {
               }
             } else if (event.event_type === "extend_rest_30s") {
               if (restingRef.current) {
+                // handleAddRest sam pomera restEndsAtRef + resting.endsAt + upise
+                // bazu. Bez rucnog seconds bump-a (dupli izvor je pravio trzanje).
                 handleAddRestRef.current(30);
-                setResting((prev) => prev ? { ...prev, seconds: prev.seconds + 30 } : prev);
               }
             }
           } catch (err) {
@@ -930,7 +955,7 @@ const ActiveWorkout = () => {
 
       {resting && (
         <RestTimer
-          targetSeconds={resting.seconds}
+          endsAt={resting.endsAt}
           subtitle={resting.subtitle}
           onDone={handleRestDone}
           onAddSeconds={handleAddRest}

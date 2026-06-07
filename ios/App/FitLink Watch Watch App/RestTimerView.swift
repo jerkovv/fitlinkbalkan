@@ -2,9 +2,7 @@ import SwiftUI
 import WatchKit
 
 struct RestTimerView: View {
-    // Sloj 2: apsolutni kraj odmora sa servera + offset serverskog sata.
-    // Odbrojavanje se racuna iz sata (restEndsAt - serverNow), lokalni tajmer
-    // samo okida preracun svake sekunde.
+    // Apsolutni kraj odmora sa servera + offset serverskog sata (ZIVI prop-ovi).
     let restEndsAt: Date?
     let serverClockOffset: TimeInterval
     let nextExerciseName: String
@@ -13,65 +11,73 @@ struct RestTimerView: View {
     @Binding var heartRate: Int
     let onComplete: () -> Void
     let onSkip: () -> Void
+    // Sat → telefon: +30 ide kroz server (Ruta A, watch_button_events).
+    let onAddRest: (Int) -> Void
 
-    @State private var secondsRemaining: Int = 0
-    @State private var maxSeconds: Int = 0
-    @State private var timer: Timer?
-    // Lokalni +30 (Sloj 2 ostaje lokalno, NE zove watch_set_rest_ends_at).
-    @State private var localExtra: TimeInterval = 0
+    // ARHITEKTURA (bez kasnjenja od jednog ciklusa):
+    // - `now` je jedini "klok" koji tajmer kuca svake sekunde. Tajmer NE cita
+    //   prop-ove (da ne zamrzne stari restEndsAt u closure-u), samo postavlja now.
+    // - `secondsRemaining` se racuna u TELU view-a iz ZIVOG prop-a restEndsAt i
+    //   now. Kad poll donese novi restEndsAt, telo se odmah preracuna sa svezom
+    //   vrednoscu - prikaz skoci istog rendera, bez ogledala punjenog kroz onChange.
+    // - Optimisticki watch +30 ide kroz `optimisticEndDate`; prikaz koristi
+    //   max(restEndsAt, optimisticEndDate). Cim server dostigne/premasi tu
+    //   vrednost, max() vraca serversku - pa nema ni +60 ni kasnjenja, nezavisno
+    //   od toga kad se optimisticEndDate ocisti (cisti se poredjenjem vrednosti).
+    @State private var now: Date = Date()
+    @State private var optimisticEndDate: Date? = nil
+    @State private var maxSeconds: Int = 1
     @State private var didComplete: Bool = false
+    @State private var timer: Timer?
 
-    // Ogledala ulaznih `let` vrednosti u @State. KLJUCNO: Timer closure hvata
-    // `self` (struct) na .onAppear i `restEndsAt`/`serverClockOffset` kao `let`
-    // ostaju zamrznuti u toj kopiji. @State se cita/pise kroz spoljni storage,
-    // pa stari closure uvek vidi AKTUELNU vrednost. Bez ovoga +30 sa telefona
-    // (rast restEndsAt usred odmora) ne menja prikaz - tick preracuna sa starim.
-    @State private var endDate: Date? = nil
-    @State private var clockOffset: TimeInterval = 0
-
-    private func syncFromInputs() {
-        endDate = restEndsAt
-        clockOffset = serverClockOffset
+    // Efektivni kraj = kasniji od serverskog i optimistickog (watch +30).
+    private var effectiveEnd: Date? {
+        switch (restEndsAt, optimisticEndDate) {
+        case let (s?, o?): return max(s, o)
+        case let (s?, nil): return s
+        case let (nil, o?): return o
+        case (nil, nil): return nil
+        }
     }
 
     private func serverNow() -> Date {
-        Date().addingTimeInterval(clockOffset)
+        now.addingTimeInterval(serverClockOffset)
     }
 
-    private func computeRemaining() -> Int {
-        guard let end = endDate else { return 0 }
-        let delta = end.addingTimeInterval(localExtra).timeIntervalSince(serverNow())
-        return max(0, Int(delta.rounded()))
+    // Racuna se iz ZIVOG prop-a restEndsAt (+ optimistic) i now. Uvek svez.
+    private var secondsRemaining: Int {
+        guard let end = effectiveEnd else { return 0 }
+        return max(0, Int(end.timeIntervalSince(serverNow()).rounded()))
     }
 
     private var progress: Double {
         guard maxSeconds > 0 else { return 0 }
         return 1.0 - (Double(secondsRemaining) / Double(maxSeconds))
     }
-    
+
     private var formattedTime: String {
         let minutes = secondsRemaining / 60
         let seconds = secondsRemaining % 60
         return String(format: "%d:%02d", minutes, seconds)
     }
-    
+
     private var isLastFiveSeconds: Bool {
         secondsRemaining <= 5 && secondsRemaining > 0
     }
-    
+
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            
+
             VStack(spacing: 0) {
                 HStack {
                     Text("PAUZA")
                         .font(.system(size: 11, weight: .heavy))
                         .tracking(2.5)
                         .foregroundColor(.textMuted)
-                    
+
                     Spacer()
-                    
+
                     HStack(spacing: 4) {
                         Image(systemName: "heart.fill")
                             .font(.system(size: 10, weight: .bold))
@@ -83,13 +89,13 @@ struct RestTimerView: View {
                 }
                 .padding(.horizontal, 6)
                 .padding(.top, 4)
-                
+
                 Spacer(minLength: 4)
-                
+
                 ZStack {
                     Circle()
                         .stroke(Color.white.opacity(0.06), lineWidth: 6)
-                    
+
                     Circle()
                         .trim(from: 0, to: progress)
                         .stroke(
@@ -102,7 +108,7 @@ struct RestTimerView: View {
                         .rotationEffect(.degrees(-90))
                         .animation(.linear(duration: 1), value: progress)
                         .shadow(color: Color.brandViolet.opacity(0.5), radius: 6)
-                    
+
                     Text(formattedTime)
                         .font(.system(size: 42, weight: .heavy, design: .rounded))
                         .tracking(-2)
@@ -113,9 +119,9 @@ struct RestTimerView: View {
                         .lineLimit(1)
                 }
                 .frame(width: 120, height: 120)
-                
+
                 Spacer(minLength: 3)
-                
+
                 VStack(spacing: 1) {
                     Text("SLEDI - SET \(nextSet)/\(totalSets)")
                         .font(.system(size: 8, weight: .heavy))
@@ -128,7 +134,7 @@ struct RestTimerView: View {
                         .minimumScaleFactor(0.7)
                 }
                 .padding(.bottom, 4)
-                
+
                 HStack(spacing: 4) {
                     Button(action: addThirtySeconds) {
                         HStack(spacing: 2) {
@@ -144,7 +150,7 @@ struct RestTimerView: View {
                     .clipShape(Capsule())
                     .foregroundColor(.white)
                     .buttonStyle(.plain)
-                    
+
                     Button(action: skip) {
                         Text("Preskoči")
                             .font(.system(size: 12, weight: .semibold))
@@ -161,21 +167,45 @@ struct RestTimerView: View {
             .padding(.horizontal, 4)
         }
         .onAppear {
-            syncFromInputs()
-            resetBaseline()
+            maxSeconds = max(secondsRemaining, 1)
+            didComplete = false
             startTimer()
         }
-        .onChange(of: restEndsAt) { _ in
-            // Novi rest ili produzen rest (npr. +30 sa telefona) - preuzmi novu
-            // vrednost u @State ogledalo i preracunaj. localExtra se ponistava
-            // jer server sad nosi puno trajanje.
-            localExtra = 0
-            syncFromInputs()
-            resetBaseline()
+        // Svaka promena izracunatog secondsRemaining (svake sekunde, ili ODMAH kad
+        // novi restEndsAt stigne kroz poll) -> ovde su SVI prop-ovi svezi.
+        .onChange(of: secondsRemaining) { oldValue, newValue in
+            let inMs = restEndsAt.map { String($0.timeIntervalSince1970) } ?? "nil"
+            let optMs = optimisticEndDate.map { String($0.timeIntervalSince1970) } ?? "nil"
+            print("RT tick restEndsAt=\(inMs) offset=\(serverClockOffset) optimistic=\(optMs) remaining=\(newValue)")
+
+            // Prsten raste, nikad ne skace unazad.
+            if newValue > maxSeconds { maxSeconds = newValue }
+
+            // Haptika u poslednje 3s.
+            if newValue <= 3 && newValue > 0 {
+                WKInterfaceDevice.current().play(.click)
+            }
+
+            // Zavrsetak odmora - okini jednom. (nil effectiveEnd != kraj odmora)
+            if newValue == 0 && oldValue > 0 && !didComplete && effectiveEnd != nil {
+                didComplete = true
+                WKInterfaceDevice.current().play(.start)
+                onComplete()
+            }
         }
-        .onChange(of: serverClockOffset) { _ in
-            // Osvezi offset serverskog sata da tick racuna iz aktuelne vrednosti.
-            clockOffset = serverClockOffset
+        // Cim serverski restEndsAt dostigne/premasi optimisticki, ocisti optimistic
+        // (POREDJENJEM VREDNOSTI, ne zavisi od onChange tajminga - max() i ovako
+        // vec vraca tacnu vrednost, ovo je samo higijena).
+        .onChange(of: restEndsAt) { _, newValue in
+            let inMs = newValue.map { String($0.timeIntervalSince1970) } ?? "nil"
+            let effMs = effectiveEnd.map { String($0.timeIntervalSince1970) } ?? "nil"
+            let optMs = optimisticEndDate.map { String($0.timeIntervalSince1970) } ?? "nil"
+            print("RT onChange restEndsAt=\(inMs) effectiveEnd=\(effMs) optimistic=\(optMs)")
+
+            if let opt = optimisticEndDate, let s = newValue, s >= opt {
+                print("RT optimisticEndDate reset na nil (server \(s.timeIntervalSince1970) >= optimistic \(opt.timeIntervalSince1970))")
+                optimisticEndDate = nil
+            }
         }
         .onDisappear {
             timer?.invalidate()
@@ -183,57 +213,32 @@ struct RestTimerView: View {
         }
     }
 
-    // Postavi baseline za prsten i preostalo vreme iz trenutnog sata.
-    private func resetBaseline() {
-        let remaining = computeRemaining()
-        secondsRemaining = remaining
-        maxSeconds = max(remaining, 1)
-        didComplete = false
-    }
-
-    private func tick() {
-        let prev = secondsRemaining
-        let remaining = computeRemaining()
-        secondsRemaining = remaining
-        if remaining > maxSeconds {
-            maxSeconds = remaining
-        }
-
-        if remaining <= 3 && remaining > 0 && remaining != prev {
-            WKInterfaceDevice.current().play(.click)
-        }
-
-        // Ne okidaj zavrsetak ako jos nemamo rest_ends_at sa servera (nil != kraj odmora).
-        if remaining == 0 && !didComplete && restEndsAt != nil {
-            didComplete = true
-            WKInterfaceDevice.current().play(.start)
-            timer?.invalidate()
-            timer = nil
-            onComplete()
-        }
-    }
-
     private func startTimer() {
         timer?.invalidate()
+        // Tajmer SAMO kuca `now`. Ne cita prop-ove -> nema zamrznutog restEndsAt.
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             DispatchQueue.main.async {
-                tick()
+                now = Date()
             }
         }
     }
 
     private func addThirtySeconds() {
-        // Sloj 2: lokalno produzenje, ne dira server.
         WKInterfaceDevice.current().play(.click)
-        localExtra += 30
+        // Optimisticki kraj = trenutni efektivni kraj + 30. Prikaz odmah skoci.
+        // Konvergencija: kad server (restEndsAt) dostigne ovu vrednost kroz poll,
+        // max(restEndsAt, optimisticEndDate) vraca serversku -> tacno +30, nikad +60.
+        let base = effectiveEnd ?? serverNow()
+        let newOptimistic = base.addingTimeInterval(30)
+        optimisticEndDate = newOptimistic
         didComplete = false
-        let remaining = computeRemaining()
-        secondsRemaining = remaining
-        if remaining > maxSeconds {
-            maxSeconds = remaining
-        }
+        print("RT optimisticEndDate set na \(newOptimistic.timeIntervalSince1970) [addThirtySeconds]")
+
+        // Posalji na telefon: telefon upise novi rest_ends_at = stari + 30.
+        print("RT onAddRest(30) -> salje extend na telefon")
+        onAddRest(30)
     }
-    
+
     private func skip() {
         WKInterfaceDevice.current().play(.click)
         timer?.invalidate()
@@ -251,6 +256,7 @@ struct RestTimerView: View {
         totalSets: 4,
         heartRate: .constant(118),
         onComplete: { print("Rest complete") },
-        onSkip: { print("Rest skipped") }
+        onSkip: { print("Rest skipped") },
+        onAddRest: { s in print("Add rest \(s)") }
     )
 }
