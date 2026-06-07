@@ -19,6 +19,7 @@ struct ActiveWorkoutView: View {
     let workout: ActiveWorkout
     @Binding var heartRate: Int
     let onCompleteSet: () -> Void
+    let onFinishWorkout: () -> Void
     
     private var zone: HRZone {
         HRZone.zone(for: heartRate)
@@ -34,6 +35,7 @@ struct ActiveWorkoutView: View {
                 Spacer(minLength: 4)
                 targetInfo
                 completeSetButton
+                finishWorkoutButton
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 4)
@@ -158,12 +160,31 @@ struct ActiveWorkoutView: View {
         .buttonStyle(.plain)
         .shadow(color: Color.brandViolet.opacity(0.4), radius: 6, y: 3)
     }
+
+    // Rani kraj treninga sa sata -> watch_finish_workout. Diskretno, da se ne
+    // pomesa sa "Završio set". Izvor istine ostaje poll.
+    private var finishWorkoutButton: some View {
+        Button(action: {
+            WKInterfaceDevice.current().play(.success)
+            onFinishWorkout()
+        }) {
+            Text("Završi trening")
+                .font(.system(size: 11, weight: .semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 5)
+        }
+        .background(Color.white.opacity(0.06))
+        .clipShape(Capsule())
+        .foregroundColor(.textMuted)
+        .buttonStyle(.plain)
+    }
 }
 
 #Preview {
     ActiveWorkoutView(
         workout: .mock,
         heartRate: .constant(142),
-        onCompleteSet: { print("Set completed") }
+        onCompleteSet: { print("Set completed") },
+        onFinishWorkout: { print("Finish workout") }
     )
 }

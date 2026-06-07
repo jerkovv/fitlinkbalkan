@@ -47,7 +47,8 @@ struct ContentView: View {
                 ActiveWorkoutView(
                     workout: currentWorkout,
                     heartRate: $heartRate,
-                    onCompleteSet: handleCompleteSet
+                    onCompleteSet: handleCompleteSet,
+                    onFinishWorkout: handleFinishWorkout
                 )
                 
             case .rest:
@@ -69,7 +70,7 @@ struct ContentView: View {
         }
         // Vidljiva build oznaka - cisto za potvrdu da sat dobija nove build-ove.
         .overlay(alignment: .bottomTrailing) {
-            Text("build T8")
+            Text("build T9")
                 .font(.system(size: 9, weight: .bold))
                 .foregroundColor(.white.opacity(0.55))
                 .padding(.trailing, 4)
@@ -423,10 +424,19 @@ struct ContentView: View {
         WKInterfaceDevice.current().play(.success)
 
         Task {
-            guard let token = effectiveToken else { return }
+            // Engine zove server direktno; sessionId imamo iz poll-a. Bez njega
+            // nema zive sesije -> preskoci (poll ce ga uskoro doneti).
+            guard let token = effectiveToken, let sessionId = currentSessionId else { return }
             do {
-                try await SupabaseClient.shared.completeSet(token: token)
-                print("Watch button: complete_set sent to iPhone")
+                // Sat prikazuje samo plan -> reps/weight/rpe = nil, server uzima
+                // planirane vrednosti. Posle upisa, prikaz prati poll.
+                try await SupabaseClient.shared.engineCompleteSet(
+                    token: token, sessionId: sessionId, reps: nil, weight: nil, rpe: nil
+                )
+                print("Watch engine: complete_set [session \(sessionId)]")
+            } catch SupabaseError.sessionEnded {
+                print("Watch engine: complete_set -> session ended")
+                await MainActor.run { handleWorkoutDeleted() }
             } catch {
                 print("Complete set error: \(error.localizedDescription)")
             }
@@ -435,10 +445,12 @@ struct ContentView: View {
 
     private func handleRestComplete() {
         Task {
-            guard let token = effectiveToken else { return }
+            guard let token = effectiveToken, let sessionId = currentSessionId else { return }
             do {
-                try await SupabaseClient.shared.skipRest(token: token)
-                print("Watch button: skip_rest (auto) sent to iPhone")
+                try await SupabaseClient.shared.engineSkipRest(token: token, sessionId: sessionId)
+                print("Watch engine: skip_rest (auto) [session \(sessionId)]")
+            } catch SupabaseError.sessionEnded {
+                await MainActor.run { handleWorkoutDeleted() }
             } catch {
                 print("Rest complete error: \(error.localizedDescription)")
             }
@@ -449,12 +461,30 @@ struct ContentView: View {
         WKInterfaceDevice.current().play(.click)
 
         Task {
-            guard let token = effectiveToken else { return }
+            guard let token = effectiveToken, let sessionId = currentSessionId else { return }
             do {
-                try await SupabaseClient.shared.skipRest(token: token)
-                print("Watch button: skip_rest sent to iPhone")
+                try await SupabaseClient.shared.engineSkipRest(token: token, sessionId: sessionId)
+                print("Watch engine: skip_rest [session \(sessionId)]")
+            } catch SupabaseError.sessionEnded {
+                await MainActor.run { handleWorkoutDeleted() }
             } catch {
                 print("Skip rest error: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func handleFinishWorkout() {
+        WKInterfaceDevice.current().play(.success)
+
+        Task {
+            guard let token = effectiveToken, let sessionId = currentSessionId else { return }
+            do {
+                try await SupabaseClient.shared.engineFinishWorkout(token: token, sessionId: sessionId)
+                print("Watch engine: finish_workout [session \(sessionId)]")
+            } catch SupabaseError.sessionEnded {
+                await MainActor.run { handleWorkoutDeleted() }
+            } catch {
+                print("Finish workout error: \(error.localizedDescription)")
             }
         }
     }

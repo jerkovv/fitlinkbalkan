@@ -151,6 +151,60 @@ final class SupabaseClient {
     func finishWorkout(token: String) async throws -> Bool {
         return try await pressButton(token: token, rpcName: "watch_press_finish_button")
     }
+    // MARK: - Serverski motor treninga (sat zove direktno tokenom, kao watch_poll_state)
+    // Ove funkcije UPISUJU stanje na serveru (sledeca pozicija / kraj), pa se sat
+    // oslanja na poll da osvezi prikaz. Telefon se ne dira u ovom koraku.
+
+    @discardableResult
+    func engineSkipRest(token: String, sessionId: String) async throws -> Bool {
+        let body: [String: Any] = ["p_token": token, "p_session_id": sessionId]
+        return try await callEngine(rpcName: "watch_skip_rest", body: body)
+    }
+
+    @discardableResult
+    func engineCompleteSet(
+        token: String,
+        sessionId: String,
+        reps: Int? = nil,
+        weight: Double? = nil,
+        rpe: Double? = nil
+    ) async throws -> Bool {
+        // Nil parametri se IZOSTAVLJAJU -> server uzima planirane vrednosti (DEFAULT).
+        var body: [String: Any] = ["p_token": token, "p_session_id": sessionId]
+        if let reps = reps { body["p_reps"] = reps }
+        if let weight = weight { body["p_weight"] = weight }
+        if let rpe = rpe { body["p_rpe"] = rpe }
+        return try await callEngine(rpcName: "watch_complete_set", body: body)
+    }
+
+    @discardableResult
+    func engineFinishWorkout(token: String, sessionId: String) async throws -> Bool {
+        let body: [String: Any] = ["p_token": token, "p_session_id": sessionId]
+        return try await callEngine(rpcName: "watch_finish_workout", body: body)
+    }
+
+    // Zajednicki decode za engine RPC-ove. Server vraca jsonb sa bar success/error
+    // (complete_set vraca i state/position - ignorisemo ih, izvor istine je poll).
+    private func callEngine(rpcName: String, body: [String: Any]) async throws -> Bool {
+        let data = try await callRPC(functionName: rpcName, body: body)
+        do {
+            let response = try decoder.decode(ButtonPressResponse.self, from: data)
+            if !response.success, let error = response.error {
+                if error == "invalid_token" {
+                    throw SupabaseError.invalidToken
+                }
+                if error == "session_ended" || error == "no_live_session" {
+                    throw SupabaseError.sessionEnded
+                }
+            }
+            return response.success
+        } catch let error as SupabaseError {
+            throw error
+        } catch {
+            throw SupabaseError.decodingFailed(error.localizedDescription)
+        }
+    }
+
     private func pressButton(token: String, rpcName: String) async throws -> Bool {
         let body: [String: String] = ["p_token": token]
         let data = try await callRPC(functionName: rpcName, body: body)
