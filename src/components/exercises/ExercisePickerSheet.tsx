@@ -109,7 +109,11 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, onClose, onAdded }: 
   };
 
   return (
-    <Sheet open={open} onOpenChange={handleClose}>
+    // modal={false}: ovaj Sheet je full-screen (h-100dvh) pa nema "spolja" za
+    // klik; bez modal-a Radix ne postavlja body pointer-events:none niti hvata
+    // fokus, sto je dozvoljavalo da ugnezdeni full-screen ExerciseSearchSheet
+    // (portal na body) ostane mrtav na tap i ne otvori tastaturu.
+    <Sheet open={open} onOpenChange={handleClose} modal={false}>
       <SheetContent
         side="bottom"
         className="h-[100dvh] w-full max-w-[440px] mx-auto rounded-t-3xl p-0 flex flex-col [&>button]:hidden"
@@ -119,7 +123,10 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, onClose, onAdded }: 
           Izaberi vežbe iz biblioteke i dodaj ih u trening dan
         </SheetDescription>
         {/* Header */}
-        <div className="h-14 shrink-0 bg-background border-b border-hairline px-4 flex items-center gap-2">
+        <div
+          className="shrink-0 bg-background border-b border-hairline px-4 pb-2 flex items-center gap-2"
+          style={{ paddingTop: "calc(max(env(safe-area-inset-top), 20px) + 12px)" }}
+        >
           <button
             onClick={() => handleClose(false)}
             className="h-9 w-9 rounded-full hover:bg-surface-2 flex items-center justify-center"

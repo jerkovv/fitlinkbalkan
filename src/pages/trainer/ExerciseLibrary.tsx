@@ -7,8 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  FullScreenSheet,
+  FullScreenSheetScroll,
+  FullScreenSheetFooter,
+} from "@/components/ui/full-screen-sheet";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -154,77 +159,76 @@ const ExerciseLibrary = () => {
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <span className="eyebrow text-muted-foreground">Biblioteka</span>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <button className="h-9 w-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-brand">
-              <Plus className="h-4 w-4" />
-            </button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Nova vežba</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleCreate} className="space-y-3">
-              <div>
-                <Label htmlFor="ex-name">Naziv</Label>
-                <Input id="ex-name" value={name} onChange={(e) => setName(e.target.value)} required className="mt-1.5" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Glavna grupa</Label>
-                  <Select value={primaryMuscle} onValueChange={setPrimaryMuscle}>
-                    <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {MUSCLE_GROUPS.filter((m) => m.value !== "all").map((m) => (
-                        <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Oprema</Label>
-                  <Select value={equipment} onValueChange={setEquipment}>
-                    <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {EQUIPMENT.map((e) => (
-                        <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="ex-desc">Kratak opis</Label>
-                <Input id="ex-desc" value={description} onChange={(e) => setDescription(e.target.value)} className="mt-1.5" />
-              </div>
-              <div>
-                <Label htmlFor="ex-instr">Uputstvo (opciono)</Label>
-                <Textarea id="ex-instr" value={instructions} onChange={(e) => setInstructions(e.target.value)} rows={3} className="mt-1.5" />
-              </div>
-              <div>
-                <Label htmlFor="ex-video">Video link (opciono)</Label>
-                <Input
-                  id="ex-video"
-                  value={videoUrl}
-                  onChange={(e) => setVideoUrl(e.target.value)}
-                  placeholder="https://youtube.com/watch?v=..."
-                  className="mt-1.5"
-                  type="url"
-                />
-                <div className="text-[11px] text-muted-foreground mt-1">
-                  YouTube, Vimeo ili direktan .mp4 link.
-                </div>
-              </div>
-              <DialogFooter className="mt-4">
-                <Button type="submit" disabled={submitting} className="w-full">
-                  {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Sačuvaj vežbu
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <button
+          onClick={() => setOpen(true)}
+          className="h-9 w-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-brand"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
       </div>
+
+      <FullScreenSheet open={open} onClose={() => setOpen(false)} title="Nova vežba">
+        <form onSubmit={handleCreate} className="flex flex-1 min-h-0 flex-col">
+          <FullScreenSheetScroll className="pt-5 space-y-3">
+            <div>
+              <Label htmlFor="ex-name">Naziv</Label>
+              <Input id="ex-name" value={name} onChange={(e) => setName(e.target.value)} required className="mt-1.5 h-14 text-base rounded-2xl" autoFocus />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Glavna grupa</Label>
+                <Select value={primaryMuscle} onValueChange={setPrimaryMuscle}>
+                  <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {MUSCLE_GROUPS.filter((m) => m.value !== "all").map((m) => (
+                      <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Oprema</Label>
+                <Select value={equipment} onValueChange={setEquipment}>
+                  <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {EQUIPMENT.map((e) => (
+                      <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="ex-desc">Kratak opis</Label>
+              <Input id="ex-desc" value={description} onChange={(e) => setDescription(e.target.value)} className="mt-1.5 h-14 text-base rounded-2xl" />
+            </div>
+            <div>
+              <Label htmlFor="ex-instr">Uputstvo (opciono)</Label>
+              <Textarea id="ex-instr" value={instructions} onChange={(e) => setInstructions(e.target.value)} rows={3} className="mt-1.5" />
+            </div>
+            <div>
+              <Label htmlFor="ex-video">Video link (opciono)</Label>
+              <Input
+                id="ex-video"
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+                placeholder="https://youtube.com/watch?v=..."
+                className="mt-1.5 h-14 text-base rounded-2xl"
+                type="url"
+              />
+              <div className="text-[11px] text-muted-foreground mt-1">
+                YouTube, Vimeo ili direktan .mp4 link.
+              </div>
+            </div>
+          </FullScreenSheetScroll>
+          <FullScreenSheetFooter>
+            <Button type="submit" disabled={submitting} className="w-full bg-gradient-brand text-white shadow-brand">
+              {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Sačuvaj vežbu
+            </Button>
+          </FullScreenSheetFooter>
+        </form>
+      </FullScreenSheet>
 
       <h1 className="font-display text-[28px] font-bold tracking-tightest mb-1">Biblioteka vežbi</h1>
       <p className="text-sm text-muted-foreground mb-4">{items.length} vežbi ukupno</p>

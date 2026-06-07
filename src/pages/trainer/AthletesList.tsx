@@ -9,8 +9,10 @@ import { Search, ChevronRight, Loader2, UserPlus, Mail, Loader, Clock, RefreshCw
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
+  FullScreenSheet,
+  FullScreenSheetScroll,
+  FullScreenSheetFooter,
+} from "@/components/ui/full-screen-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -398,54 +400,47 @@ const AthletesList = () => {
       </PhoneShell>
       <BottomNav role="trainer" />
 
-      {/* Invite dialog */}
-      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Pozovi novog vežbača</DialogTitle>
-            <DialogDescription>
-              Poslaće mu se email sa linkom za pridruživanje. Link važi 7 dana.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 mt-2">
-            <div>
-              <Label htmlFor="inv-name">Ime i prezime</Label>
-              <Input
-                id="inv-name"
-                value={inviteName}
-                onChange={(e) => setInviteName(e.target.value)}
-                placeholder="npr. Marko Petrović"
-                className="mt-1.5"
-                disabled={sending}
-                autoFocus
-              />
-            </div>
-            <div>
-              <Label htmlFor="inv-email">Email</Label>
-              <Input
-                id="inv-email"
-                type="email"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder="marko@email.com"
-                className="mt-1.5"
-                disabled={sending}
-              />
-            </div>
-            <Button
-              onClick={sendInvite}
+      {/* Invite sheet */}
+      <FullScreenSheet open={inviteOpen} onClose={() => setInviteOpen(false)} title="Pozovi novog vežbača">
+        <FullScreenSheetScroll className="pt-5 space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Poslaće mu se email sa linkom za pridruživanje. Link važi 7 dana.
+          </p>
+          <div>
+            <Label htmlFor="inv-name">Ime i prezime</Label>
+            <Input
+              id="inv-name"
+              value={inviteName}
+              onChange={(e) => setInviteName(e.target.value)}
+              placeholder="npr. Marko Petrović"
+              className="mt-1.5 h-14 text-base rounded-2xl"
               disabled={sending}
-              className="w-full mt-4"
-            >
-              {sending ? (
-                <><Loader className="h-4 w-4 mr-2 animate-spin" /> Šaljem...</>
-              ) : (
-                <><Mail className="h-4 w-4 mr-2" /> Pošalji pozivnicu</>
-              )}
-            </Button>
+              autoFocus
+            />
           </div>
-        </DialogContent>
-      </Dialog>
+          <div>
+            <Label htmlFor="inv-email">Email</Label>
+            <Input
+              id="inv-email"
+              type="email"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              placeholder="marko@email.com"
+              className="mt-1.5 h-14 text-base rounded-2xl"
+              disabled={sending}
+            />
+          </div>
+        </FullScreenSheetScroll>
+        <FullScreenSheetFooter>
+          <Button onClick={sendInvite} disabled={sending} className="w-full bg-gradient-brand text-white shadow-brand">
+            {sending ? (
+              <><Loader className="h-4 w-4 mr-2 animate-spin" /> Šaljem...</>
+            ) : (
+              <><Mail className="h-4 w-4 mr-2" /> Pošalji pozivnicu</>
+            )}
+          </Button>
+        </FullScreenSheetFooter>
+      </FullScreenSheet>
     </>
   );
 };

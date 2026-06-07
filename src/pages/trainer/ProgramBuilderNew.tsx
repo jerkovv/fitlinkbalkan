@@ -7,8 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  FullScreenSheet,
+  FullScreenSheetScroll,
+  FullScreenSheetFooter,
+} from "@/components/ui/full-screen-sheet";
 import {
   Plus, Loader2, Dumbbell, Trash2, GripVertical, ChevronDown, ChevronUp, UserPlus, Check,
 } from "lucide-react";
@@ -313,26 +318,27 @@ const ProgramBuilder = () => {
         </div>
       )}
 
-      {/* Add Day Dialog */}
-      <Dialog open={addDayOpen} onOpenChange={setAddDayOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Novi dan</DialogTitle></DialogHeader>
-          <form onSubmit={handleAddDay} className="space-y-3">
+      {/* Add Day - full-screen (Wolt-style) */}
+      <FullScreenSheet open={addDayOpen} onClose={() => setAddDayOpen(false)} title="Novi dan">
+        <form onSubmit={handleAddDay} className="flex flex-1 min-h-0 flex-col">
+          <FullScreenSheetScroll className="pt-5 space-y-3">
             <div>
               <Label htmlFor="day-name">Naziv dana</Label>
               <Input
                 id="day-name"
                 value={newDayName}
                 onChange={(e) => setNewDayName(e.target.value)}
-                placeholder={`Dan ${(days[days.length - 1]?.day_number ?? 0) + 1} — Push`}
-                className="mt-1.5"
+                placeholder={`Dan ${(days[days.length - 1]?.day_number ?? 0) + 1} - Push`}
+                className="mt-1.5 h-14 text-base rounded-2xl"
                 autoFocus
               />
             </div>
-            <DialogFooter><Button type="submit" className="w-full">Dodaj dan</Button></DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+          </FullScreenSheetScroll>
+          <FullScreenSheetFooter>
+            <Button type="submit" className="w-full bg-gradient-brand text-white shadow-brand">Dodaj dan</Button>
+          </FullScreenSheetFooter>
+        </form>
+      </FullScreenSheet>
 
       {/* Exercise Picker */}
       <ExercisePickerSheet

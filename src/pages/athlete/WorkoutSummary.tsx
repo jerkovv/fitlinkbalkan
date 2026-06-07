@@ -6,13 +6,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  FullScreenSheet,
+  FullScreenSheetScroll,
+  FullScreenSheetFooter,
+} from "@/components/ui/full-screen-sheet";
 import { Textarea } from "@/components/ui/textarea";
 
 type SessionRow = {
@@ -204,17 +201,17 @@ const WorkoutSummary = () => {
 
   if (loading || !session || !stats) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="h-[100dvh] bg-background flex items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-[100dvh] overflow-y-auto bg-background">
       <div
         className="mx-auto w-full max-w-[440px] min-h-screen px-4 pb-10"
-        style={{ paddingTop: "calc(env(safe-area-inset-top, 20px) + 24px)" }}
+        style={{ paddingTop: "calc(max(env(safe-area-inset-top), 20px) + 24px)" }}
       >
         {/* Hero check */}
         <div className="text-center pt-6 pb-2">
@@ -336,39 +333,30 @@ const WorkoutSummary = () => {
         </button>
       </div>
 
-      <Dialog open={noteOpen} onOpenChange={setNoteOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Komentar treneru</DialogTitle>
-            <DialogDescription>
-              Kratko opiši kako se trening osetio, šta je bilo teško ili lako.
-            </DialogDescription>
-          </DialogHeader>
+      <FullScreenSheet open={noteOpen} onClose={() => setNoteOpen(false)} title="Komentar treneru">
+        <FullScreenSheetScroll className="pt-5 space-y-2">
+          <p className="text-sm text-muted-foreground">
+            Kratko opiši kako se trening osetio, šta je bilo teško ili lako.
+          </p>
           <Textarea
             value={noteText}
             onChange={(e) => setNoteText(e.target.value)}
             rows={5}
             placeholder="npr. Squat je bio težak, levo koleno me malo žuljalo."
+            autoFocus
           />
-          <DialogFooter>
-            <button
-              type="button"
-              onClick={() => setNoteOpen(false)}
-              className="px-4 h-11 rounded-xl bg-surface border border-hairline text-[14px] font-semibold"
-            >
-              Otkaži
-            </button>
-            <button
-              type="button"
-              onClick={saveNote}
-              disabled={savingNote}
-              className="px-5 h-11 rounded-xl bg-gradient-brand text-white text-[14px] font-bold shadow-brand disabled:opacity-60"
-            >
-              {savingNote ? "Čuvanje..." : "Sačuvaj"}
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </FullScreenSheetScroll>
+        <FullScreenSheetFooter>
+          <button
+            type="button"
+            onClick={saveNote}
+            disabled={savingNote}
+            className="w-full h-11 rounded-xl bg-gradient-brand text-white text-[14px] font-bold shadow-brand disabled:opacity-60"
+          >
+            {savingNote ? "Čuvanje..." : "Sačuvaj"}
+          </button>
+        </FullScreenSheetFooter>
+      </FullScreenSheet>
     </div>
   );
 };

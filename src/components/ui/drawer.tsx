@@ -1,10 +1,22 @@
 import * as React from "react";
 import { Drawer as DrawerPrimitive } from "vaul";
+import { Keyboard } from "@capacitor/keyboard";
 
 import { cn } from "@/lib/utils";
 
-const Drawer = ({ shouldScaleBackground = true, ...props }: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
-  <DrawerPrimitive.Root shouldScaleBackground={shouldScaleBackground} {...props} />
+const Drawer = ({
+  shouldScaleBackground = true,
+  // Vaul po defaultu "reposicionira" sheet uz visual viewport kad iskoči
+  // tastatura, pa se sheet skupi na visinu tastature i odseče sadržaj. Mi to
+  // gasimo i sami podižemo sadržaj iznad tastature (DrawerContent paddingBottom).
+  repositionInputs = false,
+  ...props
+}: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
+  <DrawerPrimitive.Root
+    shouldScaleBackground={shouldScaleBackground}
+    repositionInputs={repositionInputs}
+    {...props}
+  />
 );
 Drawer.displayName = "Drawer";
 
@@ -25,23 +37,53 @@ DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName;
 const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <DrawerPortal>
-    <DrawerOverlay />
-    <DrawerPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
-        className,
-      )}
-      {...props}
-    >
-      <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
-      {children}
-    </DrawerPrimitive.Content>
-  </DrawerPortal>
-));
+>(({ className, children, style, ...props }, ref) => {
+  // Kad iskoči tastatura, podigni ceo sadržaj sheeta iznad nje (paddingBottom =
+  // visina tastature). Sheet zadrži svoju visinu (max-h), a unutrašnji
+  // DrawerBody (flex-1 overflow-y-auto) skroluje do svih polja i dugmeta.
+  const [keyboardHeight, setKeyboardHeight] = React.useState(0);
+  React.useEffect(() => {
+    const showPromise = Keyboard.addListener("keyboardWillShow", (info) => {
+      setKeyboardHeight(info.keyboardHeight);
+    });
+    const hidePromise = Keyboard.addListener("keyboardWillHide", () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showPromise.then((h) => h.remove());
+      hidePromise.then((h) => h.remove());
+    };
+  }, []);
+
+  return (
+    <DrawerPortal>
+      <DrawerOverlay />
+      <DrawerPrimitive.Content
+        ref={ref}
+        className={cn(
+          "fixed inset-x-0 bottom-0 z-50 mt-24 flex max-h-[90dvh] flex-col rounded-t-[10px] border bg-background",
+          className,
+        )}
+        style={{
+          paddingBottom: keyboardHeight ? `${keyboardHeight}px` : undefined,
+          transition: "padding-bottom 0.25s ease",
+          ...style,
+        }}
+        {...props}
+      >
+        <div className="mx-auto mt-4 h-2 w-[100px] shrink-0 rounded-full bg-muted" />
+        {children}
+      </DrawerPrimitive.Content>
+    </DrawerPortal>
+  );
+});
 DrawerContent.displayName = "DrawerContent";
+
+/** Skrolabilni deo sheeta (polja forme). Skrati se kad tastatura smanji prostor. */
+const DrawerBody = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+  <div className={cn("flex-1 min-h-0 overflow-y-auto overscroll-contain", className)} {...props} />
+);
+DrawerBody.displayName = "DrawerBody";
 
 const DrawerHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn("grid gap-1.5 p-4 text-center sm:text-left", className)} {...props} />
@@ -49,7 +91,7 @@ const DrawerHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
 DrawerHeader.displayName = "DrawerHeader";
 
 const DrawerFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("mt-auto flex flex-col gap-2 p-4", className)} {...props} />
+  <div className={cn("mt-auto flex shrink-0 flex-col gap-2 p-4", className)} {...props} />
 );
 DrawerFooter.displayName = "DrawerFooter";
 
@@ -80,6 +122,7 @@ export {
   DrawerTrigger,
   DrawerClose,
   DrawerContent,
+  DrawerBody,
   DrawerHeader,
   DrawerFooter,
   DrawerTitle,

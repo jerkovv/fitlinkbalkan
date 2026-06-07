@@ -8,8 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
-} from "@/components/ui/dialog";
+  FullScreenSheet,
+  FullScreenSheetScroll,
+  FullScreenSheetFooter,
+} from "@/components/ui/full-screen-sheet";
 import { Plus, ClipboardList, ChevronRight, Loader2, Target } from "lucide-react";
 import { toast } from "sonner";
 
@@ -88,46 +90,44 @@ const ProgramTemplates = () => {
       eyebrow="Treninzi"
       title="Programi"
       rightSlot={
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <button className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-brand active:scale-95 transition">
-              <Plus className="h-4 w-4" strokeWidth={2.5} />
-            </button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Novi program</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleCreate} className="space-y-3">
-              <div>
-                <Label htmlFor="p-name">Naziv programa</Label>
-                <Input id="p-name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="npr. Push Pull Legs" className="mt-1.5" />
-              </div>
-              <div>
-                <Label htmlFor="p-desc">Opis (opciono)</Label>
-                <Textarea id="p-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="mt-1.5" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="p-goal">Cilj</Label>
-                  <Input id="p-goal" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Hipertrofija" className="mt-1.5" />
-                </div>
-                <div>
-                  <Label htmlFor="p-level">Nivo</Label>
-                  <Input id="p-level" value={level} onChange={(e) => setLevel(e.target.value)} placeholder="Srednji" className="mt-1.5" />
-                </div>
-              </div>
-              <DialogFooter className="mt-4">
-                <Button type="submit" disabled={submitting} className="w-full">
-                  {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Kreiraj program
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <button
+          onClick={() => setOpen(true)}
+          className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-brand active:scale-95 transition"
+        >
+          <Plus className="h-4 w-4" strokeWidth={2.5} />
+        </button>
       }
     >
+      <FullScreenSheet open={open} onClose={() => setOpen(false)} title="Novi program">
+        <form onSubmit={handleCreate} className="flex flex-1 min-h-0 flex-col">
+          <FullScreenSheetScroll className="pt-5 space-y-3">
+            <div>
+              <Label htmlFor="p-name">Naziv programa</Label>
+              <Input id="p-name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="npr. Push Pull Legs" className="mt-1.5 h-14 text-base rounded-2xl" autoFocus />
+            </div>
+            <div>
+              <Label htmlFor="p-desc">Opis (opciono)</Label>
+              <Textarea id="p-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="mt-1.5" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="p-goal">Cilj</Label>
+                <Input id="p-goal" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Hipertrofija" className="mt-1.5 h-14 text-base rounded-2xl" />
+              </div>
+              <div>
+                <Label htmlFor="p-level">Nivo</Label>
+                <Input id="p-level" value={level} onChange={(e) => setLevel(e.target.value)} placeholder="Srednji" className="mt-1.5 h-14 text-base rounded-2xl" />
+              </div>
+            </div>
+          </FullScreenSheetScroll>
+          <FullScreenSheetFooter>
+            <Button type="submit" disabled={submitting} className="w-full bg-gradient-brand text-white shadow-brand">
+              {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Kreiraj program
+            </Button>
+          </FullScreenSheetFooter>
+        </form>
+      </FullScreenSheet>
       {loading ? (
         <div className="flex justify-center py-10">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />

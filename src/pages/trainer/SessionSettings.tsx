@@ -4,8 +4,10 @@ import { Card, Chip } from "@/components/ui-bits";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
+  FullScreenSheet,
+  FullScreenSheetScroll,
+  FullScreenSheetFooter,
+} from "@/components/ui/full-screen-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -325,125 +327,128 @@ const SessionSettings = () => {
         </>
       )}
 
-      {/* Type dialog */}
-      <Dialog open={typeOpen} onOpenChange={setTypeOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingType ? "Izmeni tip" : "Nov tip sesije"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
+      {/* Type sheet */}
+      <FullScreenSheet
+        open={typeOpen}
+        onClose={() => setTypeOpen(false)}
+        title={editingType ? "Izmeni tip" : "Nov tip sesije"}
+      >
+        <FullScreenSheetScroll className="pt-5 space-y-3">
+          <div>
+            <label className="text-[12px] font-semibold text-muted-foreground mb-1.5 block">Naziv</label>
+            <Input
+              placeholder="npr. Personalni trening"
+              value={typeForm.name}
+              onChange={(e) => setTypeForm({ ...typeForm, name: e.target.value })}
+              className="h-14 text-base rounded-2xl"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="text-[12px] font-semibold text-muted-foreground mb-1.5 block">Boja</label>
+            <div className="flex gap-2 flex-wrap">
+              {sessionColors.map((c) => {
+                const colors = sessionColorClasses(c.value);
+                const active = typeForm.color === c.value;
+                return (
+                  <button
+                    key={c.value}
+                    onClick={() => setTypeForm({ ...typeForm, color: c.value })}
+                    className={cn(
+                      "h-10 w-10 rounded-xl flex items-center justify-center transition",
+                      colors.bg,
+                      active ? "ring-2 ring-foreground ring-offset-2" : "hover:scale-110",
+                    )}
+                    title={c.label}
+                  >
+                    <span className={cn("h-3 w-3 rounded-full", colors.dot)} />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[12px] font-semibold text-muted-foreground mb-1.5 block">Naziv</label>
+              <label className="text-[12px] font-semibold text-muted-foreground mb-1.5 block">Trajanje (min)</label>
               <Input
-                placeholder="npr. Personalni trening"
-                value={typeForm.name}
-                onChange={(e) => setTypeForm({ ...typeForm, name: e.target.value })}
+                type="number"
+                min={15}
+                step={15}
+                value={typeForm.duration_min}
+                onChange={(e) => setTypeForm({ ...typeForm, duration_min: parseInt(e.target.value) || 60 })}
+                className="h-14 text-base rounded-2xl"
               />
             </div>
             <div>
-              <label className="text-[12px] font-semibold text-muted-foreground mb-1.5 block">Boja</label>
-              <div className="flex gap-2 flex-wrap">
-                {sessionColors.map((c) => {
-                  const colors = sessionColorClasses(c.value);
-                  const active = typeForm.color === c.value;
-                  return (
-                    <button
-                      key={c.value}
-                      onClick={() => setTypeForm({ ...typeForm, color: c.value })}
-                      className={cn(
-                        "h-10 w-10 rounded-xl flex items-center justify-center transition",
-                        colors.bg,
-                        active ? "ring-2 ring-foreground ring-offset-2" : "hover:scale-110",
-                      )}
-                      title={c.label}
-                    >
-                      <span className={cn("h-3 w-3 rounded-full", colors.dot)} />
-                    </button>
-                  );
-                })}
-              </div>
+              <label className="text-[12px] font-semibold text-muted-foreground mb-1.5 block">Max ljudi</label>
+              <Input
+                type="number"
+                min={1}
+                value={typeForm.capacity}
+                onChange={(e) => setTypeForm({ ...typeForm, capacity: parseInt(e.target.value) || 1 })}
+                className="h-14 text-base rounded-2xl"
+              />
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-[12px] font-semibold text-muted-foreground mb-1.5 block">Trajanje (min)</label>
-                <Input
-                  type="number"
-                  min={15}
-                  step={15}
-                  value={typeForm.duration_min}
-                  onChange={(e) => setTypeForm({ ...typeForm, duration_min: parseInt(e.target.value) || 60 })}
-                />
-              </div>
-              <div>
-                <label className="text-[12px] font-semibold text-muted-foreground mb-1.5 block">Max ljudi</label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={typeForm.capacity}
-                  onChange={(e) => setTypeForm({ ...typeForm, capacity: parseInt(e.target.value) || 1 })}
-                />
-              </div>
-            </div>
-            <Button className="w-full" onClick={submitType} disabled={savingType}>
-              {savingType && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {editingType ? "Sačuvaj" : "Kreiraj"}
-            </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </FullScreenSheetScroll>
+        <FullScreenSheetFooter>
+          <Button className="w-full bg-gradient-brand text-white shadow-brand" onClick={submitType} disabled={savingType}>
+            {savingType && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {editingType ? "Sačuvaj" : "Kreiraj"}
+          </Button>
+        </FullScreenSheetFooter>
+      </FullScreenSheet>
 
-      {/* Slot dialog */}
-      <Dialog open={slotOpen} onOpenChange={setSlotOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Dodaj termin u raspored</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <label className="text-[12px] font-semibold text-muted-foreground mb-1.5 block">Tip</label>
-              <Select
-                value={slotForm.session_type_id}
-                onValueChange={(v) => setSlotForm({ ...slotForm, session_type_id: v })}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {types.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name} ({t.duration_min}min · {t.capacity} ljudi)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-[12px] font-semibold text-muted-foreground mb-1.5 block">Dan u nedelji</label>
-              <Select
-                value={String(slotForm.weekday)}
-                onValueChange={(v) => setSlotForm({ ...slotForm, weekday: parseInt(v) })}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {weekdayLabelsLong.map((label, i) => (
-                    <SelectItem key={i} value={String(i)}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-[12px] font-semibold text-muted-foreground mb-1.5 block">Vreme početka</label>
-              <Input
-                type="time"
-                value={slotForm.start_time}
-                onChange={(e) => setSlotForm({ ...slotForm, start_time: e.target.value })}
-              />
-            </div>
-            <Button className="w-full" onClick={submitSlot} disabled={savingSlot}>
-              {savingSlot && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Dodaj termin
-            </Button>
+      {/* Slot sheet */}
+      <FullScreenSheet open={slotOpen} onClose={() => setSlotOpen(false)} title="Dodaj termin u raspored">
+        <FullScreenSheetScroll className="pt-5 space-y-3">
+          <div>
+            <label className="text-[12px] font-semibold text-muted-foreground mb-1.5 block">Tip</label>
+            <Select
+              value={slotForm.session_type_id}
+              onValueChange={(v) => setSlotForm({ ...slotForm, session_type_id: v })}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {types.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name} ({t.duration_min}min · {t.capacity} ljudi)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        </DialogContent>
-      </Dialog>
+          <div>
+            <label className="text-[12px] font-semibold text-muted-foreground mb-1.5 block">Dan u nedelji</label>
+            <Select
+              value={String(slotForm.weekday)}
+              onValueChange={(v) => setSlotForm({ ...slotForm, weekday: parseInt(v) })}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {weekdayLabelsLong.map((label, i) => (
+                  <SelectItem key={i} value={String(i)}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-[12px] font-semibold text-muted-foreground mb-1.5 block">Vreme početka</label>
+            <Input
+              type="time"
+              value={slotForm.start_time}
+              onChange={(e) => setSlotForm({ ...slotForm, start_time: e.target.value })}
+              className="h-14 text-base rounded-2xl"
+            />
+          </div>
+        </FullScreenSheetScroll>
+        <FullScreenSheetFooter>
+          <Button className="w-full bg-gradient-brand text-white shadow-brand" onClick={submitSlot} disabled={savingSlot}>
+            {savingSlot && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Dodaj termin
+          </Button>
+        </FullScreenSheetFooter>
+      </FullScreenSheet>
     </PhoneShell>
   );
 };

@@ -8,6 +8,11 @@ import { Avatar, Card, Chip } from "@/components/ui-bits";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  FullScreenSheet,
+  FullScreenSheetScroll,
+  FullScreenSheetFooter,
+} from "@/components/ui/full-screen-sheet";
 import { Button } from "@/components/ui/button";
 import {
   Apple, ClipboardList, Wallet, MessageSquare, Phone, Loader2, Plus, X, Check,
@@ -879,38 +884,33 @@ const AthleteProfile = () => {
         </Card>
       )}
 
-      {/* Bonus dialog */}
-      <Dialog open={bonusOpen} onOpenChange={setBonusOpen}>
-        <DialogContent className="max-w-[380px]">
-          <DialogHeader>
-            <DialogTitle>Dodaj bonus treninge</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <p className="text-[13px] text-muted-foreground">
-              Dodato će se na trenutnu članarinu, bez plaćanja.
-            </p>
-            <input
-              type="number"
-              min={1}
-              max={100}
-              value={bonusCount}
-              onChange={(e) => setBonusCount(e.target.value)}
-              className="w-full px-4 py-3 rounded-2xl border border-hairline bg-surface text-center font-display text-[24px] font-bold tracking-tight focus:outline-none focus:ring-2 focus:ring-primary/40"
-            />
-          </div>
-          <div className="flex gap-2 justify-end pt-2">
-            <Button variant="outline" onClick={() => setBonusOpen(false)}>Otkaži</Button>
-            <Button
-              onClick={addBonus}
-              disabled={bonusSaving}
-              className="bg-gradient-brand text-white shadow-brand"
-            >
-              {bonusSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Dodaj
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Bonus sheet */}
+      <FullScreenSheet open={bonusOpen} onClose={() => setBonusOpen(false)} title="Dodaj bonus treninge">
+        <FullScreenSheetScroll className="pt-5 space-y-3">
+          <p className="text-[13px] text-muted-foreground">
+            Dodato će se na trenutnu članarinu, bez plaćanja.
+          </p>
+          <input
+            type="number"
+            min={1}
+            max={100}
+            value={bonusCount}
+            onChange={(e) => setBonusCount(e.target.value)}
+            autoFocus
+            className="w-full px-4 py-3 rounded-2xl border border-hairline bg-surface text-center font-display text-[24px] font-bold tracking-tight focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </FullScreenSheetScroll>
+        <FullScreenSheetFooter>
+          <Button
+            onClick={addBonus}
+            disabled={bonusSaving}
+            className="w-full bg-gradient-brand text-white shadow-brand"
+          >
+            {bonusSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Dodaj
+          </Button>
+        </FullScreenSheetFooter>
+      </FullScreenSheet>
 
       {/* Assign dialog */}
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>

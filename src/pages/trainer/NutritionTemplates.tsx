@@ -8,8 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
-} from "@/components/ui/dialog";
+  FullScreenSheet,
+  FullScreenSheetScroll,
+  FullScreenSheetFooter,
+} from "@/components/ui/full-screen-sheet";
 import { Plus, Apple, ChevronRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -92,58 +94,56 @@ const NutritionTemplates = () => {
       eyebrow="Ishrana"
       title="Planovi ishrane"
       rightSlot={
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <button className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-brand active:scale-95 transition">
-              <Plus className="h-4 w-4" strokeWidth={2.5} />
-            </button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Novi plan ishrane</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleCreate} className="space-y-3">
-              <div>
-                <Label htmlFor="n-name">Naziv plana</Label>
-                <Input id="n-name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="npr. Cut 2200 kcal" className="mt-1.5" />
-              </div>
-              <div>
-                <Label htmlFor="n-goal">Cilj</Label>
-                <Input id="n-goal" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Mršavljenje / Masa / Održavanje" className="mt-1.5" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="n-kcal">Target kcal</Label>
-                  <Input id="n-kcal" type="number" value={targetKcal} onChange={(e) => setTargetKcal(e.target.value)} placeholder="2200" className="mt-1.5" />
-                </div>
-                <div>
-                  <Label htmlFor="n-prot">Target proteini (g)</Label>
-                  <Input id="n-prot" type="number" value={targetProtein} onChange={(e) => setTargetProtein(e.target.value)} placeholder="180" className="mt-1.5" />
-                </div>
-                <div>
-                  <Label htmlFor="n-carbs">Target UH (g)</Label>
-                  <Input id="n-carbs" type="number" value={targetCarbs} onChange={(e) => setTargetCarbs(e.target.value)} placeholder="220" className="mt-1.5" />
-                </div>
-                <div>
-                  <Label htmlFor="n-fat">Target masti (g)</Label>
-                  <Input id="n-fat" type="number" value={targetFat} onChange={(e) => setTargetFat(e.target.value)} placeholder="70" className="mt-1.5" />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="n-notes">Napomene (opciono)</Label>
-                <Textarea id="n-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="mt-1.5" />
-              </div>
-              <DialogFooter className="mt-4">
-                <Button type="submit" disabled={submitting} className="w-full">
-                  {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Kreiraj plan
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <button
+          onClick={() => setOpen(true)}
+          className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-brand active:scale-95 transition"
+        >
+          <Plus className="h-4 w-4" strokeWidth={2.5} />
+        </button>
       }
     >
+      <FullScreenSheet open={open} onClose={() => setOpen(false)} title="Novi plan ishrane">
+        <form onSubmit={handleCreate} className="flex flex-1 min-h-0 flex-col">
+          <FullScreenSheetScroll className="pt-5 space-y-3">
+            <div>
+              <Label htmlFor="n-name">Naziv plana</Label>
+              <Input id="n-name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="npr. Cut 2200 kcal" className="mt-1.5 h-14 text-base rounded-2xl" autoFocus />
+            </div>
+            <div>
+              <Label htmlFor="n-goal">Cilj</Label>
+              <Input id="n-goal" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Mršavljenje / Masa / Održavanje" className="mt-1.5 h-14 text-base rounded-2xl" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="n-kcal">Target kcal</Label>
+                <Input id="n-kcal" type="number" value={targetKcal} onChange={(e) => setTargetKcal(e.target.value)} placeholder="2200" className="mt-1.5 h-14 text-base rounded-2xl" />
+              </div>
+              <div>
+                <Label htmlFor="n-prot">Target proteini (g)</Label>
+                <Input id="n-prot" type="number" value={targetProtein} onChange={(e) => setTargetProtein(e.target.value)} placeholder="180" className="mt-1.5 h-14 text-base rounded-2xl" />
+              </div>
+              <div>
+                <Label htmlFor="n-carbs">Target UH (g)</Label>
+                <Input id="n-carbs" type="number" value={targetCarbs} onChange={(e) => setTargetCarbs(e.target.value)} placeholder="220" className="mt-1.5 h-14 text-base rounded-2xl" />
+              </div>
+              <div>
+                <Label htmlFor="n-fat">Target masti (g)</Label>
+                <Input id="n-fat" type="number" value={targetFat} onChange={(e) => setTargetFat(e.target.value)} placeholder="70" className="mt-1.5 h-14 text-base rounded-2xl" />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="n-notes">Napomene (opciono)</Label>
+              <Textarea id="n-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="mt-1.5" />
+            </div>
+          </FullScreenSheetScroll>
+          <FullScreenSheetFooter>
+            <Button type="submit" disabled={submitting} className="w-full bg-gradient-brand text-white shadow-brand">
+              {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Kreiraj plan
+            </Button>
+          </FullScreenSheetFooter>
+        </form>
+      </FullScreenSheet>
       {loading ? (
         <div className="flex justify-center py-10">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />

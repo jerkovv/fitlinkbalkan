@@ -5,14 +5,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  FullScreenSheet,
+  FullScreenSheetScroll,
+  FullScreenSheetFooter,
+} from "@/components/ui/full-screen-sheet";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -78,24 +74,17 @@ export const BroadcastButton = ({ fab = false }: Props) => {
         </div>
       )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        {!fab && (
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Megaphone className="h-4 w-4" /> Obaveštenje
-            </Button>
-          </DialogTrigger>
-        )}
+      {!fab && (
+        <Button className="gap-2" onClick={() => setOpen(true)}>
+          <Megaphone className="h-4 w-4" /> Obaveštenje
+        </Button>
+      )}
 
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Pošalji obaveštenje</DialogTitle>
-          <DialogDescription>
+      <FullScreenSheet open={open} onClose={() => setOpen(false)} title="Pošalji obaveštenje">
+        <FullScreenSheetScroll className="pt-5 space-y-3">
+          <p className="text-sm text-muted-foreground">
             Stiže kao notifikacija u app-u svim odabranim vežbačima.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-3">
+          </p>
           <div className="space-y-1.5">
             <label className="text-[12px] font-semibold text-muted-foreground">Naslov (opciono)</label>
             <Input
@@ -103,6 +92,8 @@ export const BroadcastButton = ({ fab = false }: Props) => {
               onChange={(e) => setTitle(e.target.value.slice(0, 80))}
               placeholder="Npr. Promena rasporeda"
               maxLength={80}
+              className="h-14 text-base rounded-2xl"
+              autoFocus
             />
           </div>
 
@@ -147,13 +138,10 @@ export const BroadcastButton = ({ fab = false }: Props) => {
             </div>
             <Switch checked={onlyActive} onCheckedChange={setOnlyActive} />
           </button>
-        </div>
+        </FullScreenSheetScroll>
 
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)} disabled={sending}>
-            Otkaži
-          </Button>
-          <Button onClick={handleSend} disabled={sending || !body.trim()}>
+        <FullScreenSheetFooter>
+          <Button onClick={handleSend} disabled={sending || !body.trim()} className="w-full bg-gradient-brand text-white shadow-brand">
             {sending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
@@ -162,9 +150,8 @@ export const BroadcastButton = ({ fab = false }: Props) => {
               </>
             )}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </FullScreenSheetFooter>
+      </FullScreenSheet>
     </>
   );
 };

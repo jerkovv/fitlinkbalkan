@@ -5,7 +5,11 @@ import { Card, SectionTitle } from "@/components/ui-bits";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  FullScreenSheet,
+  FullScreenSheetScroll,
+  FullScreenSheetFooter,
+} from "@/components/ui/full-screen-sheet";
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Plus, Loader2, Dumbbell, Scale, Flame, CalendarCheck, Target, Sparkles } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -554,52 +558,49 @@ const Progress = () => {
           </>
         )}
 
-        <Dialog open={addOpen} onOpenChange={setAddOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Novo merenje</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="w">Težina (kg)</Label>
-                <Input
-                  id="w"
-                  inputMode="decimal"
-                  value={weight}
-                  onChange={(e) => setWeight(e.target.value)}
-                  placeholder="npr. 78.5"
-                  className="mt-1.5"
-                  autoFocus
-                />
-              </div>
-              <div>
-                <Label htmlFor="bf">% telesne masti (opciono)</Label>
-                <Input
-                  id="bf"
-                  inputMode="decimal"
-                  value={bodyFat}
-                  onChange={(e) => setBodyFat(e.target.value)}
-                  placeholder="npr. 18"
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label htmlFor="n">Napomena (opciono)</Label>
-                <Input
-                  id="n"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="npr. ujutru, na prazan stomak"
-                  className="mt-1.5"
-                />
-              </div>
-              <Button onClick={saveMetric} disabled={saving} className="w-full">
-                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Sačuvaj
-              </Button>
+        <FullScreenSheet open={addOpen} onClose={() => setAddOpen(false)} title="Novo merenje">
+          <FullScreenSheetScroll className="pt-5 space-y-4">
+            <div>
+              <Label htmlFor="w">Težina (kg)</Label>
+              <Input
+                id="w"
+                inputMode="decimal"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                placeholder="npr. 78.5"
+                className="mt-1.5 h-14 text-base rounded-2xl"
+                autoFocus
+              />
             </div>
-          </DialogContent>
-        </Dialog>
+            <div>
+              <Label htmlFor="bf">% telesne masti (opciono)</Label>
+              <Input
+                id="bf"
+                inputMode="decimal"
+                value={bodyFat}
+                onChange={(e) => setBodyFat(e.target.value)}
+                placeholder="npr. 18"
+                className="mt-1.5 h-14 text-base rounded-2xl"
+              />
+            </div>
+            <div>
+              <Label htmlFor="n">Napomena (opciono)</Label>
+              <Input
+                id="n"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="npr. ujutru, na prazan stomak"
+                className="mt-1.5 h-14 text-base rounded-2xl"
+              />
+            </div>
+          </FullScreenSheetScroll>
+          <FullScreenSheetFooter>
+            <Button onClick={saveMetric} disabled={saving} className="w-full bg-gradient-brand text-white shadow-brand">
+              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Sačuvaj
+            </Button>
+          </FullScreenSheetFooter>
+        </FullScreenSheet>
       </PhoneShell>
       <BottomNav role="athlete" />
     </>

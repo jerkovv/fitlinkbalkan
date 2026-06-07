@@ -7,8 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
+  FullScreenSheet,
+  FullScreenSheetScroll,
+  FullScreenSheetFooter,
+} from "@/components/ui/full-screen-sheet";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, Plus, Pencil, Trash2, Package } from "lucide-react";
@@ -201,69 +203,72 @@ const Packages = () => {
       </PhoneShell>
       <BottomNav role="trainer" />
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-[420px]">
-          <DialogHeader>
-            <DialogTitle>{editing ? "Izmeni paket" : "Novi paket"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
+      <FullScreenSheet
+        open={open}
+        onClose={() => setOpen(false)}
+        title={editing ? "Izmeni paket" : "Novi paket"}
+      >
+        <FullScreenSheetScroll className="pt-5 space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="pname">Naziv</Label>
+            <Input
+              id="pname"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="npr. 12 treninga / 4 nedelje"
+              className="h-14 text-base rounded-2xl"
+              autoFocus
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="pname">Naziv</Label>
+              <Label htmlFor="psc">Treninga</Label>
               <Input
-                id="pname"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="npr. 12 treninga / 4 nedelje"
+                id="psc"
+                type="number"
+                min={1}
+                max={200}
+                value={form.sessions_count}
+                onChange={(e) => setForm({ ...form, sessions_count: e.target.value })}
+                className="h-14 text-base rounded-2xl"
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="psc">Treninga</Label>
-                <Input
-                  id="psc"
-                  type="number"
-                  min={1}
-                  max={200}
-                  value={form.sessions_count}
-                  onChange={(e) => setForm({ ...form, sessions_count: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="pdd">Trajanje (dani)</Label>
-                <Input
-                  id="pdd"
-                  type="number"
-                  min={1}
-                  max={365}
-                  value={form.duration_days}
-                  onChange={(e) => setForm({ ...form, duration_days: e.target.value })}
-                />
-              </div>
-            </div>
             <div className="space-y-1.5">
-              <Label htmlFor="ppr">Cena (RSD)</Label>
+              <Label htmlFor="pdd">Trajanje (dani)</Label>
               <Input
-                id="ppr"
+                id="pdd"
                 type="number"
-                min={0}
-                value={form.price_rsd}
-                onChange={(e) => setForm({ ...form, price_rsd: e.target.value })}
+                min={1}
+                max={365}
+                value={form.duration_days}
+                onChange={(e) => setForm({ ...form, duration_days: e.target.value })}
+                className="h-14 text-base rounded-2xl"
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Otkaži</Button>
-            <Button
-              onClick={save}
-              disabled={saving}
-              className="bg-gradient-brand text-white shadow-brand"
-            >
-              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Sačuvaj
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <div className="space-y-1.5">
+            <Label htmlFor="ppr">Cena (RSD)</Label>
+            <Input
+              id="ppr"
+              type="number"
+              min={0}
+              value={form.price_rsd}
+              onChange={(e) => setForm({ ...form, price_rsd: e.target.value })}
+              className="h-14 text-base rounded-2xl"
+            />
+          </div>
+        </FullScreenSheetScroll>
+        <FullScreenSheetFooter>
+          <Button
+            onClick={save}
+            disabled={saving}
+            className="w-full bg-gradient-brand text-white shadow-brand"
+          >
+            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Sačuvaj
+          </Button>
+        </FullScreenSheetFooter>
+      </FullScreenSheet>
     </>
   );
 };

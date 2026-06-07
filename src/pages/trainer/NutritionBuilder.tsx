@@ -9,6 +9,9 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  FullScreenSheet, FullScreenSheetHeader, FullScreenSheetScroll, FullScreenSheetFooter,
+} from "@/components/ui/full-screen-sheet";
+import {
   Plus, Loader2, Apple, Search, Trash2, ChevronDown, ChevronUp, UserPlus, Check, CalendarDays,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -492,224 +495,226 @@ const NutritionBuilder = () => {
         </div>
       )}
 
-      {/* Add Day */}
-      <Dialog open={addDayOpen} onOpenChange={setAddDayOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Novi dan</DialogTitle></DialogHeader>
-          <form onSubmit={handleAddDay} className="space-y-3">
+      {/* Add Day - full-screen (Wolt-style) */}
+      <FullScreenSheet open={addDayOpen} onClose={() => setAddDayOpen(false)} title="Novi dan">
+        <form onSubmit={handleAddDay} className="flex flex-1 min-h-0 flex-col">
+          <FullScreenSheetScroll className="pt-5 space-y-3">
             <div>
               <Label htmlFor="day-name">Naziv dana</Label>
               <Input
                 id="day-name"
                 value={newDayName}
                 onChange={(e) => setNewDayName(e.target.value)}
-                placeholder={`Dan ${(days[days.length - 1]?.day_number ?? 0) + 1} — Trening dan`}
-                className="mt-1.5"
+                placeholder={`Dan ${(days[days.length - 1]?.day_number ?? 0) + 1} - Trening dan`}
+                className="mt-1.5 h-14 text-base rounded-2xl"
                 autoFocus
               />
             </div>
-            <DialogFooter><Button type="submit" className="w-full">Dodaj dan</Button></DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+          </FullScreenSheetScroll>
+          <FullScreenSheetFooter>
+            <Button type="submit" className="w-full bg-gradient-brand text-white shadow-brand">Dodaj dan</Button>
+          </FullScreenSheetFooter>
+        </form>
+      </FullScreenSheet>
 
-      {/* Add Meal */}
-      <Dialog open={!!addMealForDayId} onOpenChange={(o) => !o && setAddMealForDayId(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Novi obrok</DialogTitle></DialogHeader>
-          <form onSubmit={handleAddMeal} className="space-y-3">
+      {/* Add Meal - full-screen (Wolt-style) */}
+      <FullScreenSheet
+        open={!!addMealForDayId}
+        onClose={() => setAddMealForDayId(null)}
+        title="Novi obrok"
+      >
+        <form onSubmit={handleAddMeal} className="flex flex-1 min-h-0 flex-col">
+          <FullScreenSheetScroll className="pt-5 space-y-3">
             <div>
               <Label htmlFor="meal-name">Naziv obroka</Label>
-              <Input id="meal-name" value={newMealName} onChange={(e) => setNewMealName(e.target.value)} placeholder="Doručak" className="mt-1.5" autoFocus />
+              <Input id="meal-name" value={newMealName} onChange={(e) => setNewMealName(e.target.value)} placeholder="Doručak" className="mt-1.5 h-14 text-base rounded-2xl" autoFocus />
             </div>
             <div>
               <Label htmlFor="meal-time">Vreme (opciono)</Label>
-              <Input id="meal-time" value={newMealTime} onChange={(e) => setNewMealTime(e.target.value)} placeholder="08:00" className="mt-1.5" />
+              <Input id="meal-time" value={newMealTime} onChange={(e) => setNewMealTime(e.target.value)} placeholder="08:00" className="mt-1.5 h-14 text-base rounded-2xl" />
             </div>
-            <DialogFooter><Button type="submit" className="w-full">Dodaj obrok</Button></DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+          </FullScreenSheetScroll>
+          <FullScreenSheetFooter>
+            <Button type="submit" className="w-full bg-gradient-brand text-white shadow-brand">Dodaj obrok</Button>
+          </FullScreenSheetFooter>
+        </form>
+      </FullScreenSheet>
 
-      {/* Food Picker */}
-      <Dialog open={!!pickerMealId} onOpenChange={(o) => !o && setPickerMealId(null)}>
-        <DialogContent className="max-w-md max-h-[85vh] p-0 gap-0 flex flex-col overflow-hidden">
-          <DialogHeader className="px-5 pt-5 pb-3 border-b border-hairline shrink-0">
-            <DialogTitle>{pickedFood ? "Količina" : "Izaberi namirnicu"}</DialogTitle>
-          </DialogHeader>
+      {/* Food Picker — full-screen (Wolt-style) */}
+      <FullScreenSheet
+        open={!!pickerMealId}
+        onClose={() => setPickerMealId(null)}
+        title={pickedFood ? "Količina" : "Izaberi namirnicu"}
+      >
+        {!pickedFood ? (
+          <>
+            <FullScreenSheetHeader>
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                  value={foodQuery}
+                  onChange={(e) => setFoodQuery(e.target.value)}
+                  placeholder="Pretraži namirnicu..."
+                  className="pl-12 h-14 text-base rounded-2xl"
+                  autoFocus
+                />
+              </div>
 
-          {!pickedFood ? (
-            <div className="flex flex-col flex-1 min-h-0">
-              {/* Sticky filter bar */}
-              <div className="px-5 pt-4 pb-3 space-y-3 border-b border-hairline shrink-0 bg-surface">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    value={foodQuery}
-                    onChange={(e) => setFoodQuery(e.target.value)}
-                    placeholder="Pretraži namirnicu..."
-                    className="pl-9 h-10"
-                    autoFocus
-                  />
-                </div>
+              {/* Dietary toggle filteri */}
+              <div className="flex gap-1.5 flex-wrap">
+                {[
+                  { key: "vegan", label: "Veganski", active: filterVegan, set: setFilterVegan },
+                  { key: "gf", label: "Bez glutena", active: filterGlutenFree, set: setFilterGlutenFree },
+                  { key: "posno", label: "Posno", active: filterPosno, set: setFilterPosno },
+                ].map((t) => (
+                  <button
+                    key={t.key}
+                    onClick={() => t.set(!t.active)}
+                    className={`pill px-3 py-1.5 text-[11px] ${
+                      t.active
+                        ? "bg-primary text-primary-foreground shadow-brand"
+                        : "bg-surface-2 text-muted-foreground hover:bg-surface-3"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
 
-                {/* Dietary toggle filteri */}
-                <div className="flex gap-1.5 flex-wrap">
-                  {[
-                    { key: "vegan", label: "Veganski", active: filterVegan, set: setFilterVegan },
-                    { key: "gf", label: "Bez glutena", active: filterGlutenFree, set: setFilterGlutenFree },
-                    { key: "posno", label: "Posno", active: filterPosno, set: setFilterPosno },
-                  ].map((t) => (
+              {/* Kategorije — horizontal scroll */}
+              {availableCategories.length > 0 && (
+                <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-4 px-4">
+                  <button
+                    onClick={() => setActiveCategory(null)}
+                    className={`pill px-3 py-1.5 text-[11px] shrink-0 ${
+                      activeCategory === null
+                        ? "bg-foreground text-background"
+                        : "bg-surface-2 text-muted-foreground hover:bg-surface-3"
+                    }`}
+                  >
+                    Sve
+                  </button>
+                  {availableCategories.map((c) => (
                     <button
-                      key={t.key}
-                      onClick={() => t.set(!t.active)}
-                      className={`pill px-3 py-1.5 text-[11px] ${
-                        t.active
-                          ? "bg-primary text-primary-foreground shadow-brand"
-                          : "bg-surface-2 text-muted-foreground hover:bg-surface-3"
-                      }`}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Kategorije — horizontal scroll */}
-                {availableCategories.length > 0 && (
-                  <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-5 px-5">
-                    <button
-                      onClick={() => setActiveCategory(null)}
+                      key={c}
+                      onClick={() => setActiveCategory(c === activeCategory ? null : c)}
                       className={`pill px-3 py-1.5 text-[11px] shrink-0 ${
-                        activeCategory === null
+                        c === activeCategory
                           ? "bg-foreground text-background"
                           : "bg-surface-2 text-muted-foreground hover:bg-surface-3"
                       }`}
                     >
-                      Sve
-                    </button>
-                    {availableCategories.map((c) => (
-                      <button
-                        key={c}
-                        onClick={() => setActiveCategory(c === activeCategory ? null : c)}
-                        className={`pill px-3 py-1.5 text-[11px] shrink-0 ${
-                          c === activeCategory
-                            ? "bg-foreground text-background"
-                            : "bg-surface-2 text-muted-foreground hover:bg-surface-3"
-                        }`}
-                      >
-                        {c}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Counter + scrollable lista */}
-              <div className="px-5 pt-2 pb-1 text-[10px] text-muted-foreground shrink-0">
-                {filteredFoods.length} {filteredFoods.length === 1 ? "namirnica" : "namirnica"}
-              </div>
-
-              <div className="overflow-y-auto flex-1 min-h-0 px-3 pb-4 space-y-1">
-                {filteredFoods.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-8">
-                    Nema namirnica za odabrane filtere
-                  </p>
-                ) : (
-                  filteredFoods.map((f) => (
-                    <button
-                      key={f.id}
-                      onClick={() => selectFood(f)}
-                      className="w-full text-left p-3 rounded-lg hover:bg-surface-2 flex items-center gap-3 transition"
-                    >
-                      <div className="h-9 w-9 rounded-lg bg-gradient-brand-soft flex items-center justify-center shrink-0">
-                        <Apple className="h-4 w-4 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-semibold text-sm truncate">{f.name}</span>
-                          {f.is_vegan && (
-                            <span className="pill px-1.5 py-0 text-[9px] bg-success-soft text-success-soft-foreground">V</span>
-                          )}
-                          {f.is_gluten_free && (
-                            <span className="pill px-1.5 py-0 text-[9px] bg-primary-soft text-primary-soft-foreground">GF</span>
-                          )}
-                          {f.is_posno && (
-                            <span className="pill px-1.5 py-0 text-[9px] bg-warning-soft text-warning-soft-foreground">P</span>
-                          )}
-                        </div>
-                        <div className="text-[11px] text-muted-foreground truncate">
-                          {f.category && <span>{f.category} · </span>}
-                          {f.kcal_per_100g} kcal · P{f.protein_per_100g} U{f.carbs_per_100g} M{f.fat_per_100g} /100g
-                        </div>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="px-5 pb-5 pt-4 space-y-4 overflow-y-auto">
-              <div className="bg-surface-2 rounded-xl p-3">
-                <div className="font-semibold text-sm">{pickedFood.name}</div>
-                <div className="text-[11px] text-muted-foreground">
-                  {pickedFood.kcal_per_100g} kcal · P{pickedFood.protein_per_100g} U{pickedFood.carbs_per_100g} M{pickedFood.fat_per_100g} /100g
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="grams">Količina (g)</Label>
-                <Input
-                  id="grams"
-                  type="number"
-                  value={pickedGrams}
-                  onChange={(e) => setPickedGrams(e.target.value)}
-                  className="mt-1.5"
-                  autoFocus
-                />
-                {/* Brzi gram preseti */}
-                <div className="flex gap-1.5 mt-2 flex-wrap">
-                  {[50, 100, 150, 200].map((g) => (
-                    <button
-                      key={g}
-                      type="button"
-                      onClick={() => setPickedGrams(String(g))}
-                      className="pill px-2.5 py-1 text-[11px] bg-surface-2 hover:bg-surface-3 text-muted-foreground"
-                    >
-                      {g}g
+                      {c}
                     </button>
                   ))}
-                  {pickedFood.serving_size_g && (
-                    <button
-                      type="button"
-                      onClick={() => setPickedGrams(String(pickedFood.serving_size_g))}
-                      className="pill px-2.5 py-1 text-[11px] bg-primary-soft text-primary-soft-foreground hover:bg-primary-soft/80"
-                    >
-                      1 porcija ({pickedFood.serving_size_g}g)
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {pickedGrams && parseFloat(pickedGrams) > 0 && (
-                <div className="text-center text-sm bg-gradient-brand-soft rounded-xl p-3">
-                  <div className="font-bold text-lg text-primary">
-                    {Math.round(pickedFood.kcal_per_100g * parseFloat(pickedGrams) / 100)} kcal
-                  </div>
-                  <div className="text-[11px] text-muted-foreground">
-                    P{Math.round(pickedFood.protein_per_100g * parseFloat(pickedGrams) / 10) / 10}g ·
-                    U{Math.round(pickedFood.carbs_per_100g * parseFloat(pickedGrams) / 10) / 10}g ·
-                    M{Math.round(pickedFood.fat_per_100g * parseFloat(pickedGrams) / 10) / 10}g
-                  </div>
                 </div>
               )}
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setPickedFood(null)} className="flex-1">Nazad</Button>
-                <Button onClick={addFoodToMeal} className="flex-1">Dodaj</Button>
+
+              <div className="text-[10px] text-muted-foreground">
+                {filteredFoods.length} {filteredFoods.length === 1 ? "namirnica" : "namirnica"}
+              </div>
+            </FullScreenSheetHeader>
+
+            <FullScreenSheetScroll>
+              {filteredFoods.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Nema namirnica za odabrane filtere
+                </p>
+              ) : (
+                filteredFoods.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => selectFood(f)}
+                    className="w-full text-left py-4 flex items-center gap-4 border-b border-hairline active:bg-surface-2 transition"
+                  >
+                    <div className="h-12 w-12 rounded-xl bg-gradient-brand-soft flex items-center justify-center shrink-0">
+                      <Apple className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-[15px] truncate">{f.name}</span>
+                        {f.is_vegan && (
+                          <span className="pill px-1.5 py-0 text-[9px] bg-success-soft text-success-soft-foreground">V</span>
+                        )}
+                        {f.is_gluten_free && (
+                          <span className="pill px-1.5 py-0 text-[9px] bg-primary-soft text-primary-soft-foreground">GF</span>
+                        )}
+                        {f.is_posno && (
+                          <span className="pill px-1.5 py-0 text-[9px] bg-warning-soft text-warning-soft-foreground">P</span>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate mt-0.5">
+                        {f.category && <span>{f.category} · </span>}
+                        {f.kcal_per_100g} kcal · P{f.protein_per_100g} U{f.carbs_per_100g} M{f.fat_per_100g} /100g
+                      </div>
+                    </div>
+                  </button>
+                ))
+              )}
+            </FullScreenSheetScroll>
+          </>
+        ) : (
+          <FullScreenSheetScroll className="pt-5 space-y-4">
+            <div className="bg-surface-2 rounded-2xl p-4">
+              <div className="font-semibold text-[15px]">{pickedFood.name}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                {pickedFood.kcal_per_100g} kcal · P{pickedFood.protein_per_100g} U{pickedFood.carbs_per_100g} M{pickedFood.fat_per_100g} /100g
               </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+
+            <div>
+              <Label htmlFor="grams">Količina (g)</Label>
+              <Input
+                id="grams"
+                type="number"
+                value={pickedGrams}
+                onChange={(e) => setPickedGrams(e.target.value)}
+                className="mt-1.5 h-14 text-base rounded-2xl"
+                autoFocus
+              />
+              {/* Brzi gram preseti */}
+              <div className="flex gap-1.5 mt-2 flex-wrap">
+                {[50, 100, 150, 200].map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => setPickedGrams(String(g))}
+                    className="pill px-2.5 py-1 text-[11px] bg-surface-2 hover:bg-surface-3 text-muted-foreground"
+                  >
+                    {g}g
+                  </button>
+                ))}
+                {pickedFood.serving_size_g && (
+                  <button
+                    type="button"
+                    onClick={() => setPickedGrams(String(pickedFood.serving_size_g))}
+                    className="pill px-2.5 py-1 text-[11px] bg-primary-soft text-primary-soft-foreground hover:bg-primary-soft/80"
+                  >
+                    1 porcija ({pickedFood.serving_size_g}g)
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {pickedGrams && parseFloat(pickedGrams) > 0 && (
+              <div className="text-center text-sm bg-gradient-brand-soft rounded-2xl p-4">
+                <div className="font-bold text-xl text-primary">
+                  {Math.round(pickedFood.kcal_per_100g * parseFloat(pickedGrams) / 100)} kcal
+                </div>
+                <div className="text-[11px] text-muted-foreground">
+                  P{Math.round(pickedFood.protein_per_100g * parseFloat(pickedGrams) / 10) / 10}g ·
+                  U{Math.round(pickedFood.carbs_per_100g * parseFloat(pickedGrams) / 10) / 10}g ·
+                  M{Math.round(pickedFood.fat_per_100g * parseFloat(pickedGrams) / 10) / 10}g
+                </div>
+              </div>
+            )}
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" onClick={() => setPickedFood(null)} className="flex-1">Nazad</Button>
+              <Button onClick={addFoodToMeal} className="flex-1">Dodaj</Button>
+            </div>
+          </FullScreenSheetScroll>
+        )}
+      </FullScreenSheet>
 
       {/* Schedule */}
       <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>

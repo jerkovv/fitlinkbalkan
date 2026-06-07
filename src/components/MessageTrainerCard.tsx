@@ -4,13 +4,10 @@ import { Card } from "@/components/ui-bits";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  FullScreenSheet,
+  FullScreenSheetScroll,
+  FullScreenSheetFooter,
+} from "@/components/ui/full-screen-sheet";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -52,42 +49,35 @@ export const MessageTrainerCard = () => {
         <span className="text-muted-foreground">→</span>
       </button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Poruka treneru</DialogTitle>
-            <DialogDescription>
-              Trener će dobiti notifikaciju i odgovoriće ti čim stigne.
-            </DialogDescription>
-          </DialogHeader>
-
+      <FullScreenSheet open={open} onClose={() => setOpen(false)} title="Poruka treneru">
+        <FullScreenSheetScroll className="pt-5 space-y-2">
+          <p className="text-sm text-muted-foreground">
+            Trener će dobiti notifikaciju i odgovoriće ti čim stigne.
+          </p>
           <Textarea
             value={body}
             onChange={(e) => setBody(e.target.value.slice(0, MAX))}
             placeholder="Npr. Mogu li da pomerim termin za sutra?"
             rows={5}
             className="resize-none"
+            autoFocus
           />
           <div className="text-[11px] text-muted-foreground text-right tnum">
             {body.length}/{MAX}
           </div>
-
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpen(false)} disabled={sending}>
-              Otkaži
-            </Button>
-            <Button onClick={handleSend} disabled={sending || !body.trim()}>
-              {sending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <>
-                  <Send className="h-4 w-4 mr-2" /> Pošalji
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </FullScreenSheetScroll>
+        <FullScreenSheetFooter>
+          <Button onClick={handleSend} disabled={sending || !body.trim()} className="w-full bg-gradient-brand text-white shadow-brand">
+            {sending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-2" /> Pošalji
+              </>
+            )}
+          </Button>
+        </FullScreenSheetFooter>
+      </FullScreenSheet>
     </>
   );
 };
