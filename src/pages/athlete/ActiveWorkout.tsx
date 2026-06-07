@@ -108,6 +108,9 @@ const ActiveWorkout = () => {
   // NIJE izvor pozicije; markeri "urađeno" se izvode iz pos.setNumber.
   const [completedSets, setCompletedSets] = useState<CompletedSet[]>([]);
   const [finishing, setFinishing] = useState(false);
+  // Kraj treninga (finish/poslednji set/cancel). Kad je true: poll i heartbeat se
+  // GASE (effect teardown), i init NE sme više da zove start_workout_session.
+  const [finished, setFinished] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
 
   // Live HR (lokalni HealthKit stream na telefonu)
@@ -128,14 +131,33 @@ const ActiveWorkout = () => {
   const sawWorkoutRef = useRef(false);
   // Štit: kad smo već krenuli na "završeno", ignoriši poll i ne navigiraj dvaput.
   const finishedRef = useRef(false);
+  // Init guard: start_workout_session sme TAČNO jednom po ulasku u ekran. Sprečava
+  // dupli start na re-render/dep promenu (npr. nova referenca user-a).
+  const initRef = useRef(false);
+  // Da posle unmount-a ne diramo state iz in-flight init-a.
+  const unmountedRef = useRef(false);
   // Ref na poziciju za stabilne handlere (watch eventi).
   const posRef = useRef<WorkoutPos | null>(null);
   useEffect(() => { posRef.current = pos; }, [pos]);
 
+  // Jedinstveni prelaz u "završeno": sinhroni ref (za async zatvaranja) + state
+  // (da poll/heartbeat effekti urade teardown i prestanu da rade ODMAH).
+  const markFinished = useCallback(() => {
+    finishedRef.current = true;
+    setFinished(true);
+  }, []);
+
+  useEffect(() => {
+    return () => { unmountedRef.current = true; };
+  }, []);
+
   /* ------------------------- Init: start session + load day ------------------------- */
   useEffect(() => {
     if (!dayId || !user) return;
-    let cancelled = false;
+    // TAČNO jednom: nikad ponovo na re-render, dep promenu, ni posle završetka.
+    if (initRef.current || finishedRef.current) return;
+    initRef.current = true;
+
     (async () => {
       setLoading(true);
 
@@ -143,7 +165,7 @@ const ActiveWorkout = () => {
         "get_workout_day_full",
         { p_day_id: dayId } as any
       );
-      if (cancelled) return;
+      if (unmountedRef.current) return;
       if (dayErr || !dayRaw) {
         toast.error(dayErr?.message ?? "Trening nije pronađen");
         setLoading(false);
@@ -167,7 +189,7 @@ const ActiveWorkout = () => {
           p_day_id: dayData.day_id,
         } as any
       );
-      if (cancelled) return;
+      if (unmountedRef.current) return;
       if (startErr || !sid) {
         toast.error(startErr?.message ?? "Ne mogu da pokrenem trening");
         setLoading(false);
@@ -176,9 +198,6 @@ const ActiveWorkout = () => {
       setSessionId(sid as unknown as string);
       setLoading(false);
     })();
-    return () => {
-      cancelled = true;
-    };
   }, [dayId, user]);
 
   /* ------------------------- Elapsed clock (tick; vreme se računa od servera) ------------------------- */
@@ -362,7 +381,7 @@ const ActiveWorkout = () => {
         // na satu) -> zakači HR i idi na rezultat. Na samom startu (još nismo videli
         // ništa) ne diramo — seed garantuje da prvi poll ima trening.
         if (sawWorkoutRef.current) {
-          finishedRef.current = true;
+          markFinished();
           void finalizeAndNav();
         }
         return;
@@ -386,11 +405,11 @@ const ActiveWorkout = () => {
         currentHr: typeof workout.current_hr === "number" ? workout.current_hr : null,
       });
     },
-    [finalizeAndNav]
+    [finalizeAndNav, markFinished]
   );
 
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId || finished) return;
     let stopped = false;
 
     const poll = async () => {
@@ -419,13 +438,13 @@ const ActiveWorkout = () => {
       clearInterval(id);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [sessionId, applyPoll]);
+  }, [sessionId, finished, applyPoll]);
 
   /* ------------------------- Heartbeat: athlete_heartbeat (samo HR + svežina) ------------------------- */
   // Dira SAMO last_heartbeat i current_hr — nikad poziciju. Drži živi red svežim
   // (poll filtrira last_heartbeat > now - 5min).
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId || finished) return;
     let stopped = false;
     const beat = async () => {
       if (stopped || finishedRef.current) return;
@@ -444,7 +463,7 @@ const ActiveWorkout = () => {
       stopped = true;
       clearInterval(id);
     };
-  }, [sessionId, liveHr]);
+  }, [sessionId, liveHr, finished]);
 
   /* ------------------------- Helper: produži odmor (+30, privremeno rest-only upis) ------------------------- */
   const handleAddRest = useCallback(
@@ -499,8 +518,9 @@ const ActiveWorkout = () => {
 
       if (isWorkoutDone) {
         // Zadnja serija: athlete_complete_set LOGUJE seriju I finalizuje sesiju.
+        // markFinished ODMAH gasi poll i heartbeat, da posle kraja ništa ne ostane živo.
         setFinishing(true);
-        finishedRef.current = true;
+        markFinished();
         const { error } = await supabase.rpc("athlete_complete_set", {
           p_session_id: sessionId,
           p_reps: data.reps,
@@ -510,6 +530,7 @@ const ActiveWorkout = () => {
         if (error) {
           toast.error(error.message);
           finishedRef.current = false;
+          setFinished(false);
           setFinishing(false);
           return;
         }
@@ -542,7 +563,7 @@ const ActiveWorkout = () => {
       lastActionAtRef.current = Date.now();
       if (error) toast.error(error.message);
     },
-    [sessionId, day, finalizeAndNav]
+    [sessionId, day, finalizeAndNav, markFinished]
   );
 
   const skipRest = useCallback(async () => {
@@ -558,9 +579,9 @@ const ActiveWorkout = () => {
   }, [sessionId]);
 
   const finishWorkout = useCallback(async () => {
-    if (!sessionId || finishing) return;
+    if (!sessionId || finishing || finishedRef.current) return;
     setFinishing(true);
-    finishedRef.current = true;
+    markFinished();
     lastActionAtRef.current = Date.now();
     const { error } = await supabase.rpc("athlete_finish_workout", {
       p_session_id: sessionId,
@@ -568,15 +589,16 @@ const ActiveWorkout = () => {
     if (error) {
       toast.error(error.message);
       finishedRef.current = false;
+      setFinished(false);
       setFinishing(false);
       return;
     }
     await finalizeAndNav();
     setFinishing(false);
-  }, [sessionId, finishing, finalizeAndNav]);
+  }, [sessionId, finishing, finalizeAndNav, markFinished]);
 
   const confirmCancel = async () => {
-    finishedRef.current = true;
+    markFinished();
     if (sessionId) {
       await supabase.rpc("cancel_workout_session", { p_session_id: sessionId } as any);
       await supabase.from("workout_live_state" as any).delete().eq("session_log_id", sessionId);
