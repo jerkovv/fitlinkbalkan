@@ -33,6 +33,9 @@ struct ContentView: View {
     // Sloj 2: apsolutni kraj odmora sa servera i offset serverskog sata.
     @State private var restEndsAt: Date? = nil
     @State private var serverClockOffset: TimeInterval = 0
+    // Poruka trenera: poslednji prikazani id (dedup) i tekuci banner.
+    @State private var lastShownMessageId: String? = nil
+    @State private var bannerMessage: TrainerMessage? = nil
 
     @StateObject private var realtimeClient = SupabaseRealtimeClient()
     @StateObject private var healthKit = HealthKitManager.shared
@@ -68,9 +71,15 @@ struct ContentView: View {
                 completedView
             }
         }
+        // Poruka trenera - banner preko svega, tap ili auto-hide ga sklanja.
+        .overlay(alignment: .top) {
+            if let banner = bannerMessage {
+                trainerMessageBanner(banner)
+            }
+        }
         // Vidljiva build oznaka - cisto za potvrdu da sat dobija nove build-ove.
         .overlay(alignment: .bottomTrailing) {
-            Text("build T10")
+            Text("build T11")
                 .font(.system(size: 9, weight: .bold))
                 .foregroundColor(.white.opacity(0.55))
                 .padding(.trailing, 4)
@@ -290,6 +299,9 @@ struct ContentView: View {
                     phoneSession.requestCurrentToken()
                 }
             }
+            realtimeClient.onTrainerMessage = { message in
+                handleTrainerMessage(message)
+            }
 
             realtimeClient.setToken(token)
             realtimeClient.connect(userId: context.userId)
@@ -508,8 +520,74 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Poruka trenera
+
+    private func handleTrainerMessage(_ message: TrainerMessage) {
+        // Dedup po id: vibriraj i prikazi SAMO novu poruku. Ista poruka koja se
+        // ponavlja kroz poll (poslednje 2 min) ne okida ponovnu vibraciju.
+        guard message.id != lastShownMessageId else { return }
+        lastShownMessageId = message.id
+
+        WKInterfaceDevice.current().play(.notification)
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            bannerMessage = message
+        }
+
+        // Auto-sakrij posle par sekundi, osim ako je u medjuvremenu stigla nova.
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            if bannerMessage?.id == message.id {
+                withAnimation { bannerMessage = nil }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func trainerMessageBanner(_ message: TrainerMessage) -> some View {
+        let accent = trainerMessageColor(message.messageType)
+        HStack(spacing: 8) {
+            Image(systemName: "message.fill")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(accent)
+            Text(message.message)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.white)
+                .lineLimit(3)
+                .minimumScaleFactor(0.75)
+                .multilineTextAlignment(.leading)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 11)
+        .padding(.vertical, 9)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.black.opacity(0.88))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(accent.opacity(0.6), lineWidth: 1.5)
+                )
+        )
+        .shadow(color: accent.opacity(0.4), radius: 8)
+        .padding(.horizontal, 5)
+        .padding(.top, 2)
+        .transition(.move(edge: .top).combined(with: .opacity))
+        .onTapGesture {
+            withAnimation { bannerMessage = nil }
+        }
+    }
+
+    // encouragement -> zeleno, warning -> narandzasto, ostalo (text) -> neutralno.
+    private func trainerMessageColor(_ type: String?) -> Color {
+        switch type {
+        case "encouragement": return .brandSuccess
+        case "warning": return .brandWarning
+        default: return .brandViolet
+        }
+    }
+
     // MARK: - HealthKit
-    
+
     private func startHealthKitWorkout() {
         guard !healthKit.isWorkoutActive else { return }
         

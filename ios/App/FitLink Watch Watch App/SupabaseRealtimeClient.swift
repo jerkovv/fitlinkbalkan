@@ -28,6 +28,22 @@ struct WorkoutLiveStateRow: Decodable {
     }
 }
 
+// Poruka trenera za aktivnu sesiju (poslednja u zadnje 2 min, ili nil).
+// Internal (ne private) - ContentView je koristi u callback-u i banner-u.
+struct TrainerMessage: Decodable, Equatable {
+    let id: String
+    let message: String
+    let messageType: String?
+    let createdAtMs: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case message
+        case messageType = "message_type"
+        case createdAtMs = "created_at_ms"
+    }
+}
+
 // Response struct za watch_poll_state RPC
 private struct PollStateResponse: Decodable {
     let success: Bool
@@ -53,6 +69,9 @@ private struct PolledWorkout: Decodable {
     let currentHr: Int?
     // Sloj 2: apsolutni kraj odmora, epoch ms (Double, može null).
     let restEndsAtMs: Double?
+    // Poslednja poruka trenera za sesiju (može null). Ide zasebnim kanalom,
+    // mimo dedupa stanja, da promena samo poruke ne bude odbačena.
+    let trainerMessage: TrainerMessage?
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
@@ -62,6 +81,7 @@ private struct PolledWorkout: Decodable {
         case currentState = "current_state"
         case currentHr = "current_hr"
         case restEndsAtMs = "rest_ends_at_ms"
+        case trainerMessage = "trainer_message"
     }
 }
 
@@ -73,6 +93,9 @@ final class SupabaseRealtimeClient: ObservableObject {
     // Public API - isti kao pre, ContentView se ne menja
     var onWorkoutStateChange: ((WorkoutLiveStateRow) -> Void)?
     var onWorkoutDeleted: (() -> Void)?
+    // Okida se kad poll donese trainer_message (na SVAKI tick gde poruka postoji,
+    // mimo dedupa stanja). ContentView dedupuje po id - vibrira/prikazuje jednom.
+    var onTrainerMessage: ((TrainerMessage) -> Void)?
     // Okida se na svaki poll tick - ContentView ga koristi da retry-uje
     // handshake dok je identitet nesiguran (telefon bio nedostupan).
     var onPollTick: (() -> Void)?
@@ -159,6 +182,11 @@ final class SupabaseRealtimeClient: ObservableObject {
             
             // Workout state changed?
             if let workout = response.workout {
+                // Poruka trenera ide PRE i NEZAVISNO od dedupa stanja - inace bi
+                // poruka koja stigne bez promene pozicije/odmora bila odbacena.
+                if let trainerMessage = workout.trainerMessage {
+                    onTrainerMessage?(trainerMessage)
+                }
                 handleWorkoutPolled(workout, serverNowMs: response.serverNowMs)
                 lastHadWorkout = true
             } else {
