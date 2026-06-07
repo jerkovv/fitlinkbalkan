@@ -37,6 +37,7 @@ public class WatchSyncPlugin: CAPPlugin, WCSessionDelegate {
     private let cacheLoggedOutKey = "watchsync.loggedOut"
 
     override public func load() {
+        NSLog("[WatchSync] NATIVE plugin load() - bridge registrovan")
         guard WCSession.isSupported() else {
             print("[WatchSync] WCSession not supported on this device")
             return
@@ -52,6 +53,7 @@ public class WatchSyncPlugin: CAPPlugin, WCSessionDelegate {
     // MARK: - JS API
 
     @objc func sendTokenToWatch(_ call: CAPPluginCall) {
+        NSLog("[WatchSync] NATIVE sendTokenToWatch pozvan")
         guard let token = call.getString("token"),
               let userId = call.getString("userId") else {
             call.reject("Missing token or userId")
@@ -63,6 +65,7 @@ public class WatchSyncPlugin: CAPPlugin, WCSessionDelegate {
         UserDefaults.standard.set(token, forKey: cacheTokenKey)
         UserDefaults.standard.set(userId, forKey: cacheUserIdKey)
         UserDefaults.standard.set(false, forKey: cacheLoggedOutKey)
+        print("[WatchSync] Cache filled - token for user \(userId), loggedOut=false")
 
         guard let session = self.session else {
             call.reject("WCSession not available")
@@ -111,11 +114,23 @@ public class WatchSyncPlugin: CAPPlugin, WCSessionDelegate {
         }
     }
 
+    // Lagani reset loggedOut flaga - poziva se cim JS potvrdi autentifikovanu
+    // sesiju (cold-start sa sesijom, SIGNED_IN), NEZAVISNO od RPC-a/tokena/mreze.
+    // Time prazan ili jos nepristigao token daje handshake odgovor "unknown"
+    // (sat tiho retry-uje), nikad "loggedOut" - pa sat ne brise token.
+    @objc func confirmLoggedIn(_ call: CAPPluginCall) {
+        NSLog("[WatchSync] NATIVE confirmLoggedIn pozvan")
+        UserDefaults.standard.set(false, forKey: cacheLoggedOutKey)
+        print("[WatchSync] confirmLoggedIn - reset loggedOut=false")
+        call.resolve(["success": true])
+    }
+
     @objc func clearWatchToken(_ call: CAPPluginCall) {
         // Odjava: handshake od sada vraca loggedOut dok se neko ne uloguje.
         UserDefaults.standard.set(true, forKey: cacheLoggedOutKey)
         UserDefaults.standard.removeObject(forKey: cacheTokenKey)
         UserDefaults.standard.removeObject(forKey: cacheUserIdKey)
+        print("[WatchSync] Cache cleared - loggedOut=true (explicit signOut)")
 
         guard let session = self.session else {
             // Tiho - nema sesije, nema sta da se brise

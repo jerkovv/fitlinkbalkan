@@ -28,6 +28,9 @@ struct ContentView: View {
     @State private var hrSendCounter: Int = 0
     @State private var lastServerSignature: String = ""
     @State private var lastConnectedToken: String? = nil
+    // Sloj 2: apsolutni kraj odmora sa servera i offset serverskog sata.
+    @State private var restEndsAt: Date? = nil
+    @State private var serverClockOffset: TimeInterval = 0
 
     @StateObject private var realtimeClient = SupabaseRealtimeClient()
     @StateObject private var healthKit = HealthKitManager.shared
@@ -47,7 +50,8 @@ struct ContentView: View {
                 
             case .rest:
                 RestTimerView(
-                    totalSeconds: currentWorkout.restSeconds,
+                    restEndsAt: restEndsAt,
+                    serverClockOffset: serverClockOffset,
                     nextExerciseName: currentWorkout.exerciseName,
                     nextSet: currentWorkout.currentSet,
                     totalSets: currentWorkout.totalSets,
@@ -59,6 +63,14 @@ struct ContentView: View {
             case .completed:
                 completedView
             }
+        }
+        // Vidljiva build oznaka - cisto za potvrdu da sat dobija nove build-ove.
+        .overlay(alignment: .bottomTrailing) {
+            Text("build T3")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundColor(.white.opacity(0.55))
+                .padding(.trailing, 4)
+                .padding(.bottom, 2)
         }
         .task {
             lastConnectedToken = effectiveToken
@@ -251,7 +263,9 @@ struct ContentView: View {
                     exerciseName: serverWorkout.currentExerciseName,
                     setNumber: serverWorkout.currentSetNumber,
                     totalSets: serverWorkout.totalSets,
-                    state: serverWorkout.currentState
+                    state: serverWorkout.currentState,
+                    restEndsAtMs: serverWorkout.restEndsAtMs,
+                    serverNowMs: context.serverNowMs
                 )
             }
 
@@ -311,18 +325,23 @@ struct ContentView: View {
             return
         }
         
-        let signature = "\(exerciseName)|\(setNumber)|\(state)"
+        // Sloj 2: dedup mora da ukljuci rest_ends_at_ms da promena tajmera
+        // (npr. +30 sa telefona) ne bude tiho odbacena.
+        let restKey = row.restEndsAtMs.map { String($0) } ?? "nil"
+        let signature = "\(exerciseName)|\(setNumber)|\(state)|\(restKey)"
         if signature == lastServerSignature {
             return
         }
         lastServerSignature = signature
 
-        print("Realtime update: \(exerciseName) - SET \(setNumber)/\(totalSets) [\(state)]")
+        print("Realtime update: \(exerciseName) - SET \(setNumber)/\(totalSets) [\(state)] restEndsAtMs=\(restKey)")
         applyServerState(
             exerciseName: exerciseName,
             setNumber: setNumber,
             totalSets: totalSets,
-            state: state
+            state: state,
+            restEndsAtMs: row.restEndsAtMs,
+            serverNowMs: row.serverNowMs
         )
     }
 
@@ -330,7 +349,9 @@ struct ContentView: View {
         exerciseName: String,
         setNumber: Int,
         totalSets: Int,
-        state: String
+        state: String,
+        restEndsAtMs: Double?,
+        serverNowMs: Double?
     ) {
         currentWorkout = ActiveWorkout(
             workoutId: currentWorkout.workoutId,
@@ -343,16 +364,27 @@ struct ContentView: View {
             restSeconds: 90
         )
 
+        // Offset serverskog sata: serverNow - Date(). Display koristi Date() + offset.
+        if let serverNowMs = serverNowMs {
+            let serverNow = Date(timeIntervalSince1970: serverNowMs / 1000.0)
+            serverClockOffset = serverNow.timeIntervalSince(Date())
+        }
+
         switch state {
         case "active":
+            restEndsAt = nil
             currentState = .activeWorkout
             startHealthKitWorkout()
 
         case "rest":
+            // Postavi kraj odmora na SVAKI poll (bez guarda "samo na promenu stanja"),
+            // da +30 sa telefona odmah produzi tajmer na satu. null = nema tajmera.
+            restEndsAt = restEndsAtMs.map { Date(timeIntervalSince1970: $0 / 1000.0) }
             currentState = .rest
             startHealthKitWorkout()
 
         case "completed":
+            restEndsAt = nil
             stopHealthKitWorkout()
             WKInterfaceDevice.current().play(.success)
             currentState = .completed

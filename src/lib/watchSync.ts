@@ -8,6 +8,9 @@ interface WatchSyncPlugin {
     userId: string;
   }): Promise<{ success: boolean; reachable?: boolean }>;
 
+  // Lagani reset loggedOut flaga na native strani, nezavisno od tokena/RPC-a.
+  confirmLoggedIn(): Promise<{ success: boolean }>;
+
   clearWatchToken(): Promise<{ success: boolean; skipped?: boolean }>;
 
   isWatchPaired(): Promise<{ paired: boolean }>;

@@ -18,12 +18,13 @@ async function syncWatchTokenOnce(userId: string, label: string): Promise<boolea
       console.warn(`[WatchSync] ${label} RPC returned no token:`, data);
       return false;
     }
+    console.log(`[WatchSync] ${label} get_or_create ok (user ${data.user_id ?? userId})`);
     const result = await WatchSync.sendTokenToWatch({
       token: data.token,
       userId: data.user_id ?? userId,
     });
     const success = (result as any)?.success === true;
-    console.log(`[WatchSync] ${label} native returned:`, result, "→ ok:", success);
+    console.log(`[WatchSync] ${label} sendTokenToWatch returned:`, result, "→ ok:", success);
     return success;
   } catch (e) {
     // Watch nije upared, app nije instalirana, sesija nije reachable.
@@ -50,8 +51,23 @@ async function syncWatchToken(userId: string) {
   console.warn("[WatchSync] All sync attempts failed - Watch may keep stale token");
 }
 
-// Retry clear: 0s, 1s, 3s. Awaitable, pre SIGNED_OUT-a treba uspeti
-// jer drugačije Watch ostaje keširan na bivšem korisniku.
+// Lagani reset loggedOut flaga na native strani. Poziva se cim znamo da postoji
+// autentifikovana sesija (cold-start sa sesijom, SIGNED_IN), NEZAVISNO od RPC-a
+// i mreže. Ovaj reset NE sme da zavisi od get_or_create - drugačije zaglavljen
+// loggedOut=true ostane i sat lažno traži "uloguj se". Token se šalje zasebno.
+async function confirmLoggedInSafe() {
+  if (!isNativeIOS()) return;
+  try {
+    const result = await WatchSync.confirmLoggedIn();
+    console.log("[WatchSync] confirmLoggedIn reset loggedOut=false:", result);
+  } catch (e) {
+    console.warn("[WatchSync] confirmLoggedIn failed:", e);
+  }
+}
+
+// Retry clear: 0s, 1s, 3s. Zove se SAMO iz eksplicitne signOut() funkcije,
+// nikad iz onAuthStateChange SIGNED_OUT handlera (tranzitorni drop sesije /
+// neuspešan refresh ne sme da lažno upali loggedOut).
 async function clearWatchTokenSafe() {
   if (!isNativeIOS()) return;
   const delays = [0, 1000, 3000];
@@ -95,16 +111,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // 1. Listener PRVO
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      // SIGNED_OUT: prvo posalji clear_token Watch-u, pa tek onda resetuj state.
-      // Tako Watch dobije signal pre nego sto cele sesije nestane.
+      // SIGNED_OUT NE briše Watch token ovde - Supabase emituje SIGNED_OUT i na
+      // neuspešan refresh i na istek sesije, pa bi clearWatchToken lažno upalio
+      // loggedOut. Watch keš se briše SAMO iz eksplicitne signOut() funkcije.
       if (event === "SIGNED_OUT") {
-        await clearWatchTokenSafe();
+        console.log("[WatchSync] auth event SIGNED_OUT (no clear here - only explicit signOut clears)");
       }
 
       setSession(newSession);
       setUser(newSession?.user ?? null);
 
       if (newSession?.user) {
+        // Autentifikovana sesija → ODMAH resetuj loggedOut flag, nezavisno od
+        // RPC-a/mreže. Token ide zasebno, best-effort, ispod.
+        void confirmLoggedInSafe();
+
         // Defer role fetch da izbegnemo deadlock u callbacku
         setTimeout(() => {
           fetchRole(newSession.user.id);
@@ -127,6 +148,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(existing);
       setUser(existing?.user ?? null);
       if (existing?.user) {
+        // Cold-start sa postojećom sesijom → ODMAH resetuj loggedOut flag,
+        // nezavisno od RPC-a (pokriva slučaj zaglavljenog loggedOut=true).
+        void confirmLoggedInSafe();
+
         fetchRole(existing.user.id).finally(() => setLoading(false));
         // Cold start - sync Watch token ako je sesija vec postojala
         // (npr. korisnik vec ulogovan, app reload). Defer 500ms da se
@@ -168,6 +193,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
+    // Eksplicitni logout je JEDINO mesto koje briše Watch token i pali
+    // loggedOut=true. Pošalji clear PRE signOut-a da Watch dobije signal dok
+    // sesija još važi (a SIGNED_OUT event više ne dira Watch keš).
+    await clearWatchTokenSafe();
     await supabase.auth.signOut();
     setRole(null);
   };

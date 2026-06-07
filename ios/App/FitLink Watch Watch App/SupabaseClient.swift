@@ -3,10 +3,13 @@ import Foundation
 struct UserContextResponse: Codable {
     let userId: String
     let activeWorkout: ActiveWorkoutFromServer?
-    
+    // Epoch ms (broj), Double da decode ne pukne na decimalama. Za clock-offset.
+    let serverNowMs: Double?
+
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
         case activeWorkout = "active_workout"
+        case serverNowMs = "server_now_ms"
     }
 }
 
@@ -17,7 +20,9 @@ struct ActiveWorkoutFromServer: Codable {
     let totalSets: Int
     let currentState: String
     let currentHr: Int?
-    
+    // Apsolutni kraj odmora, epoch ms (broj, može null). Double, bez ISO parsiranja.
+    let restEndsAtMs: Double?
+
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
         case currentExerciseName = "current_exercise_name"
@@ -25,6 +30,7 @@ struct ActiveWorkoutFromServer: Codable {
         case totalSets = "total_sets"
         case currentState = "current_state"
         case currentHr = "current_hr"
+        case restEndsAtMs = "rest_ends_at_ms"
     }
 }
 

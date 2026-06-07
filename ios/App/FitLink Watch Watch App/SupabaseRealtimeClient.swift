@@ -10,6 +10,9 @@ struct WorkoutLiveStateRow: Decodable {
     let currentState: String?
     let currentHr: Int?
     let totalCompletedSets: Int?
+    // Sloj 2: apsolutni kraj odmora i serverski sat, epoch ms (Double da decode ne pukne na decimalama).
+    let restEndsAtMs: Double?
+    let serverNowMs: Double?
 
     enum CodingKeys: String, CodingKey {
         case sessionLogId = "session_log_id"
@@ -20,6 +23,8 @@ struct WorkoutLiveStateRow: Decodable {
         case currentState = "current_state"
         case currentHr = "current_hr"
         case totalCompletedSets = "total_completed_sets"
+        case restEndsAtMs = "rest_ends_at_ms"
+        case serverNowMs = "server_now_ms"
     }
 }
 
@@ -28,11 +33,14 @@ private struct PollStateResponse: Decodable {
     let success: Bool
     let userId: String?
     let workout: PolledWorkout?
+    // Sloj 2: serverski sat za clock-offset, epoch ms.
+    let serverNowMs: Double?
 
     enum CodingKeys: String, CodingKey {
         case success
         case userId = "user_id"
         case workout
+        case serverNowMs = "server_now_ms"
     }
 }
 
@@ -43,6 +51,8 @@ private struct PolledWorkout: Decodable {
     let totalSets: Int?
     let currentState: String?
     let currentHr: Int?
+    // Sloj 2: apsolutni kraj odmora, epoch ms (Double, može null).
+    let restEndsAtMs: Double?
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
@@ -51,6 +61,7 @@ private struct PolledWorkout: Decodable {
         case totalSets = "total_sets"
         case currentState = "current_state"
         case currentHr = "current_hr"
+        case restEndsAtMs = "rest_ends_at_ms"
     }
 }
 
@@ -148,7 +159,7 @@ final class SupabaseRealtimeClient: ObservableObject {
             
             // Workout state changed?
             if let workout = response.workout {
-                handleWorkoutPolled(workout)
+                handleWorkoutPolled(workout, serverNowMs: response.serverNowMs)
                 lastHadWorkout = true
             } else {
                 // Nema workout-a sad, a pre je bilo - znaci trening je zavrsen
@@ -185,7 +196,7 @@ final class SupabaseRealtimeClient: ObservableObject {
         }
     }
     
-    private func handleWorkoutPolled(_ workout: PolledWorkout) {
+    private func handleWorkoutPolled(_ workout: PolledWorkout, serverNowMs: Double?) {
         guard let exerciseName = workout.currentExerciseName,
               let setNumber = workout.currentSetNumber,
               let totalSets = workout.totalSets,
@@ -193,7 +204,10 @@ final class SupabaseRealtimeClient: ObservableObject {
             return
         }
 
-        let signature = "\(exerciseName)|\(setNumber)|\(state)"
+        // Sloj 2: dedup kljuc mora da ukljuci rest_ends_at_ms, da promena tajmera
+        // unutar istog rest-a (npr. +30 na telefonu) ne bude odbacena.
+        let restKey = workout.restEndsAtMs.map { String($0) } ?? "nil"
+        let signature = "\(exerciseName)|\(setNumber)|\(state)|\(restKey)"
 
         // Dedup - ne baljaj UI ako se nista nije promenilo
         if signature == lastWorkoutSignature {
@@ -201,7 +215,7 @@ final class SupabaseRealtimeClient: ObservableObject {
         }
         lastWorkoutSignature = signature
 
-        print("Poll update: \(exerciseName) - SET \(setNumber)/\(totalSets) [\(state)]")
+        print("Poll update: \(exerciseName) - SET \(setNumber)/\(totalSets) [\(state)] restEndsAtMs=\(restKey)")
 
         let row = WorkoutLiveStateRow(
             sessionLogId: workout.sessionId,
@@ -211,7 +225,9 @@ final class SupabaseRealtimeClient: ObservableObject {
             totalSets: totalSets,
             currentState: state,
             currentHr: workout.currentHr,
-            totalCompletedSets: nil
+            totalCompletedSets: nil,
+            restEndsAtMs: workout.restEndsAtMs,
+            serverNowMs: serverNowMs
         )
 
         onWorkoutStateChange?(row)

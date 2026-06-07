@@ -8,6 +8,8 @@ interface RestTimerProps {
   onDone: () => void;
   /** Optional title above timer (e.g. "Sledeca serija 2 od 4"). */
   subtitle?: string;
+  /** Optional: poziva se na +30/+60 kako bi parent upisao novi rest_ends_at. */
+  onAddSeconds?: (seconds: number) => void;
 }
 
 const fmt = (s: number) => {
@@ -48,7 +50,7 @@ const playDing = () => {
   }
 };
 
-export const RestTimer = ({ targetSeconds, onDone, subtitle }: RestTimerProps) => {
+export const RestTimer = ({ targetSeconds, onDone, subtitle, onAddSeconds }: RestTimerProps) => {
   const [target, setTarget] = useState(targetSeconds);
   const [elapsed, setElapsed] = useState(0);
   const firedRef = useRef(false);
@@ -141,6 +143,7 @@ export const RestTimer = ({ targetSeconds, onDone, subtitle }: RestTimerProps) =
           onClick={() => {
             setTarget((t) => t + 30);
             firedRef.current = false;
+            onAddSeconds?.(30);
           }}
           className="flex-1 h-12 rounded-2xl bg-surface border border-hairline text-[14px] font-semibold inline-flex items-center justify-center gap-1.5 active:scale-95 transition"
         >
@@ -150,6 +153,7 @@ export const RestTimer = ({ targetSeconds, onDone, subtitle }: RestTimerProps) =
           onClick={() => {
             setTarget((t) => t + 60);
             firedRef.current = false;
+            onAddSeconds?.(60);
           }}
           className="flex-1 h-12 rounded-2xl bg-surface border border-hairline text-[14px] font-semibold inline-flex items-center justify-center gap-1.5 active:scale-95 transition"
         >
