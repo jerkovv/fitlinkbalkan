@@ -223,7 +223,7 @@ const Calendar = () => {
                   className={cn(
                     "shrink-0 w-[60px] py-2.5 rounded-2xl text-center transition border",
                     active
-                      ? "bg-gradient-brand text-primary-foreground shadow-brand border-transparent"
+                      ? "bg-gradient-brand text-primary-foreground border-[hsl(268_80%_56%)]"
                       : "bg-surface border-hairline hover:border-primary/30 text-foreground",
                   )}
                 >

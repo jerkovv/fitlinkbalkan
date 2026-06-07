@@ -210,7 +210,7 @@ const Booking = () => {
                   className={cn(
                     "shrink-0 w-[68px] py-3 rounded-2xl overflow-hidden text-center transition border",
                     active
-                      ? "bg-gradient-brand bg-clip-padding text-primary-foreground shadow-brand border-transparent"
+                      ? "bg-gradient-brand text-primary-foreground border-[hsl(268_80%_56%)]"
                       : "bg-surface border-hairline hover:border-primary/30 text-foreground",
                   )}
                 >
