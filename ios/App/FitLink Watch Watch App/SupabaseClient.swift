@@ -49,16 +49,20 @@ enum SupabaseError: LocalizedError {
     case invalidResponse
     case invalidToken
     case noActiveWorkout
+    // Server javio da je sesija zavrsena (session_ended / no_live_session) -
+    // sat treba da zatvori svoj HealthKit workout i napusti ekran treninga.
+    case sessionEnded
     case decodingFailed(String)
     case networkError(String)
     case httpError(Int)
-    
+
     var errorDescription: String? {
         switch self {
         case .invalidURL: return "Neispravan URL"
         case .invalidResponse: return "Neispravan odgovor sa servera"
         case .invalidToken: return "Token nije validan ili je istekao"
         case .noActiveWorkout: return "Nema aktivnog treninga"
+        case .sessionEnded: return "Sesija je završena"
         case .decodingFailed(let detail): return "Decoding error: \(detail)"
         case .networkError(let detail): return "Mrežna greška: \(detail)"
         case .httpError(let code): return "HTTP greška: \(code)"
@@ -100,10 +104,13 @@ final class SupabaseClient {
     }
     
     @discardableResult
-    func updateHeartRate(token: String, heartRate: Int) async throws -> Bool {
+    func updateHeartRate(token: String, heartRate: Int, sessionId: String) async throws -> Bool {
+        // Sloj 0 (HR keep-alive): server prima tri parametra i odrzava TACNO ovu
+        // sesiju zivom bez 5-min uslova, pa puls stize i kad telefon spava.
         let body: [String: Any] = [
             "p_token": token,
-            "p_heart_rate": heartRate
+            "p_heart_rate": heartRate,
+            "p_session_id": sessionId
         ]
         let data = try await callRPC(functionName: "watch_update_workout_hr", body: body)
         
@@ -112,6 +119,10 @@ final class SupabaseClient {
             if !response.success, let error = response.error {
                 if error == "invalid_token" {
                     throw SupabaseError.invalidToken
+                }
+                // Sesija je zavrsena na serveru - signal satu da zatvori workout.
+                if error == "session_ended" || error == "no_live_session" {
+                    throw SupabaseError.sessionEnded
                 }
             }
             return response.success

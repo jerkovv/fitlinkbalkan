@@ -25,7 +25,9 @@ struct ContentView: View {
     @State private var connectionError: String?
     @State private var currentWorkout: ActiveWorkout = .mock
     @State private var heartRate: Int = 0
-    @State private var hrSendCounter: Int = 0
+    // Sloj 0: poslednji poznati session_id iz poll-a/realtime-a. Salje se uz svaki
+    // HR upis da server odrzi tacno tu sesiju zivom (keep-alive).
+    @State private var currentSessionId: String? = nil
     @State private var lastServerSignature: String = ""
     @State private var lastConnectedToken: String? = nil
     // Sloj 2: apsolutni kraj odmora sa servera i offset serverskog sata.
@@ -67,7 +69,7 @@ struct ContentView: View {
         }
         // Vidljiva build oznaka - cisto za potvrdu da sat dobija nove build-ove.
         .overlay(alignment: .bottomTrailing) {
-            Text("build T6")
+            Text("build T8")
                 .font(.system(size: 9, weight: .bold))
                 .foregroundColor(.white.opacity(0.55))
                 .padding(.trailing, 4)
@@ -261,6 +263,7 @@ struct ContentView: View {
             if let serverWorkout = context.activeWorkout {
                 print("Active workout: \(serverWorkout.currentExerciseName) [\(serverWorkout.currentState)]")
                 applyServerState(
+                    sessionId: serverWorkout.sessionId,
                     exerciseName: serverWorkout.currentExerciseName,
                     setNumber: serverWorkout.currentSetNumber,
                     totalSets: serverWorkout.totalSets,
@@ -274,7 +277,8 @@ struct ContentView: View {
                 handleRealtimeUpdate(row)
             }
             realtimeClient.onWorkoutDeleted = {
-                print("Workout deleted from server - showing completed screen")
+                // Loguje se unutar handleWorkoutDeleted samo kad stvarno deluje
+                // (poziva se na svaki null poll, pa bi print ovde bio spam).
                 handleWorkoutDeleted()
             }
             realtimeClient.onPollTick = {
@@ -301,18 +305,20 @@ struct ContentView: View {
     // MARK: - Realtime sync
     
     private func handleWorkoutDeleted() {
-        if currentState != .completed && currentState != .idle {
-            stopHealthKitWorkout()
-            WKInterfaceDevice.current().play(.success)
-            currentState = .completed
-            
-            Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 2_500_000_000)
-                if currentState == .completed {
-                    currentState = .idle
-                    currentWorkout = .mock
-                    lastServerSignature = ""
-                }
+        // Idempotentno: poziva se i sa svakog null poll-a i iz HR session_ended
+        // putanje. Deluje (i loguje) samo na prelazu iz treninga u neutralno.
+        guard currentState != .completed && currentState != .idle else { return }
+        print("No active workout (poll null / session ended) - leaving workout screen")
+        stopHealthKitWorkout()
+        WKInterfaceDevice.current().play(.success)
+        currentState = .completed
+
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            if currentState == .completed {
+                currentState = .idle
+                currentWorkout = .mock
+                lastServerSignature = ""
             }
         }
     }
@@ -337,6 +343,7 @@ struct ContentView: View {
 
         print("Realtime update: \(exerciseName) - SET \(setNumber)/\(totalSets) [\(state)] restEndsAtMs=\(restKey)")
         applyServerState(
+            sessionId: row.sessionLogId,
             exerciseName: exerciseName,
             setNumber: setNumber,
             totalSets: totalSets,
@@ -347,6 +354,7 @@ struct ContentView: View {
     }
 
     private func applyServerState(
+        sessionId: String?,
         exerciseName: String,
         setNumber: Int,
         totalSets: Int,
@@ -354,6 +362,11 @@ struct ContentView: View {
         restEndsAtMs: Double?,
         serverNowMs: Double?
     ) {
+        // Sloj 0: zapamti zivi session_id da HR keep-alive uvek gadja tacnu sesiju.
+        if let sessionId = sessionId {
+            currentSessionId = sessionId
+        }
+
         currentWorkout = ActiveWorkout(
             workoutId: currentWorkout.workoutId,
             exerciseName: exerciseName,
@@ -482,14 +495,11 @@ struct ContentView: View {
             // Listener za HR update-ove
             healthKit.onHeartRateUpdate = { bpm in
                 heartRate = bpm
-                
-                // Salji u bazu svake 5 update-a (~5 sekundi)
-                hrSendCounter += 1
-                if hrSendCounter >= 5 {
-                    hrSendCounter = 0
-                    Task {
-                        await sendHeartRateToServer()
-                    }
+
+                // Sloj 0: salji SVAKI sample dok je workout aktivan. Svaki upis
+                // ujedno odrzava sesiju zivom (keep-alive) bez budnog telefona.
+                Task {
+                    await sendHeartRateToServer()
                 }
             }
         }
@@ -499,17 +509,26 @@ struct ContentView: View {
         healthKit.stopWorkoutSession()
         healthKit.onHeartRateUpdate = nil
         heartRate = 0
-        hrSendCounter = 0
+        currentSessionId = nil
     }
-    
+
     private func sendHeartRateToServer() async {
-        guard isPaired, heartRate > 0, let token = effectiveToken else { return }
+        // Ako session_id jos nije poznat (nema zive sesije), samo preskoci ovaj
+        // sample - bez greske. Cim poll/realtime donese session_id, slanje krene.
+        guard isPaired, heartRate > 0, let token = effectiveToken,
+              let sessionId = currentSessionId else { return }
 
         do {
             try await SupabaseClient.shared.updateHeartRate(
                 token: token,
-                heartRate: heartRate
+                heartRate: heartRate,
+                sessionId: sessionId
             )
+        } catch SupabaseError.sessionEnded {
+            // Trening je zavrsen na serveru, a sat je jos slao puls (fantom).
+            // Zatvori HealthKit workout, prestani slanje, napusti ekran treninga.
+            print("HR update: session ended on server - closing watch workout")
+            await MainActor.run { handleWorkoutDeleted() }
         } catch {
             print("HR update error: \(error.localizedDescription)")
         }

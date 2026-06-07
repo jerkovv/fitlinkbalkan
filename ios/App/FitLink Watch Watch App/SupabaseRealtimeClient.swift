@@ -162,13 +162,17 @@ final class SupabaseRealtimeClient: ObservableObject {
                 handleWorkoutPolled(workout, serverNowMs: response.serverNowMs)
                 lastHadWorkout = true
             } else {
-                // Nema workout-a sad, a pre je bilo - znaci trening je zavrsen
+                // Nema aktivnog treninga. Prikaz MORA da prati poll: ako sat jos
+                // pokazuje trening (iz poll-a ILI iz pocetnog getUserContext kesa),
+                // onWorkoutDeleted ga napusta. handleWorkoutDeleted je idempotentan
+                // (no-op kad smo vec idle/completed), pa je bezbedno zvati na svaki
+                // null tick - bez oslanjanja na lastHadWorkout.
                 if lastHadWorkout {
                     print("Polling: workout disappeared, treating as completed")
-                    onWorkoutDeleted?()
                     lastHadWorkout = false
                     lastWorkoutSignature = ""
                 }
+                onWorkoutDeleted?()
             }
             
         } catch {
