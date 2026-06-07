@@ -3,6 +3,7 @@ import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import type { AppRole } from "@/lib/database.types";
 import { WatchSync, isNativeIOS } from "@/lib/watchSync";
+import { registerPushNotifications, clearPushToken } from "@/lib/pushNotifications";
 
 // Jedan pokušaj sync-a tokena Watch-u. Vraća true ako je native potvrdio uspeh.
 // Tihi no-op na web/Lovable preview-u.
@@ -138,6 +139,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             syncWatchToken(newSession.user.id);
           }, 200);
         }
+
+        // Push: na SIGNED_IN zatrazi dozvolu i registruj APNs token.
+        if (event === "SIGNED_IN") {
+          setTimeout(() => {
+            void registerPushNotifications(newSession.user.id);
+          }, 300);
+        }
       } else {
         setRole(null);
       }
@@ -159,6 +167,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setTimeout(() => {
           syncWatchToken(existing.user.id);
         }, 500);
+        // Cold start sa postojecom sesijom - registruj push (dozvola je vec
+        // data ranije, ovo samo osvezi APNs token).
+        setTimeout(() => {
+          void registerPushNotifications(existing.user.id);
+        }, 600);
       } else {
         setLoading(false);
       }
@@ -197,6 +210,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // loggedOut=true. Pošalji clear PRE signOut-a da Watch dobije signal dok
     // sesija još važi (a SIGNED_OUT event više ne dira Watch keš).
     await clearWatchTokenSafe();
+    // Obrisi APNs token ovog uredjaja dok sesija jos vazi (RLS delete own).
+    await clearPushToken();
     await supabase.auth.signOut();
     setRole(null);
   };
