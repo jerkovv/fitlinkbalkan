@@ -10,12 +10,13 @@ struct ContentView: View {
     }
     
     @StateObject private var phoneSession = WatchPhoneSession.shared
+    @Environment(\.scenePhase) private var scenePhase
 
-    // FALLBACK za development. Ukloniti pre App Store launch-a.
-    // Ako pairing preko WCSession nije stigao (bug, prvi launch, dev test),
-    // koristi hardcoded token za apgrejdpremium2 nalog da Watch i dalje radi.
-    private var effectiveToken: String {
-        phoneSession.pairingToken ?? "b57d21268a2652edc10280a4a7074d324a90832d5a48ed25"
+    // Token iz pair_token payload-a koji je iPhone poslao preko WCSession.
+    // Nil = nije upareno → "Uloguj se na iPhone-u". Bez fallback-a:
+    // korišćenje tuđeg keširanog tokena bi tiho prikazivalo pogrešne podatke.
+    private var effectiveToken: String? {
+        phoneSession.pairingToken
     }
 
     @State private var currentState: AppState = .idle
@@ -61,7 +62,15 @@ struct ContentView: View {
         }
         .task {
             lastConnectedToken = effectiveToken
+            // Handshake (pull): potvrdi ko je trenutno ulogovan na telefonu.
+            phoneSession.requestCurrentToken()
             await initializeConnection()
+        }
+        .onChange(of: scenePhase) { newPhase in
+            // Kad sat postane aktivan, ponovo povuci aktuelni identitet.
+            if newPhase == .active {
+                phoneSession.requestCurrentToken()
+            }
         }
         .onChange(of: phoneSession.pairingToken) { _ in
             // Token primljen sa iPhone-a (login, refresh) ili obrisan (logout).
@@ -181,26 +190,21 @@ struct ContentView: View {
     // MARK: - Computed
     
     private var statusColor: Color {
+        if phoneSession.tokenIsUncertain { return .brandWarning }
         if !isPaired { return .brandWarning }
         if !realtimeClient.isConnected { return .brandWarning }
         return .brandSuccess
     }
-    
+
     private var statusText: String {
         if isLoading { return "Povezivanje..." }
         if let error = connectionError { return error }
-        if !isPaired {
-            // Bez pravog tokena i bez fallback-a (kad fallback bude uklonjen u prod)
-            if phoneSession.pairingToken == nil && effectiveToken.isEmpty {
-                return "Uloguj se na iPhone-u"
-            }
-            return "Nije povezano"
-        }
+        if phoneSession.pairingToken == nil { return "Uloguj se na iPhone-u" }
+        // Identitet jos nije potvrdjen handshake-om (telefon bio nedostupan) -
+        // ne tvrdi "Povezano" na osnovu starog, nepotvrdjenog keša.
+        if phoneSession.tokenIsUncertain { return "Provera naloga…" }
+        if !isPaired { return "Nije povezano" }
         if !realtimeClient.isConnected { return "Veza prekinuta" }
-        // Paired i konektovano - ali koristimo fallback token (dev)
-        if phoneSession.pairingToken == nil {
-            return "Dev mode"
-        }
         return "Povezano"
     }
     
@@ -209,25 +213,38 @@ struct ContentView: View {
     private func initializeConnection() async {
         isLoading = true
         connectionError = nil
-        
+
         // Zatraži HealthKit dozvolu odmah na pokretanju
         if !healthKit.isAuthorized {
             _ = await healthKit.requestAuthorization()
         }
-        
+
+        guard let token = effectiveToken else {
+            // Nema tokena → korisnik nije ulogovan na iPhone-u (ili sync nije
+            // stigao). statusText prikazuje "Uloguj se na iPhone-u".
+            isPaired = false
+            isLoading = false
+            return
+        }
+
         do {
-            let context = try await SupabaseClient.shared.getUserContext(token: effectiveToken)
-            
+            let context = try await SupabaseClient.shared.getUserContext(token: token)
+
             guard let context = context else {
                 isPaired = false
                 connectionError = "Token nevažeći"
                 isLoading = false
                 return
             }
-            
+
+            // Identitet se sada osigurava handshake-om (pull) sa telefona, koji
+            // UVEK prepiše keš tokenom trenutno ulogovanog korisnika. Stara
+            // mismatch-provera (pairedId vs context.userId) je uklonjena - bila
+            // je strukturno mrtva jer server izvodi userId iz samog tokena, pa
+            // se keširani pairedUserId i context.userId uvek poklapaju.
             isPaired = true
             print("Watch paired - user: \(context.userId)")
-            
+
             if let serverWorkout = context.activeWorkout {
                 print("Active workout: \(serverWorkout.currentExerciseName) [\(serverWorkout.currentState)]")
                 applyServerState(
@@ -237,7 +254,7 @@ struct ContentView: View {
                     state: serverWorkout.currentState
                 )
             }
-            
+
             realtimeClient.onWorkoutStateChange = { row in
                 handleRealtimeUpdate(row)
             }
@@ -245,16 +262,24 @@ struct ContentView: View {
                 print("Workout deleted from server - showing completed screen")
                 handleWorkoutDeleted()
             }
-            
-            realtimeClient.setToken(effectiveToken)
+            realtimeClient.onPollTick = {
+                // Dok je identitet nesiguran (telefon bio nedostupan), retry-uj
+                // handshake na svaki tick - oporavak cim telefon postane dostupan,
+                // bez tranzicije scenePhase (sat moze ostati aktivan tokom treninga).
+                if phoneSession.tokenIsUncertain {
+                    phoneSession.requestCurrentToken()
+                }
+            }
+
+            realtimeClient.setToken(token)
             realtimeClient.connect(userId: context.userId)
-            
+
         } catch {
             isPaired = false
             connectionError = "Greška konekcije"
             print("Connection error: \(error.localizedDescription)")
         }
-        
+
         isLoading = false
     }
     
@@ -291,7 +316,7 @@ struct ContentView: View {
             return
         }
         lastServerSignature = signature
-        
+
         print("Realtime update: \(exerciseName) - SET \(setNumber)/\(totalSets) [\(state)]")
         applyServerState(
             exerciseName: exerciseName,
@@ -300,7 +325,7 @@ struct ContentView: View {
             state: state
         )
     }
-    
+
     private func applyServerState(
         exerciseName: String,
         setNumber: Int,
@@ -317,16 +342,16 @@ struct ContentView: View {
             targetWeight: nil,
             restSeconds: 90
         )
-        
+
         switch state {
         case "active":
             currentState = .activeWorkout
             startHealthKitWorkout()
-            
+
         case "rest":
             currentState = .rest
             startHealthKitWorkout()
-            
+
         case "completed":
             stopHealthKitWorkout()
             WKInterfaceDevice.current().play(.success)
@@ -350,41 +375,44 @@ struct ContentView: View {
     
     private func handleCompleteSet() {
         WKInterfaceDevice.current().play(.success)
-        
+
         Task {
+            guard let token = effectiveToken else { return }
             do {
-                try await SupabaseClient.shared.completeSet(token: effectiveToken)
+                try await SupabaseClient.shared.completeSet(token: token)
                 print("Watch button: complete_set sent to iPhone")
             } catch {
                 print("Complete set error: \(error.localizedDescription)")
             }
         }
     }
-    
+
     private func handleRestComplete() {
         Task {
+            guard let token = effectiveToken else { return }
             do {
-                try await SupabaseClient.shared.skipRest(token: effectiveToken)
+                try await SupabaseClient.shared.skipRest(token: token)
                 print("Watch button: skip_rest (auto) sent to iPhone")
             } catch {
                 print("Rest complete error: \(error.localizedDescription)")
             }
         }
     }
-    
+
     private func handleRestSkip() {
         WKInterfaceDevice.current().play(.click)
-        
+
         Task {
+            guard let token = effectiveToken else { return }
             do {
-                try await SupabaseClient.shared.skipRest(token: effectiveToken)
+                try await SupabaseClient.shared.skipRest(token: token)
                 print("Watch button: skip_rest sent to iPhone")
             } catch {
                 print("Skip rest error: \(error.localizedDescription)")
             }
         }
     }
-    
+
     // MARK: - HealthKit
     
     private func startHealthKitWorkout() {
@@ -427,11 +455,11 @@ struct ContentView: View {
     }
     
     private func sendHeartRateToServer() async {
-        guard isPaired, heartRate > 0 else { return }
-        
+        guard isPaired, heartRate > 0, let token = effectiveToken else { return }
+
         do {
             try await SupabaseClient.shared.updateHeartRate(
-                token: effectiveToken,
+                token: token,
                 heartRate: heartRate
             )
         } catch {

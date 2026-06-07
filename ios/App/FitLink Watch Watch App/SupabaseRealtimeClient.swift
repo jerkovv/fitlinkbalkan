@@ -10,7 +10,7 @@ struct WorkoutLiveStateRow: Decodable {
     let currentState: String?
     let currentHr: Int?
     let totalCompletedSets: Int?
-    
+
     enum CodingKeys: String, CodingKey {
         case sessionLogId = "session_log_id"
         case athleteId = "athlete_id"
@@ -28,7 +28,7 @@ private struct PollStateResponse: Decodable {
     let success: Bool
     let userId: String?
     let workout: PolledWorkout?
-    
+
     enum CodingKeys: String, CodingKey {
         case success
         case userId = "user_id"
@@ -43,7 +43,7 @@ private struct PolledWorkout: Decodable {
     let totalSets: Int?
     let currentState: String?
     let currentHr: Int?
-    
+
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
         case currentExerciseName = "current_exercise_name"
@@ -62,6 +62,9 @@ final class SupabaseRealtimeClient: ObservableObject {
     // Public API - isti kao pre, ContentView se ne menja
     var onWorkoutStateChange: ((WorkoutLiveStateRow) -> Void)?
     var onWorkoutDeleted: (() -> Void)?
+    // Okida se na svaki poll tick - ContentView ga koristi da retry-uje
+    // handshake dok je identitet nesiguran (telefon bio nedostupan).
+    var onPollTick: (() -> Void)?
     
     @Published private(set) var isConnected: Bool = false
     
@@ -119,6 +122,9 @@ final class SupabaseRealtimeClient: ObservableObject {
     }
     
     private func pollOnce() async {
+        // Hook za handshake retry (npr. dok je identitet nesiguran).
+        onPollTick?()
+
         guard let token = pairingToken else {
             print("Polling: no token, skipping")
             return
@@ -186,17 +192,17 @@ final class SupabaseRealtimeClient: ObservableObject {
               let state = workout.currentState else {
             return
         }
-        
+
         let signature = "\(exerciseName)|\(setNumber)|\(state)"
-        
+
         // Dedup - ne baljaj UI ako se nista nije promenilo
         if signature == lastWorkoutSignature {
             return
         }
         lastWorkoutSignature = signature
-        
+
         print("Poll update: \(exerciseName) - SET \(setNumber)/\(totalSets) [\(state)]")
-        
+
         let row = WorkoutLiveStateRow(
             sessionLogId: workout.sessionId,
             athleteId: nil,
@@ -207,7 +213,7 @@ final class SupabaseRealtimeClient: ObservableObject {
             currentHr: workout.currentHr,
             totalCompletedSets: nil
         )
-        
+
         onWorkoutStateChange?(row)
     }
     

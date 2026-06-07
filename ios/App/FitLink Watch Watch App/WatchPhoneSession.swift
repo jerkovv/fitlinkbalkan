@@ -17,6 +17,11 @@ final class WatchPhoneSession: NSObject, ObservableObject {
     @Published private(set) var pairingToken: String?
     @Published private(set) var pairedUserId: String?
 
+    // True dok handshake (pull) nije potvrdio identitet sa telefona - npr.
+    // telefon nedostupan pa errorHandler padne. Dok je true, ne tvrdimo
+    // "Povezano" sa sigurnošću; ContentView retry-uje na svaki poll tick.
+    @Published private(set) var tokenIsUncertain: Bool = false
+
     private let tokenKey = "fitlink.pairingToken"
     private let userIdKey = "fitlink.pairedUserId"
 
@@ -86,6 +91,66 @@ final class WatchPhoneSession: NSObject, ObservableObject {
             print("[WatchPhoneSession] Unknown payload type: \(type)")
         }
     }
+
+    // MARK: - Public API
+
+    /// Forsira clear lokalno keširanog tokena. Poziva se kad ContentView
+    /// otkrije da server-vraćeni userId ne odgovara cached pairedUserId
+    /// (znak da je iPhone u međuvremenu prebacio nalog ali sync nije
+    /// stigao do Watch-a).
+    func clearLocalToken() {
+        UserDefaults.standard.removeObject(forKey: tokenKey)
+        UserDefaults.standard.removeObject(forKey: userIdKey)
+        self.pairingToken = nil
+        self.pairedUserId = nil
+        print("[WatchPhoneSession] Local token cleared (identity mismatch)")
+    }
+
+    /// Handshake (pull): pita telefon ko je trenutno ulogovan i sinhronizuje
+    /// lokalni keš sa odgovorom. Poziva se na .task, scenePhase .active,
+    /// activation-complete i na poll tick dok je tokenIsUncertain.
+    func requestCurrentToken() {
+        guard WCSession.isSupported() else { return }
+        let session = WCSession.default
+
+        guard session.activationState == .activated else {
+            // Sesija jos nije spremna - markiraj nesigurnim, pokušaj kasnije.
+            DispatchQueue.main.async { [weak self] in self?.tokenIsUncertain = true }
+            return
+        }
+
+        session.sendMessage(["type": "request_current_token"], replyHandler: { [weak self] reply in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+
+                if let loggedOut = reply["loggedOut"] as? Bool, loggedOut {
+                    print("[WatchPhoneSession] Handshake reply: loggedOut")
+                    self.clearLocalToken()
+                    self.tokenIsUncertain = false
+                    return
+                }
+
+                if let token = reply["token"] as? String,
+                   let userId = reply["userId"] as? String {
+                    // UVEK prepiši (handlePayload skipuje samo ako je identično).
+                    self.handlePayload(["type": "pair_token", "token": token, "user_id": userId])
+                    self.tokenIsUncertain = false
+                    return
+                }
+
+                // "unknown" ili neocekivan oblik - telefon ne zna identitet jos.
+                // Zadrzi keš, ostani nesiguran, retry sledeci put.
+                print("[WatchPhoneSession] Handshake reply: unknown identity, keeping cache as uncertain")
+                self.tokenIsUncertain = true
+            }
+        }, errorHandler: { [weak self] error in
+            DispatchQueue.main.async {
+                print("[WatchPhoneSession] Handshake error: \(error.localizedDescription)")
+                // Telefon nedostupan - zadrzi keš ali markiraj nesigurnim.
+                self?.tokenIsUncertain = true
+            }
+        })
+    }
 }
 
 // MARK: - WCSessionDelegate
@@ -100,6 +165,12 @@ extension WatchPhoneSession: WCSessionDelegate {
             return
         }
         print("[WatchPhoneSession] Activation state: \(activationState.rawValue), reachable: \(session.isReachable)")
+
+        // Cim je sesija spremna, povuci aktuelni identitet sa telefona
+        // (pokriva slucaj kada je .task pozvao requestCurrentToken pre aktivacije).
+        if activationState == .activated {
+            requestCurrentToken()
+        }
 
         // Pri aktivaciji, iOS automatski isporucuje POSLEDNJI applicationContext
         // koji je iPhone poslao - tako da ako je iPhone vec poslao token,

@@ -4,43 +4,70 @@ import { supabase } from "@/lib/supabase";
 import type { AppRole } from "@/lib/database.types";
 import { WatchSync, isNativeIOS } from "@/lib/watchSync";
 
-// Salje pairing token Apple Watch-u preko nativnog WatchSync plugin-a.
-// Tihi no-op na web/Lovable preview-u i kad Watch nije upared.
-async function syncWatchToken(userId: string) {
-  if (!isNativeIOS()) return;
-
-  console.log("[WatchSync] Calling get_or_create_watch_token RPC...");
+// Jedan pokušaj sync-a tokena Watch-u. Vraća true ako je native potvrdio uspeh.
+// Tihi no-op na web/Lovable preview-u.
+async function syncWatchTokenOnce(userId: string, label: string): Promise<boolean> {
+  if (!isNativeIOS()) return false;
   try {
     const { data, error } = await supabase.rpc("get_or_create_watch_token");
     if (error) {
-      console.error("[WatchSync] RPC failed:", error);
-      return;
+      console.error(`[WatchSync] ${label} RPC failed:`, error);
+      return false;
     }
     if (!data?.success || !data?.token) {
-      console.warn("[WatchSync] RPC returned no token:", data);
-      return;
+      console.warn(`[WatchSync] ${label} RPC returned no token:`, data);
+      return false;
     }
-    console.log("[WatchSync] Got token, calling native sendTokenToWatch...");
     const result = await WatchSync.sendTokenToWatch({
       token: data.token,
       userId: data.user_id ?? userId,
     });
-    console.log("[WatchSync] Native returned:", result);
+    const success = (result as any)?.success === true;
+    console.log(`[WatchSync] ${label} native returned:`, result, "→ ok:", success);
+    return success;
   } catch (e) {
-    // Watch nije upared, app nije instalirana - ne smatrati greskom.
-    console.warn("[WatchSync] sendTokenToWatch failed (Watch may not be paired):", e);
+    // Watch nije upared, app nije instalirana, sesija nije reachable.
+    console.warn(`[WatchSync] ${label} sendTokenToWatch failed:`, e);
+    return false;
   }
 }
 
+// Retry sync sa backoff-om: 0s, 2s, 6s, 15s (četiri pokušaja u ~23s).
+// Koristi se na SIGNED_IN, TOKEN_REFRESHED i cold start - kad treba
+// da osiguramo da Watch dobije najnoviji token i ako je u tom trenu bio
+// nedostupan (zaključan, sleep, app upravo restartovan).
+async function syncWatchToken(userId: string) {
+  if (!isNativeIOS()) return;
+  const delays = [0, 2000, 6000, 15000];
+  for (let i = 0; i < delays.length; i++) {
+    if (delays[i] > 0) await new Promise((r) => setTimeout(r, delays[i]));
+    const ok = await syncWatchTokenOnce(userId, `sync ${i + 1}/${delays.length}`);
+    if (ok) {
+      console.log(`[WatchSync] Success on attempt ${i + 1}`);
+      return;
+    }
+  }
+  console.warn("[WatchSync] All sync attempts failed - Watch may keep stale token");
+}
+
+// Retry clear: 0s, 1s, 3s. Awaitable, pre SIGNED_OUT-a treba uspeti
+// jer drugačije Watch ostaje keširan na bivšem korisniku.
 async function clearWatchTokenSafe() {
   if (!isNativeIOS()) return;
-  console.log("[WatchSync] Sending clear_token to Watch...");
-  try {
-    const result = await WatchSync.clearWatchToken();
-    console.log("[WatchSync] Clear returned:", result);
-  } catch (e) {
-    console.warn("[WatchSync] clearWatchToken failed:", e);
+  const delays = [0, 1000, 3000];
+  for (let i = 0; i < delays.length; i++) {
+    if (delays[i] > 0) await new Promise((r) => setTimeout(r, delays[i]));
+    try {
+      const result = await WatchSync.clearWatchToken();
+      console.log(`[WatchSync] clear ${i + 1}/${delays.length} returned:`, result);
+      // success=true pokriva i "skipped" (nema sata/app-a) - oba znače da
+      // više nemamo šta da brišemo.
+      if ((result as any)?.success === true) return;
+    } catch (e) {
+      console.warn(`[WatchSync] clear ${i + 1} failed:`, e);
+    }
   }
+  console.warn("[WatchSync] All clear attempts failed");
 }
 
 interface AuthContextType {
@@ -114,6 +141,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Re-sync na visibility change: kad app postane vidljiv (user otvori
+  // FitLink iz pozadine), pokušaj jedan sync. Pokriva slučajeve kada je
+  // početni sync na SIGNED_IN propao jer je Watch bio nedostupan.
+  useEffect(() => {
+    if (!isNativeIOS() || !user) return;
+    const userId = user.id;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        console.log("[WatchSync] App became visible - single sync attempt");
+        void syncWatchTokenOnce(userId, "visibility");
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [user]);
 
   const fetchRole = async (userId: string) => {
     const { data } = await supabase
