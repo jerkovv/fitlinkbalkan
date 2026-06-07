@@ -55,7 +55,21 @@ type CompletedSet = {
 
 type HRPoint = { ts: string; bpm: number };
 
-type LiveStateOverride = "active" | "rest" | "completed";
+// Pozicija treninga = JEDINI izvor istine za prikaz. Dolazi iz athlete_poll_state
+// (server motor). Telefon je ČITAČ: ne upisuje poziciju, samo zove engine RPC-ove
+// i renderuje ono što server vrati. Optimistički lokalni prikaz je samo radi
+// brzine; poll je korektor.
+type WorkoutPos = {
+  exerciseIdx: number;
+  setNumber: number;
+  totalSets: number;
+  state: "active" | "rest" | "completed";
+  // Apsolutni kraj odmora u KLIJENTSKOM epoch ms (server-abs umanjen za clock offset).
+  restEndsAtMs: number | null;
+  // Početak treninga, SERVER epoch ms. Proteklo vreme se računa od servera, ne lokalno.
+  startedAtMs: number | null;
+  currentHr: number | null;
+};
 
 const triggerHaptic = async () => {
   try {
@@ -85,35 +99,38 @@ const ActiveWorkout = () => {
   const [loading, setLoading] = useState(true);
   const [day, setDay] = useState<DayFull | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [startedAt, setStartedAt] = useState<Date | null>(null);
   const [now, setNow] = useState<Date>(new Date());
 
-  const [exerciseIdx, setExerciseIdx] = useState(0);
-  const [setNumber, setSetNumber] = useState(1);
+  // Pozicija iz servera (poll). null dok prvi poll ne stigne.
+  const [pos, setPos] = useState<WorkoutPos | null>(null);
+
+  // Lokalni log serija — SAMO za labele u listi serija (best-effort, optimistički).
+  // NIJE izvor pozicije; markeri "urađeno" se izvode iz pos.setNumber.
   const [completedSets, setCompletedSets] = useState<CompletedSet[]>([]);
-  const [currentSetStartedAt, setCurrentSetStartedAt] = useState<Date>(new Date());
-
-  // endsAt = apsolutni kraj odmora (epoch ms). Prikaz racuna remaining = endsAt - now,
-  // pa +30 sa BILO kog uredjaja (telefon ili sat preko baze) glatko pomeri prikaz.
-  const [resting, setResting] = useState<{ endsAt: number; subtitle: string } | null>(null);
-  const [closeOpen, setCloseOpen] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const [closeOpen, setCloseOpen] = useState(false);
 
-  // Live HR
+  // Live HR (lokalni HealthKit stream na telefonu)
   const [liveHr, setLiveHr] = useState<number | null>(null);
   const hrSeriesRef = useRef<HRPoint[]>([]);
 
   // Wake lock
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
-  // Live state ref
-  const liveStateRef = useRef<LiveStateOverride>("active");
-
-  // Apsolutni kraj odmora — upisuje se kao rest_ends_at. null kad nije rest.
-  const restEndsAtRef = useRef<Date | null>(null);
-  // Vežba/serija na koju se odnosi tekući odmor (sledeći set), da add/bump
-  // upisi ne pregaze "sledeći set" koji je upisan na ulasku u odmor.
-  const restTargetRef = useRef<{ exerciseIdx: number; setNumber: number } | null>(null);
+  // --- Reader plumbing ---
+  // Clock offset = server_now_ms - client Date.now(). Primenjuje se na rest_ends_at_ms
+  // da skew sata uređaja ne pokvari preostalo vreme.
+  const clockOffsetRef = useRef(0);
+  // Staleness brana: ako optimistička akcija krene POSLE nego što je poll započeo,
+  // odgovor tog poll-a se odbacuje (ne sme da vrati prikaz na staro server stanje).
+  const lastActionAtRef = useRef(0);
+  // Da li smo ikad videli živ trening (da null poll na startu ne odvede u "završeno").
+  const sawWorkoutRef = useRef(false);
+  // Štit: kad smo već krenuli na "završeno", ignoriši poll i ne navigiraj dvaput.
+  const finishedRef = useRef(false);
+  // Ref na poziciju za stabilne handlere (watch eventi).
+  const posRef = useRef<WorkoutPos | null>(null);
+  useEffect(() => { posRef.current = pos; }, [pos]);
 
   /* ------------------------- Init: start session + load day ------------------------- */
   useEffect(() => {
@@ -141,6 +158,8 @@ const ActiveWorkout = () => {
       }
       setDay(dayData);
 
+      // start_workout_session sada I seed-uje početni živi red (vežba 0, serija 1)
+      // na serveru, pa prvi athlete_poll_state vraća trening, ne null.
       const { data: sid, error: startErr } = await supabase.rpc(
         "start_workout_session",
         {
@@ -155,9 +174,6 @@ const ActiveWorkout = () => {
         return;
       }
       setSessionId(sid as unknown as string);
-      const t = new Date();
-      setStartedAt(t);
-      setCurrentSetStartedAt(t);
       setLoading(false);
     })();
     return () => {
@@ -165,12 +181,12 @@ const ActiveWorkout = () => {
     };
   }, [dayId, user]);
 
-  /* ------------------------- Elapsed clock ------------------------- */
+  /* ------------------------- Elapsed clock (tick; vreme se računa od servera) ------------------------- */
   useEffect(() => {
-    if (!startedAt) return;
+    if (!sessionId) return;
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
-  }, [startedAt]);
+  }, [sessionId]);
 
   /* ------------------------- Wake lock ------------------------- */
   useEffect(() => {
@@ -278,83 +294,26 @@ const ActiveWorkout = () => {
     return () => clearTimeout(id);
   }, [incomingMessage]);
 
-  /* ------------------------- Live state heartbeat (every 15s) ------------------------- */
-  const cleanupLiveStateRef = useRef(false);
-
-  useEffect(() => {
-    if (!sessionId || !user || !day || !day.exercises?.length) return;
-    let stopped = false;
-    const upsert = async () => {
-      if (stopped) return;
-
-      // Flap fix: tokom odmora writeLiveState upisuje TARGET (sledeću) seriju,
-      // a React setNumber/exerciseIdx se ne pomeraju dok rest ne završi. Da se
-      // dva pisca ne svađaju oko current_set_number, heartbeat koristi ISTI
-      // izvor istine — restTargetRef — dok smo u rest stanju.
-      const isResting = liveStateRef.current === "rest";
-      const target = restTargetRef.current;
-      const liveExIdx = isResting && target ? target.exerciseIdx : exerciseIdx;
-      const liveSetNum = isResting && target ? target.setNumber : setNumber;
-      const ex = day.exercises[liveExIdx];
-      if (!ex) return;
-
-      const restEndsAt = isResting
-        ? restEndsAtRef.current?.toISOString() ?? null
-        : null;
-
-      const payload = {
-        session_log_id: sessionId,
-        athlete_id: user.id,
-        current_exercise_idx: liveExIdx,
-        current_exercise_name: ex.exercise.name_en?.trim() || ex.exercise.name,
-        current_set_number: liveSetNum,
-        total_sets: ex.sets,
-        current_state: liveStateRef.current,
-        current_hr: liveHr,
-        total_completed_sets: completedSets.length,
-        rest_ends_at: restEndsAt,
-        last_heartbeat: new Date().toISOString(),
-      };
-
-      console.log("UPSERT workout_live_state:", payload);
-
-      await supabase
-        .from("workout_live_state" as any)
-        .upsert(payload as any, { onConflict: "session_log_id" } as any)
-        .eq("session_log_id", sessionId);
-    };
-    upsert();
-    const id = setInterval(upsert, 15000);
-    return () => {
-      stopped = true;
-      clearInterval(id);
-    };
-  }, [sessionId, user, day, exerciseIdx, setNumber, liveHr, completedSets.length]);
-
-  // Cleanup on unmount: remove live state row
-  useEffect(() => {
-    return () => {
-      if (sessionId && !cleanupLiveStateRef.current) {
-        cleanupLiveStateRef.current = true;
-        supabase
-          .from("workout_live_state" as any)
-          .delete()
-          .eq("session_log_id", sessionId)
-          .then(() => undefined);
-      }
-    };
-  }, [sessionId]);
-
-
   /* ------------------------- Derived ------------------------- */
   const exercises = day?.exercises ?? [];
-  const current = exercises[exerciseIdx];
+  const current = pos ? exercises[pos.exerciseIdx] : undefined;
   const totalSetsAll = useMemo(
     () => exercises.reduce((acc, e) => acc + (e.sets ?? 0), 0),
     [exercises]
   );
-  const completedTotal = completedSets.length;
-  const elapsedMs = startedAt ? now.getTime() - startedAt.getTime() : 0;
+  // Ukupno urađenih serija = sve serije vežbi pre tekuće + (setNumber - 1) tekuće.
+  const completedTotal = useMemo(() => {
+    if (!pos || !day) return 0;
+    let sum = 0;
+    for (let i = 0; i < pos.exerciseIdx; i++) sum += day.exercises[i]?.sets ?? 0;
+    sum += Math.max(0, pos.setNumber - 1);
+    return sum;
+  }, [pos, day]);
+  // Proteklo vreme se računa od SERVERA: serverNow (= now + clockOffset) − started_at_ms.
+  // Bez lokalnog startedAt-a, pa remount/otključavanje ne resetuje brojač.
+  const elapsedMs = pos?.startedAtMs
+    ? Math.max(0, now.getTime() + clockOffsetRef.current - pos.startedAtMs)
+    : 0;
 
   const initialFor = (exIndex: number, setNum: number) => {
     const found = completedSets.find(
@@ -363,292 +322,279 @@ const ActiveWorkout = () => {
     return found ? { reps: found.reps, weight_kg: found.weight_kg } : null;
   };
 
-  /* ------------------------- Helper: pisi state odmah u bazu ------------------------- */
-  const writeLiveState = useCallback(
-    async (overrides: {
-      exerciseIdx?: number;
-      setNumber?: number;
-      state: LiveStateOverride;
-      restEndsAt?: Date | null;
-    }) => {
-      if (!sessionId || !user || !day) return;
-      const targetIdx = overrides.exerciseIdx ?? exerciseIdx;
-      const ex = day.exercises[targetIdx];
-      if (!ex) return;
-
-      // rest_ends_at samo dok je rest; svako drugo stanje ga eksplicitno nulira.
-      const restEndsAt =
-        overrides.state === "rest"
-          ? (overrides.restEndsAt ?? restEndsAtRef.current)?.toISOString() ?? null
-          : null;
-
-      const payload = {
-        session_log_id: sessionId,
-        athlete_id: user.id,
-        current_exercise_idx: targetIdx,
-        current_exercise_name: ex.exercise.name_en?.trim() || ex.exercise.name,
-        current_set_number: overrides.setNumber ?? setNumber,
-        total_sets: ex.sets,
-        current_state: overrides.state,
-        current_hr: liveHr,
-        total_completed_sets: completedSets.length,
-        rest_ends_at: restEndsAt,
-        last_heartbeat: new Date().toISOString(),
-      };
-
-      console.log("UPSERT workout_live_state (immediate):", payload);
-
-      await supabase
-        .from("workout_live_state" as any)
-        .upsert(payload as any, { onConflict: "session_log_id" } as any)
-        .eq("session_log_id", sessionId);
-    },
-    [sessionId, user, day, exerciseIdx, setNumber, liveHr, completedSets.length]
-  );
-
-  /* ------------------------- Helper: produži odmor (samo DB upis u Sloju 1) ------------------------- */
-  const handleAddRest = useCallback(
-    (extraSeconds: number) => {
-      const base = restEndsAtRef.current ?? new Date();
-      const newEnd = new Date(base.getTime() + extraSeconds * 1000);
-      restEndsAtRef.current = newEnd;
-      liveStateRef.current = "rest";
-      const target = restTargetRef.current;
-      void writeLiveState({
-        exerciseIdx: target?.exerciseIdx,
-        setNumber: target?.setNumber,
-        state: "rest",
-        restEndsAt: newEnd,
-      });
-      // Pomeri i lokalni prikaz na telefonu (jedini izvor prikaza je endsAt).
-      // Vazi i za +30 sa telefona i za watch event koji zove ovaj isti helper.
-      setResting((prev) => (prev ? { ...prev, endsAt: newEnd.getTime() } : prev));
-    },
-    [writeLiveState]
-  );
-
-
-  /* ------------------------- Handlers ------------------------- */
-  const handleSetComplete = useCallback(
-    async (data: { reps: number; weight_kg: number; rpe: number | null; notes: string | null }) => {
-      if (!current || !sessionId) return;
-      const nowTs = new Date();
-      const restEst = Math.max(
-        0,
-        Math.round((nowTs.getTime() - currentSetStartedAt.getTime()) / 1000)
-      );
-
-      const { error } = await supabase.from("set_logs").insert({
-        session_log_id: sessionId,
-        exercise_id: current.id,
-        set_number: setNumber,
-        reps: data.reps,
-        weight_kg: data.weight_kg,
-        rpe: data.rpe,
-        notes: data.notes,
-        done: true,
-        started_at: currentSetStartedAt.toISOString(),
-        completed_at: nowTs.toISOString(),
-        actual_rest_seconds: restEst,
-      } as any);
-
-      if (error) {
-        toast.error(error.message);
-        return;
-      }
-
-      triggerHaptic();
-
-      setCompletedSets((prev) => {
-        const without = prev.filter(
-          (c) => !(c.exerciseIndex === exerciseIdx && c.setNumber === setNumber)
-        );
-        return [
-          ...without,
-          {
-            exerciseIndex: exerciseIdx,
-            setNumber,
-            reps: data.reps,
-            weight_kg: data.weight_kg,
-          },
-        ];
-      });
-
-      const isLastSetOfExercise = setNumber >= current.sets;
-      const isLastExercise = exerciseIdx >= exercises.length - 1;
-
-      if (isLastSetOfExercise && isLastExercise) {
-        liveStateRef.current = "completed";
-        restEndsAtRef.current = null;
-        restTargetRef.current = null;
-        await writeLiveState({ state: "completed" });
-        await finishWorkout();
-        return;
-      }
-
-      const restSec = current.rest_seconds && current.rest_seconds > 0
-        ? current.rest_seconds
-        : 60;
-
-      const nextEx = exercises[exerciseIdx + 1]?.exercise;
-      const nextName = nextEx ? (nextEx.name_en?.trim() || nextEx.name) : "";
-      const nextSubtitle = isLastSetOfExercise
-        ? `Sledeća vežba: ${nextName}`
-        : `Sledeća serija ${setNumber + 1} od ${current.sets}`;
-
-      const restEnd = new Date(Date.now() + restSec * 1000);
-      restEndsAtRef.current = restEnd;
-
-      liveStateRef.current = "rest";
-      if (isLastSetOfExercise) {
-        restTargetRef.current = { exerciseIdx: exerciseIdx + 1, setNumber: 1 };
-        await writeLiveState({
-          exerciseIdx: exerciseIdx + 1,
-          setNumber: 1,
-          state: "rest",
-          restEndsAt: restEnd,
-        });
-      } else {
-        restTargetRef.current = { exerciseIdx, setNumber: setNumber + 1 };
-        await writeLiveState({
-          setNumber: setNumber + 1,
-          state: "rest",
-          restEndsAt: restEnd,
-        });
-      }
-
-      setResting({ endsAt: restEnd.getTime(), subtitle: nextSubtitle });
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [current, sessionId, setNumber, currentSetStartedAt, exerciseIdx, exercises, writeLiveState]
-  );
-
-  const finishWorkout = useCallback(async () => {
-    if (!sessionId || finishing) return;
-    setFinishing(true);
-    
-    // KLJUČNO: Postavi current_state = 'completed' PRE delete-a
-    // Tako Watch dobija realtime event i može da prikaže "Bravo!" screen
-    restEndsAtRef.current = null;
-    restTargetRef.current = null;
-    if (user && day) {
-      const ex = day.exercises[exerciseIdx];
-      if (ex) {
-        console.log("UPSERT workout_live_state (finish - completed):", {
-          session_log_id: sessionId,
-          current_state: "completed",
-        });
-        await supabase
-          .from("workout_live_state" as any)
-          .upsert(
-            {
-              session_log_id: sessionId,
-              athlete_id: user.id,
-              current_exercise_idx: exerciseIdx,
-              current_exercise_name: ex.exercise.name_en?.trim() || ex.exercise.name,
-              current_set_number: setNumber,
-              total_sets: ex.sets,
-              current_state: "completed",
-              current_hr: liveHr,
-              total_completed_sets: completedSets.length,
-              rest_ends_at: null,
-              last_heartbeat: new Date().toISOString(),
-            } as any,
-            { onConflict: "session_log_id" } as any,
-          )
-          .eq("session_log_id", sessionId);
-        // Daj Watch-u 1.5s da prikaže "Bravo!" screen pre delete-a
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-      }
-    }
-    
+  /* ------------------------- Finalizacija (HR statistika + nav) ------------------------- */
+  // Engine (athlete_complete_set zadnje serije / athlete_finish_workout) već zatvara
+  // sesiju i živi red na serveru. Ovde SAMO zakačimo HR statistiku (avg/max/series)
+  // koju motor ne računa, pa navigiramo. complete_workout_session je idempotentan.
+  const finalizeAndNav = useCallback(async () => {
+    if (!sessionId) return;
     const series = hrSeriesRef.current;
     const bpms = series.map((p) => p.bpm).filter((n) => Number.isFinite(n));
     const avg = bpms.length ? Math.round(bpms.reduce((a, b) => a + b, 0) / bpms.length) : null;
     const max = bpms.length ? Math.max(...bpms) : null;
     const min = bpms.length ? Math.min(...bpms) : null;
 
-    const { error } = await supabase.rpc("complete_workout_session", {
-      p_session_id: sessionId,
-      p_hr_avg: avg,
-      p_hr_max: max,
-      p_hr_min: min,
-      p_active_calories: null,
-      p_hr_series: series.length ? (series as any) : null,
-    } as any);
+    try {
+      await supabase.rpc("complete_workout_session", {
+        p_session_id: sessionId,
+        p_hr_avg: avg,
+        p_hr_max: max,
+        p_hr_min: min,
+        p_active_calories: null,
+        p_hr_series: series.length ? (series as any) : null,
+      } as any);
+    } catch {
+      /* sesija je možda već zatvorena drugde — svejedno idemo na ekran rezultata */
+    }
+    nav(`/vezbac/trening/zavrsen/${sessionId}`, { replace: true });
+  }, [sessionId, nav]);
 
-    setFinishing(false);
+  /* ------------------------- Poll: athlete_poll_state (render iz servera) ------------------------- */
+  const applyPoll = useCallback(
+    (workout: any, serverNowMs: number | null | undefined) => {
+      if (finishedRef.current) return;
+      if (typeof serverNowMs === "number") {
+        clockOffsetRef.current = serverNowMs - Date.now();
+      }
+
+      if (!workout) {
+        // Nema živog reda. Ako smo prethodno videli trening -> završen je (ovde ili
+        // na satu) -> zakači HR i idi na rezultat. Na samom startu (još nismo videli
+        // ništa) ne diramo — seed garantuje da prvi poll ima trening.
+        if (sawWorkoutRef.current) {
+          finishedRef.current = true;
+          void finalizeAndNav();
+        }
+        return;
+      }
+
+      sawWorkoutRef.current = true;
+
+      const serverRestMs =
+        typeof workout.rest_ends_at_ms === "number" ? workout.rest_ends_at_ms : null;
+      const restEndsAtMs =
+        serverRestMs != null ? serverRestMs - clockOffsetRef.current : null;
+
+      setPos({
+        exerciseIdx: workout.current_exercise_idx ?? 0,
+        setNumber: workout.current_set_number ?? 1,
+        totalSets: workout.total_sets ?? 1,
+        state: (workout.current_state as WorkoutPos["state"]) ?? "active",
+        restEndsAtMs,
+        startedAtMs:
+          typeof workout.started_at_ms === "number" ? workout.started_at_ms : null,
+        currentHr: typeof workout.current_hr === "number" ? workout.current_hr : null,
+      });
+    },
+    [finalizeAndNav]
+  );
+
+  useEffect(() => {
+    if (!sessionId) return;
+    let stopped = false;
+
+    const poll = async () => {
+      if (finishedRef.current) return;
+      const startedTs = Date.now();
+      const { data, error } = await supabase.rpc("athlete_poll_state");
+      if (stopped) return;
+      if (error) return; // zadrži poslednje stanje
+      // Staleness: novija optimistička akcija je krenula POSLE starta ovog poll-a.
+      if (lastActionAtRef.current > startedTs) return;
+      const res = data as any;
+      if (!res || res.success === false) return;
+      applyPoll(res.workout, res.server_now_ms);
+    };
+
+    poll();
+    const id = setInterval(poll, 2000);
+    const onVis = () => {
+      // Na povratak u foreground odmah poll-uj i pregazi lokalno stanje.
+      if (document.visibilityState === "visible") poll();
+    };
+    document.addEventListener("visibilitychange", onVis);
+
+    return () => {
+      stopped = true;
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [sessionId, applyPoll]);
+
+  /* ------------------------- Heartbeat: athlete_heartbeat (samo HR + svežina) ------------------------- */
+  // Dira SAMO last_heartbeat i current_hr — nikad poziciju. Drži živi red svežim
+  // (poll filtrira last_heartbeat > now - 5min).
+  useEffect(() => {
+    if (!sessionId) return;
+    let stopped = false;
+    const beat = async () => {
+      if (stopped || finishedRef.current) return;
+      try {
+        await supabase.rpc("athlete_heartbeat", {
+          p_session_id: sessionId,
+          p_hr: liveHr ?? null,
+        } as any);
+      } catch {
+        /* noop */
+      }
+    };
+    beat();
+    const id = setInterval(beat, 12000);
+    return () => {
+      stopped = true;
+      clearInterval(id);
+    };
+  }, [sessionId, liveHr]);
+
+  /* ------------------------- Helper: produži odmor (+30, privremeno rest-only upis) ------------------------- */
+  const handleAddRest = useCallback(
+    async (extraSeconds: number) => {
+      const p = posRef.current;
+      if (!sessionId || !p || !p.restEndsAtMs) return;
+      const newClientEnd = p.restEndsAtMs + extraSeconds * 1000;
+
+      lastActionAtRef.current = Date.now();
+      setPos((prev) => (prev ? { ...prev, restEndsAtMs: newClientEnd } : prev));
+
+      // Samo polje rest_ends_at (NIJE pozicija). Apsolutno serversko vreme = klijent + offset.
+      const serverEnd = new Date(newClientEnd + clockOffsetRef.current);
+      await supabase
+        .from("workout_live_state" as any)
+        .update({
+          rest_ends_at: serverEnd.toISOString(),
+          last_heartbeat: new Date().toISOString(),
+        } as any)
+        .eq("session_log_id", sessionId);
+      lastActionAtRef.current = Date.now();
+    },
+    [sessionId]
+  );
+
+  /* ------------------------- Handlers (dugmad -> engine RPC, optimistički prikaz) ------------------------- */
+  const handleSetComplete = useCallback(
+    async (data: { reps: number; weight_kg: number; rpe: number | null; notes: string | null }) => {
+      const p = posRef.current;
+      if (!sessionId || !p || !day) return;
+      triggerHaptic();
+
+      const ex = day.exercises[p.exerciseIdx];
+      const isLastSet = p.setNumber >= (ex?.sets ?? p.totalSets);
+      const isLastExercise = p.exerciseIdx >= day.exercises.length - 1;
+      const isWorkoutDone = isLastSet && isLastExercise;
+
+      // Optimistički log za labele (best-effort)
+      setCompletedSets((prev) => [
+        ...prev.filter(
+          (c) => !(c.exerciseIndex === p.exerciseIdx && c.setNumber === p.setNumber)
+        ),
+        {
+          exerciseIndex: p.exerciseIdx,
+          setNumber: p.setNumber,
+          reps: data.reps,
+          weight_kg: data.weight_kg,
+        },
+      ]);
+
+      lastActionAtRef.current = Date.now();
+
+      if (isWorkoutDone) {
+        // Zadnja serija: athlete_complete_set LOGUJE seriju I finalizuje sesiju.
+        setFinishing(true);
+        finishedRef.current = true;
+        const { error } = await supabase.rpc("athlete_complete_set", {
+          p_session_id: sessionId,
+          p_reps: data.reps,
+          p_weight: data.weight_kg,
+          p_rpe: data.rpe,
+        } as any);
+        if (error) {
+          toast.error(error.message);
+          finishedRef.current = false;
+          setFinishing(false);
+          return;
+        }
+        await finalizeAndNav();
+        setFinishing(false);
+        return;
+      }
+
+      // Optimistički: uđi u odmor sa predviđenom sledećom pozicijom; poll koriguje.
+      const restSec = ex?.rest_seconds && ex.rest_seconds > 0 ? ex.rest_seconds : 60;
+      const nextIdx = isLastSet ? p.exerciseIdx + 1 : p.exerciseIdx;
+      const nextSet = isLastSet ? 1 : p.setNumber + 1;
+      const nextEx = day.exercises[nextIdx];
+      setPos({
+        exerciseIdx: nextIdx,
+        setNumber: nextSet,
+        totalSets: nextEx?.sets ?? p.totalSets,
+        state: "rest",
+        restEndsAtMs: Date.now() + restSec * 1000,
+        startedAtMs: p.startedAtMs,
+        currentHr: p.currentHr,
+      });
+
+      const { error } = await supabase.rpc("athlete_complete_set", {
+        p_session_id: sessionId,
+        p_reps: data.reps,
+        p_weight: data.weight_kg,
+        p_rpe: data.rpe,
+      } as any);
+      lastActionAtRef.current = Date.now();
+      if (error) toast.error(error.message);
+    },
+    [sessionId, day, finalizeAndNav]
+  );
+
+  const skipRest = useCallback(async () => {
+    const p = posRef.current;
+    if (!sessionId || !p) return;
+    lastActionAtRef.current = Date.now();
+    setPos((prev) => (prev ? { ...prev, state: "active", restEndsAtMs: null } : prev));
+    const { error } = await supabase.rpc("athlete_skip_rest", {
+      p_session_id: sessionId,
+    } as any);
+    lastActionAtRef.current = Date.now();
+    if (error) toast.error(error.message);
+  }, [sessionId]);
+
+  const finishWorkout = useCallback(async () => {
+    if (!sessionId || finishing) return;
+    setFinishing(true);
+    finishedRef.current = true;
+    lastActionAtRef.current = Date.now();
+    const { error } = await supabase.rpc("athlete_finish_workout", {
+      p_session_id: sessionId,
+    } as any);
     if (error) {
       toast.error(error.message);
+      finishedRef.current = false;
+      setFinishing(false);
       return;
     }
-    cleanupLiveStateRef.current = true;
-    await supabase.from("workout_live_state" as any).delete().eq("session_log_id", sessionId);
-    nav(`/vezbac/trening/zavrsen/${sessionId}`, { replace: true });
-  }, [sessionId, finishing, nav, user, day, exerciseIdx, setNumber, liveHr, completedSets.length]);
-
-  const handleRestDone = useCallback(() => {
-    setResting(null);
-    if (!current) return;
-    
-    let newIdx = exerciseIdx;
-    let newSetNum = setNumber;
-    
-    if (setNumber >= current.sets) {
-      if (exerciseIdx < exercises.length - 1) {
-        newIdx = exerciseIdx + 1;
-        newSetNum = 1;
-        setExerciseIdx(newIdx);
-        setSetNumber(newSetNum);
-      }
-    } else {
-      newSetNum = setNumber + 1;
-      setSetNumber(newSetNum);
-    }
-    
-    setCurrentSetStartedAt(new Date());
-
-    restEndsAtRef.current = null;
-    restTargetRef.current = null;
-    liveStateRef.current = "active";
-    writeLiveState({
-      exerciseIdx: newIdx,
-      setNumber: newSetNum,
-      state: "active",
-    });
-  }, [current, exerciseIdx, setNumber, exercises.length, writeLiveState]);
+    await finalizeAndNav();
+    setFinishing(false);
+  }, [sessionId, finishing, finalizeAndNav]);
 
   const confirmCancel = async () => {
+    finishedRef.current = true;
     if (sessionId) {
       await supabase.rpc("cancel_workout_session", { p_session_id: sessionId } as any);
-      cleanupLiveStateRef.current = true;
       await supabase.from("workout_live_state" as any).delete().eq("session_log_id", sessionId);
     }
     setCloseOpen(false);
     nav("/vezbac");
   };
 
-  /* ------------------------- Watch button events (Watch -> iPhone) ------------------------- */
-  const handleSetCompleteRef = useRef(handleSetComplete);
-  const handleRestDoneRef = useRef(handleRestDone);
+  /* ------------------------- Watch button events (samo +30) ------------------------- */
+  // Sat sada zove engine direktno (complete/skip), pa ih telefon NE obrađuje ovde.
+  // Ostaje samo extend_rest_30s jer +30 i dalje ide preko watch_button_events.
   const handleAddRestRef = useRef(handleAddRest);
-  const restingRef = useRef(resting);
-  // Idempotencija: isti watch_button_events red ne sme da se primeni dvaput
-  // (realtime ume da isporuci duplikat). Bez ovoga bi extend_rest_30s dodao +60.
   const processedEventIdsRef = useRef<Set<string>>(new Set());
-  const currentRef = useRef(current);
-
-  useEffect(() => { handleSetCompleteRef.current = handleSetComplete; }, [handleSetComplete]);
-  useEffect(() => { handleRestDoneRef.current = handleRestDone; }, [handleRestDone]);
   useEffect(() => { handleAddRestRef.current = handleAddRest; }, [handleAddRest]);
-  useEffect(() => { restingRef.current = resting; }, [resting]);
-  useEffect(() => { currentRef.current = current; }, [current]);
 
   useEffect(() => {
     if (!user || !sessionId) return;
-    
-    console.log("Subscribing to watch_button_events for athlete_id:", user.id);
-    
+
     const channel = supabase
       .channel(`watch-events:${user.id}`)
       .on(
@@ -661,72 +607,40 @@ const ActiveWorkout = () => {
         },
         async (payload) => {
           const event = payload.new as any;
-          console.log("WATCH EVENT received:", event);
-          
           if (!event || !event.id) return;
 
-          // Primeni svaki event tacno jednom. Realtime ume da isporuci isti red
-          // dvaput; bez ove brane bi +30 postao +60.
-          if (processedEventIdsRef.current.has(event.id)) {
-            console.log("Watch event already processed, skipping:", event.id);
-            return;
-          }
+          if (processedEventIdsRef.current.has(event.id)) return;
           processedEventIdsRef.current.add(event.id);
 
           const eventAge = Date.now() - new Date(event.created_at).getTime();
           if (eventAge > 30000) {
-            console.log("Watch event too old, ignoring and deleting");
             await supabase.from("watch_button_events" as any).delete().eq("id", event.id);
             return;
           }
 
           try {
-            if (event.event_type === "complete_set") {
-              if (restingRef.current) {
-                console.log("Watch complete_set ignored - currently resting");
-              } else {
-                const cur = currentRef.current;
-                if (cur) {
-                  await handleSetCompleteRef.current({
-                    reps: cur.reps ?? 10,
-                    weight_kg: cur.weight_kg ?? 0,
-                    rpe: null,
-                    notes: null,
-                  });
-                }
-              }
-            } else if (event.event_type === "skip_rest") {
-              if (restingRef.current) {
-                handleRestDoneRef.current();
-              } else {
-                console.log("Watch skip_rest ignored - not currently resting");
-              }
-            } else if (event.event_type === "extend_rest_30s") {
-              if (restingRef.current) {
-                // handleAddRest sam pomera restEndsAtRef + resting.endsAt + upise
-                // bazu. Bez rucnog seconds bump-a (dupli izvor je pravio trzanje).
+            if (event.event_type === "extend_rest_30s") {
+              if (posRef.current?.state === "rest") {
                 handleAddRestRef.current(30);
               }
             }
+            // complete_set / skip_rest: sat ih sada šalje direktno motoru, ignorišemo.
           } catch (err) {
             console.error("Error processing watch event:", err);
           }
-          
+
           await supabase.from("watch_button_events" as any).delete().eq("id", event.id);
         },
       )
-      .subscribe((status) => {
-        console.log("watch_button_events subscription status:", status);
-      });
-    
+      .subscribe();
+
     return () => {
-      console.log("Unsubscribing from watch_button_events");
       supabase.removeChannel(channel);
     };
   }, [user, sessionId]);
 
   /* ------------------------- Render ------------------------- */
-  if (loading) {
+  if (loading || !pos) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -750,9 +664,17 @@ const ActiveWorkout = () => {
     );
   }
 
+  const exerciseIdx = pos.exerciseIdx;
+  const setNumber = pos.setNumber;
   const setsForCurrent = current.sets;
   const setsList = Array.from({ length: setsForCurrent }, (_, i) => i + 1);
   const progressPct = totalSetsAll > 0 ? (completedTotal / totalSetsAll) * 100 : 0;
+  const hr = liveHr ?? pos.currentHr;
+  const isResting = pos.state === "rest" && pos.restEndsAtMs != null;
+  const restSubtitle =
+    setNumber <= 1
+      ? `Sledeća vežba: ${current.exercise.name_en?.trim() || current.exercise.name}`
+      : `Sledeća serija ${setNumber} od ${setsForCurrent}`;
 
   return (
     <div className="min-h-screen bg-background">
@@ -772,7 +694,7 @@ const ActiveWorkout = () => {
             </button>
             <div className="flex-1 min-w-0">
               <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                Aktivan trening · {fmtElapsed(elapsedMs)}
+                Aktivan trening{pos.startedAtMs ? ` · ${fmtElapsed(elapsedMs)}` : ""}
               </div>
               <div className="text-[13px] font-bold text-foreground truncate">
                 Vežba {exerciseIdx + 1} od {exercises.length} · Serija {setNumber} od {setsForCurrent}
@@ -780,16 +702,16 @@ const ActiveWorkout = () => {
             </div>
             <div
               className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full bg-surface border border-hairline shrink-0"
-              style={{ color: liveHr && liveHr > 0 ? getHrColor(liveHr) : undefined }}
+              style={{ color: hr && hr > 0 ? getHrColor(hr) : undefined }}
               aria-label="Trenutni puls"
             >
               <Heart
-                className={cn("h-3.5 w-3.5", liveHr && liveHr > 0 && "animate-pulse")}
+                className={cn("h-3.5 w-3.5", hr && hr > 0 && "animate-pulse")}
                 strokeWidth={2.4}
-                fill={liveHr && liveHr > 0 ? "currentColor" : "none"}
+                fill={hr && hr > 0 ? "currentColor" : "none"}
               />
               <span className="text-[13px] font-bold tnum leading-none">
-                {liveHr && liveHr > 0 ? liveHr : "-"}
+                {hr && hr > 0 ? hr : "-"}
               </span>
             </div>
           </div>
@@ -882,10 +804,9 @@ const ActiveWorkout = () => {
           {/* Sets list */}
           <div className="rounded-3xl bg-surface border border-hairline overflow-hidden">
             {setsList.map((n) => {
-              const done = completedSets.some(
-                (c) => c.exerciseIndex === exerciseIdx && c.setNumber === n
-              );
-              const active = n === setNumber && !done;
+              // Markeri "urađeno" se izvode iz pozicije (server), ne iz lokalnog loga.
+              const done = n < setNumber;
+              const active = n === setNumber && pos.state === "active";
               const completed = completedSets.find(
                 (c) => c.exerciseIndex === exerciseIdx && c.setNumber === n
               );
@@ -953,11 +874,11 @@ const ActiveWorkout = () => {
         </div>
       </div>
 
-      {resting && (
+      {isResting && pos.restEndsAtMs != null && (
         <RestTimer
-          endsAt={resting.endsAt}
-          subtitle={resting.subtitle}
-          onDone={handleRestDone}
+          endsAt={pos.restEndsAtMs}
+          subtitle={restSubtitle}
+          onDone={skipRest}
           onAddSeconds={handleAddRest}
         />
       )}
