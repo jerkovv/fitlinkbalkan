@@ -614,7 +614,7 @@ const ActiveWorkout = () => {
   /* ------------------------- Render ------------------------- */
   if (loading || !pos) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="h-[100dvh] bg-background flex items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
@@ -622,7 +622,7 @@ const ActiveWorkout = () => {
 
   if (!day || !current) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-6 text-center">
+      <div className="h-[100dvh] bg-background flex items-center justify-center px-6 text-center">
         <div className="space-y-3">
           <p className="text-muted-foreground">Trening nije dostupan.</p>
           <button
@@ -649,12 +649,12 @@ const ActiveWorkout = () => {
       : `Sledeća serija ${setNumber} od ${setsForCurrent}`;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-[100dvh] overflow-y-auto bg-background">
       <div className="mx-auto w-full max-w-[440px] min-h-screen relative pb-10">
         {/* Top bar */}
         <div
           className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-hairline"
-          style={{ paddingTop: "calc(env(safe-area-inset-top, 20px) + 8px)" }}
+          style={{ paddingTop: "calc(max(env(safe-area-inset-top), 20px) + 8px)" }}
         >
           <div className="px-4 pb-3 flex items-center gap-3">
             <button

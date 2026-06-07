@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
+  FullScreenSheet, FullScreenSheetHeader, FullScreenSheetScroll,
+} from "@/components/ui/full-screen-sheet";
 import { Apple, Plus, Loader2, Search, Trash2, Flame } from "lucide-react";
 import { toast } from "sonner";
 
@@ -371,77 +371,85 @@ const Nutrition = () => {
           </div>
         )}
 
-        {/* Log dialog */}
-        <Dialog open={logOpen} onOpenChange={setLogOpen}>
-          <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
-            <DialogHeader>
-              <DialogTitle>{pickedFood ? "Količina" : "Loguj namirnicu"}</DialogTitle>
-            </DialogHeader>
-
-            {!pickedFood ? (
-              <>
-                {pickedMealName && (
-                  <div className="text-xs text-muted-foreground -mt-2">Za obrok: <span className="font-semibold text-foreground">{pickedMealName}</span></div>
-                )}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    value={foodQuery}
-                    onChange={(e) => setFoodQuery(e.target.value)}
-                    placeholder="Pretraži namirnicu..."
-                    className="pl-9"
-                    autoFocus
-                  />
-                </div>
-                <div className="overflow-y-auto flex-1 space-y-1 -mx-1 px-1">
-                  {filteredFoods.map((f) => (
-                    <button
-                      key={f.id}
-                      onClick={() => setPickedFood(f)}
-                      className="w-full text-left p-3 rounded-lg hover:bg-surface-2 flex items-center gap-3 transition"
-                    >
-                      <div className="h-9 w-9 rounded-lg bg-gradient-brand-soft flex items-center justify-center shrink-0">
-                        <Apple className="h-4 w-4 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-sm truncate">{f.name}</div>
-                        <div className="text-[11px] text-muted-foreground">
-                          {f.kcal_per_100g} kcal · P{f.protein_per_100g} U{f.carbs_per_100g} M{f.fat_per_100g} /100g
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="space-y-4">
-                <div className="bg-surface-2 rounded-xl p-3">
-                  <div className="font-semibold text-sm">{pickedFood.name}</div>
-                  <div className="text-[11px] text-muted-foreground">
-                    {pickedFood.kcal_per_100g} kcal · P{pickedFood.protein_per_100g} /100g
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="lgrams">Količina (g)</Label>
-                  <Input id="lgrams" type="number" value={pickedGrams} onChange={(e) => setPickedGrams(e.target.value)} className="mt-1.5" autoFocus />
-                </div>
-                {pickedGrams && parseFloat(pickedGrams) > 0 && (
-                  <div className="text-center bg-gradient-brand-soft rounded-xl p-3">
-                    <div className="font-bold text-lg text-primary">
-                      {Math.round(pickedFood.kcal_per_100g * parseFloat(pickedGrams) / 100)} kcal
-                    </div>
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setPickedFood(null)} className="flex-1">Nazad</Button>
-                  <Button onClick={addLog} className="flex-1">Loguj</Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
       </PhoneShell>
       <BottomNav role="athlete" />
+
+      {/* Loguj namirnicu — full-screen (Wolt-style) */}
+      <FullScreenSheet
+        open={logOpen}
+        onClose={() => setLogOpen(false)}
+        title={pickedFood ? "Količina" : "Loguj namirnicu"}
+      >
+        {!pickedFood ? (
+          <>
+            <FullScreenSheetHeader>
+              {pickedMealName && (
+                <div className="text-sm text-muted-foreground">
+                  Za obrok: <span className="font-semibold text-foreground">{pickedMealName}</span>
+                </div>
+              )}
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                  value={foodQuery}
+                  onChange={(e) => setFoodQuery(e.target.value)}
+                  placeholder="Pretraži namirnicu..."
+                  className="pl-12 h-14 text-base rounded-2xl"
+                  autoFocus
+                />
+              </div>
+            </FullScreenSheetHeader>
+            <FullScreenSheetScroll>
+              {filteredFoods.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setPickedFood(f)}
+                  className="w-full text-left py-4 flex items-center gap-4 border-b border-hairline active:bg-surface-2 transition"
+                >
+                  <div className="h-12 w-12 rounded-xl bg-gradient-brand-soft flex items-center justify-center shrink-0">
+                    <Apple className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-[15px] truncate">{f.name}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {f.kcal_per_100g} kcal · P{f.protein_per_100g} U{f.carbs_per_100g} M{f.fat_per_100g} /100g
+                    </div>
+                  </div>
+                </button>
+              ))}
+              {filteredFoods.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-8">Nema rezultata</p>
+              )}
+            </FullScreenSheetScroll>
+          </>
+        ) : (
+          <FullScreenSheetScroll className="pt-5">
+            <div className="space-y-4">
+              <div className="bg-surface-2 rounded-2xl p-4">
+                <div className="font-semibold text-[15px]">{pickedFood.name}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  {pickedFood.kcal_per_100g} kcal · P{pickedFood.protein_per_100g} /100g
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="lgrams">Količina (g)</Label>
+                <Input id="lgrams" type="number" value={pickedGrams} onChange={(e) => setPickedGrams(e.target.value)} className="mt-1.5 h-14 text-base rounded-2xl" autoFocus />
+              </div>
+              {pickedGrams && parseFloat(pickedGrams) > 0 && (
+                <div className="text-center bg-gradient-brand-soft rounded-2xl p-4">
+                  <div className="font-bold text-xl text-primary">
+                    {Math.round(pickedFood.kcal_per_100g * parseFloat(pickedGrams) / 100)} kcal
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2 pt-1">
+                <Button variant="outline" onClick={() => setPickedFood(null)} className="flex-1">Nazad</Button>
+                <Button onClick={addLog} className="flex-1">Loguj</Button>
+              </div>
+            </div>
+          </FullScreenSheetScroll>
+        )}
+      </FullScreenSheet>
     </>
   );
 };

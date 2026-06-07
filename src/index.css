@@ -133,10 +133,22 @@
 @layer base {
   * { @apply border-border; }
 
+  /* WKWebView: scroll must live on a container with a fixed height, not on the
+     document, otherwise position:sticky inside it fails to pin. So we lock the
+     document and let .phone-shell be the scroller. (On Safari this differs from
+     the website on purpose — there the document scrolls; here the container
+     must, or the sticky header drifts in the iOS WebView.) */
   html, body, #root {
     @apply bg-background text-foreground;
-    min-height: 100vh;
+    height: 100%;
+    overflow: hidden;
     overscroll-behavior: none;
+  }
+
+  html, body {
+    width: 100%;
+    position: relative;
+    left: 0;
   }
 
   body {
@@ -220,11 +232,20 @@
     @apply inline-flex items-center rounded-full font-semibold transition;
   }
 
-  /* Mobile shell */
+  /* Mobile shell — the real scroll container. Fixed height (100dvh) + own
+     overflow-y so the sticky header inside it pins correctly in WKWebView.
+     Visually identical to the website; only the scroll owner moved from the
+     document to this element. */
   .phone-shell {
-    @apply mx-auto w-full max-w-[440px] min-h-screen relative bg-background;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    @apply mx-auto w-full max-w-[440px] relative bg-background;
+    left: 0;
+    right: 0;
+    height: 100vh; /* fallback */
+    height: 100dvh;
+    overflow-y: auto;
+    padding-bottom: max(env(safe-area-inset-bottom), 0px);
     overscroll-behavior-y: contain;
+    overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -239,7 +260,7 @@
     top: 0;
     z-index: 30;
     background: hsl(var(--background));
-    padding-top: calc(env(safe-area-inset-top, 20px) + 12px);
+    padding-top: calc(max(env(safe-area-inset-top), 20px) + 12px);
   }
 
   .phone-shell-header {

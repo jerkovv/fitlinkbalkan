@@ -62,7 +62,7 @@ const Auth = () => {
   };
 
   return (
-    <div className="phone-shell flex flex-col px-6 py-10 min-h-screen">
+    <div className="phone-shell flex flex-col px-6 py-10">
       <Link to="/" className="text-xs text-muted-foreground mb-8">← Nazad</Link>
 
       <div className="mb-8">

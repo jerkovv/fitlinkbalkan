@@ -61,7 +61,7 @@ const TrainerPublic = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="h-[100dvh] flex items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
@@ -69,7 +69,7 @@ const TrainerPublic = () => {
 
   if (!profile) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6 text-center gap-4">
+      <div className="h-[100dvh] flex flex-col items-center justify-center bg-background px-6 text-center gap-4">
         <div className="h-16 w-16 rounded-3xl bg-muted flex items-center justify-center">
           <Dumbbell className="h-7 w-7 text-muted-foreground" />
         </div>
@@ -91,7 +91,7 @@ const TrainerPublic = () => {
   const studioLine = [profile.studio_name, profile.city].filter(Boolean).join(" · ");
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-[100dvh] overflow-y-auto bg-background">
       {/* Hero */}
       <header className="relative overflow-hidden bg-gradient-brand text-white">
         <div className="absolute -top-20 -right-20 h-72 w-72 rounded-full bg-white/10 blur-3xl" />

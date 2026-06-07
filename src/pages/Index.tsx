@@ -3,7 +3,7 @@ import { Briefcase, Dumbbell, ArrowRight, Sparkles } from "lucide-react";
 
 const Index = () => {
   return (
-    <div className="phone-shell flex flex-col px-6 py-8 min-h-screen relative overflow-hidden">
+    <div className="phone-shell flex flex-col px-6 py-8 relative overflow-x-hidden">
       {/* Decorative gradient blobs */}
       <div className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-gradient-brand opacity-20 blur-3xl" />
       <div className="pointer-events-none absolute top-40 -left-32 h-72 w-72 rounded-full bg-gradient-brand opacity-15 blur-3xl" />

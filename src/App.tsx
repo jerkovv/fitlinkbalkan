@@ -63,6 +63,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <div vaul-drawer-wrapper="" className="h-full bg-background">
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
@@ -112,6 +113,7 @@ const App = () => (
 
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </div>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

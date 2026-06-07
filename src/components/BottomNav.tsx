@@ -10,14 +10,14 @@ interface BottomNavProps {
 }
 
 const trainerLinks = [
-  { to: "/trener", icon: Home, label: "Početna", end: true },
+  { to: "/trener", icon: Home, label: "Početna", end: true},
   { to: "/trener/vezbaci", icon: Users, label: "Vežbači" },
   { to: "/trener/kalendar", icon: CalendarClock, label: "Kalendar" },
   { to: "/trener/finansije", icon: BarChart3, label: "Finansije" },
 ];
 
 const athleteLinks = [
-  { to: "/vezbac", icon: Home, label: "Početna", end: true },
+  { to: "/vezbac", icon: Home, label: "Početna", end: true},
   { to: "/vezbac/trening", icon: Dumbbell, label: "Trening" },
   { to: "/vezbac/rezervacija", icon: CalendarPlus, label: "Rezerviši" },
   { to: "/vezbac/napredak", icon: TrendingUp, label: "Napredak" },

@@ -229,7 +229,7 @@ const Invite = () => {
 
   if (checking) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
@@ -237,7 +237,7 @@ const Invite = () => {
 
   if (!valid) {
     return (
-      <div className="phone-shell flex flex-col items-center justify-center px-6 py-10 min-h-screen text-center">
+      <div className="phone-shell flex flex-col items-center justify-center px-6 py-10 text-center">
         <div className="h-12 w-12 rounded-2xl bg-muted flex items-center justify-center mb-4">
           <Dumbbell className="h-5 w-5" />
         </div>
@@ -251,7 +251,7 @@ const Invite = () => {
   }
 
   return (
-    <div className="phone-shell flex flex-col px-6 py-10 min-h-screen">
+    <div className="phone-shell flex flex-col px-6 py-10">
       <div className="mb-8">
         <div className="h-12 w-12 rounded-2xl bg-athlete-soft text-athlete-soft-foreground flex items-center justify-center mb-4">
           <Dumbbell className="h-5 w-5" strokeWidth={2.25} />

@@ -37,14 +37,14 @@ const TrainerChatThread = () => {
 
   if (valid === null) {
     return (
-      <div className="phone-shell flex items-center justify-center min-h-screen">
+      <div className="phone-shell flex items-center justify-center">
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
   if (!valid || !athleteId || !user?.id) {
     return (
-      <div className="phone-shell flex flex-col items-center justify-center min-h-screen px-6 text-center">
+      <div className="phone-shell flex flex-col items-center justify-center px-6 text-center">
         <p className="text-sm text-muted-foreground">Razgovor nije dostupan.</p>
         <button onClick={() => navigate("/trener/chat")} className="mt-4 text-primary text-sm font-semibold">
           Nazad na razgovore
@@ -55,7 +55,10 @@ const TrainerChatThread = () => {
 
   return (
     <div className="phone-shell flex flex-col h-[100dvh] bg-background">
-      <header className="flex items-center gap-3 px-3 py-3 border-b border-hairline bg-surface/80 backdrop-blur sticky top-0 z-10">
+      <header
+        className="flex items-center gap-3 px-3 pb-3 border-b border-hairline bg-surface/80 backdrop-blur sticky top-0 z-10"
+        style={{ paddingTop: "calc(max(env(safe-area-inset-top), 20px) + 8px)" }}
+      >
         <button
           onClick={() => navigate("/trener/chat")}
           className="h-9 w-9 rounded-full hover:bg-surface-2 flex items-center justify-center transition"

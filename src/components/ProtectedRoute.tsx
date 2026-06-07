@@ -13,7 +13,7 @@ export const ProtectedRoute = ({ children, requireRole }: Props) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="h-[100dvh] flex items-center justify-center">
         <div className="text-sm text-muted-foreground">Učitavanje…</div>
       </div>
     );

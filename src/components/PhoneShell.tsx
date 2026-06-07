@@ -60,7 +60,7 @@ export const PhoneShell = ({
         </header>
       </div>
 
-      <main className="px-6 space-y-4">{children}</main>
+      <main className="px-6 pt-3 space-y-4">{children}</main>
     </div>
   );
 };
