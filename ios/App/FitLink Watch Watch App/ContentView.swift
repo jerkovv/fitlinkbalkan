@@ -1081,11 +1081,23 @@ struct ContentView: View {
     private func handleFinishWorkout() {
         WKInterfaceDevice.current().play(.success)
 
+        // Procitaj HealthKit agregate DOK je sesija jos ziva (stopWorkoutSession
+        // ih resetuje na 0). 0 -> nil, da se ne salje lazna nula.
+        let kcal = healthKit.activeCalories
+        let hrAvg = healthKit.averageHeartRate
+        let hrMax = healthKit.maxHeartRate
+
         Task {
             guard let token = effectiveToken, let sessionId = currentSessionId else { return }
             do {
-                try await SupabaseClient.shared.engineFinishWorkout(token: token, sessionId: sessionId)
-                print("Watch engine: finish_workout [session \(sessionId)]")
+                try await SupabaseClient.shared.engineFinishWorkout(
+                    token: token,
+                    sessionId: sessionId,
+                    activeCalories: kcal > 0 ? kcal : nil,
+                    hrAvg: hrAvg > 0 ? hrAvg : nil,
+                    hrMax: hrMax > 0 ? hrMax : nil
+                )
+                print("Watch engine: finish_workout [session \(sessionId)] kcal=\(kcal) hrAvg=\(hrAvg) hrMax=\(hrMax)")
             } catch SupabaseError.sessionEnded {
                 await MainActor.run { handleWorkoutDeleted() }
             } catch {

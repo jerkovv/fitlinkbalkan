@@ -14,6 +14,7 @@ final class HealthKitManager: NSObject, ObservableObject {
     // Prosecan puls i aktivne kalorije - iz live statistike workout buildera.
     // Bez nove dozvole: heartRate i activeEnergyBurned su vec u typesToRead.
     @Published var averageHeartRate: Int = 0
+    @Published var maxHeartRate: Int = 0
     @Published var activeCalories: Int = 0
     @Published var isAuthorized: Bool = false
     @Published var isWorkoutActive: Bool = false
@@ -36,8 +37,13 @@ final class HealthKitManager: NSObject, ObservableObject {
             HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!,
         ]
         
+        // Share (write) dozvola: pored workout-a, i energija + puls, da bi
+        // finishWorkout() upisao activeEnergyBurned i heartRate u sacuvani
+        // HKWorkout (inace se trening snimi bez kalorija, pa ih sync ne pokupi).
         let typesToWrite: Set<HKSampleType> = [
-            HKObjectType.workoutType()
+            HKObjectType.workoutType(),
+            HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!,
+            HKQuantityType.quantityType(forIdentifier: .heartRate)!,
         ]
         
         do {
@@ -83,6 +89,7 @@ final class HealthKitManager: NSObject, ObservableObject {
             
             // Reset agregata na pocetku nove sesije.
             averageHeartRate = 0
+            maxHeartRate = 0
             activeCalories = 0
 
             let startDate = Date()
@@ -127,6 +134,7 @@ final class HealthKitManager: NSObject, ObservableObject {
         isWorkoutActive = false
         currentHeartRate = 0
         averageHeartRate = 0
+        maxHeartRate = 0
         activeCalories = 0
     }
 }
@@ -181,14 +189,16 @@ extension HealthKitManager: HKLiveWorkoutBuilderDelegate {
                     // umesto da treperi UI na praznu.
                     guard bpm > 0 else { continue }
 
-                    // Prosek za ceo trening (averageQuantity nad agregatom sesije).
+                    // Prosek i max za ceo trening (nad agregatom sesije).
                     let avg = statistics?.averageQuantity().map { Int($0.doubleValue(for: hrUnit)) } ?? 0
+                    let mx = statistics?.maximumQuantity().map { Int($0.doubleValue(for: hrUnit)) } ?? 0
 
                     Task { @MainActor in
                         self.currentHeartRate = bpm
                         if avg > 0 { self.averageHeartRate = avg }
+                        if mx > 0 { self.maxHeartRate = mx }
                         self.onHeartRateUpdate?(bpm)
-                        print("HealthKit: HR \(bpm) BPM, avg \(avg)")
+                        print("HealthKit: HR \(bpm) BPM, avg \(avg), max \(mx)")
                     }
                 }
             } else if quantityType == HKObjectType.quantityType(forIdentifier: .activeEnergyBurned) {

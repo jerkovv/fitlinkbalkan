@@ -53,6 +53,13 @@ const tiles: Array<{
     higherIsBetter: true,
   },
   {
+    type: "calories_active",
+    label: "Kalorije",
+    icon: Flame,
+    format: (v) => ({ value: Math.round(v).toString(), unit: "kcal" }),
+    higherIsBetter: true,
+  },
+  {
     type: "heart_rate_resting",
     label: "Puls u mirovanju",
     icon: Heart,
@@ -75,13 +82,6 @@ const tiles: Array<{
     label: "Koraci",
     icon: Footprints,
     format: (v) => ({ value: Math.round(v).toLocaleString("sr-RS"), unit: "" }),
-    higherIsBetter: true,
-  },
-  {
-    type: "calories_active",
-    label: "Kalorije",
-    icon: Flame,
-    format: (v) => ({ value: Math.round(v).toString(), unit: "kcal" }),
     higherIsBetter: true,
   },
   {

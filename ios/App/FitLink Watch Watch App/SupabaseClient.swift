@@ -174,8 +174,19 @@ final class SupabaseClient {
     }
 
     @discardableResult
-    func engineFinishWorkout(token: String, sessionId: String) async throws -> Bool {
-        let body: [String: Any] = ["p_token": token, "p_session_id": sessionId]
+    func engineFinishWorkout(
+        token: String,
+        sessionId: String,
+        activeCalories: Int? = nil,
+        hrAvg: Int? = nil,
+        hrMax: Int? = nil
+    ) async throws -> Bool {
+        // Kalorije i puls se snimaju instant na serveru (bez HealthKit sync-a).
+        // 0/nedostupno se IZOSTAVLJA -> server param ostaje null (ne lazna nula).
+        var body: [String: Any] = ["p_token": token, "p_session_id": sessionId]
+        if let kcal = activeCalories, kcal > 0 { body["p_active_calories"] = kcal }
+        if let avg = hrAvg, avg > 0 { body["p_hr_avg"] = avg }
+        if let mx = hrMax, mx > 0 { body["p_hr_max"] = mx }
         return try await callEngine(rpcName: "watch_finish_workout", body: body)
     }
 
