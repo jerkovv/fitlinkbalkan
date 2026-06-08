@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { cn } from "@/lib/utils";
 import { PhoneShell } from "@/components/PhoneShell";
 import { SendMessageToAthlete } from "@/components/SendMessageToAthlete";
 import { Avatar, Card, Chip } from "@/components/ui-bits";
@@ -20,7 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   Apple, ClipboardList, Wallet, MessageSquare, Phone, Loader2, Plus, X, Check,
-  Dumbbell, Activity, Scale, ChevronRight, UserMinus,
+  Dumbbell, Activity, Scale, ChevronRight, UserMinus, Flame,
 } from "lucide-react";
 import { toast } from "sonner";
 import { WorkoutSessionDetailDialog } from "@/components/WorkoutSessionDetailDialog";
@@ -97,6 +98,48 @@ const initialsOf = (name: string | null) => {
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "??";
 };
 
+// Boja po riziku (iz get_athlete_stats): low zeleno, medium amber, high crveno.
+const RISK_TEXT: Record<string, string> = {
+  low: "text-success-soft-foreground",
+  medium: "text-warning-soft-foreground",
+  high: "text-destructive",
+};
+
+const fmtVolume = (n: number) => (n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(Math.round(n)));
+
+// Premium stat kartica (isti jezik kao Finances StatTile).
+const StatBox = ({
+  label,
+  value,
+  unit,
+  sub,
+  valueClass,
+  icon,
+}: {
+  label: string;
+  value: string;
+  unit?: string;
+  sub?: string;
+  valueClass?: string;
+  icon?: ReactNode;
+}) => (
+  <Card className="p-4">
+    <div className="flex items-center justify-between gap-2 mb-1.5">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
+        {label}
+      </div>
+      {icon && <span className="text-primary shrink-0">{icon}</span>}
+    </div>
+    <div className="flex items-baseline gap-1">
+      <span className={cn("font-display font-bold tracking-tightest leading-none text-[22px]", valueClass ?? "text-foreground")}>
+        {value}
+      </span>
+      {unit && <span className="text-[11px] font-medium text-muted-foreground">{unit}</span>}
+    </div>
+    {sub && <div className="text-[11px] text-muted-foreground mt-1.5 truncate">{sub}</div>}
+  </Card>
+);
+
 const AthleteProfile = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -130,6 +173,7 @@ const AthleteProfile = () => {
     .pop() as string | undefined;
   const hasWearable = wearableConns.some((c) => c.status === "connected");
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<any | null>(null);
   const [athlete, setAthlete] = useState<AthleteData | null>(null);
   const [activePlan, setActivePlan] = useState<AssignedPlan | null>(null);
   const [activeProgram, setActiveProgram] = useState<AssignedProgram | null>(null);
@@ -255,6 +299,15 @@ const AthleteProfile = () => {
   };
 
   useEffect(() => { load(); }, [id]);
+
+  // Statisticki blok (backend racuna sve; mi samo prikazujemo).
+  useEffect(() => {
+    if (!id) return;
+    (async () => {
+      const { data } = await supabase.rpc("get_athlete_stats", { p_athlete_id: id } as any);
+      setStats(data ?? null);
+    })();
+  }, [id]);
 
   const openProgramAssign = async () => {
     setProgOpen(true);
@@ -638,6 +691,91 @@ const AthleteProfile = () => {
           </button>
         </div>
       </Card>
+
+      {/* Statisticki blok */}
+      {stats && stats.success === false ? (
+        <Card className="p-6 text-center text-[13px] text-muted-foreground">
+          Nema još podataka
+        </Card>
+      ) : stats ? (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <StatBox
+              label="Ukupno treninga"
+              value={String(stats.total_workouts ?? 0)}
+              sub={`Ovaj mesec: ${stats.workouts_this_month ?? 0}`}
+            />
+            <StatBox
+              label="Učestalost"
+              value={String(stats.weekly_avg ?? 0)}
+              unit="nedeljno"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <StatBox
+              label="Poslednji trening"
+              value={stats.days_since_last == null
+                ? "Nikad"
+                : stats.days_since_last <= 0
+                  ? "Danas"
+                  : `Pre ${stats.days_since_last} d`}
+              sub={stats.days_since_last == null ? "Još nije trenirao" : undefined}
+              valueClass={cn("text-[18px]", RISK_TEXT[stats.risk] ?? "text-foreground")}
+            />
+            <StatBox
+              label="PR-ovi"
+              value={String(stats.pr_count ?? 0)}
+              sub={stats.best_e1rm_kg ? `${stats.best_e1rm_kg} kg najjaci` : undefined}
+            />
+          </div>
+
+          {stats.sessions_total != null && stats.sessions_used != null && (
+            <Card className="p-4">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5">
+                Iskorišćenost paketa
+              </div>
+              <div className="flex items-baseline gap-1 mb-2">
+                <span className="font-display text-[22px] font-bold tracking-tightest leading-none tnum">
+                  {stats.sessions_used}/{stats.sessions_total}
+                </span>
+                <span className="text-[11px] text-muted-foreground">sesija</span>
+              </div>
+              <div className="h-2 rounded-full bg-surface-2 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-brand"
+                  style={{
+                    width: `${Math.min(100, Math.round((stats.sessions_used / stats.sessions_total) * 100))}%`,
+                  }}
+                />
+              </div>
+            </Card>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <StatBox
+              label="Ishrana"
+              value={String(stats.nutrition_days_30 ?? 0)}
+              unit="/ 30 dana"
+            />
+            <StatBox
+              label="Volumen"
+              value={fmtVolume(stats.total_volume_kg ?? 0)}
+              unit="kg ukupno"
+            />
+          </div>
+
+          {stats.kcal_sessions > 0 && (
+            <StatBox
+              icon={<Flame className="h-4 w-4" />}
+              label="Kalorije"
+              value={Math.round(stats.total_kcal ?? 0).toLocaleString("sr-Latn-RS")}
+              unit="kcal ukupno"
+              sub={stats.avg_kcal ? `Prosek po treningu: ${Math.round(stats.avg_kcal)} kcal` : undefined}
+            />
+          )}
+        </>
+      ) : null}
 
       {/* Training program */}
       <section>

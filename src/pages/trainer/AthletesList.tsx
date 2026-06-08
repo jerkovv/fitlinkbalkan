@@ -66,6 +66,19 @@ const statusChip = {
   expired: <Chip tone="danger">Istekao</Chip>,
 };
 
+// Signal rizika (iz get_athletes_overview): low zeleno, medium amber, high crveno.
+const RISK_DOT: Record<string, string> = {
+  low: "bg-success-soft-foreground",
+  medium: "bg-warning-soft-foreground",
+  high: "bg-destructive",
+};
+
+const recencyText = (days: number | null) => {
+  if (days == null) return "Nije trenirao";
+  if (days <= 0) return "Trenirao danas";
+  return `Trenirao pre ${days} dana`;
+};
+
 const filters: { key: "all" | "active" | "expiring" | "expired"; label: string }[] = [
   { key: "all", label: "Svi" },
   { key: "active", label: "Aktivni" },
@@ -84,6 +97,7 @@ const AthletesList = () => {
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [inviteToDelete, setInviteToDelete] = useState<PendingInvite | null>(null);
   const [deletingInvite, setDeletingInvite] = useState(false);
+  const [overview, setOverview] = useState<Map<string, { risk: string; days_since_last: number | null }>>(new Map());
 
   const load = async () => {
     if (!user) return;
@@ -151,6 +165,21 @@ const AthletesList = () => {
   };
 
   useEffect(() => { load(); }, [user]);
+
+  // Signal rizika/aktivnosti po vezbacu (backend racuna sve).
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase.rpc("get_athletes_overview");
+      const res = data as any;
+      if (!res?.success || !Array.isArray(res.athletes)) return;
+      const m = new Map<string, { risk: string; days_since_last: number | null }>();
+      res.athletes.forEach((a: any) =>
+        m.set(a.athlete_id, { risk: a.risk, days_since_last: a.days_since_last }),
+      );
+      setOverview(m);
+    })();
+  }, [user]);
 
   const enriched = useMemo(
     () =>
@@ -338,6 +367,19 @@ const AthletesList = () => {
                       <div className="text-[12.5px] text-muted-foreground mt-0.5 truncate">
                         {goalLabel[a.goal ?? "general"] ?? "Opšte"} · {a.expiresLabel}
                       </div>
+                      {overview.get(a.id) && (
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span
+                            className={cn(
+                              "h-1.5 w-1.5 rounded-full shrink-0",
+                              RISK_DOT[overview.get(a.id)!.risk] ?? "bg-muted",
+                            )}
+                          />
+                          <span className="text-[11.5px] text-muted-foreground truncate">
+                            {recencyText(overview.get(a.id)!.days_since_last)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                     {statusChip[a.status]}
                     <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
