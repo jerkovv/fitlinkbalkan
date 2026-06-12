@@ -4,11 +4,12 @@ import { PhoneShell } from "@/components/PhoneShell";
 import { AthleteOnboardingTour } from "@/components/AthleteOnboardingTour";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui-bits";
-import { Loader2, Play, Dumbbell, History, CalendarDays, Flame, AlertTriangle } from "lucide-react";
+import { Loader2, Play, Dumbbell, History, CalendarDays, Flame, AlertTriangle, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { getNextWorkoutDay, type NextWorkoutDay } from "@/lib/workouts";
 import { cn } from "@/lib/utils";
+import { InAppWorkoutDetailDialog } from "@/components/InAppWorkoutDetailDialog";
 
 type RecentLog = {
   id: string;
@@ -34,6 +35,7 @@ const WorkoutHome = () => {
   const [allDays, setAllDays] = useState<ProgramDay[]>([]);
   const [streak, setStreak] = useState(0);
   const [daysInactive, setDaysInactive] = useState<number>(0);
+  const [openSessionId, setOpenSessionId] = useState<string | null>(null);
   const [hasEverTrained, setHasEverTrained] = useState(true);
 
   useEffect(() => {
@@ -252,19 +254,26 @@ const WorkoutHome = () => {
           ) : (
             <div className="space-y-2">
               {recent.map((log) => (
-                <Card key={log.id} className="p-4 flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-2xl bg-gradient-brand-soft text-primary flex items-center justify-center">
-                    <Dumbbell className="h-[18px] w-[18px]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[14px] font-semibold tracking-tight">
-                      Dan {log.day_number}
+                <button
+                  key={log.id}
+                  onClick={() => setOpenSessionId(log.id)}
+                  className="block w-full text-left active:scale-[0.99] transition"
+                >
+                  <Card className="p-4 flex items-center gap-3 hover:bg-surface-2 transition">
+                    <div className="h-10 w-10 rounded-2xl bg-gradient-brand-soft text-primary flex items-center justify-center shrink-0">
+                      <Dumbbell className="h-[18px] w-[18px]" />
                     </div>
-                    <div className="text-[12px] text-muted-foreground">
-                      {formatDate(log.completed_at)} · {formatDuration(log.duration_seconds)}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[14px] font-semibold tracking-tight">
+                        Dan {log.day_number}
+                      </div>
+                      <div className="text-[12px] text-muted-foreground">
+                        {formatDate(log.completed_at)} · {formatDuration(log.duration_seconds)}
+                      </div>
                     </div>
-                  </div>
-                </Card>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                  </Card>
+                </button>
               ))}
               <Link
                 to="/vezbac/napredak"
@@ -278,6 +287,11 @@ const WorkoutHome = () => {
       </PhoneShell>
       <BottomNav role="athlete" />
       <AthleteOnboardingTour />
+      <InAppWorkoutDetailDialog
+        sessionId={openSessionId}
+        open={!!openSessionId}
+        onOpenChange={(o) => !o && setOpenSessionId(null)}
+      />
     </>
   );
 };
