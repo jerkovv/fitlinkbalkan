@@ -183,6 +183,7 @@ final class SupabaseClient {
     ) async throws -> Bool {
         // Kalorije i puls se snimaju instant na serveru (bez HealthKit sync-a).
         // 0/nedostupno se IZOSTAVLJA -> server param ostaje null (ne lazna nula).
+        // hr_series NE salje sat (telefon je izvor); DB param ostaje null (COALESCE).
         var body: [String: Any] = ["p_token": token, "p_session_id": sessionId]
         if let kcal = activeCalories, kcal > 0 { body["p_active_calories"] = kcal }
         if let avg = hrAvg, avg > 0 { body["p_hr_avg"] = avg }

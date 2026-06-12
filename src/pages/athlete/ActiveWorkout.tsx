@@ -151,6 +151,28 @@ const ActiveWorkout = () => {
     return () => { unmountedRef.current = true; };
   }, []);
 
+  // Ref na sessionId za async provere (resume/poll) bez zavisnosti u callback-ovima.
+  const sessionIdRef = useRef<string | null>(null);
+  useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
+
+  // Ako je sesija vec zatvorena na serveru (npr. zavrsena na satu dok je telefon
+  // spavao/ubijen), idi pravo na rezime umesto da visimo na ekranu treninga.
+  const navIfSessionDone = useCallback(async (sid: string | null): Promise<boolean> => {
+    if (!sid || finishedRef.current) return false;
+    const { data } = await supabase
+      .from("workout_session_logs")
+      .select("is_active")
+      .eq("id", sid)
+      .maybeSingle();
+    if (unmountedRef.current) return false;
+    if (data && (data as any).is_active === false) {
+      markFinished();
+      nav(`/vezbac/trening/zavrsen/${sid}`, { replace: true });
+      return true;
+    }
+    return false;
+  }, [nav, markFinished]);
+
   /* ------------------------- Init: start session + load day ------------------------- */
   useEffect(() => {
     if (!dayId || !user) return;
@@ -179,6 +201,35 @@ const ActiveWorkout = () => {
         return;
       }
       setDay(dayData);
+
+      // Ako za ovaj dan vec postoji sesija (app ubijena/ponovo otvorena), ne pravi
+      // duplikat: aktivnu nastavi, upravo zavrsenu vodi na rezime.
+      const { data: existing } = await supabase
+        .from("workout_session_logs")
+        .select("id, is_active, completed_at")
+        .eq("athlete_id", user.id)
+        .eq("day_id", dayData.day_id)
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (unmountedRef.current) return;
+      if (existing) {
+        const ex = existing as any;
+        if (ex.is_active) {
+          // Nastavi aktivnu sesiju; reader (poll) ce je pokupiti.
+          setSessionId(ex.id as string);
+          setLoading(false);
+          return;
+        }
+        const justDone =
+          ex.completed_at &&
+          Date.now() - new Date(ex.completed_at).getTime() < 15 * 60 * 1000;
+        if (justDone) {
+          // Upravo zavrsena (npr. na satu dok je app bila ugasena) -> rezime, ne nov trening.
+          nav(`/vezbac/trening/zavrsen/${ex.id}`, { replace: true });
+          return;
+        }
+      }
 
       // start_workout_session sada I seed-uje početni živi red (vežba 0, serija 1)
       // na serveru, pa prvi athlete_poll_state vraća trening, ne null.
@@ -378,11 +429,15 @@ const ActiveWorkout = () => {
 
       if (!workout) {
         // Nema živog reda. Ako smo prethodno videli trening -> završen je (ovde ili
-        // na satu) -> zakači HR i idi na rezultat. Na samom startu (još nismo videli
-        // ništa) ne diramo — seed garantuje da prvi poll ima trening.
+        // na satu) -> zakači HR i idi na rezultat.
         if (sawWorkoutRef.current) {
           markFinished();
           void finalizeAndNav();
+        } else {
+          // Nismo videli živ trening (npr. završen na satu pre nego što je telefon
+          // polovao, ili otvoren ekran posle finiša). Ako je sesija STVARNO zatvorena
+          // -> rezime; ako nije (start grace, seed još nije stigao) -> ne diramo.
+          void navIfSessionDone(sessionIdRef.current);
         }
         return;
       }
@@ -405,7 +460,7 @@ const ActiveWorkout = () => {
         currentHr: typeof workout.current_hr === "number" ? workout.current_hr : null,
       });
     },
-    [finalizeAndNav, markFinished]
+    [finalizeAndNav, markFinished, navIfSessionDone]
   );
 
   useEffect(() => {
@@ -428,8 +483,13 @@ const ActiveWorkout = () => {
     poll();
     const id = setInterval(poll, 2000);
     const onVis = () => {
-      // Na povratak u foreground odmah poll-uj i pregazi lokalno stanje.
-      if (document.visibilityState === "visible") poll();
+      // Na povratak u foreground: prvo proveri da li je sesija zatvorena (npr.
+      // zavrsena na satu dok je telefon spavao) -> rezime; pa onda poll.
+      if (document.visibilityState === "visible") {
+        void navIfSessionDone(sessionIdRef.current).then((done) => {
+          if (!done) poll();
+        });
+      }
     };
     document.addEventListener("visibilitychange", onVis);
 
@@ -438,7 +498,7 @@ const ActiveWorkout = () => {
       clearInterval(id);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [sessionId, finished, applyPoll]);
+  }, [sessionId, finished, applyPoll, navIfSessionDone]);
 
   /* ------------------------- Heartbeat: athlete_heartbeat (samo HR + svežina) ------------------------- */
   // Dira SAMO last_heartbeat i current_hr — nikad poziciju. Drži živi red svežim
