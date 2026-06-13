@@ -159,6 +159,9 @@ const ActiveWorkout = () => {
   // spavao/ubijen), idi pravo na rezime umesto da visimo na ekranu treninga.
   const navIfSessionDone = useCallback(async (sid: string | null): Promise<boolean> => {
     if (!sid || finishedRef.current) return false;
+    // Samo ako smo videli zivu sesiju (vezbac je bio u toku treninga). Inace bi
+    // staru zavrsenu sesiju bacalo na rezime cim vezbac udje da je ponovo odradi.
+    if (!sawWorkoutRef.current) return false;
     const { data } = await supabase
       .from("workout_session_logs")
       .select("is_active")
@@ -202,37 +205,11 @@ const ActiveWorkout = () => {
       }
       setDay(dayData);
 
-      // Ako za ovaj dan vec postoji sesija (app ubijena/ponovo otvorena), ne pravi
-      // duplikat: aktivnu nastavi, upravo zavrsenu vodi na rezime.
-      const { data: existing } = await supabase
-        .from("workout_session_logs")
-        .select("id, is_active, completed_at")
-        .eq("athlete_id", user.id)
-        .eq("day_id", dayData.day_id)
-        .order("started_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (unmountedRef.current) return;
-      if (existing) {
-        const ex = existing as any;
-        if (ex.is_active) {
-          // Nastavi aktivnu sesiju; reader (poll) ce je pokupiti.
-          setSessionId(ex.id as string);
-          setLoading(false);
-          return;
-        }
-        const justDone =
-          ex.completed_at &&
-          Date.now() - new Date(ex.completed_at).getTime() < 15 * 60 * 1000;
-        if (justDone) {
-          // Upravo zavrsena (npr. na satu dok je app bila ugasena) -> rezime, ne nov trening.
-          nav(`/vezbac/trening/zavrsen/${ex.id}`, { replace: true });
-          return;
-        }
-      }
-
-      // start_workout_session sada I seed-uje početni živi red (vežba 0, serija 1)
-      // na serveru, pa prvi athlete_poll_state vraća trening, ne null.
+      // start_workout_session sam resava: ako za ovaj dan postoji ZIVA sesija ->
+      // vrati je (resume + re-seed zivog reda); inace pokrene NOVU. Klik na dan =
+      // nov trening cak i za vec zavrsen dan. NE navigiramo na rezime na osnovu
+      // stare zavrsene sesije (to je ranije gresno bacalo na rezime).
+      // Takodje seed-uje pocetni zivi red, pa prvi athlete_poll_state vraca trening.
       const { data: sid, error: startErr } = await supabase.rpc(
         "start_workout_session",
         {
@@ -428,16 +405,13 @@ const ActiveWorkout = () => {
       }
 
       if (!workout) {
-        // Nema živog reda. Ako smo prethodno videli trening -> završen je (ovde ili
-        // na satu) -> zakači HR i idi na rezultat.
+        // Nema živog reda. Navigiraj na rezime SAMO ako smo videli živu sesiju
+        // (završena DOK je vežbač u ActiveWorkout - ovde ili na satu). Ako još
+        // nismo videli živu (vežbač tek ušao / seed nije stigao), NE navigiraj na
+        // rezime - pusti normalan tok (init je pokrenuo novu sesiju).
         if (sawWorkoutRef.current) {
           markFinished();
           void finalizeAndNav();
-        } else {
-          // Nismo videli živ trening (npr. završen na satu pre nego što je telefon
-          // polovao, ili otvoren ekran posle finiša). Ako je sesija STVARNO zatvorena
-          // -> rezime; ako nije (start grace, seed još nije stigao) -> ne diramo.
-          void navIfSessionDone(sessionIdRef.current);
         }
         return;
       }
@@ -460,7 +434,7 @@ const ActiveWorkout = () => {
         currentHr: typeof workout.current_hr === "number" ? workout.current_hr : null,
       });
     },
-    [finalizeAndNav, markFinished, navIfSessionDone]
+    [finalizeAndNav, markFinished]
   );
 
   useEffect(() => {
