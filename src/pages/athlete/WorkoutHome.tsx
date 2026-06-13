@@ -1,22 +1,17 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { AthleteOnboardingTour } from "@/components/AthleteOnboardingTour";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui-bits";
-import { Loader2, Play, Dumbbell, History, CalendarDays, Flame, AlertTriangle, ChevronRight } from "lucide-react";
+import { Loader2, Play, Dumbbell, History, CalendarDays, Flame, AlertTriangle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { getNextWorkoutDay, type NextWorkoutDay } from "@/lib/workouts";
 import { cn } from "@/lib/utils";
-import { InAppWorkoutDetailDialog } from "@/components/InAppWorkoutDetailDialog";
-
-type RecentLog = {
-  id: string;
-  day_number: number;
-  completed_at: string | null;
-  duration_seconds: number | null;
-};
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { InAppWorkoutsList } from "@/components/InAppWorkoutsList";
+import { WorkoutsList } from "@/components/wearables/WorkoutsList";
 
 type ProgramDay = {
   id: string;
@@ -31,11 +26,9 @@ const WorkoutHome = () => {
   const [loading, setLoading] = useState(true);
   const [next, setNext] = useState<NextWorkoutDay | null>(null);
   const [exerciseCount, setExerciseCount] = useState(0);
-  const [recent, setRecent] = useState<RecentLog[]>([]);
   const [allDays, setAllDays] = useState<ProgramDay[]>([]);
   const [streak, setStreak] = useState(0);
   const [daysInactive, setDaysInactive] = useState<number>(0);
-  const [openSessionId, setOpenSessionId] = useState<string | null>(null);
   const [hasEverTrained, setHasEverTrained] = useState(true);
 
   useEffect(() => {
@@ -71,15 +64,6 @@ const WorkoutHome = () => {
         setAllDays([]);
       }
 
-      const { data: logs } = await supabase
-        .from("workout_session_logs")
-        .select("id, day_number, completed_at, duration_seconds")
-        .eq("athlete_id", user.id)
-        .not("completed_at", "is", null)
-        .order("completed_at", { ascending: false })
-        .limit(5);
-      setRecent((logs as any[]) ?? []);
-
       const { data: streakData } = await supabase.rpc("get_athlete_streak", { p_athlete_id: user.id } as any);
       const sd = (streakData as any[])?.[0];
       if (sd) setStreak(sd.current_streak_days ?? 0);
@@ -95,18 +79,6 @@ const WorkoutHome = () => {
     };
     load();
   }, [user]);
-
-  const formatDuration = (sec: number | null) => {
-    if (!sec) return "—";
-    const m = Math.round(sec / 60);
-    return `${m} min`;
-  };
-
-  const formatDate = (iso: string | null) => {
-    if (!iso) return "";
-    const d = new Date(iso);
-    return d.toLocaleDateString("sr-Latn-RS", { day: "numeric", month: "short" });
-  };
 
   return (
     <>
@@ -244,54 +216,35 @@ const WorkoutHome = () => {
         <section>
           <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground mb-3">
             <History className="h-3.5 w-3.5" />
-            Poslednji treninzi
+            Treninzi
           </div>
 
-          {recent.length === 0 ? (
-            <Card className="p-5 text-[13px] text-muted-foreground">
-              Još nemaš završenih treninga. Završi prvi trening da se pojavi ovde.
-            </Card>
-          ) : (
-            <div className="space-y-2">
-              {recent.map((log) => (
-                <button
-                  key={log.id}
-                  onClick={() => setOpenSessionId(log.id)}
-                  className="block w-full text-left active:scale-[0.99] transition"
-                >
-                  <Card className="p-4 flex items-center gap-3 hover:bg-surface-2 transition">
-                    <div className="h-10 w-10 rounded-2xl bg-gradient-brand-soft text-primary flex items-center justify-center shrink-0">
-                      <Dumbbell className="h-[18px] w-[18px]" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[14px] font-semibold tracking-tight">
-                        Dan {log.day_number}
-                      </div>
-                      <div className="text-[12px] text-muted-foreground">
-                        {formatDate(log.completed_at)} · {formatDuration(log.duration_seconds)}
-                      </div>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                  </Card>
-                </button>
-              ))}
-              <Link
-                to="/vezbac/napredak"
-                className="block text-center text-[12.5px] font-semibold text-primary py-2"
+          <Tabs defaultValue="app" className="w-full">
+            <TabsList className="grid grid-cols-2 w-full mb-1">
+              <TabsTrigger
+                value="app"
+                className="data-[state=active]:bg-gradient-brand data-[state=active]:text-white data-[state=active]:shadow-brand"
               >
-                Vidi sve →
-              </Link>
-            </div>
-          )}
+                Iz aplikacije
+              </TabsTrigger>
+              <TabsTrigger
+                value="watch"
+                className="data-[state=active]:bg-gradient-brand data-[state=active]:text-white data-[state=active]:shadow-brand"
+              >
+                Sa sata
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="app">
+              <InAppWorkoutsList limit={10} />
+            </TabsContent>
+            <TabsContent value="watch">
+              <WorkoutsList limit={10} />
+            </TabsContent>
+          </Tabs>
         </section>
       </PhoneShell>
       <BottomNav role="athlete" />
       <AthleteOnboardingTour />
-      <InAppWorkoutDetailDialog
-        sessionId={openSessionId}
-        open={!!openSessionId}
-        onOpenChange={(o) => !o && setOpenSessionId(null)}
-      />
     </>
   );
 };
