@@ -1,9 +1,30 @@
 import { useEffect, useRef, useState } from "react";
+import { Keyboard } from "@capacitor/keyboard";
 import { useChat } from "@/hooks/useChat";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Loader2, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// Isti keyboard-aware pristup kao FullScreenSheetFooter: visina tastature iz
+// Capacitor Keyboard plugin-a (resize mode je "none", pa WKWebView ne skuplja
+// sam - mi rucno podizemo input iznad tastature preko paddingBottom na root-u).
+function useKeyboardHeight() {
+  const [height, setHeight] = useState(0);
+  useEffect(() => {
+    const showPromise = Keyboard.addListener("keyboardWillShow", (info) => {
+      setHeight(info.keyboardHeight);
+    });
+    const hidePromise = Keyboard.addListener("keyboardWillHide", () => {
+      setHeight(0);
+    });
+    return () => {
+      showPromise.then((h) => h.remove());
+      hidePromise.then((h) => h.remove());
+    };
+  }, []);
+  return height;
+}
 
 interface ChatThreadProps {
   trainerId: string;
@@ -46,18 +67,19 @@ export const ChatThread = ({
   const { messages, loading, sending, send, markRead } = useChat({ trainerId, athleteId });
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const keyboardHeight = useKeyboardHeight();
 
   // Mark read on open + every time messages arrive
   useEffect(() => {
     if (!loading) markRead();
   }, [loading, messages.length, markRead]);
 
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom (i kad tastatura izadje -> poslednja poruka vidljiva)
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages.length]);
+  }, [messages.length, keyboardHeight]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +91,21 @@ export const ChatThread = ({
   };
 
   return (
-    <div className={cn("flex flex-col h-full min-h-0", className)}>
+    <div
+      className={cn("flex flex-col h-full min-h-0", className)}
+      // Lift input iznad tastature. Roditeljski .phone-shell vec rezervise
+      // padding-bottom = env(safe-area-inset-bottom) (home indicator). Kad je
+      // tastatura otvorena ona prekriva home indicator, pa NE smemo sabirati
+      // safe-area + keyboardHeight (to je pravilo dupli razmak). Oduzimamo
+      // safe-area koju phone-shell vec daje, pa neto lift = tacno keyboardHeight
+      // i input sedne tacno na vrh tastature (kao iMessage).
+      style={{
+        paddingBottom: keyboardHeight
+          ? `max(0px, calc(${keyboardHeight}px - env(safe-area-inset-bottom)))`
+          : undefined,
+        transition: "padding-bottom 0.25s ease",
+      }}
+    >
       {showHeader && (title || subtitle) && (
         <div className="px-4 py-3 border-b border-hairline">
           {title && <div className="font-semibold tracking-tight text-[15px]">{title}</div>}
