@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { useConfirm } from "@/hooks/useConfirm";
 import { Card, SectionTitle } from "@/components/ui-bits";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,7 @@ interface Props {
 }
 
 export const ProgressPhotos = ({ athleteId, canManage, sharedOnly = false }: Props) => {
+  const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
   const [photos, setPhotos] = useState<PhotoView[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -140,7 +142,7 @@ export const ProgressPhotos = ({ athleteId, canManage, sharedOnly = false }: Pro
   };
 
   const deletePhoto = async (p: PhotoView) => {
-    if (!confirm("Obrisati fotku?")) return;
+    if (!(await confirm({ title: "Obrisati fotku?", destructive: true }))) return;
     const { error: delErr } = await supabase.from("progress_photos").delete().eq("id", p.id);
     if (delErr) {
       toast.error(delErr.message);

@@ -3,6 +3,7 @@ import { PhoneShell } from "@/components/PhoneShell";
 import { Card, Chip } from "@/components/ui-bits";
 import { supabase } from "@/lib/supabase";
 import { friendlyDbError } from "@/lib/dbError";
+import { useConfirm } from "@/hooks/useConfirm";
 import { useAuth } from "@/hooks/useAuth";
 import {
   FullScreenSheet,
@@ -41,6 +42,7 @@ type Template = {
 
 const SessionSettings = () => {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
   const [types, setTypes] = useState<SessionType[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -134,7 +136,7 @@ const SessionSettings = () => {
   };
 
   const deleteType = async (t: SessionType) => {
-    if (!confirm(`Obrisati tip "${t.name}"? Postojeće rezervacije ostaju.`)) return;
+    if (!(await confirm({ title: `Obrisati tip "${t.name}"?`, description: "Postojeće rezervacije ostaju.", destructive: true }))) return;
     const { error } = await supabase
       .from("session_types")
       .update({ is_archived: true } as any)
@@ -172,7 +174,7 @@ const SessionSettings = () => {
   };
 
   const deleteSlot = async (id: string) => {
-    if (!confirm("Ukloniti ovaj termin iz nedeljnog rasporeda?")) return;
+    if (!(await confirm({ title: "Ukloniti ovaj termin iz nedeljnog rasporeda?", destructive: true }))) return;
     const { error } = await supabase.from("session_slot_templates").delete().eq("id", id);
     if (error) { toast.error(friendlyDbError(error)); return; }
     toast.success("Termin uklonjen");

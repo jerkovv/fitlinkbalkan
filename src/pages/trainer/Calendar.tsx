@@ -5,6 +5,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { Card, Chip } from "@/components/ui-bits";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
+import { useConfirm } from "@/hooks/useConfirm";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -57,6 +58,7 @@ const parseDateParam = (raw: string | null): Date | null => {
 
 const Calendar = () => {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const [searchParams] = useSearchParams();
   const today = useMemo(() => new Date(), []);
   // Ako notifikacija prosledi ?date=YYYY-MM-DD (slot_date termina), otvori
@@ -142,7 +144,7 @@ const Calendar = () => {
 
   const cancelSlot = async (s: Slot) => {
     if (!user || !s.template_id) return;
-    if (!confirm(`Otkazati ${s.type_name} u ${formatTime(s.start_time)} za ovaj dan?`)) return;
+    if (!(await confirm({ title: `Otkazati ${s.type_name} u ${formatTime(s.start_time)}?`, description: "Termin se otkazuje samo za ovaj dan.", destructive: true }))) return;
     const { error } = await supabase.from("session_slot_overrides").insert({
       trainer_id: user.id,
       date: toIsoDate(selectedDate),
@@ -156,7 +158,7 @@ const Calendar = () => {
   };
 
   const removeBooking = async (id: string) => {
-    if (!confirm("Ukloniti ovog vežbača iz termina?")) return;
+    if (!(await confirm({ title: "Ukloniti ovog vežbača iz termina?", destructive: true }))) return;
     const { error } = await supabase.from("session_bookings").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success("Rezervacija uklonjena");

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import { useConfirm } from "@/hooks/useConfirm";
 import { assignProgramToAthlete } from "@/lib/programAssignment";
 import { PhoneShell } from "@/components/PhoneShell";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ type Athlete = { id: string; full_name: string | null; email: string };
 
 const ProgramBuilder = () => {
   const { id: templateId } = useParams<{ id: string }>();
+  const confirm = useConfirm();
   const [templateName, setTemplateName] = useState("");
   const [days, setDays] = useState<Day[]>([]);
   const [exByDay, setExByDay] = useState<Record<string, Exercise[]>>({});
@@ -103,7 +105,7 @@ const ProgramBuilder = () => {
   };
 
   const handleDeleteDay = async (dayId: string) => {
-    if (!confirm("Obrisati dan i sve njegove vežbe?")) return;
+    if (!(await confirm({ title: "Obrisati dan?", description: "Dan i sve njegove vežbe biće obrisani.", destructive: true }))) return;
     const { error } = await supabase.from("program_template_days").delete().eq("id", dayId);
     if (error) { toast.error(error.message); return; }
     toast.success("Dan obrisan");

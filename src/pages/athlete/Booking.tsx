@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Clock, Users, User, Check, Loader2, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { friendlyDbError } from "@/lib/dbError";
+import { useConfirm } from "@/hooks/useConfirm";
 import { useAuth } from "@/hooks/useAuth";
 import {
   sessionColorClasses, dateToWeekday, toIsoDate, formatTime, addMinutesToTime,
@@ -39,6 +40,7 @@ type MyBooking = {
 
 const Booking = () => {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const today = useMemo(() => new Date(), []);
   const [trainerId, setTrainerId] = useState<string | null>(null);
   const [trainerName, setTrainerName] = useState<string>("");
@@ -155,7 +157,7 @@ const Booking = () => {
         && b.session_type_id === s.session_type_id,
     );
     if (!myBook) return;
-    if (!confirm("Otkazati rezervaciju?")) return;
+    if (!(await confirm({ title: "Otkazati rezervaciju?", destructive: true }))) return;
     const key = isMineKey(s);
     setActingKey(key);
     const { error } = await supabase.rpc("cancel_session_booking", { p_booking_id: myBook.id });

@@ -7,6 +7,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabase";
+import { useConfirm } from "@/hooks/useConfirm";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Loader2, ShieldCheck, Package, Banknote, Receipt, Clock, X, Plus, Copy, Check, Landmark, QrCode,
@@ -168,6 +169,7 @@ const BankSlip = ({ bank, amount }: { bank: BankInfo | null; amount: number }) =
 
 const Membership = () => {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
   const [trainerId, setTrainerId] = useState<string | null>(null);
   const [trainerName, setTrainerName] = useState("");
@@ -267,7 +269,7 @@ const Membership = () => {
   };
 
   const cancelRequest = async (id: string) => {
-    if (!window.confirm("Otkazati zahtev?")) return;
+    if (!(await confirm({ title: "Otkazati zahtev?", destructive: true }))) return;
     const { error } = await supabase.rpc("cancel_membership_purchase", { p_purchase_id: id });
     if (error) return toast.error(error.message);
     toast.success("Zahtev otkazan");
@@ -275,7 +277,11 @@ const Membership = () => {
   };
 
   const markPaid = async (id: string) => {
-    if (!window.confirm("Potvrđuješ da si izvršio uplatu? Trener će dobiti notifikaciju.")) return;
+    if (!(await confirm({
+      title: "Potvrđuješ da si izvršio uplatu?",
+      description: "Trener će dobiti notifikaciju.",
+      confirmLabel: "Potvrdi",
+    }))) return;
     const { error } = await supabase.rpc("mark_membership_paid", { p_purchase_id: id });
     if (error) return toast.error(error.message);
     toast.success("Trener je obavešten o uplati");

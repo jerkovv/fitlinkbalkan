@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import { useConfirm } from "@/hooks/useConfirm";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { PhoneShell } from "@/components/PhoneShell";
@@ -138,6 +139,7 @@ const AthleteProfile = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [removeOpen, setRemoveOpen] = useState(false);
   const [removing, setRemoving] = useState(false);
 
@@ -591,7 +593,7 @@ const AthleteProfile = () => {
 
   const unassignPlan = async () => {
     if (!activePlan) return;
-    if (!confirm("Otkazati aktivni plan ishrane?")) return;
+    if (!(await confirm({ title: "Otkazati aktivni plan ishrane?", destructive: true }))) return;
     await supabase
       .from("assigned_nutrition_plans")
       .update({ is_active: false } as any)

@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
+import { ConfirmProvider } from "@/hooks/useConfirm";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 import Index from "./pages/Index.tsx";
@@ -63,6 +64,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <ConfirmProvider>
           <div vaul-drawer-wrapper="" className="h-full bg-background">
           <Routes>
             <Route path="/" element={<Index />} />
@@ -114,6 +116,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
           </div>
+          </ConfirmProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

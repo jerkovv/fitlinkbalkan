@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/full-screen-sheet";
 import { supabase } from "@/lib/supabase";
 import { friendlyDbError } from "@/lib/dbError";
+import { useConfirm } from "@/hooks/useConfirm";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, Plus, Pencil, Trash2, Package } from "lucide-react";
 import { toast } from "sonner";
@@ -31,6 +32,7 @@ const empty = { name: "", sessions_count: "12", duration_days: "28", price_rsd: 
 
 const Packages = () => {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
   const [packages, setPackages] = useState<Pkg[]>([]);
   const [open, setOpen] = useState(false);
@@ -109,7 +111,7 @@ const Packages = () => {
   };
 
   const remove = async (p: Pkg) => {
-    if (!confirm(`Obriši paket "${p.name}"?`)) return;
+    if (!(await confirm({ title: `Obriši paket "${p.name}"?`, destructive: true }))) return;
     const { error } = await supabase.from("membership_packages").delete().eq("id", p.id);
     if (error) return toast.error(error.message);
     toast.success("Paket obrisan");

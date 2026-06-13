@@ -5,6 +5,7 @@ import { Card, Chip } from "@/components/ui-bits";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { useConfirm } from "@/hooks/useConfirm";
 import { Loader2, Banknote, Receipt, Check, X, Inbox } from "lucide-react";
 import { toast } from "sonner";
 
@@ -23,6 +24,7 @@ type Purchase = {
 
 const Payments = () => {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState<Purchase[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -67,7 +69,7 @@ const Payments = () => {
   };
 
   const rejectPurchase = async (p: Purchase) => {
-    if (!window.confirm(`Odbiti zahtev "${p.package_name}"?`)) return;
+    if (!(await confirm({ title: `Odbiti zahtev "${p.package_name}"?`, destructive: true }))) return;
     setBusyId(p.id);
     const { error } = await supabase.rpc("reject_membership_purchase", {
       p_purchase_id: p.id,

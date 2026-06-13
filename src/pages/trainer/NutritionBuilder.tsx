@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import { useConfirm } from "@/hooks/useConfirm";
 import { PhoneShell } from "@/components/PhoneShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +55,7 @@ const macros = (item: MealItem) => {
 
 const NutritionBuilder = () => {
   const { id: templateId } = useParams<{ id: string }>();
+  const confirm = useConfirm();
   const [templateName, setTemplateName] = useState("");
   const [days, setDays] = useState<Day[]>([]);
   const [mealsByDay, setMealsByDay] = useState<Record<string, Meal[]>>({});
@@ -177,7 +179,7 @@ const NutritionBuilder = () => {
   };
 
   const handleDeleteDay = async (dayId: string) => {
-    if (!confirm("Obrisati dan i sve obroke?")) return;
+    if (!(await confirm({ title: "Obrisati dan?", description: "Dan i svi obroci biće obrisani.", destructive: true }))) return;
     const { error } = await supabase.from("nutrition_plan_days").delete().eq("id", dayId);
     if (error) { toast.error(error.message); return; }
     load();
@@ -199,7 +201,7 @@ const NutritionBuilder = () => {
   };
 
   const handleDeleteMeal = async (mealId: string) => {
-    if (!confirm("Obrisati obrok?")) return;
+    if (!(await confirm({ title: "Obrisati obrok?", destructive: true }))) return;
     await supabase.from("nutrition_plan_meals").delete().eq("id", mealId);
     load();
   };
