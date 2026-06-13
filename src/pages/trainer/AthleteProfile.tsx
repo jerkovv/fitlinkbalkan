@@ -24,7 +24,7 @@ import {
   Dumbbell, Activity, Scale, ChevronRight, UserMinus, Flame,
 } from "lucide-react";
 import { toast } from "sonner";
-import { WorkoutSessionDetailDialog } from "@/components/WorkoutSessionDetailDialog";
+import { InAppWorkoutDetailDialog } from "@/components/InAppWorkoutDetailDialog";
 import { assignProgramToAthlete } from "@/lib/programAssignment";
 import { ProgressPhotos } from "@/components/ProgressPhotos";
 import { HealthMetricsCard } from "@/components/wearables/HealthMetricsCard";
@@ -1171,7 +1171,7 @@ const AthleteProfile = () => {
         </DialogContent>
       </Dialog>
 
-      <WorkoutSessionDetailDialog
+      <InAppWorkoutDetailDialog
         sessionId={openSessionId}
         open={!!openSessionId}
         onOpenChange={(o) => !o && setOpenSessionId(null)}

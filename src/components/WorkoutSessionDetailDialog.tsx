@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Dumbbell, Clock, CalendarDays, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Loader2, Dumbbell, Clock, CalendarDays, TrendingUp, TrendingDown, Minus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -189,7 +189,7 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[88vh] overflow-y-auto p-0">
-        <DialogHeader className="p-5 pb-3 border-b border-hairline sticky top-0 bg-card z-10">
+        <DialogHeader className="p-5 pb-3 pr-14 border-b border-hairline sticky top-0 bg-card z-10">
           <DialogTitle className="font-display text-xl font-bold tracking-tight">
             {loading ? "Učitavanje…" : meta?.day_name ?? "Trening"}
           </DialogTitle>
@@ -198,6 +198,11 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
               {meta.program_name} · Dan {meta.day_number}
             </div>
           )}
+          {/* Lokalni X iznad sticky headera (wrapperov X je z-10 pa ga header prekrije). */}
+          <DialogClose className="absolute right-4 top-4 z-20 h-8 w-8 rounded-full bg-surface-2 hover:bg-surface-3 flex items-center justify-center transition active:scale-95 focus:outline-none">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Zatvori</span>
+          </DialogClose>
         </DialogHeader>
 
         {loading ? (

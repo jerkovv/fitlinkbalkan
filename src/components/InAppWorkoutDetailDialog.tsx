@@ -1,11 +1,12 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Dumbbell, Flame, Clock, Heart } from "lucide-react";
+import { Dumbbell, Flame, Clock, Heart, Minus, TrendingUp, TrendingDown } from "lucide-react";
 import {
   Dialog, DialogContent, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui-bits";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import {
   computeMaxHR, computeZones, formatDuration, type HRSample,
@@ -17,6 +18,23 @@ interface Props {
   sessionId: string | null;
   open: boolean;
   onOpenChange: (o: boolean) => void;
+}
+
+interface InAppSet {
+  set_number: number;
+  reps: number | null;
+  weight_kg: number | null;
+  rpe: number | null;
+  done: boolean;
+}
+
+interface InAppExercise {
+  exercise_name: string;
+  planned_sets: number;
+  planned_reps: string | null;
+  planned_weight_kg: number | null;
+  done_count: number;
+  sets: InAppSet[];
 }
 
 interface InAppDetail {
@@ -36,6 +54,7 @@ interface InAppDetail {
   day_name: string | null;
   birth_year: number | null;
   sets_done: number | null;
+  exercises: InAppExercise[] | null;
 }
 
 const fmtDate = (iso: string) =>
@@ -191,6 +210,83 @@ export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange }: Prop
                   Zone pulsa
                 </div>
                 <HRZonesChart zones={zones} />
+              </Card>
+            )}
+
+            {/* Vežbe (serije: planirano vs uradjeno) */}
+            {detail.exercises && detail.exercises.length > 0 && (
+              <Card className="p-4">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-3">
+                  Vežbe
+                </div>
+                <div className="space-y-3">
+                  {detail.exercises.map((ex, i) => (
+                    <div key={i} className="rounded-2xl border border-hairline overflow-hidden">
+                      <div className="px-3.5 py-2.5 bg-surface-2 border-b border-hairline flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="font-semibold text-[14px] tracking-tight truncate">
+                            {ex.exercise_name}
+                          </div>
+                          <div className="text-[11.5px] text-muted-foreground mt-0.5">
+                            Plan: {ex.planned_sets} × {ex.planned_reps ?? "-"}
+                            {ex.planned_weight_kg != null ? ` @ ${ex.planned_weight_kg} kg` : ""}
+                          </div>
+                        </div>
+                        <span className="shrink-0 text-[11px] font-bold tnum px-2 py-0.5 rounded-full bg-success-soft text-success-soft-foreground">
+                          {ex.done_count}/{ex.planned_sets}
+                        </span>
+                      </div>
+                      <div className="px-3.5 py-2 space-y-1">
+                        {(ex.sets ?? []).map((s) => {
+                          // Delta vs plan: stvarna tezina - planirana (samo kad ima plana).
+                          const wDelta =
+                            ex.planned_weight_kg != null && s.weight_kg != null
+                              ? s.weight_kg - ex.planned_weight_kg
+                              : null;
+                          return (
+                            <div
+                              key={s.set_number}
+                              className="flex items-center justify-between gap-2 text-[13px] tnum py-0.5"
+                            >
+                              <span
+                                className={cn(
+                                  "flex-1 min-w-0",
+                                  s.done ? "text-foreground" : "text-muted-foreground/50",
+                                )}
+                              >
+                                Serija {s.set_number}: {s.reps ?? "-"}
+                                {s.weight_kg != null ? ` x ${s.weight_kg} kg` : ""}
+                                {s.rpe != null ? ` - RPE ${s.rpe}` : ""}
+                              </span>
+                              {wDelta != null && wDelta !== 0 && s.done && (
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center gap-0.5 text-[10px] font-semibold shrink-0",
+                                    wDelta > 0 ? "text-success" : "text-destructive",
+                                  )}
+                                >
+                                  {wDelta > 0 ? (
+                                    <TrendingUp className="h-3 w-3" />
+                                  ) : (
+                                    <TrendingDown className="h-3 w-3" />
+                                  )}
+                                  {wDelta > 0 ? "+" : ""}{wDelta}kg
+                                </span>
+                              )}
+                              {s.done ? (
+                                <div className="h-5 w-5 rounded-full bg-success/15 text-success flex items-center justify-center text-[10px] font-bold shrink-0">
+                                  ✓
+                                </div>
+                              ) : (
+                                <Minus className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </Card>
             )}
 
