@@ -16,7 +16,7 @@ import {
   FullScreenSheetFooter,
 } from "@/components/ui/full-screen-sheet";
 import {
-  Plus, Loader2, Dumbbell, Trash2, GripVertical, ChevronDown, ChevronUp, UserPlus, Check,
+  Plus, Loader2, Dumbbell, Trash2, GripVertical, ChevronDown, ChevronUp, UserPlus, Check, Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ExercisePickerSheet } from "@/components/exercises/ExercisePickerSheet";
@@ -77,6 +77,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
   const [assignOpen, setAssignOpen] = useState(false);
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [assigning, setAssigning] = useState<string | null>(null);
+  const [notifying, setNotifying] = useState(false);
 
   const load = async () => {
     if (!parentId) return;
@@ -225,6 +226,20 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
     } finally {
       setAssigning(null);
     }
+  };
+
+  // Custom plan se kreira tiho (bez notifikacije); trener eksplicitno obavesti
+  // vezbaca kad zavrsi. RPC vraca false ako je vec poslata notifikacija za ovaj plan.
+  const notifyAthlete = async () => {
+    if (!parentId) return;
+    setNotifying(true);
+    const { data, error } = await supabase.rpc("notify_athlete_about_program", {
+      p_assigned_program_id: parentId,
+    } as any);
+    setNotifying(false);
+    if (error) { toast.error(error.message); return; }
+    if (data === true) toast.success("Plan poslat vežbaču");
+    else toast("Plan je već poslat");
   };
 
   return (
@@ -378,6 +393,9 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
         </button>
       )}
 
+      {/* Prostor da poslednji dan ne stoji ispod sticky "Obavesti vezbaca" CTA */}
+      {mode === "assigned" && days.length > 0 && <div className="h-24" />}
+
       {/* Add Day - full-screen (Wolt-style) */}
       <FullScreenSheet open={addDayOpen} onClose={() => setAddDayOpen(false)} title="Novi dan">
         <form onSubmit={handleAddDay} className="flex flex-1 min-h-0 flex-col">
@@ -455,6 +473,25 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
             <Button onClick={openAssign} className="w-full h-12 shadow-brand">
               <UserPlus className="h-4 w-4 mr-2" />
               Dodeli vežbaču
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Sticky bottom CTA - posalji vezbacu samo u assigned modu */}
+      {mode === "assigned" && days.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 px-6 pb-6 pt-3 bg-gradient-to-t from-background via-background to-transparent pointer-events-none">
+          <div className="max-w-[440px] mx-auto pointer-events-auto">
+            <p className="text-[11px] text-muted-foreground text-center mb-2">
+              Vežbač vidi plan tek kada ga pošaljete. Kada završite, pošaljite ga.
+            </p>
+            <Button
+              onClick={notifyAthlete}
+              disabled={notifying}
+              className="w-full h-12 bg-gradient-brand text-white shadow-brand"
+            >
+              {notifying ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+              Pošalji vežbaču
             </Button>
           </div>
         </div>

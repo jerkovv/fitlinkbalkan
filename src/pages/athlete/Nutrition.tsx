@@ -79,6 +79,7 @@ const Nutrition = () => {
       .select("*")
       .eq("athlete_id", user.id)
       .eq("is_active", true)
+      .not("published_at", "is", null)
       .order("assigned_at", { ascending: false })
       .limit(1)
       .maybeSingle();

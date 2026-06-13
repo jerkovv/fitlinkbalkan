@@ -59,6 +59,7 @@ type AssignedPlan = {
   target_kcal: number | null;
   assigned_at: string;
   is_active: boolean;
+  published_at: string | null;
 };
 
 type AssignedProgram = {
@@ -66,6 +67,7 @@ type AssignedProgram = {
   name: string;
   assigned_at: string;
   total_days: number;
+  published_at: string | null;
 };
 
 type ProgramTemplate = {
@@ -203,6 +205,16 @@ const AthleteProfile = () => {
   const [customName, setCustomName] = useState("");
   const [customCreating, setCustomCreating] = useState(false);
 
+  // Custom plan ishrane od nule (kreira prazan assigned_nutrition_plans, otvara editor)
+  const [customNutOpen, setCustomNutOpen] = useState(false);
+  const [customNutName, setCustomNutName] = useState("");
+  const [customNutCreating, setCustomNutCreating] = useState(false);
+
+  // Zapocet (nesacuvan/neposlat) draft: nudi Nastavi / Napravi nov
+  const [draftResume, setDraftResume] = useState<
+    { kind: "program" | "nutrition"; draftId: string; draftName: string } | null
+  >(null);
+
   // Workout session detail
 
   const load = async () => {
@@ -212,21 +224,22 @@ const AthleteProfile = () => {
     const [aRes, pRes, planRes, progRes, metricsRes] = await Promise.all([
       supabase.from("athletes").select("*").eq("id", id).maybeSingle(),
       supabase.from("profiles").select("full_name, phone").eq("id", id).maybeSingle(),
+      // Kartica prikazuje SAMO poslat plan (published_at NOT NULL). Nacrt se ne vidi.
       supabase
         .from("assigned_nutrition_plans")
-        .select("id, name, target_kcal, assigned_at, is_active")
+        .select("id, name, target_kcal, assigned_at, is_active, published_at")
         .eq("athlete_id", id)
         .eq("is_active", true)
+        .not("published_at", "is", null)
         .order("assigned_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+        .limit(1),
       supabase
         .from("assigned_programs")
-        .select("id, name, assigned_at")
+        .select("id, name, assigned_at, published_at")
         .eq("athlete_id", id)
+        .not("published_at", "is", null)
         .order("assigned_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+        .limit(1),
       supabase
         .from("body_metrics")
         .select("id, recorded_on, weight_kg, body_fat_pct")
@@ -242,17 +255,17 @@ const AthleteProfile = () => {
         phone: (pRes.data as any)?.phone ?? null,
       });
     }
-    setActivePlan((planRes.data as any) ?? null);
+    setActivePlan((planRes.data as any[])?.[0] ?? null);
 
     // Active program + total days count
-    if (progRes.data) {
-      const prog: any = progRes.data;
+    const prog: any = (progRes.data as any[])?.[0];
+    if (prog) {
       const { count } = await supabase
         .from("assigned_program_days")
         .select("id", { count: "exact", head: true })
         .eq("assigned_program_id", prog.id)
         .is("deleted_at", null);
-      setActiveProgram({ id: prog.id, name: prog.name, assigned_at: prog.assigned_at, total_days: count ?? 0 });
+      setActiveProgram({ id: prog.id, name: prog.name, assigned_at: prog.assigned_at, total_days: count ?? 0, published_at: prog.published_at ?? null });
     } else {
       setActiveProgram(null);
     }
@@ -455,6 +468,80 @@ const AthleteProfile = () => {
     navigate(`/trener/vezbaci/${id}/program/${assignedId}`);
   };
 
+  // Plan ishrane od nule: RPC kreira prazan assigned_nutrition_plans (tiho, bez
+  // notifikacije), trener gradi pa eksplicitno "Obavesti vezbaca" iz editora.
+  const createCustomNutrition = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id) return;
+    setCustomNutCreating(true);
+    const { data, error } = await supabase.rpc("create_custom_assigned_nutrition_plan", {
+      p_athlete_id: id,
+      p_name: customNutName.trim() || "Plan ishrane",
+    } as any);
+    setCustomNutCreating(false);
+    if (error) { toast.error(error.message); return; }
+    const assignedId = data as string;
+    setCustomNutOpen(false);
+    setCustomNutName("");
+    navigate(`/trener/vezbaci/${id}/ishrana/${assignedId}`);
+  };
+
+  // "Nov plan" klik: ako postoji zapocet draft (custom, jos neposlat) ponudi
+  // Nastavi/Napravi nov; inace odmah otvori naziv dijalog za nov plan.
+  const startCustomProgram = async () => {
+    if (!id) return;
+    // limit(1) + niz (BEZ maybeSingle): vise drafta -> uzmi najnoviji jedan.
+    // Hvatamo error da ne padne tiho u "nema drafta" pa da gomila nove.
+    const { data, error } = await supabase
+      .from("assigned_programs")
+      .select("id, name")
+      .eq("athlete_id", id)
+      .is("source_template_id", null)
+      .is("published_at", null)
+      .order("assigned_at", { ascending: false })
+      .limit(1);
+    if (error) { toast.error(error.message); return; }
+    const draft = (data as any[] | null)?.[0];
+    if (draft) setDraftResume({ kind: "program", draftId: draft.id, draftName: draft.name });
+    else setCustomOpen(true);
+  };
+
+  const startCustomNutrition = async () => {
+    if (!id) return;
+    const { data, error } = await supabase
+      .from("assigned_nutrition_plans")
+      .select("id, name")
+      .eq("athlete_id", id)
+      .is("source_template_id", null)
+      .is("published_at", null)
+      .order("assigned_at", { ascending: false })
+      .limit(1);
+    if (error) { toast.error(error.message); return; }
+    const draft = (data as any[] | null)?.[0];
+    if (draft) setDraftResume({ kind: "nutrition", draftId: draft.id, draftName: draft.name });
+    else setCustomNutOpen(true);
+  };
+
+  const continueDraft = () => {
+    if (!draftResume || !id) return;
+    const path = draftResume.kind === "program" ? "program" : "ishrana";
+    const draftId = draftResume.draftId;
+    setDraftResume(null);
+    navigate(`/trener/vezbaci/${id}/${path}/${draftId}`);
+  };
+
+  const makeNewFromDraft = async () => {
+    if (!draftResume) return;
+    const { kind, draftId } = draftResume;
+    // Draft nije poslat -> nema istorije, pravi DELETE je bezbedan (CASCADE brise dane/obroke).
+    const table = kind === "program" ? "assigned_programs" : "assigned_nutrition_plans";
+    const { error } = await supabase.from(table).delete().eq("id", draftId);
+    if (error) { toast.error(error.message); return; }
+    setDraftResume(null);
+    if (kind === "program") setCustomOpen(true);
+    else setCustomNutOpen(true);
+  };
+
   const openAssign = async () => {
     setAssignOpen(true);
     if (templates.length === 0 && user) {
@@ -490,12 +577,15 @@ const AthleteProfile = () => {
   };
 
   const unassignPlan = async () => {
-    if (!activePlan) return;
+    if (!activePlan || !id) return;
     if (!(await confirm({ title: "Otkazati aktivni plan ishrane?", destructive: true }))) return;
-    await supabase
+    // Obrisi SVE planove ishrane ovog vezbaca odjednom (jedan klik = prazno).
+    // Ishrana nema istoriju; CASCADE brise dane/obroke/stavke/raspored.
+    const { error } = await supabase
       .from("assigned_nutrition_plans")
-      .update({ is_active: false } as any)
-      .eq("id", activePlan.id);
+      .delete()
+      .eq("athlete_id", id);
+    if (error) { toast.error(error.message); return; }
     toast.success("Plan otkazan");
     load();
   };
@@ -695,7 +785,7 @@ const AthleteProfile = () => {
                 <Button variant="outline" className="w-full" onClick={openProgramAssign}>
                   Promeni program
                 </Button>
-                <Button variant="outline" className="w-full" onClick={() => setCustomOpen(true)}>
+                <Button variant="outline" className="w-full" onClick={startCustomProgram}>
                   <Sparkles className="h-4 w-4 mr-1.5" /> Nov plan
                 </Button>
               </div>
@@ -705,7 +795,7 @@ const AthleteProfile = () => {
           <div className="space-y-2">
             <Button
               className="w-full h-12 bg-gradient-brand text-white shadow-brand"
-              onClick={() => setCustomOpen(true)}
+              onClick={startCustomProgram}
             >
               <Sparkles className="h-4 w-4 mr-1.5" /> Napravi plan od nule
             </Button>
@@ -756,18 +846,31 @@ const AthleteProfile = () => {
               >
                 Izmeni plan ishrane
               </Button>
-              <Button variant="outline" className="w-full" onClick={openAssign}>
-                Promeni plan
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" className="w-full" onClick={openAssign}>
+                  Promeni plan
+                </Button>
+                <Button variant="outline" className="w-full" onClick={startCustomNutrition}>
+                  <Sparkles className="h-4 w-4 mr-1.5" /> Nov plan
+                </Button>
+              </div>
             </div>
           </Card>
         ) : (
-          <button
-            onClick={openAssign}
-            className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-hairline hover:border-primary/40 hover:bg-primary-soft/40 py-4 text-[14px] font-semibold text-muted-foreground hover:text-primary-soft-foreground transition"
-          >
-            <Plus className="h-4 w-4" /> Dodeli plan ishrane
-          </button>
+          <div className="space-y-2">
+            <Button
+              className="w-full h-12 bg-gradient-brand text-white shadow-brand"
+              onClick={startCustomNutrition}
+            >
+              <Sparkles className="h-4 w-4 mr-1.5" /> Napravi plan ishrane od nule
+            </Button>
+            <button
+              onClick={openAssign}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-hairline hover:border-primary/40 hover:bg-primary-soft/40 py-4 text-[14px] font-semibold text-muted-foreground hover:text-primary-soft-foreground transition"
+            >
+              <Plus className="h-4 w-4" /> Dodeli gotov plan
+            </button>
+          </div>
         )}
       </section>
 
@@ -1010,6 +1113,34 @@ const AthleteProfile = () => {
         </form>
       </FullScreenSheet>
 
+      {/* Nov plan ishrane od nule - naziv (isti obrazac kao trening custom) */}
+      <FullScreenSheet open={customNutOpen} onClose={() => setCustomNutOpen(false)} title="Nov plan ishrane">
+        <form onSubmit={createCustomNutrition} className="flex flex-1 min-h-0 flex-col">
+          <FullScreenSheetScroll className="pt-5 space-y-3">
+            <p className="text-[13px] text-muted-foreground">
+              Prazan plan ishrane koji praviš direktno za ovog vežbača. Posle naziva dodaješ dane, obroke i namirnice.
+            </p>
+            <div>
+              <Label htmlFor="custom-nut-name">Naziv plana</Label>
+              <Input
+                id="custom-nut-name"
+                value={customNutName}
+                onChange={(e) => setCustomNutName(e.target.value)}
+                placeholder="npr. Definicija 2000 kcal"
+                className="mt-1.5 h-14 text-base rounded-2xl"
+                autoFocus
+              />
+            </div>
+          </FullScreenSheetScroll>
+          <FullScreenSheetFooter>
+            <Button type="submit" disabled={customNutCreating} className="w-full bg-gradient-brand text-white shadow-brand">
+              {customNutCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Napravi i otvori
+            </Button>
+          </FullScreenSheetFooter>
+        </form>
+      </FullScreenSheet>
+
       {/* Assign dialog */}
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
         <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
@@ -1132,6 +1263,30 @@ const AthleteProfile = () => {
             >
               {removing ? "Uklanjanje..." : "Ukloni vežbača"}
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Zapocet draft: Nastavi ili Napravi nov */}
+      <AlertDialog open={!!draftResume} onOpenChange={(o) => { if (!o) setDraftResume(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Imaš započet plan</AlertDialogTitle>
+            <AlertDialogDescription>
+              Plan "{draftResume?.draftName}" je sačuvan ali nije poslat vežbaču. Nastaviti ga ili napraviti nov?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:gap-2">
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); continueDraft(); }}
+              className="w-full bg-gradient-brand text-white shadow-brand"
+            >
+              Nastavi
+            </AlertDialogAction>
+            <Button variant="outline" className="w-full" onClick={makeNewFromDraft}>
+              Napravi nov
+            </Button>
+            <AlertDialogCancel className="w-full mt-0">Otkaži</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

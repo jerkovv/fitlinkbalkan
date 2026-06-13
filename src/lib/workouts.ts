@@ -21,6 +21,7 @@ export const getNextWorkoutDay = async (athleteId: string): Promise<NextWorkoutD
     .from("assigned_programs")
     .select("id, name, assigned_at")
     .eq("athlete_id", athleteId)
+    .not("published_at", "is", null)
     .order("assigned_at", { ascending: false })
     .limit(1);
 

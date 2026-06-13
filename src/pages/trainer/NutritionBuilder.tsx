@@ -13,7 +13,7 @@ import {
   FullScreenSheet, FullScreenSheetHeader, FullScreenSheetScroll, FullScreenSheetFooter,
 } from "@/components/ui/full-screen-sheet";
 import {
-  Plus, Loader2, Apple, Search, Trash2, ChevronDown, ChevronUp, UserPlus, Check, CalendarDays,
+  Plus, Loader2, Apple, Search, Trash2, ChevronDown, ChevronUp, UserPlus, Check, CalendarDays, Send,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -117,6 +117,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   const [assignOpen, setAssignOpen] = useState(false);
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [assigning, setAssigning] = useState<string | null>(null);
+  const [notifying, setNotifying] = useState(false);
 
   const load = async () => {
     if (!parentId) return;
@@ -362,6 +363,20 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
     if (error) { toast.error(error.message); return; }
     toast.success("Plan ishrane dodeljen");
     setAssignOpen(false);
+  };
+
+  // Custom plan ishrane se kreira tiho; trener eksplicitno obavesti vezbaca kad
+  // zavrsi. RPC vraca false ako je vec poslata notifikacija za ovaj plan.
+  const notifyAthlete = async () => {
+    if (!parentId) return;
+    setNotifying(true);
+    const { data, error } = await supabase.rpc("notify_athlete_about_nutrition", {
+      p_assigned_plan_id: parentId,
+    } as any);
+    setNotifying(false);
+    if (error) { toast.error(error.message); return; }
+    if (data === true) toast.success("Plan poslat vežbaču");
+    else toast("Plan je već poslat");
   };
 
   return (
@@ -814,6 +829,23 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
         <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[440px] px-6 pb-6 pt-3 bg-gradient-to-t from-background via-background to-transparent">
           <Button onClick={openAssign} className="w-full shadow-brand">
             <UserPlus className="h-4 w-4 mr-2" /> Dodeli vežbaču
+          </Button>
+        </div>
+      )}
+
+      {/* Sticky CTA - posalji vezbacu samo u assigned modu */}
+      {mode === "assigned" && days.length > 0 && (
+        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[440px] px-6 pb-6 pt-3 bg-gradient-to-t from-background via-background to-transparent">
+          <p className="text-[11px] text-muted-foreground text-center mb-2">
+            Vežbač vidi plan tek kada ga pošaljete. Kada završite, pošaljite ga.
+          </p>
+          <Button
+            onClick={notifyAthlete}
+            disabled={notifying}
+            className="w-full bg-gradient-brand text-white shadow-brand"
+          >
+            {notifying ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+            Pošalji vežbaču
           </Button>
         </div>
       )}
