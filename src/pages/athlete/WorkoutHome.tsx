@@ -4,7 +4,7 @@ import { PhoneShell } from "@/components/PhoneShell";
 import { AthleteOnboardingTour } from "@/components/AthleteOnboardingTour";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui-bits";
-import { Loader2, Play, Dumbbell, History, CalendarDays, Flame, AlertTriangle } from "lucide-react";
+import { Loader2, Play, Dumbbell, History, CalendarDays, Flame, AlertTriangle, RefreshCw } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { getNextWorkoutDay, type NextWorkoutDay } from "@/lib/workouts";
@@ -235,9 +235,23 @@ const WorkoutHome = () => {
               </TabsTrigger>
             </TabsList>
             <TabsContent value="app">
+              <p className="text-xs text-muted-foreground mt-2 mb-3">
+                Treninzi koje si radio kroz FitLink. Ako si nosio sat, puls i kalorije su vec ovde.
+              </p>
               <InAppWorkoutsList limit={10} />
             </TabsContent>
             <TabsContent value="watch">
+              <p className="text-xs text-muted-foreground mt-2 mb-3">
+                Aktivnosti koje si radio bez FitLink-a, direktno na satu. Sinhronizuj ih da budu na jednom mestu.
+              </p>
+              <div className="flex justify-end mb-3">
+                <button
+                  onClick={() => nav("/vezbac/integracije")}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-hairline bg-surface px-3.5 py-1.5 text-[12.5px] font-semibold text-foreground hover:bg-surface-2 transition active:scale-95"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" /> Sinhronizuj sat
+                </button>
+              </div>
               <WorkoutsList limit={10} />
             </TabsContent>
           </Tabs>
