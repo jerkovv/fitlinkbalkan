@@ -243,7 +243,8 @@ const AthleteProfile = () => {
       const { count } = await supabase
         .from("assigned_program_days")
         .select("id", { count: "exact", head: true })
-        .eq("assigned_program_id", prog.id);
+        .eq("assigned_program_id", prog.id)
+        .is("deleted_at", null);
       setActiveProgram({ id: prog.id, name: prog.name, assigned_at: prog.assigned_at, total_days: count ?? 0 });
     } else {
       setActiveProgram(null);

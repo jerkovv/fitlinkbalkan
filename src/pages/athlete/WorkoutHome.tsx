@@ -43,7 +43,8 @@ const WorkoutHome = () => {
         const { count } = await supabase
           .from("assigned_program_exercises")
           .select("id", { count: "exact", head: true })
-          .eq("day_id", nextDay.day_id);
+          .eq("day_id", nextDay.day_id)
+          .is("deleted_at", null);
         setExerciseCount(count ?? 0);
 
         // Učitaj sve dane iz programa da vežbač može opet da pokrene bilo koji
@@ -51,6 +52,7 @@ const WorkoutHome = () => {
           .from("assigned_program_days")
           .select("id, day_number, name, assigned_program_exercises(id)")
           .eq("assigned_program_id", nextDay.assigned_program_id)
+          .is("deleted_at", null)
           .order("day_number", { ascending: true });
 
         const list: ProgramDay[] = ((daysData as any[]) ?? []).map((d) => ({

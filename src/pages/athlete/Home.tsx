@@ -49,7 +49,8 @@ const Home = () => {
         const { count } = await supabase
           .from("assigned_program_exercises")
           .select("id", { count: "exact", head: true })
-          .eq("day_id", nextDay.day_id);
+          .eq("day_id", nextDay.day_id)
+          .is("deleted_at", null);
         setExerciseCount(count ?? 0);
       }
 

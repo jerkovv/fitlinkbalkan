@@ -32,6 +32,7 @@ export const getNextWorkoutDay = async (athleteId: string): Promise<NextWorkoutD
     .from("assigned_program_days")
     .select("id, day_number, name")
     .eq("assigned_program_id", program.id)
+    .is("deleted_at", null)
     .order("day_number", { ascending: true });
 
   const programDays = (days as any[] | null) ?? [];
