@@ -86,7 +86,7 @@ const getActionTarget = (
     return null;
   }
   // athlete
-  if (n.kind === "program_assigned") return { path: "/vezbac", label: "Otvori program" };
+  if (n.kind === "program_assigned") return { path: "/vezbac/trening", label: "Otvori program" };
   if (n.kind === "nutrition_assigned") return { path: "/vezbac/ishrana", label: "Otvori plan ishrane" };
   if (n.kind === "membership_expiring" || n.kind === "membership_expired"
       || n.kind === "membership_activated" || n.kind === "membership_rejected")
