@@ -4,16 +4,18 @@ import { toast } from "sonner";
 
 type Args = {
   dayId: string;
+  /** Ciljna tabela: sablon (default) ili dodeljeni plan. */
+  table?: "program_template_exercises" | "assigned_program_exercises";
   onSuccess?: () => void;
 };
 
-export const useAddExercisesToDay = ({ dayId, onSuccess }: Args) => {
+export const useAddExercisesToDay = ({ dayId, table = "program_template_exercises", onSuccess }: Args) => {
   return useMutation({
     mutationFn: async (exerciseIds: string[]) => {
       if (!dayId || exerciseIds.length === 0) return;
 
       const { data: maxRow, error: maxErr } = await supabase
-        .from("program_template_exercises")
+        .from(table)
         .select("position")
         .eq("day_id", dayId)
         .order("position", { ascending: false })
@@ -32,7 +34,7 @@ export const useAddExercisesToDay = ({ dayId, onSuccess }: Args) => {
       }));
 
       const { error } = await supabase
-        .from("program_template_exercises")
+        .from(table)
         .insert(rows as any);
       if (error) throw error;
       return rows.length;

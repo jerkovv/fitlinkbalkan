@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useConfirm } from "@/hooks/useConfirm";
 import { assignProgramToAthlete } from "@/lib/programAssignment";
@@ -35,9 +35,31 @@ type Exercise = {
 };
 type Athlete = { id: string; full_name: string | null; email: string };
 
-const ProgramBuilder = () => {
-  const { id: templateId } = useParams<{ id: string }>();
+type ProgramBuilderMode = "template" | "assigned";
+
+const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) => {
+  const params = useParams<{ id?: string; assignedId?: string; athleteId?: string }>();
+  // parentId = template_id (sablon) ili assigned_program_id (dodeljeni plan).
+  const parentId = mode === "assigned" ? params.assignedId : params.id;
+  const athleteId = params.athleteId;
+  // Config sloj: sve tabele/kolone/strategija brisanja izvedene iz moda.
+  const cfg = mode === "assigned"
+    ? {
+        parentTable: "assigned_programs",
+        daysTable: "assigned_program_days",
+        exTable: "assigned_program_exercises",
+        parentCol: "assigned_program_id",
+        softDelete: true,
+      } as const
+    : {
+        parentTable: "program_templates",
+        daysTable: "program_template_days",
+        exTable: "program_template_exercises",
+        parentCol: "template_id",
+        softDelete: false,
+      } as const;
   const confirm = useConfirm();
+  const navigate = useNavigate();
   const [templateName, setTemplateName] = useState("");
   const [days, setDays] = useState<Day[]>([]);
   const [exByDay, setExByDay] = useState<Record<string, Exercise[]>>({});
@@ -57,11 +79,15 @@ const ProgramBuilder = () => {
   const [assigning, setAssigning] = useState<string | null>(null);
 
   const load = async () => {
-    if (!templateId) return;
+    if (!parentId) return;
     setLoading(true);
+
+    let daysQ = supabase.from(cfg.daysTable).select("*").eq(cfg.parentCol, parentId);
+    if (cfg.softDelete) daysQ = daysQ.is("deleted_at", null);
+
     const [{ data: tpl }, { data: daysData }] = await Promise.all([
-      supabase.from("program_templates").select("name").eq("id", templateId).maybeSingle(),
-      supabase.from("program_template_days").select("*").eq("template_id", templateId).order("day_number"),
+      supabase.from(cfg.parentTable).select("name").eq("id", parentId).maybeSingle(),
+      daysQ.order("day_number"),
     ]);
     setTemplateName((tpl as any)?.name ?? "Program");
     const dList = (daysData as any) ?? [];
@@ -69,11 +95,12 @@ const ProgramBuilder = () => {
 
     if (dList.length) {
       const dayIds = dList.map((d: any) => d.id);
-      const { data: exs } = await supabase
-        .from("program_template_exercises")
+      let exQ = supabase
+        .from(cfg.exTable)
         .select("*, exercises(name, name_en, primary_muscle)")
-        .in("day_id", dayIds)
-        .order("position");
+        .in("day_id", dayIds);
+      if (cfg.softDelete) exQ = exQ.is("deleted_at", null);
+      const { data: exs } = await exQ.order("position");
       const grouped: Record<string, Exercise[]> = {};
       (exs as any ?? []).forEach((e: Exercise) => {
         const k = (e as any).day_id;
@@ -86,14 +113,14 @@ const ProgramBuilder = () => {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [templateId]);
+  useEffect(() => { load(); }, [parentId]);
 
   const handleAddDay = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!templateId) return;
+    if (!parentId) return;
     const nextNum = (days[days.length - 1]?.day_number ?? 0) + 1;
-    const { error } = await supabase.from("program_template_days").insert({
-      template_id: templateId,
+    const { error } = await supabase.from(cfg.daysTable).insert({
+      [cfg.parentCol]: parentId,
       day_number: nextNum,
       name: newDayName || `Dan ${nextNum}`,
     } as any);
@@ -106,7 +133,10 @@ const ProgramBuilder = () => {
 
   const handleDeleteDay = async (dayId: string) => {
     if (!(await confirm({ title: "Obrisati dan?", description: "Dan i sve njegove vežbe biće obrisani.", destructive: true }))) return;
-    const { error } = await supabase.from("program_template_days").delete().eq("id", dayId);
+    // Assigned: SOFT delete (CASCADE bi pobrisao set_logs/workout_session_logs = istoriju).
+    const { error } = cfg.softDelete
+      ? await supabase.from(cfg.daysTable).update({ deleted_at: new Date().toISOString() } as any).eq("id", dayId)
+      : await supabase.from(cfg.daysTable).delete().eq("id", dayId);
     if (error) { toast.error(error.message); return; }
     toast.success("Dan obrisan");
     load();
@@ -116,14 +146,32 @@ const ProgramBuilder = () => {
     setPickerDayId(dayId);
   };
 
+  // Brisanje celog SABLONA (samo template mod). CASCADE brise dane+vezbe;
+  // assigned_programs.source_template_id -> SET NULL (dodeljeni zadrzavaju kopiju).
+  const handleDeleteProgram = async () => {
+    if (mode !== "template" || !parentId) return;
+    if (!(await confirm({
+      title: "Obrisati program?",
+      description: "Program ce biti trajno obrisan. Vezbaci kojima je dodeljen zadrzavaju svoju kopiju.",
+      destructive: true,
+    }))) return;
+    const { error } = await supabase.from("program_templates").delete().eq("id", parentId);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Program obrisan");
+    navigate("/trener/programi");
+  };
+
   const updateExercise = async (exId: string, patch: Partial<Exercise>) => {
-    const { error } = await supabase.from("program_template_exercises").update(patch as any).eq("id", exId);
+    const { error } = await supabase.from(cfg.exTable).update(patch as any).eq("id", exId);
     if (error) { toast.error(error.message); return; }
     load();
   };
 
   const removeExercise = async (exId: string) => {
-    const { error } = await supabase.from("program_template_exercises").delete().eq("id", exId);
+    // Assigned: SOFT delete (set_logs ima CASCADE -> pravi DELETE bi pobrisao istoriju serija).
+    const { error } = cfg.softDelete
+      ? await supabase.from(cfg.exTable).update({ deleted_at: new Date().toISOString() } as any).eq("id", exId)
+      : await supabase.from(cfg.exTable).delete().eq("id", exId);
     if (error) { toast.error(error.message); return; }
     load();
   };
@@ -165,11 +213,11 @@ const ProgramBuilder = () => {
     }
   };
 
-  const handleAssign = async (athleteId: string) => {
-    if (!templateId) return;
-    setAssigning(athleteId);
+  const handleAssign = async (targetAthleteId: string) => {
+    if (!parentId) return;
+    setAssigning(targetAthleteId);
     try {
-      await assignProgramToAthlete(templateId, athleteId);
+      await assignProgramToAthlete(parentId, targetAthleteId);
       toast.success("Program dodeljen vežbaču");
       setAssignOpen(false);
     } catch (error: any) {
@@ -181,9 +229,9 @@ const ProgramBuilder = () => {
 
   return (
     <PhoneShell
-      back="/trener/programi"
-      eyebrow="Program"
-      title={templateName}
+      back={mode === "assigned" && athleteId ? `/trener/vezbaci/${athleteId}` : "/trener/programi"}
+      eyebrow={mode === "assigned" ? templateName : "Program"}
+      title={mode === "assigned" ? "Izmeni plan" : templateName}
       rightSlot={
         <button
           onClick={() => setAddDayOpen(true)}
@@ -320,6 +368,16 @@ const ProgramBuilder = () => {
         </div>
       )}
 
+      {/* Brisanje celog sablona - samo template mod (dodeljeni plan se ne brise) */}
+      {mode === "template" && (
+        <button
+          onClick={handleDeleteProgram}
+          className="w-full text-[13px] font-semibold text-destructive py-3 mt-2 mb-24"
+        >
+          Obriši program
+        </button>
+      )}
+
       {/* Add Day - full-screen (Wolt-style) */}
       <FullScreenSheet open={addDayOpen} onClose={() => setAddDayOpen(false)} title="Novi dan">
         <form onSubmit={handleAddDay} className="flex flex-1 min-h-0 flex-col">
@@ -347,11 +405,13 @@ const ProgramBuilder = () => {
         open={!!pickerDayId}
         dayId={pickerDayId}
         dayName={days.find((d) => d.id === pickerDayId)?.name ?? ""}
+        table={cfg.exTable}
         onClose={() => setPickerDayId(null)}
         onAdded={() => { setPickerDayId(null); load(); }}
       />
 
-      {/* Assign Dialog */}
+      {/* Assign Dialog - samo u template modu (dodeljeni plan je vec dodeljen) */}
+      {mode === "template" && (
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
         <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
           <DialogHeader><DialogTitle>Dodeli vežbaču</DialogTitle></DialogHeader>
@@ -386,9 +446,10 @@ const ProgramBuilder = () => {
           </div>
         </DialogContent>
       </Dialog>
+      )}
 
-      {/* Sticky bottom CTA */}
-      {days.length > 0 && (
+      {/* Sticky bottom CTA - dodela samo u template modu */}
+      {mode === "template" && days.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 px-6 pb-6 pt-3 bg-gradient-to-t from-background via-background to-transparent pointer-events-none">
           <div className="max-w-[440px] mx-auto pointer-events-auto">
             <Button onClick={openAssign} className="w-full h-12 shadow-brand">

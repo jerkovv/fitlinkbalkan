@@ -446,142 +446,14 @@ const AthleteProfile = () => {
     if (!user || !id) return;
     setAssigning(templateId);
     try {
-      // 1) Učitaj kompletan template
-      const [tRes, dRes, schedRes] = await Promise.all([
-        supabase.from("nutrition_plan_templates").select("*").eq("id", templateId).maybeSingle(),
-        supabase.from("nutrition_plan_days").select("*").eq("template_id", templateId).order("day_number"),
-        supabase.from("nutrition_plan_week_schedule").select("weekday, day_id").eq("template_id", templateId),
-      ]);
-      const tpl: any = tRes.data;
-      if (!tpl) throw new Error("Template ne postoji");
-
-      const days: any[] = (dRes.data as any) ?? [];
-      const dayIds = days.map((d) => d.id);
-
-      const [mRes] = await Promise.all([
-        dayIds.length
-          ? supabase.from("nutrition_plan_meals").select("*").in("day_id", dayIds).order("meal_order")
-          : Promise.resolve({ data: [] as any[] }),
-      ]);
-      const meals: any[] = (mRes.data as any) ?? [];
-      const mealIds = meals.map((m) => m.id);
-
-      const itemsRes = mealIds.length
-        ? await supabase
-            .from("nutrition_plan_meal_items")
-            .select("*")
-            .in("meal_id", mealIds)
-            .order("item_order")
-        : { data: [] as any[] };
-      const items: any[] = (itemsRes.data as any) ?? [];
-
-      // 2) Deaktiviraj postojeće aktivne planove vežbača
-      await supabase
-        .from("assigned_nutrition_plans")
-        .update({ is_active: false } as any)
-        .eq("athlete_id", id)
-        .eq("is_active", true);
-
-      // 3) Insert assigned_nutrition_plan (snapshot root)
-      const { data: assignedPlan, error: apErr } = await supabase
-        .from("assigned_nutrition_plans")
-        .insert({
-          athlete_id: id,
-          trainer_id: user.id,
-          template_id: templateId,
-          name: tpl.name,
-          goal: tpl.goal,
-          target_kcal: tpl.target_kcal,
-          target_protein: tpl.target_protein,
-          target_carbs: tpl.target_carbs,
-          target_fat: tpl.target_fat,
-          notes: tpl.notes,
-          is_active: true,
-        } as any)
-        .select("id")
-        .single();
-      if (apErr) throw apErr;
-      const assignedPlanId = (assignedPlan as any).id;
-
-      // 4) Insert days (mapiraj stari day.id → novi)
-      const dayIdMap = new Map<string, string>();
-      if (days.length) {
-        const dayInserts = days.map((d) => ({
-          assigned_plan_id: assignedPlanId,
-          day_number: d.day_number,
-          name: d.name,
-        }));
-        const { data: newDays, error: dErr } = await supabase
-          .from("assigned_nutrition_days")
-          .insert(dayInserts as any)
-          .select("id, day_number");
-        if (dErr) throw dErr;
-        days.forEach((oldD) => {
-          const newD = (newDays as any[]).find((nd) => nd.day_number === oldD.day_number);
-          if (newD) dayIdMap.set(oldD.id, newD.id);
-        });
-      }
-
-      // 5) Insert meals
-      const mealIdMap = new Map<string, string>();
-      if (meals.length) {
-        const mealInserts = meals
-          .map((m) => ({
-            day_id: dayIdMap.get(m.day_id),
-            meal_order: m.meal_order,
-            name: m.name,
-            time_hint: m.time_hint,
-            _origId: m.id,
-          }))
-          .filter((m) => m.day_id);
-        // Insert one-by-one to keep mapping (or batch + match by day_id+meal_order)
-        const { data: newMeals, error: mErr } = await supabase
-          .from("assigned_nutrition_meals")
-          .insert(mealInserts.map(({ _origId, ...rest }) => rest) as any)
-          .select("id, day_id, meal_order");
-        if (mErr) throw mErr;
-        meals.forEach((oldM) => {
-          const newDayId = dayIdMap.get(oldM.day_id);
-          const match = (newMeals as any[]).find(
-            (nm) => nm.day_id === newDayId && nm.meal_order === oldM.meal_order,
-          );
-          if (match) mealIdMap.set(oldM.id, match.id);
-        });
-      }
-
-      // 6) Insert meal items
-      if (items.length) {
-        const itemInserts = items
-          .map((it) => ({
-            meal_id: mealIdMap.get(it.meal_id),
-            food_id: it.food_id,
-            grams: it.grams,
-            item_order: it.item_order,
-          }))
-          .filter((it) => it.meal_id);
-        if (itemInserts.length) {
-          const { error: iErr } = await supabase
-            .from("assigned_nutrition_meal_items")
-            .insert(itemInserts as any);
-          if (iErr) throw iErr;
-        }
-      }
-
-      // 7) Week schedule
-      const sched: any[] = (schedRes.data as any) ?? [];
-      if (sched.length) {
-        const schedInserts = sched
-          .map((s) => ({
-            assigned_plan_id: assignedPlanId,
-            weekday: s.weekday,
-            day_id: dayIdMap.get(s.day_id),
-          }))
-          .filter((s) => s.day_id);
-        if (schedInserts.length) {
-          await supabase.from("assigned_nutrition_week_schedule").insert(schedInserts as any);
-        }
-      }
-
+      // RPC radi ceo posao: kopira plan + dane + obroke + raspored, deaktivira
+      // stari aktivni plan, salje notifikaciju (triger). Resava i ispravne kolone
+      // (source_template_id), pa nema vise "template_id" greske.
+      const { error } = await supabase.rpc("assign_nutrition_plan_to_athlete", {
+        p_template_id: templateId,
+        p_athlete_id: id,
+      } as any);
+      if (error) throw error;
       toast.success("Plan dodeljen vežbaču");
       setAssignOpen(false);
       load();
@@ -787,9 +659,17 @@ const AthleteProfile = () => {
                 </div>
               </div>
             </div>
-            <Button variant="outline" className="w-full mt-3" onClick={openProgramAssign}>
-              Promeni program
-            </Button>
+            <div className="mt-3 flex flex-col gap-2">
+              <Button
+                className="w-full bg-gradient-brand text-white shadow-brand"
+                onClick={() => navigate(`/trener/vezbaci/${id}/program/${activeProgram.id}`)}
+              >
+                Izmeni plan
+              </Button>
+              <Button variant="outline" className="w-full" onClick={openProgramAssign}>
+                Promeni program
+              </Button>
+            </div>
           </Card>
         ) : (
           <button

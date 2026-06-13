@@ -17,11 +17,13 @@ type Props = {
   open: boolean;
   dayId: string | null;
   dayName: string;
+  /** Ciljna tabela za dodavanje: sablon (default) ili dodeljeni plan. */
+  table?: "program_template_exercises" | "assigned_program_exercises";
   onClose: () => void;
   onAdded: () => void;
 };
 
-export const ExercisePickerSheet = ({ open, dayId, dayName, onClose, onAdded }: Props) => {
+export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAdded }: Props) => {
   const [muscle, setMuscle] = useState<MuscleGroupId>("grudi");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [searchOpen, setSearchOpen] = useState(false);
@@ -73,6 +75,7 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, onClose, onAdded }: 
 
   const { mutate: addExercises, isPending } = useAddExercisesToDay({
     dayId: dayId ?? "",
+    table,
     onSuccess: () => {
       setSelected(new Set());
       onAdded();

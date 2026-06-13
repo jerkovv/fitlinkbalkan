@@ -13,8 +13,9 @@ import {
   FullScreenSheetScroll,
   FullScreenSheetFooter,
 } from "@/components/ui/full-screen-sheet";
-import { Plus, ClipboardList, ChevronRight, Loader2, Target } from "lucide-react";
+import { Plus, ClipboardList, ChevronRight, Loader2, Target, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useConfirm } from "@/hooks/useConfirm";
 
 type Template = {
   id: string;
@@ -27,6 +28,7 @@ type Template = {
 
 const ProgramTemplates = () => {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const [items, setItems] = useState<Template[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -65,6 +67,19 @@ const ProgramTemplates = () => {
   };
 
   useEffect(() => { load(); }, []);
+
+  const handleDeleteTemplate = async (t: Template) => {
+    if (!(await confirm({
+      title: "Obrisati program?",
+      description: "Program ce biti trajno obrisan. Vezbaci kojima je dodeljen zadrzavaju svoju kopiju.",
+      destructive: true,
+    }))) return;
+    // CASCADE brise dane/vezbe; assigned_programs.source_template_id -> SET NULL.
+    const { error } = await supabase.from("program_templates").delete().eq("id", t.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Program obrisan");
+    load();
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,24 +164,29 @@ const ProgramTemplates = () => {
       ) : (
         <div className="space-y-2">
           {items.map((t) => (
-            <Link
-              key={t.id}
-              to={`/trener/programi/${t.id}`}
-              className="card-premium-hover flex items-center gap-3 p-4"
-            >
-              <div className="h-12 w-12 rounded-xl bg-gradient-brand-soft flex items-center justify-center shrink-0">
-                <ClipboardList className="h-5 w-5 text-primary" strokeWidth={2.25} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-[15px] truncate">{t.name}</div>
-                <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                  <span>{counts[t.id] ?? 0} {(counts[t.id] ?? 0) === 1 ? "dan" : "dana"}</span>
-                  {t.goal && (<><span className="opacity-50">•</span><span>{t.goal}</span></>)}
-                  {t.level && (<><span className="opacity-50">•</span><span>{t.level}</span></>)}
+            <div key={t.id} className="card-premium-hover flex items-center gap-3 p-4">
+              <Link to={`/trener/programi/${t.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="h-12 w-12 rounded-xl bg-gradient-brand-soft flex items-center justify-center shrink-0">
+                  <ClipboardList className="h-5 w-5 text-primary" strokeWidth={2.25} />
                 </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </Link>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-[15px] truncate">{t.name}</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                    <span>{counts[t.id] ?? 0} {(counts[t.id] ?? 0) === 1 ? "dan" : "dana"}</span>
+                    {t.goal && (<><span className="opacity-50">•</span><span>{t.goal}</span></>)}
+                    {t.level && (<><span className="opacity-50">•</span><span>{t.level}</span></>)}
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </Link>
+              <button
+                onClick={() => handleDeleteTemplate(t)}
+                aria-label="Obriši program"
+                className="h-9 w-9 rounded-full hover:bg-destructive-soft flex items-center justify-center text-muted-foreground hover:text-destructive transition shrink-0"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
           ))}
         </div>
       )}
