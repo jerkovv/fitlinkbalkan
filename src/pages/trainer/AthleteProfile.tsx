@@ -20,9 +20,11 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Apple, ClipboardList, Wallet, MessageSquare, Phone, Loader2, Plus, X, Check,
-  Dumbbell, Scale, UserMinus, Flame,
+  Dumbbell, Scale, UserMinus, Flame, Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { InAppWorkoutsList } from "@/components/InAppWorkoutsList";
@@ -195,6 +197,11 @@ const AthleteProfile = () => {
   const [progOpen, setProgOpen] = useState(false);
   const [progTemplates, setProgTemplates] = useState<ProgramTemplate[]>([]);
   const [progAssigning, setProgAssigning] = useState<string | null>(null);
+
+  // Custom plan od nule (kreira prazan assigned_programs, otvara editor)
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customName, setCustomName] = useState("");
+  const [customCreating, setCustomCreating] = useState(false);
 
   // Workout session detail
 
@@ -428,6 +435,24 @@ const AthleteProfile = () => {
     } finally {
       setProgAssigning(null);
     }
+  };
+
+  // Plan od nule: RPC kreira prazan assigned_programs (source_template_id NULL),
+  // postaje tekuci jer je najnoviji assigned_at, pa otvaramo isti editor (mode assigned).
+  const createCustomProgram = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id) return;
+    setCustomCreating(true);
+    const { data, error } = await supabase.rpc("create_custom_assigned_program", {
+      p_athlete_id: id,
+      p_name: customName.trim() || "Plan treninga",
+    } as any);
+    setCustomCreating(false);
+    if (error) { toast.error(error.message); return; }
+    const assignedId = data as string;
+    setCustomOpen(false);
+    setCustomName("");
+    navigate(`/trener/vezbaci/${id}/program/${assignedId}`);
   };
 
   const openAssign = async () => {
@@ -666,18 +691,31 @@ const AthleteProfile = () => {
               >
                 Izmeni plan
               </Button>
-              <Button variant="outline" className="w-full" onClick={openProgramAssign}>
-                Promeni program
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" className="w-full" onClick={openProgramAssign}>
+                  Promeni program
+                </Button>
+                <Button variant="outline" className="w-full" onClick={() => setCustomOpen(true)}>
+                  <Sparkles className="h-4 w-4 mr-1.5" /> Nov plan
+                </Button>
+              </div>
             </div>
           </Card>
         ) : (
-          <button
-            onClick={openProgramAssign}
-            className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-hairline hover:border-primary/40 hover:bg-primary-soft/40 py-4 text-[14px] font-semibold text-muted-foreground hover:text-primary-soft-foreground transition"
-          >
-            <Plus className="h-4 w-4" /> Dodeli program treninga
-          </button>
+          <div className="space-y-2">
+            <Button
+              className="w-full h-12 bg-gradient-brand text-white shadow-brand"
+              onClick={() => setCustomOpen(true)}
+            >
+              <Sparkles className="h-4 w-4 mr-1.5" /> Napravi plan od nule
+            </Button>
+            <button
+              onClick={openProgramAssign}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-hairline hover:border-primary/40 hover:bg-primary-soft/40 py-4 text-[14px] font-semibold text-muted-foreground hover:text-primary-soft-foreground transition"
+            >
+              <Plus className="h-4 w-4" /> Dodeli gotov program
+            </button>
+          </div>
         )}
       </section>
 
@@ -938,6 +976,34 @@ const AthleteProfile = () => {
             Dodaj
           </Button>
         </FullScreenSheetFooter>
+      </FullScreenSheet>
+
+      {/* Nov plan od nule - naziv (isti obrazac kao "+" novi sablon u Programima) */}
+      <FullScreenSheet open={customOpen} onClose={() => setCustomOpen(false)} title="Nov plan treninga">
+        <form onSubmit={createCustomProgram} className="flex flex-1 min-h-0 flex-col">
+          <FullScreenSheetScroll className="pt-5 space-y-3">
+            <p className="text-[13px] text-muted-foreground">
+              Prazan plan koji praviš direktno za ovog vežbača. Posle naziva dodaješ dane i vežbe.
+            </p>
+            <div>
+              <Label htmlFor="custom-name">Naziv plana</Label>
+              <Input
+                id="custom-name"
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
+                placeholder="npr. Push Pull Legs"
+                className="mt-1.5 h-14 text-base rounded-2xl"
+                autoFocus
+              />
+            </div>
+          </FullScreenSheetScroll>
+          <FullScreenSheetFooter>
+            <Button type="submit" disabled={customCreating} className="w-full bg-gradient-brand text-white shadow-brand">
+              {customCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Napravi i otvori
+            </Button>
+          </FullScreenSheetFooter>
+        </form>
       </FullScreenSheet>
 
       {/* Assign dialog */}
