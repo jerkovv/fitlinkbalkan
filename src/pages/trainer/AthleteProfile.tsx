@@ -21,10 +21,11 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   Apple, ClipboardList, Wallet, MessageSquare, Phone, Loader2, Plus, X, Check,
-  Dumbbell, Activity, Scale, ChevronRight, UserMinus, Flame,
+  Dumbbell, Scale, UserMinus, Flame,
 } from "lucide-react";
 import { toast } from "sonner";
-import { InAppWorkoutDetailDialog } from "@/components/InAppWorkoutDetailDialog";
+import { InAppWorkoutsList } from "@/components/InAppWorkoutsList";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { assignProgramToAthlete } from "@/lib/programAssignment";
 import { ProgressPhotos } from "@/components/ProgressPhotos";
 import { HealthMetricsCard } from "@/components/wearables/HealthMetricsCard";
@@ -68,13 +69,6 @@ type ProgramTemplate = {
   id: string;
   name: string;
   goal: string | null;
-};
-
-type SessionLog = {
-  id: string;
-  day_number: number;
-  completed_at: string | null;
-  duration_seconds: number | null;
 };
 
 type BodyMetric = {
@@ -177,7 +171,6 @@ const AthleteProfile = () => {
   const [athlete, setAthlete] = useState<AthleteData | null>(null);
   const [activePlan, setActivePlan] = useState<AssignedPlan | null>(null);
   const [activeProgram, setActiveProgram] = useState<AssignedProgram | null>(null);
-  const [sessionLogs, setSessionLogs] = useState<SessionLog[]>([]);
   const [latestMetric, setLatestMetric] = useState<BodyMetric | null>(null);
   const [metricsHistory, setMetricsHistory] = useState<BodyMetric[]>([]);
   const [activeMembership, setActiveMembership] = useState<{
@@ -202,13 +195,12 @@ const AthleteProfile = () => {
   const [progAssigning, setProgAssigning] = useState<string | null>(null);
 
   // Workout session detail
-  const [openSessionId, setOpenSessionId] = useState<string | null>(null);
 
   const load = async () => {
     if (!id) return;
     setLoading(true);
 
-    const [aRes, pRes, planRes, progRes, logsRes, metricsRes] = await Promise.all([
+    const [aRes, pRes, planRes, progRes, metricsRes] = await Promise.all([
       supabase.from("athletes").select("*").eq("id", id).maybeSingle(),
       supabase.from("profiles").select("full_name, phone").eq("id", id).maybeSingle(),
       supabase
@@ -226,13 +218,6 @@ const AthleteProfile = () => {
         .order("assigned_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
-      supabase
-        .from("workout_session_logs")
-        .select("id, day_number, completed_at, duration_seconds")
-        .eq("athlete_id", id)
-        .not("completed_at", "is", null)
-        .order("completed_at", { ascending: false })
-        .limit(20),
       supabase
         .from("body_metrics")
         .select("id, recorded_on, weight_kg, body_fat_pct")
@@ -262,7 +247,6 @@ const AthleteProfile = () => {
       setActiveProgram(null);
     }
 
-    setSessionLogs((logsRes.data as any) ?? []);
     const metrics = (metricsRes.data as any[]) ?? [];
     setMetricsHistory(metrics);
     setLatestMetric(metrics[0] ?? null);
@@ -891,12 +875,6 @@ const AthleteProfile = () => {
             <HealthMetricsCard userId={id} showConnectCta={false} />
             <WearableTrendChart userId={id} dataType="heart_rate_avg" days={30} title="Prosečan puls, poslednjih 30 dana" />
             <WearableTrendChart userId={id} dataType="workout_duration" days={30} title="Trajanje treninga, poslednjih 30 dana" />
-            <div className="pt-1">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground mb-2">
-                Treninzi sa sata
-              </div>
-              <WorkoutsList userId={id} limit={10} />
-            </div>
           </>
         ) : (
           <Card className="p-4 text-center">
@@ -907,46 +885,49 @@ const AthleteProfile = () => {
         )}
       </section>
 
-      {/* Workout history */}
+      {/* Workout history - tabovi Iz aplikacije / Sa sata */}
       <section>
         <div className="flex items-center justify-between mb-2">
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Aktivnost</div>
-            <div className="font-display text-lg font-bold">Poslednji treninzi</div>
+            <div className="font-display text-lg font-bold">Treninzi</div>
           </div>
         </div>
 
-        {sessionLogs.length > 0 ? (
-          <div className="space-y-2">
-            {sessionLogs.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => setOpenSessionId(s.id)}
-                className="block w-full text-left active:scale-[0.99] transition"
-              >
-                <Card className="p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-success-soft text-success-soft-foreground flex items-center justify-center shrink-0">
-                      <Activity className="h-4 w-4" strokeWidth={2.25} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-[14px]">Dan {s.day_number}</div>
-                      <div className="text-[11.5px] text-muted-foreground">
-                        {s.completed_at ? new Date(s.completed_at).toLocaleDateString("sr-Latn-RS") : "—"}
-                        {s.duration_seconds ? ` · ${Math.round(s.duration_seconds / 60)} min` : ""}
-                      </div>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                  </div>
-                </Card>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <Card className="p-4 text-center text-[13px] text-muted-foreground">
-            Još nema završenih treninga.
-          </Card>
-        )}
+        <Tabs defaultValue="app" className="w-full">
+          <TabsList className="grid grid-cols-2 w-full mb-1">
+            <TabsTrigger
+              value="app"
+              className="data-[state=active]:bg-gradient-brand data-[state=active]:text-white data-[state=active]:shadow-brand"
+            >
+              Iz aplikacije
+            </TabsTrigger>
+            <TabsTrigger
+              value="watch"
+              className="data-[state=active]:bg-gradient-brand data-[state=active]:text-white data-[state=active]:shadow-brand"
+            >
+              Sa sata
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="app">
+            <p className="text-xs text-muted-foreground mt-2 mb-3">
+              Treninzi koje je vežbač radio kroz FitLink. Ako je nosio sat, puls i kalorije su vec ovde.
+            </p>
+            {id && <InAppWorkoutsList athleteId={id} limit={10} />}
+          </TabsContent>
+          <TabsContent value="watch">
+            <p className="text-xs text-muted-foreground mt-2 mb-3">
+              Aktivnosti koje je vežbač radio bez FitLink-a, direktno na satu.
+            </p>
+            {hasWearable && id ? (
+              <WorkoutsList userId={id} limit={10} />
+            ) : (
+              <Card className="p-4 text-center text-[13px] text-muted-foreground">
+                Vežbač nije povezao sat
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
       </section>
 
       {/* Nutrition section */}
@@ -1170,12 +1151,6 @@ const AthleteProfile = () => {
           )}
         </DialogContent>
       </Dialog>
-
-      <InAppWorkoutDetailDialog
-        sessionId={openSessionId}
-        open={!!openSessionId}
-        onOpenChange={(o) => !o && setOpenSessionId(null)}
-      />
 
       <section className="pt-2">
         <button
