@@ -53,8 +53,34 @@ const macros = (item: MealItem) => {
   };
 };
 
-const NutritionBuilder = () => {
-  const { id: templateId } = useParams<{ id: string }>();
+type NutritionBuilderMode = "template" | "assigned";
+
+const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }) => {
+  const params = useParams<{ id?: string; assignedId?: string; athleteId?: string }>();
+  // parentId = template_id (sablon) ili assigned_plan_id (dodeljeni plan).
+  const parentId = mode === "assigned" ? params.assignedId : params.id;
+  const athleteId = params.athleteId;
+  // Config sloj: tabele/parent kolona izvedene iz moda. Nutrition NEMA istoriju,
+  // pa je brisanje uvek pravi DELETE (nema soft-delete kao kod programa).
+  // parentCol se koristi SAMO na daysTable i scheduleTable; obroci se vezu preko
+  // day_id, stavke preko meal_id (isti nazivi u oba sveta).
+  const cfg = mode === "assigned"
+    ? {
+        parentTable: "assigned_nutrition_plans",
+        daysTable: "assigned_nutrition_days",
+        mealsTable: "assigned_nutrition_meals",
+        itemsTable: "assigned_nutrition_meal_items",
+        scheduleTable: "assigned_nutrition_week_schedule",
+        parentCol: "assigned_plan_id",
+      } as const
+    : {
+        parentTable: "nutrition_plan_templates",
+        daysTable: "nutrition_plan_days",
+        mealsTable: "nutrition_plan_meals",
+        itemsTable: "nutrition_plan_meal_items",
+        scheduleTable: "nutrition_plan_week_schedule",
+        parentCol: "template_id",
+      } as const;
   const confirm = useConfirm();
   const [templateName, setTemplateName] = useState("");
   const [days, setDays] = useState<Day[]>([]);
@@ -93,12 +119,12 @@ const NutritionBuilder = () => {
   const [assigning, setAssigning] = useState<string | null>(null);
 
   const load = async () => {
-    if (!templateId) return;
+    if (!parentId) return;
     setLoading(true);
     const [{ data: tpl }, { data: daysData }, { data: schedData }] = await Promise.all([
-      supabase.from("nutrition_plan_templates").select("name").eq("id", templateId).maybeSingle(),
-      supabase.from("nutrition_plan_days").select("*").eq("template_id", templateId).order("day_number"),
-      supabase.from("nutrition_plan_week_schedule").select("weekday, day_id").eq("template_id", templateId),
+      supabase.from(cfg.parentTable).select("name").eq("id", parentId).maybeSingle(),
+      supabase.from(cfg.daysTable).select("*").eq(cfg.parentCol, parentId).order("day_number"),
+      supabase.from(cfg.scheduleTable).select("weekday, day_id").eq(cfg.parentCol, parentId),
     ]);
     setTemplateName((tpl as any)?.name ?? "Plan");
     const dList = (daysData as any) ?? [];
@@ -114,7 +140,7 @@ const NutritionBuilder = () => {
     if (dList.length) {
       const dayIds = dList.map((d: any) => d.id);
       const { data: meals } = await supabase
-        .from("nutrition_plan_meals")
+        .from(cfg.mealsTable)
         .select("*")
         .in("day_id", dayIds)
         .order("meal_order");
@@ -128,7 +154,7 @@ const NutritionBuilder = () => {
       const mealIds = (meals ?? []).map((m: any) => m.id);
       if (mealIds.length) {
         const { data: items } = await supabase
-          .from("nutrition_plan_meal_items")
+          .from(cfg.itemsTable)
           .select("*, food_items(*)")
           .in("meal_id", mealIds)
           .order("item_order");
@@ -145,7 +171,7 @@ const NutritionBuilder = () => {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [templateId]);
+  useEffect(() => { load(); }, [parentId]);
 
   const loadFoods = async () => {
     const { data } = await supabase
@@ -165,10 +191,10 @@ const NutritionBuilder = () => {
 
   const handleAddDay = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!templateId) return;
+    if (!parentId) return;
     const nextNum = (days[days.length - 1]?.day_number ?? 0) + 1;
-    const { error } = await supabase.from("nutrition_plan_days").insert({
-      template_id: templateId,
+    const { error } = await supabase.from(cfg.daysTable).insert({
+      [cfg.parentCol]: parentId,
       day_number: nextNum,
       name: newDayName || `Dan ${nextNum}`,
     } as any);
@@ -180,7 +206,7 @@ const NutritionBuilder = () => {
 
   const handleDeleteDay = async (dayId: string) => {
     if (!(await confirm({ title: "Obrisati dan?", description: "Dan i svi obroci biće obrisani.", destructive: true }))) return;
-    const { error } = await supabase.from("nutrition_plan_days").delete().eq("id", dayId);
+    const { error } = await supabase.from(cfg.daysTable).delete().eq("id", dayId);
     if (error) { toast.error(error.message); return; }
     load();
   };
@@ -189,7 +215,7 @@ const NutritionBuilder = () => {
     e.preventDefault();
     if (!addMealForDayId) return;
     const currMeals = mealsByDay[addMealForDayId] ?? [];
-    const { error } = await supabase.from("nutrition_plan_meals").insert({
+    const { error } = await supabase.from(cfg.mealsTable).insert({
       day_id: addMealForDayId,
       meal_order: currMeals.length + 1,
       name: newMealName || "Obrok",
@@ -202,7 +228,7 @@ const NutritionBuilder = () => {
 
   const handleDeleteMeal = async (mealId: string) => {
     if (!(await confirm({ title: "Obrisati obrok?", destructive: true }))) return;
-    await supabase.from("nutrition_plan_meals").delete().eq("id", mealId);
+    await supabase.from(cfg.mealsTable).delete().eq("id", mealId);
     load();
   };
 
@@ -228,7 +254,7 @@ const NutritionBuilder = () => {
     const grams = parseFloat(pickedGrams);
     if (!grams || grams <= 0) { toast.error("Unesi gramažu"); return; }
     const curr = itemsByMeal[pickerMealId] ?? [];
-    const { error } = await supabase.from("nutrition_plan_meal_items").insert({
+    const { error } = await supabase.from(cfg.itemsTable).insert({
       meal_id: pickerMealId,
       food_id: pickedFood.id,
       grams,
@@ -240,12 +266,12 @@ const NutritionBuilder = () => {
   };
 
   const removeItem = async (itemId: string) => {
-    await supabase.from("nutrition_plan_meal_items").delete().eq("id", itemId);
+    await supabase.from(cfg.itemsTable).delete().eq("id", itemId);
     load();
   };
 
   const updateItemGrams = async (itemId: string, grams: number) => {
-    await supabase.from("nutrition_plan_meal_items").update({ grams } as any).eq("id", itemId);
+    await supabase.from(cfg.itemsTable).update({ grams } as any).eq("id", itemId);
     load();
   };
 
@@ -274,19 +300,19 @@ const NutritionBuilder = () => {
   }, [foods, foodQuery, activeCategory, filterVegan, filterGlutenFree, filterPosno]);
 
   const setScheduleDay = async (weekday: number, dayId: string | null) => {
-    if (!templateId) return;
+    if (!parentId) return;
     setSchedule((prev) => prev.map((s) => s.weekday === weekday ? { ...s, day_id: dayId } : s));
     // Upsert
     const { data: existing } = await supabase
-      .from("nutrition_plan_week_schedule")
+      .from(cfg.scheduleTable)
       .select("id")
-      .eq("template_id", templateId)
+      .eq(cfg.parentCol, parentId)
       .eq("weekday", weekday)
       .maybeSingle();
     if (existing) {
-      await supabase.from("nutrition_plan_week_schedule").update({ day_id: dayId } as any).eq("id", (existing as any).id);
+      await supabase.from(cfg.scheduleTable).update({ day_id: dayId } as any).eq("id", (existing as any).id);
     } else {
-      await supabase.from("nutrition_plan_week_schedule").insert({ template_id: templateId, weekday, day_id: dayId } as any);
+      await supabase.from(cfg.scheduleTable).insert({ [cfg.parentCol]: parentId, weekday, day_id: dayId } as any);
     }
   };
 
@@ -325,12 +351,12 @@ const NutritionBuilder = () => {
     }
   };
 
-  const handleAssign = async (athleteId: string) => {
-    if (!templateId) return;
-    setAssigning(athleteId);
+  const handleAssign = async (targetAthleteId: string) => {
+    if (!parentId) return;
+    setAssigning(targetAthleteId);
     const { error } = await supabase.rpc("assign_nutrition_plan_to_athlete", {
-      p_template_id: templateId,
-      p_athlete_id: athleteId,
+      p_template_id: parentId,
+      p_athlete_id: targetAthleteId,
     });
     setAssigning(null);
     if (error) { toast.error(error.message); return; }
@@ -340,9 +366,9 @@ const NutritionBuilder = () => {
 
   return (
     <PhoneShell
-      back="/trener/ishrana"
-      eyebrow="Plan ishrane"
-      title={templateName}
+      back={mode === "assigned" && athleteId ? `/trener/vezbaci/${athleteId}` : "/trener/ishrana"}
+      eyebrow={mode === "assigned" ? templateName : "Plan ishrane"}
+      title={mode === "assigned" ? "Izmeni plan ishrane" : templateName}
       rightSlot={
         <button
           onClick={() => setAddDayOpen(true)}
@@ -558,7 +584,6 @@ const NutritionBuilder = () => {
                   onChange={(e) => setFoodQuery(e.target.value)}
                   placeholder="Pretraži namirnicu..."
                   className="pl-12 h-14 text-base rounded-2xl"
-                  autoFocus
                 />
               </div>
 
@@ -746,7 +771,8 @@ const NutritionBuilder = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Assign */}
+      {/* Assign - samo u template modu (dodeljeni plan je vec dodeljen) */}
+      {mode === "template" && (
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
         <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
           <DialogHeader><DialogTitle>Dodeli vežbaču</DialogTitle></DialogHeader>
@@ -781,9 +807,10 @@ const NutritionBuilder = () => {
           </div>
         </DialogContent>
       </Dialog>
+      )}
 
-      {/* Sticky CTA */}
-      {days.length > 0 && (
+      {/* Sticky CTA - dodela samo u template modu */}
+      {mode === "template" && days.length > 0 && (
         <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[440px] px-6 pb-6 pt-3 bg-gradient-to-t from-background via-background to-transparent">
           <Button onClick={openAssign} className="w-full shadow-brand">
             <UserPlus className="h-4 w-4 mr-2" /> Dodeli vežbaču

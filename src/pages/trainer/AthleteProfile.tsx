@@ -719,6 +719,58 @@ const AthleteProfile = () => {
         )}
       </section>
 
+      {/* Nutrition section */}
+      <section>
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Ishrana</div>
+            <div className="font-display text-lg font-bold">Plan ishrane</div>
+          </div>
+        </div>
+
+        {activePlan ? (
+          <Card className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-11 w-11 rounded-2xl bg-gradient-brand-soft flex items-center justify-center shrink-0">
+                <Apple className="h-5 w-5 text-primary" strokeWidth={2.25} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-[15px] truncate">{activePlan.name}</div>
+                <div className="text-[12px] text-muted-foreground">
+                  {activePlan.target_kcal ? `${activePlan.target_kcal} kcal · ` : ""}
+                  Dodeljeno {new Date(activePlan.assigned_at).toLocaleDateString("sr-Latn-RS")}
+                </div>
+              </div>
+              <button
+                onClick={unassignPlan}
+                className="h-9 w-9 rounded-full hover:bg-destructive-soft flex items-center justify-center"
+                title="Otkaži plan"
+              >
+                <X className="h-4 w-4 text-destructive" />
+              </button>
+            </div>
+            <div className="mt-3 flex flex-col gap-2">
+              <Button
+                className="w-full bg-gradient-brand text-white shadow-brand"
+                onClick={() => navigate(`/trener/vezbaci/${id}/ishrana/${activePlan.id}`)}
+              >
+                Izmeni plan ishrane
+              </Button>
+              <Button variant="outline" className="w-full" onClick={openAssign}>
+                Promeni plan
+              </Button>
+            </div>
+          </Card>
+        ) : (
+          <button
+            onClick={openAssign}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-hairline hover:border-primary/40 hover:bg-primary-soft/40 py-4 text-[14px] font-semibold text-muted-foreground hover:text-primary-soft-foreground transition"
+          >
+            <Plus className="h-4 w-4" /> Dodeli plan ishrane
+          </button>
+        )}
+      </section>
+
       {/* Body metrics */}
       <section>
         <div className="flex items-center justify-between mb-2">
@@ -849,54 +901,6 @@ const AthleteProfile = () => {
             )}
           </TabsContent>
         </Tabs>
-      </section>
-
-      {/* Nutrition section */}
-      <section>
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Ishrana</div>
-            <div className="font-display text-lg font-bold">Plan ishrane</div>
-          </div>
-        </div>
-
-        {activePlan ? (
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-11 w-11 rounded-2xl bg-gradient-brand-soft flex items-center justify-center shrink-0">
-                <Apple className="h-5 w-5 text-primary" strokeWidth={2.25} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-[15px] truncate">{activePlan.name}</div>
-                <div className="text-[12px] text-muted-foreground">
-                  {activePlan.target_kcal ? `${activePlan.target_kcal} kcal · ` : ""}
-                  Dodeljeno {new Date(activePlan.assigned_at).toLocaleDateString("sr-Latn-RS")}
-                </div>
-              </div>
-              <button
-                onClick={unassignPlan}
-                className="h-9 w-9 rounded-full hover:bg-destructive-soft flex items-center justify-center"
-                title="Otkaži plan"
-              >
-                <X className="h-4 w-4 text-destructive" />
-              </button>
-            </div>
-            <Button
-              variant="outline"
-              className="w-full mt-3"
-              onClick={openAssign}
-            >
-              Promeni plan
-            </Button>
-          </Card>
-        ) : (
-          <button
-            onClick={openAssign}
-            className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-hairline hover:border-primary/40 hover:bg-primary-soft/40 py-4 text-[14px] font-semibold text-muted-foreground hover:text-primary-soft-foreground transition"
-          >
-            <Plus className="h-4 w-4" /> Dodeli plan ishrane
-          </button>
-        )}
       </section>
 
       {/* Membership */}
