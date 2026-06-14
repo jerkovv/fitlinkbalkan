@@ -51,12 +51,40 @@ const fmtDuration = (ms: number) => {
   return `${m}min`;
 };
 
+// Mrezni poziv na tek-probudenoj vezi zna da visi 15-30s. withTimeout odbaci posle ms.
+function withTimeout<T>(p: PromiseLike<T>, ms: number): Promise<T> {
+  return Promise.race([
+    Promise.resolve(p),
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error("timeout")), ms)),
+  ]);
+}
+
+// Kratak timeout + par brzih retrija (umesto jednog visceg zahteva 15-30s).
+async function fetchWithRetry<T>(
+  fn: () => PromiseLike<T>,
+  attempts = 2,
+  timeoutMs = 3500,
+  gapMs = 1500
+): Promise<T> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await withTimeout(fn(), timeoutMs);
+    } catch (e) {
+      lastErr = e;
+      if (i < attempts - 1) await new Promise((r) => setTimeout(r, gapMs));
+    }
+  }
+  throw lastErr;
+}
+
 const WorkoutSummary = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
   const { user } = useAuth();
   const nav = useNavigate();
 
-  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [session, setSession] = useState<SessionRow | null>(null);
   const [sets, setSets] = useState<SetRow[]>([]);
   const [exercises, setExercises] = useState<ExRow[]>([]);
@@ -66,78 +94,102 @@ const WorkoutSummary = () => {
   const [noteText, setNoteText] = useState("");
   const [savingNote, setSavingNote] = useState(false);
 
+  const SESSION_COLS =
+    "id, athlete_id, assigned_program_id, day_id, day_number, started_at, completed_at, notes, total_volume_kg, active_calories, live_hr_avg, live_hr_max";
+
   useEffect(() => {
-    if (!sessionId || !user) return;
+    if (!user) return;
     let cancelled = false;
+    const t0 = Date.now();
+    const ms = () => `+${Date.now() - t0}ms`;
     (async () => {
-      setLoading(true);
-
-      // Load session
-      let { data: sess } = await supabase
-        .from("workout_session_logs")
-        .select(
-          "id, athlete_id, assigned_program_id, day_id, day_number, started_at, completed_at, notes, total_volume_kg, active_calories, live_hr_avg, live_hr_max"
-        )
-        .eq("id", sessionId)
-        .maybeSingle();
-
-      // If not yet completed, complete it now (defensive — usually done by ActiveWorkout)
-      if (sess && !(sess as any).completed_at) {
-        await supabase.rpc("complete_workout_session", {
-          p_session_id: sessionId,
-          p_hr_avg: null,
-          p_hr_max: null,
-          p_hr_min: null,
-          p_active_calories: null,
-          p_hr_series: null,
-        } as any);
-        const reload = await supabase
-          .from("workout_session_logs")
-          .select(
-            "id, athlete_id, assigned_program_id, day_id, day_number, started_at, completed_at, notes, total_volume_kg, active_calories, live_hr_avg, live_hr_max"
-          )
-          .eq("id", sessionId)
-          .maybeSingle();
-        sess = reload.data as any;
-      }
-
-      if (!sess) {
-        toast.error("Trening nije pronađen");
-        if (!cancelled) setLoading(false);
+      const sid = sessionId;
+      console.log("[summary] load start id=", sid);
+      // Nevalidan sessionId -> odmah error, ne vrti.
+      if (!sid || sid === "undefined" || sid === "null") {
+        console.log("[summary] err invalid sessionId");
+        if (!cancelled) setLoadError("Trening nije pronađen");
         return;
       }
 
-      const sessionRow = sess as SessionRow;
+      // 1) SESSION (kriticno): STRIKTNO read-only - bez complete_workout_session (taj
+      // viseci write je davao 15-30s). Kratak timeout + brzi retriji.
+      let sess: any = null;
+      try {
+        const sessRes: any = await fetchWithRetry(() =>
+          supabase.from("workout_session_logs").select(SESSION_COLS).eq("id", sid).maybeSingle()
+        );
+        if (sessRes.error) throw sessRes.error;
+        sess = sessRes.data;
+      } catch (e: any) {
+        console.log("[summary] err session", e?.message ?? e, ms());
+        if (!cancelled) setLoadError("Ne mogu da otvorim rezime");
+        return;
+      }
+      console.log("[summary] session rows=", sess ? 1 : 0, ms());
+      if (!sess) {
+        if (!cancelled) setLoadError("Trening nije pronađen");
+        return;
+      }
       if (cancelled) return;
+
+      // Prikazi rezime ODMAH (trajanje/volumen iz session; puls/kcal su vec u redu).
+      const sessionRow = sess as SessionRow;
       setSession(sessionRow);
       setNoteText(sessionRow.notes ?? "");
 
-      // Load sets
-      const { data: setData } = await supabase
-        .from("set_logs")
-        .select("id, exercise_id, set_number, reps, weight_kg, done")
-        .eq("session_log_id", sessionId);
-      if (cancelled) return;
-      setSets(((setData as any[]) ?? []) as SetRow[]);
-
-      // Load exercises for this day
-      if (sessionRow.day_id) {
-        const { data: exData } = await supabase
-          .from("assigned_program_exercises")
-          .select("id, position, sets, exercises(name, primary_muscle)")
-          .eq("day_id", sessionRow.day_id)
-          .order("position", { ascending: true });
-        if (cancelled) return;
-        setExercises(((exData as any[]) ?? []) as ExRow[]);
+      // 2) SETS (best-effort): ne obara ekran ako padne; serije/volumen se dopune.
+      try {
+        const setRes: any = await fetchWithRetry(() =>
+          supabase
+            .from("set_logs")
+            .select("id, exercise_id, set_number, reps, weight_kg, done")
+            .eq("session_log_id", sid),
+          2
+        );
+        if (!cancelled) setSets(((setRes.data as any[]) ?? []) as SetRow[]);
+        console.log("[summary] sets rows=", (setRes.data as any[])?.length ?? 0, ms());
+      } catch (e: any) {
+        console.log("[summary] sets err", e?.message ?? e, ms());
       }
 
-      setLoading(false);
+      // 3) EXERCISES (best-effort)
+      if (sessionRow.day_id) {
+        try {
+          const exRes: any = await fetchWithRetry(() =>
+            supabase
+              .from("assigned_program_exercises")
+              .select("id, position, sets, exercises(name, primary_muscle)")
+              .eq("day_id", sessionRow.day_id)
+              .order("position", { ascending: true }),
+            2
+          );
+          if (!cancelled) setExercises(((exRes.data as any[]) ?? []) as ExRow[]);
+          console.log("[summary] exercises rows=", (exRes.data as any[])?.length ?? 0, ms());
+        } catch (e: any) {
+          console.log("[summary] exercises err", e?.message ?? e, ms());
+        }
+      }
+
+      console.log("[summary] done", ms());
       setTimeout(() => setShowCheck(true), 60);
     })();
     return () => {
       cancelled = true;
     };
-  }, [sessionId, user]);
+  }, [sessionId, user, reloadKey]);
+
+  // Failsafe: ako se rezime ne ucita za ~7s (a nema vec greske), prekini brendiran
+  // spinner i prikazi error+retry. Restartuje se na retry (reloadKey).
+  useEffect(() => {
+    if (session || loadError) return;
+    // 10s: backup iznad retry-prozora (load sam postavi error ranije ako svi retriji padnu).
+    const t = setTimeout(() => {
+      console.log("[summary] loading timeout -> error");
+      setLoadError("Ne mogu da otvorim rezime");
+    }, 10000);
+    return () => clearTimeout(t);
+  }, [session, loadError, reloadKey]);
 
   // Sat upisuje metrike (kcal + HR) preko reportMetrics par sekundi POSLE otvaranja
   // ovog ekrana (auto-finish / rucni finish). Osvezi plocice kad stignu: realtime
@@ -250,10 +302,43 @@ const WorkoutSummary = () => {
     toast.success("Komentar poslat treneru");
   };
 
-  if (loading || !session || !stats) {
+  // Greska / timeout: NIKAD beskonacni spinner -> poruka + Pokusaj ponovo + Nazad.
+  if (loadError) {
     return (
-      <div className="h-[100dvh] bg-background flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="h-[100dvh] bg-background flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <div className="h-14 w-14 rounded-2xl bg-surface-2 flex items-center justify-center">
+          <Dumbbell className="h-6 w-6 text-muted-foreground" strokeWidth={2} />
+        </div>
+        <p className="text-[15px] font-semibold text-foreground">{loadError}</p>
+        <div className="flex flex-col gap-2 w-full max-w-[260px]">
+          <button
+            onClick={() => { setLoadError(null); setReloadKey((k) => k + 1); }}
+            className="h-11 rounded-2xl bg-gradient-brand text-white font-semibold shadow-brand active:scale-95 transition"
+          >
+            Pokušaj ponovo
+          </button>
+          <button
+            onClick={() => nav("/vezbac/trening")}
+            className="h-11 rounded-2xl bg-surface border border-hairline text-foreground font-semibold active:scale-95 transition"
+          >
+            Nazad
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Cim imamo red sesije, prikazi rezime ODMAH (trajanje/volumen/serije iz session+sets;
+  // puls/kcal se dopune preko realtime/refetch). Dok session jos nema -> brendiran ekran
+  // (ne beo spinner), isti kao "Zavrsavam trening..." iz ActiveWorkout prelaza.
+  if (!session || !stats) {
+    return (
+      <div className="h-[100dvh] bg-background flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <div className="h-16 w-16 rounded-2xl bg-gradient-brand flex items-center justify-center shadow-brand animate-pulse">
+          <Dumbbell className="h-7 w-7 text-white" strokeWidth={2.5} />
+        </div>
+        <div className="text-[15px] font-semibold text-foreground">Završavam trening...</div>
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
       </div>
     );
   }

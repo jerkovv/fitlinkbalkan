@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell } from "lucide-react";
+import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff } from "lucide-react";
 import { getHrColor } from "@/lib/workout/hrZone";
 import {
   AlertDialog,
@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { ExerciseHeader } from "@/components/workout/ExerciseHeader";
 import { SetLogger } from "@/components/workout/SetLogger";
 import { RestTimer } from "@/components/workout/RestTimer";
+import { Network } from "@capacitor/network";
 
 type DayExercise = {
   id: string;
@@ -91,6 +92,15 @@ const fmtElapsed = (ms: number) => {
   return `${m}:${s.toString().padStart(2, "0")}`;
 };
 
+// Mrezni poziv na tek-probudenoj vezi zna da visi 15-30s (OS TCP timeout). withTimeout
+// odbaci posle ms, pa pozivalac moze brzo da retrira umesto da blokira UI.
+function withTimeout<T>(p: PromiseLike<T>, ms: number): Promise<T> {
+  return Promise.race([
+    Promise.resolve(p),
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error("timeout")), ms)),
+  ]);
+}
+
 const ActiveWorkout = () => {
   const { dayId } = useParams<{ dayId: string }>();
   const { user } = useAuth();
@@ -113,10 +123,20 @@ const ActiveWorkout = () => {
   // Kraj treninga (finish/poslednji set/cancel). Kad je true: poll i heartbeat se
   // GASE (effect teardown), i init NE sme više da zove start_workout_session.
   const [finished, setFinished] = useState(false);
+  // Prelaz na rezime (samo finish-to-summary putanje, NE cancel): prikazuje brendiran
+  // "Zavrsavam trening..." umesto belog spinnera dok finalizeAndNav radi i navigira.
+  const [finishingToSummary, setFinishingToSummary] = useState(false);
+  // Failsafe: ako prelaz ne razresi za ~7s, brendiran ekran NIJE terminalan -> error+retry.
+  const [finishError, setFinishError] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
 
   // Live HR (lokalni HealthKit stream na telefonu)
   const [liveHr, setLiveHr] = useState<number | null>(null);
+
+  // Offline indikator: telefon nema internet -> trening se ne cuva dok se veza ne vrati.
+  // Pravi izvor je @capacitor/network (navigator.onLine je nepouzdan u WKWebView).
+  // Optimisticki true; Network.getStatus() koriguje na mount.
+  const [isOnline, setIsOnline] = useState<boolean>(true);
   const hrSeriesRef = useRef<HRPoint[]>([]);
 
   // Wake lock
@@ -149,8 +169,57 @@ const ActiveWorkout = () => {
     setFinished(true);
   }, []);
 
+  // DETEKTOVAN vec-zavrsen kraj (poll null / realtime is_active=false / foreground
+  // provera): sesija je VEC finalizovana na serveru (sat) -> NE zovi
+  // complete_workout_session (to je ono sto visi na tek-uspostavljenoj vezi), samo
+  // navigiraj direktno na rezime. Samo JEDAN zavrsetak prolazi (finishedRef guard).
+  const goToSummary = useCallback((sid: string | null) => {
+    if (finishedRef.current) return;
+    markFinished();
+    if (!sid) {
+      console.log("[finish] detektovan kraj bez sessionId -> trening lista");
+      nav("/vezbac/trening", { replace: true });
+      return;
+    }
+    setFinishingToSummary(true);
+    console.log("[finish] detektovan (vec finalizovano) -> summary id=", sid);
+    nav(`/vezbac/trening/zavrsen/${sid}`, { replace: true });
+  }, [nav, markFinished]);
+
   useEffect(() => {
     return () => { unmountedRef.current = true; };
+  }, []);
+
+  // Failsafe za brendiran prelaz: ako se za ~7s ne navigira (komponenta jos mountovana),
+  // prikazi error+retry umesto beskonacnog "Zavrsavam trening...".
+  useEffect(() => {
+    if (!finishingToSummary) return;
+    const t = setTimeout(() => {
+      console.log("[finish] failsafe timeout -> error");
+      setFinishError(true);
+    }, 7000);
+    return () => clearTimeout(t);
+  }, [finishingToSummary]);
+
+  // Prati internet vezu telefona preko @capacitor/network (pouzdan u WKWebView).
+  // Kad nema veze, akcije/cuvanje ne prolaze -> prikazi banner; kad se vrati, sakrij.
+  useEffect(() => {
+    let handle: { remove: () => void } | null = null;
+    let cancelled = false;
+    (async () => {
+      const status = await Network.getStatus();
+      if (cancelled) return;
+      setIsOnline(status.connected);
+      const h = await Network.addListener("networkStatusChange", (st) => {
+        setIsOnline(st.connected);
+      });
+      if (cancelled) { h.remove(); return; }
+      handle = h;
+    })();
+    return () => {
+      cancelled = true;
+      handle?.remove();
+    };
   }, []);
 
   // Ref na sessionId za async provere (resume/poll) bez zavisnosti u callback-ovima.
@@ -164,19 +233,34 @@ const ActiveWorkout = () => {
     // Samo ako smo videli zivu sesiju (vezbac je bio u toku treninga). Inace bi
     // staru zavrsenu sesiju bacalo na rezime cim vezbac udje da je ponovo odradi.
     if (!sawWorkoutRef.current) return false;
-    const { data } = await supabase
-      .from("workout_session_logs")
-      .select("is_active")
-      .eq("id", sid)
-      .maybeSingle();
+    let data: any = null;
+    try {
+      // withTimeout: brz check, da viseci zahtev na budjenju ne drzi proveru 15-30s.
+      const res = await withTimeout(
+        supabase.from("workout_session_logs").select("is_active").eq("id", sid).maybeSingle(),
+        3500
+      );
+      data = res.data;
+    } catch {
+      return false; // timeout/mreza -> sledeci poll/foreground/online ce probati ponovo
+    }
     if (unmountedRef.current) return false;
     if (data && (data as any).is_active === false) {
-      markFinished();
-      nav(`/vezbac/trening/zavrsen/${sid}`, { replace: true });
+      // Vec finalizovano -> direktno na rezime, BEZ complete_workout_session.
+      goToSummary(sid);
       return true;
     }
     return false;
-  }, [nav, markFinished]);
+  }, [goToSummary]);
+
+  // Cim se veza vrati (isOnline false->true), ODMAH proveri da li je sesija zavrsena na
+  // serveru (sat zavrsio offline) -> rezime, bez cekanja sledeceg poll tika. Brz check
+  // (withTimeout u navIfSessionDone). Foreground povratak je pokriven onVis u poll effektu.
+  useEffect(() => {
+    if (isOnline && sessionId && !finished) {
+      void navIfSessionDone(sessionIdRef.current);
+    }
+  }, [isOnline, sessionId, finished, navIfSessionDone]);
 
   /* ------------------------- Init: start session + load day ------------------------- */
   useEffect(() => {
@@ -382,15 +466,26 @@ const ActiveWorkout = () => {
   // sesiju i živi red na serveru. Ovde SAMO zakačimo HR statistiku (avg/max/series)
   // koju motor ne računa, pa navigiramo. complete_workout_session je idempotentan.
   const finalizeAndNav = useCallback(async () => {
-    if (!sessionId) return;
+    // Nevalidan sessionId -> ne idi na /zavrsen/undefined; idi na trening listu.
+    if (!sessionId) {
+      console.log("[finish] start id= (prazno) -> trening lista");
+      nav("/vezbac/trening", { replace: true });
+      return;
+    }
+    // Brendiran prelazni ekran ("Zavrsavam trening...") umesto belog spinnera.
+    setFinishingToSummary(true);
+    console.log("[finish] start id=", sessionId);
+
     const series = hrSeriesRef.current;
     const bpms = series.map((p) => p.bpm).filter((n) => Number.isFinite(n));
     const avg = bpms.length ? Math.round(bpms.reduce((a, b) => a + b, 0) / bpms.length) : null;
     const max = bpms.length ? Math.max(...bpms) : null;
     const min = bpms.length ? Math.min(...bpms) : null;
 
-    try {
-      await supabase.rpc("complete_workout_session", {
+    // complete_workout_session sa timeout-om: ako visi (tek-uspostavljena veza), svejedno
+    // navigiramo posle ~4s. Navigacija se desava u SVAKOM slucaju (i na gresci/timeout-u).
+    const rpc = (async () => {
+      const { error } = await supabase.rpc("complete_workout_session", {
         p_session_id: sessionId,
         p_hr_avg: avg,
         p_hr_max: max,
@@ -398,9 +493,17 @@ const ActiveWorkout = () => {
         p_active_calories: null,
         p_hr_series: series.length ? (series as any) : null,
       } as any);
-    } catch {
-      /* sesija je možda već zatvorena drugde — svejedno idemo na ekran rezultata */
+      if (error) throw error;
+      return "ok" as const;
+    })();
+    const timeout = new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), 4000));
+    try {
+      const r = await Promise.race([rpc, timeout]);
+      console.log(r === "timeout" ? "[finish] rpc timeout" : "[finish] rpc ok");
+    } catch (e: any) {
+      console.log("[finish] rpc err", e?.message ?? e);
     }
+    console.log("[finish] -> summary");
     nav(`/vezbac/trening/zavrsen/${sessionId}`, { replace: true });
   }, [sessionId, nav]);
 
@@ -418,8 +521,8 @@ const ActiveWorkout = () => {
         // nismo videli živu (vežbač tek ušao / seed nije stigao), NE navigiraj na
         // rezime - pusti normalan tok (init je pokrenuo novu sesiju).
         if (sawWorkoutRef.current) {
-          markFinished();
-          void finalizeAndNav();
+          // Vec-zavrsen (sat/telefon) -> direktna navigacija, BEZ complete_workout_session.
+          goToSummary(sessionIdRef.current);
         }
         return;
       }
@@ -442,24 +545,34 @@ const ActiveWorkout = () => {
         currentHr: typeof workout.current_hr === "number" ? workout.current_hr : null,
       });
     },
-    [finalizeAndNav, markFinished]
+    [goToSummary]
   );
 
   useEffect(() => {
     if (!sessionId || finished) return;
     let stopped = false;
+    let inFlight = false;
 
     const poll = async () => {
-      if (finishedRef.current) return;
+      if (finishedRef.current || inFlight) return;
+      inFlight = true;
       const startedTs = Date.now();
-      const { data, error } = await supabase.rpc("athlete_poll_state");
-      if (stopped) return;
-      if (error) return; // zadrži poslednje stanje
-      // Staleness: novija optimistička akcija je krenula POSLE starta ovog poll-a.
-      if (lastActionAtRef.current > startedTs) return;
-      const res = data as any;
-      if (!res || res.success === false) return;
-      applyPoll(res.workout, res.server_now_ms);
+      try {
+        // withTimeout 3.5s: viseci prvi-posle-budjenja zahtev abortira, interval (2s)
+        // retrira cim je radio spreman -> detekcija za par sekundi, ne 15-30s.
+        const { data, error } = await withTimeout(supabase.rpc("athlete_poll_state"), 3500);
+        if (stopped) return;
+        if (error) return; // zadrži poslednje stanje
+        // Staleness: novija optimistička akcija je krenula POSLE starta ovog poll-a.
+        if (lastActionAtRef.current > startedTs) return;
+        const res = data as any;
+        if (!res || res.success === false) return;
+        applyPoll(res.workout, res.server_now_ms);
+      } catch {
+        // timeout / mreza -> preskoci, sledeci tik retrira
+      } finally {
+        inFlight = false;
+      }
     };
 
     poll();
@@ -481,6 +594,29 @@ const ActiveWorkout = () => {
       document.removeEventListener("visibilitychange", onVis);
     };
   }, [sessionId, finished, applyPoll, navIfSessionDone]);
+
+  /* ------------------------- Realtime: brza detekcija kraja sesije ------------------------- */
+  // workout_session_logs je u realtime publikaciji. Kad sat zavrsi trening (npr offline
+  // pa se poveze), is_active -> false stigne ODMAH preko realtime-a, bez cekanja na poll
+  // (2s) -> brzi prelaz na rezime. Poll ostaje kao fallback.
+  useEffect(() => {
+    if (!sessionId || finished) return;
+    const channel = supabase
+      .channel(`session-end:${sessionId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "workout_session_logs", filter: `id=eq.${sessionId}` },
+        (payload) => {
+          const row = payload.new as any;
+          if (row && row.is_active === false && !finishedRef.current && sawWorkoutRef.current) {
+            // Vec finalizovano na serveru -> direktno na rezime, BEZ complete RPC.
+            goToSummary(sessionId);
+          }
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [sessionId, finished, goToSummary]);
 
   /* ------------------------- Heartbeat: athlete_heartbeat (samo HR + svežina) ------------------------- */
   // Dira SAMO last_heartbeat i current_hr — nikad poziciju. Drži živi red svežim
@@ -654,6 +790,49 @@ const ActiveWorkout = () => {
   };
 
   /* ------------------------- Render ------------------------- */
+  // 0) PRELAZ NA REZIME: cim smo odlucili da zavrsimo (rucno / poslednja serija /
+  // sat zavrsio), brendiran ekran umesto belog spinnera ili zaledjenog treninga.
+  if (finishingToSummary) {
+    if (finishError) {
+      return (
+        <div className="h-[100dvh] bg-background flex flex-col items-center justify-center gap-4 px-6 text-center">
+          <div className="h-14 w-14 rounded-2xl bg-surface-2 flex items-center justify-center">
+            <Dumbbell className="h-6 w-6 text-muted-foreground" strokeWidth={2} />
+          </div>
+          <p className="text-[15px] font-semibold text-foreground">Ne mogu da otvorim rezime</p>
+          <div className="flex flex-col gap-2 w-full max-w-[260px]">
+            <button
+              onClick={() => {
+                setFinishError(false);
+                const sid = sessionIdRef.current;
+                if (sid) nav(`/vezbac/trening/zavrsen/${sid}`, { replace: true });
+                else nav("/vezbac/trening", { replace: true });
+              }}
+              className="h-11 rounded-2xl bg-gradient-brand text-white font-semibold shadow-brand active:scale-95 transition"
+            >
+              Pokušaj ponovo
+            </button>
+            <button
+              onClick={() => nav("/vezbac/trening")}
+              className="h-11 rounded-2xl bg-surface border border-hairline text-foreground font-semibold active:scale-95 transition"
+            >
+              Nazad
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="h-[100dvh] bg-background flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <div className="h-16 w-16 rounded-2xl bg-gradient-brand flex items-center justify-center shadow-brand animate-pulse">
+          <Dumbbell className="h-7 w-7 text-white" strokeWidth={2.5} />
+        </div>
+        <div className="text-[15px] font-semibold text-foreground">Završavam trening...</div>
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   // 1) LOADING: spinner samo dok ucitavamo dan / pokrecemo sesiju.
   if (loading) {
     return (
@@ -753,6 +932,21 @@ const ActiveWorkout = () => {
             />
           </div>
         </div>
+
+        {!isOnline && (
+          <div className="px-4 pt-3">
+            <div
+              className="rounded-2xl border border-warning/40 bg-warning-soft text-warning-soft-foreground px-4 py-3 flex items-start gap-3"
+              role="status"
+              aria-live="polite"
+            >
+              <WifiOff className="h-4 w-4 mt-0.5 shrink-0" strokeWidth={2.4} />
+              <div className="text-[13px] font-semibold leading-snug">
+                Nema interneta. Trening se ne čuva dok se veza ne vrati.
+              </div>
+            </div>
+          </div>
+        )}
 
         {incomingMessage && (
           <div className="px-4 pt-3">
