@@ -1,5 +1,27 @@
 import SwiftUI
 import WatchKit
+import Network
+import Combine
+
+// Event-driven detekcija mreznog puta. NWPathMonitor javi ODMAH kad put nestane
+// (telefon daleko + nema WiFi -> bridged put padne) ili se vrati - bez cekanja da
+// RPC istekne (~15s zbog waitsForConnectivity).
+final class NetworkMonitor: ObservableObject {
+    static let shared = NetworkMonitor()
+    @Published private(set) var isOnline: Bool = true
+    private let monitor = NWPathMonitor()
+    private let queue = DispatchQueue(label: "fitlink.networkMonitor")
+
+    private init() {
+        monitor.pathUpdateHandler = { [weak self] path in
+            let ok = path.status == .satisfied
+            DispatchQueue.main.async { self?.isOnline = ok }
+        }
+        monitor.start(queue: queue)
+    }
+
+    deinit { monitor.cancel() }
+}
 
 // MARK: - Inter Tight (zonski ekran)
 // Jedinstvena familija za sve velike brojke i nazive na sva cetiri stila,
@@ -31,6 +53,7 @@ struct ContentView: View {
     }
     
     @StateObject private var phoneSession = WatchPhoneSession.shared
+    @StateObject private var network = NetworkMonitor.shared
     @Environment(\.scenePhase) private var scenePhase
 
     // Token iz pair_token payload-a koji je iPhone poslao preko WCSession.
@@ -44,6 +67,14 @@ struct ContentView: View {
     @State private var isPaired: Bool = false
     @State private var isLoading: Bool = false
     @State private var connectionError: String?
+    // Indikator veze vodjen ISHODOM RPC-a (ne poseban network monitor): stvaran
+    // uspeh/neuspeh poziva je pravi signal "mogu li da posaljem akciju".
+    @State private var connectionOK: Bool = true
+    // Debounce-ovan prikaz banera: offline se POTVRDI tek ako izdrzi ~2.5s (da kratki
+    // prekidi ne teraju baner da treperi); online sakriva baner odmah.
+    @State private var offlineConfirmed: Bool = false
+    // Brojac za ponistavanje zastarelih debounce Task-ova.
+    @State private var offlineDebounceToken: Int = 0
     @State private var currentWorkout: ActiveWorkout = .mock
     @State private var heartRate: Int = 0
     // Sloj 0: poslednji poznati session_id iz poll-a/realtime-a. Salje se uz svaki
@@ -121,10 +152,15 @@ struct ContentView: View {
                 completedView
             }
         }
-        // Poruka trenera - banner preko svega, tap ili auto-hide ga sklanja.
+        // Banneri na vrhu: offline (perzistentan dok traje nema-veze) + poruka trenera.
         .overlay(alignment: .top) {
-            if let banner = bannerMessage {
-                trainerMessageBanner(banner)
+            VStack(spacing: 4) {
+                if showOfflineBanner {
+                    offlineBanner
+                }
+                if let banner = bannerMessage {
+                    trainerMessageBanner(banner)
+                }
             }
         }
         .task {
@@ -132,12 +168,22 @@ struct ContentView: View {
             // Handshake (pull): potvrdi ko je trenutno ulogovan na telefonu.
             phoneSession.requestCurrentToken()
             await initializeConnection()
+            // Isporuci eventualne offline metrike sa proslog treninga (Problem A).
+            await flushPendingMetrics()
         }
         .onChange(of: scenePhase) { newPhase in
             // Kad sat postane aktivan, ponovo povuci aktuelni identitet.
             if newPhase == .active {
                 phoneSession.requestCurrentToken()
+                // Povratak u prvi plan = vezbac obicno blizu telefona, veza obnovljena.
+                Task { await flushPendingMetrics() }
             }
+        }
+        .onChange(of: network.isOnline) { online in
+            // NWPath se NE koristi za baner (nepouzdan na watchOS), samo kao OKIDAC da
+            // odmah flush-ujemo pending metrike kad put izgleda da se vratio. Bezbedno:
+            // ako je lazno, RPC padne i payload ostaje u redu.
+            if online { Task { await flushPendingMetrics() } }
         }
         .onChange(of: phoneSession.pairingToken) { _ in
             // Token primljen sa iPhone-a (login, refresh) ili obrisan (logout).
@@ -341,6 +387,84 @@ struct ContentView: View {
         return Int(max(0, serverNowSec - startMs / 1000.0))
     }
 
+    // FIKSNA kotva za tajmer: klijentski trenutak koji odgovara pocetku sesije
+    // (server start umanjen za clock offset). TimelineView .periodic se kaci na NJU,
+    // ne na .now - inace bi se schedule re-fazirao na svaki re-render (HR/poll) pa bi
+    // tikovi padali na nepravilne ofsete (sekunda ubrza/uspori). Sa fiksnom kotvom
+    // tikovi padaju tacno na granicu elapsed-sekunde i cadence je ravnomeran.
+    private var workoutTickAnchor: Date {
+        guard let startMs = workoutStartedAtMs else { return .now }
+        return Date(timeIntervalSince1970: startMs / 1000.0 - serverClockOffset)
+    }
+
+    // MARK: - Indikator veze (vodjen ishodom RPC-a)
+
+    private func setConnectionOK(_ ok: Bool) {
+        guard connectionOK != ok else { return }
+        connectionOK = ok
+        offlineDebounceToken &+= 1   // ponisti svaki pending debounce
+        if ok {
+            // Online -> sakrij baner ODMAH.
+            withAnimation(.easeInOut(duration: 0.25)) { offlineConfirmed = false }
+        } else {
+            // Offline -> potvrdi tek ako stanje izdrzi ~2.5s (debounce protiv treperenja).
+            let myToken = offlineDebounceToken
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 2_500_000_000)
+                guard myToken == offlineDebounceToken, !connectionOK else { return }
+                withAnimation(.easeInOut(duration: 0.25)) { offlineConfirmed = true }
+            }
+        }
+    }
+    // Uspeh poziva -> online.
+    private func noteRpcSuccess() { setConnectionOK(true) }
+    // networkError (nema interneta / timeout) -> offline. Bilo koji ODGOVOR sa servera
+    // (sessionEnded/httpError/invalidToken/decoding) znaci da je server dosegnut -> online.
+    private func noteRpcError(_ error: Error) {
+        if let e = error as? SupabaseError, case .networkError = e {
+            setConnectionOK(false)
+        } else {
+            setConnectionOK(true)
+        }
+    }
+
+    // Banner samo na ekranu treninga (active/rest). JEDINI pouzdan signal je ISHOD RPC-a
+    // (connectionOK): NWPathMonitor na watchOS nepouzdano vidi bridged put (prijavi
+    // .unsatisfied iako RPC-ovi rade), a WCSession.isReachable zna da slaze (sat na WiFi,
+    // telefon daleko -> reachable false a sve radi). Zato baner pali samo stvaran neuspeh RPC-a.
+    private var showOfflineBanner: Bool {
+        offlineConfirmed && !connectionOK && (currentState == .activeWorkout || currentState == .rest)
+    }
+
+    private var offlineBanner: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "wifi.slash")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(.brandWarning)
+            Text("Nema veze. Priblizi se telefonu ili proveri internet.")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(.white)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+                .multilineTextAlignment(.leading)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.black.opacity(0.85))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.brandWarning.opacity(0.6), lineWidth: 1)
+                )
+        )
+        .padding(.horizontal, 5)
+        .padding(.top, 2)
+        .transition(.move(edge: .top).combined(with: .opacity))
+    }
+
     private func elapsedString(_ elapsed: Int) -> String {
         if elapsed < 3600 {
             return String(format: "%d:%02d", elapsed / 60, elapsed % 60)
@@ -354,9 +478,11 @@ struct ContentView: View {
     }
 
     // Trajanje boravka u TRENUTNOJ zoni (resetuje se na promenu zone u poll-u).
-    private var timeInZoneString: String {
+    // Racuna se iz TICK date-a (ne iz Date()) da bude uskladjeno sa workoutTickAnchor
+    // cadence-om - inace prikaz trza (sekunda se prelama van granice tika).
+    private func timeInZoneString(_ now: Date) -> String {
         guard let enteredAt = zoneEnteredAt else { return "0:00" }
-        let elapsed = Int(max(0, Date().timeIntervalSince(enteredAt)))
+        let elapsed = Int(max(0, now.timeIntervalSince(enteredAt)))
         return String(format: "%d:%02d", elapsed / 60, elapsed % 60)
     }
 
@@ -366,7 +492,7 @@ struct ContentView: View {
         let accent = zoneColor(zone)
         return VStack(spacing: 10) {
             // Proteklo vreme krupno na vrhu, levo poravnato.
-            TimelineView(.periodic(from: .now, by: 1.0)) { ctx in
+            TimelineView(.periodic(from: workoutTickAnchor, by: 1.0)) { ctx in
                 Text(elapsedString(workoutElapsed(ctx.date)))
                     .font(.zoneNum(27, .heavy))
                     .tracking(-0.5)
@@ -525,7 +651,7 @@ struct ContentView: View {
                 if let value = value {
                     Text(value)
                 } else {
-                    TimelineView(.periodic(from: .now, by: 1.0)) { ctx in
+                    TimelineView(.periodic(from: workoutTickAnchor, by: 1.0)) { ctx in
                         Text(elapsedString(workoutElapsed(ctx.date)))
                     }
                 }
@@ -604,7 +730,7 @@ struct ContentView: View {
                 if let value = value {
                     Text(value)
                 } else {
-                    TimelineView(.periodic(from: .now, by: 1.0)) { ctx in
+                    TimelineView(.periodic(from: workoutTickAnchor, by: 1.0)) { ctx in
                         Text(elapsedString(workoutElapsed(ctx.date)))
                     }
                 }
@@ -615,6 +741,7 @@ struct ContentView: View {
             .monospacedDigit()
             .lineLimit(1)
             .minimumScaleFactor(0.6)
+            .fixedSize(horizontal: true, vertical: false)   // ne trunkuj zadnju cifru
             Text(label.uppercased())
                 .font(.system(size: 8, weight: .semibold))
                 .tracking(0.8)
@@ -623,6 +750,8 @@ struct ContentView: View {
                 .minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity, alignment: align == .leading ? .leading : .trailing)
+        // Malo razmaka od ivice ekrana da broj ne dodiruje/seče zakrivljenu ivicu.
+        .padding(align == .leading ? .leading : .trailing, 4)
     }
 
     // MARK: - Stil 4: Tabla
@@ -662,7 +791,7 @@ struct ContentView: View {
                 }
                 HStack(spacing: 6) {
                     tablaCardTicking(label: "Trening") { elapsedString(workoutElapsed($0)) }
-                    tablaCardTicking(label: "U zoni") { _ in timeInZoneString }
+                    tablaCardTicking(label: "U zoni") { timeInZoneString($0) }
                 }
             }
         }
@@ -694,7 +823,7 @@ struct ContentView: View {
     // Kartica sa vrednoscu koja tika svake sekunde (Trening, U zoni).
     private func tablaCardTicking(label: String, value: @escaping (Date) -> String) -> some View {
         tablaCardShell(accent: nil, label: label) {
-            TimelineView(.periodic(from: .now, by: 1.0)) { ctx in
+            TimelineView(.periodic(from: workoutTickAnchor, by: 1.0)) { ctx in
                 Text(value(ctx.date))
                     .font(.zoneNum(32, .heavy))
                     .tracking(-0.5)
@@ -834,6 +963,7 @@ struct ContentView: View {
 
         do {
             let context = try await SupabaseClient.shared.getUserContext(token: token)
+            noteRpcSuccess()   // server dosegnut
 
             guard let context = context else {
                 isPaired = false
@@ -900,6 +1030,7 @@ struct ContentView: View {
             realtimeClient.connect(userId: context.userId)
 
         } catch {
+            noteRpcError(error)
             isPaired = false
             connectionError = "Greška konekcije"
             print("Connection error: \(error.localizedDescription)")
@@ -1042,11 +1173,14 @@ struct ContentView: View {
                 try await SupabaseClient.shared.engineCompleteSet(
                     token: token, sessionId: sessionId, reps: nil, weight: nil, rpe: nil
                 )
+                noteRpcSuccess()
                 print("Watch engine: complete_set [session \(sessionId)]")
             } catch SupabaseError.sessionEnded {
+                noteRpcSuccess()
                 print("Watch engine: complete_set -> session ended")
                 await MainActor.run { handleWorkoutDeleted() }
             } catch {
+                noteRpcError(error)
                 print("Complete set error: \(error.localizedDescription)")
             }
         }
@@ -1057,10 +1191,13 @@ struct ContentView: View {
             guard let token = effectiveToken, let sessionId = currentSessionId else { return }
             do {
                 try await SupabaseClient.shared.engineSkipRest(token: token, sessionId: sessionId)
+                noteRpcSuccess()
                 print("Watch engine: skip_rest (auto) [session \(sessionId)]")
             } catch SupabaseError.sessionEnded {
+                noteRpcSuccess()
                 await MainActor.run { handleWorkoutDeleted() }
             } catch {
+                noteRpcError(error)
                 print("Rest complete error: \(error.localizedDescription)")
             }
         }
@@ -1073,10 +1210,13 @@ struct ContentView: View {
             guard let token = effectiveToken, let sessionId = currentSessionId else { return }
             do {
                 try await SupabaseClient.shared.engineSkipRest(token: token, sessionId: sessionId)
+                noteRpcSuccess()
                 print("Watch engine: skip_rest [session \(sessionId)]")
             } catch SupabaseError.sessionEnded {
+                noteRpcSuccess()
                 await MainActor.run { handleWorkoutDeleted() }
             } catch {
+                noteRpcError(error)
                 print("Skip rest error: \(error.localizedDescription)")
             }
         }
@@ -1088,19 +1228,71 @@ struct ContentView: View {
     private func finalizeAndReport(token: String?, sessionId: String?) async {
         let m = await healthKit.finalizeAndStop()
         guard let token = token, let sessionId = sessionId else { return }
+        // Ne salji 0 kao metriku (gazilo bi prave vrednosti). Ako su sve tri 0 -> ne enqueue.
         guard m.calories > 0 || m.hrAvg > 0 || m.hrMax > 0 else { return }
+        // Perzistiraj pa flush: ako je sat offline na zavrsetku, ostaje za kasnije (Problem A).
+        PendingReportStore.shared.add(PendingMetrics(
+            sessionId: sessionId,
+            activeCalories: m.calories > 0 ? m.calories : nil,
+            hrAvg: m.hrAvg > 0 ? m.hrAvg : nil,
+            hrMax: m.hrMax > 0 ? m.hrMax : nil,
+            token: token,
+            createdAt: Date()
+        ))
+        await flushPendingMetrics()
+        schedulePendingRetry()
+    }
+
+    // MARK: - Offline buffer flush (Problem A)
+
+    /// Posalji sve "pending" metrike. Uspeh -> obrisi iz store-a; offline -> ostavi.
+    /// Payload stariji od 7 dana se odbacuje (token verovatno istekao, nema svrhe).
+    private func flushPendingMetrics() async {
+        let pending = PendingReportStore.shared.all()
+        guard !pending.isEmpty else { return }
+        let now = Date()
+        for item in pending {
+            if now.timeIntervalSince(item.createdAt) > 7 * 24 * 3600 {
+                PendingReportStore.shared.remove(sessionId: item.sessionId)
+                continue
+            }
+            if await trySendPending(item) {
+                PendingReportStore.shared.remove(sessionId: item.sessionId)
+            }
+        }
+    }
+
+    /// Pokusaj isporuke jednog payload-a. Sacuvani token prvo; na invalid_token probaj
+    /// trenutni effectiveToken. Mrezna greska -> false (ostaje za sledeci flush).
+    /// success ili session_not_found (permanentno) -> true (skloni iz reda).
+    private func trySendPending(_ item: PendingMetrics) async -> Bool {
         do {
-            try await SupabaseClient.shared.reportMetrics(
-                token: token,
-                sessionId: sessionId,
-                activeCalories: m.calories,
-                hrAvg: m.hrAvg,
-                hrMax: m.hrMax,
-                hrSeries: nil
-            )
-            print("Watch: reportMetrics kcal=\(m.calories) hrAvg=\(m.hrAvg) hrMax=\(m.hrMax) [session \(sessionId)]")
+            _ = try await SupabaseClient.shared.reportMetrics(
+                token: item.token, sessionId: item.sessionId,
+                activeCalories: item.activeCalories, hrAvg: item.hrAvg, hrMax: item.hrMax, hrSeries: nil)
+            return true
+        } catch SupabaseError.invalidToken {
+            guard let current = effectiveToken, current != item.token else { return false }
+            do {
+                _ = try await SupabaseClient.shared.reportMetrics(
+                    token: current, sessionId: item.sessionId,
+                    activeCalories: item.activeCalories, hrAvg: item.hrAvg, hrMax: item.hrMax, hrSeries: nil)
+                return true
+            } catch {
+                return false
+            }
         } catch {
-            print("Watch reportMetrics error: \(error.localizedDescription)")
+            return false
+        }
+    }
+
+    /// Kratak backoff posle enqueue: uhvati povratak veze u prvih par minuta dok je app aktivan.
+    private func schedulePendingRetry() {
+        for delay in [UInt64(5), UInt64(15), UInt64(30)] {
+            Task {
+                try? await Task.sleep(nanoseconds: delay * 1_000_000_000)
+                await flushPendingMetrics()
+            }
         }
     }
 
@@ -1114,6 +1306,20 @@ struct ContentView: View {
             // sumira tek posle endCollection, pa citanje pre toga vrati 0.
             let m = await healthKit.finalizeAndStop()
 
+            // Perzistiraj metrike (offline-safe) pa pokusaj isporuku. engineFinishWorkout
+            // je primarni instant put; pending store + flush pokriva offline zavrsetak.
+            // Ne salji 0: enqueue samo ako ima bar jedna prava vrednost, i to >0 ? : nil.
+            if m.calories > 0 || m.hrAvg > 0 || m.hrMax > 0 {
+                PendingReportStore.shared.add(PendingMetrics(
+                    sessionId: sessionId,
+                    activeCalories: m.calories > 0 ? m.calories : nil,
+                    hrAvg: m.hrAvg > 0 ? m.hrAvg : nil,
+                    hrMax: m.hrMax > 0 ? m.hrMax : nil,
+                    token: token,
+                    createdAt: Date()
+                ))
+            }
+
             do {
                 try await SupabaseClient.shared.engineFinishWorkout(
                     token: token,
@@ -1122,31 +1328,19 @@ struct ContentView: View {
                     hrAvg: m.hrAvg > 0 ? m.hrAvg : nil,
                     hrMax: m.hrMax > 0 ? m.hrMax : nil
                 )
-                // Dodatno upisi FINALNE metrike (GREATEST stiti od kasne nule/duplikata).
-                try? await SupabaseClient.shared.reportMetrics(
-                    token: token,
-                    sessionId: sessionId,
-                    activeCalories: m.calories,
-                    hrAvg: m.hrAvg,
-                    hrMax: m.hrMax,
-                    hrSeries: nil
-                )
+                noteRpcSuccess()
                 print("Watch engine: finish_workout [session \(sessionId)] kcal=\(m.calories) hrAvg=\(m.hrAvg) hrMax=\(m.hrMax)")
             } catch SupabaseError.sessionEnded {
-                // Sesija vec zavrsena na serveru -> svejedno upisi metrike (server pise
-                // i na zavrsenu sesiju), pa napusti ekran.
-                try? await SupabaseClient.shared.reportMetrics(
-                    token: token,
-                    sessionId: sessionId,
-                    activeCalories: m.calories,
-                    hrAvg: m.hrAvg,
-                    hrMax: m.hrMax,
-                    hrSeries: nil
-                )
+                noteRpcSuccess()
                 await MainActor.run { handleWorkoutDeleted() }
             } catch {
+                noteRpcError(error)
                 print("Finish workout error: \(error.localizedDescription)")
             }
+
+            // Flush pending (ukljucujuci ovaj) - uspeh brise iz store-a; offline ostaje.
+            await flushPendingMetrics()
+            schedulePendingRetry()
         }
     }
 
@@ -1160,10 +1354,13 @@ struct ContentView: View {
                 try await SupabaseClient.shared.engineExtendRest(
                     token: token, sessionId: sessionId, seconds: seconds
                 )
+                noteRpcSuccess()
                 print("Watch engine: extend_rest (+\(seconds)) [session \(sessionId)]")
             } catch SupabaseError.sessionEnded {
+                noteRpcSuccess()
                 await MainActor.run { handleWorkoutDeleted() }
             } catch {
+                noteRpcError(error)
                 print("Extend rest error: \(error.localizedDescription)")
             }
         }
@@ -1285,12 +1482,15 @@ struct ContentView: View {
                 heartRate: heartRate,
                 sessionId: sessionId
             )
+            noteRpcSuccess()
         } catch SupabaseError.sessionEnded {
             // Trening je zavrsen na serveru, a sat je jos slao puls (fantom).
             // Zatvori HealthKit workout, prestani slanje, napusti ekran treninga.
+            noteRpcSuccess()   // server dosegnut -> online
             print("HR update: session ended on server - closing watch workout")
             await MainActor.run { handleWorkoutDeleted() }
         } catch {
+            noteRpcError(error)
             print("HR update error: \(error.localizedDescription)")
         }
     }

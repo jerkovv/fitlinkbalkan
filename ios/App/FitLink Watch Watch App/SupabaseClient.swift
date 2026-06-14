@@ -81,7 +81,10 @@ final class SupabaseClient {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 10
         config.timeoutIntervalForResource = 15
-        config.waitsForConnectivity = true
+        // false: bez veze RPC padne ODMAH (umesto da ceka ~15s) -> connectionOK brzo
+        // flipuje pa se baner pojavi/sakrije za par sekundi. Offline buffer (pending
+        // metrike) hvata neuspele posiljke, pa nema gubitka.
+        config.waitsForConnectivity = false
         self.session = URLSession(configuration: config)
         
         self.decoder = JSONDecoder()
@@ -282,6 +285,16 @@ final class SupabaseClient {
         let response: URLResponse
         do {
             (data, response) = try await session.data(for: request)
+        } catch let urlErr as URLError {
+            // Transportne greske -> networkError (sekundarni offline signal). Eksplicitno
+            // navedeni kodovi su tipicni za "nema veze"; ostali URLError su takodje transport.
+            switch urlErr.code {
+            case .notConnectedToInternet, .networkConnectionLost, .timedOut,
+                 .cannotConnectToHost, .cannotFindHost, .dataNotAllowed:
+                throw SupabaseError.networkError(urlErr.localizedDescription)
+            default:
+                throw SupabaseError.networkError(urlErr.localizedDescription)
+            }
         } catch {
             throw SupabaseError.networkError(error.localizedDescription)
         }
@@ -303,5 +316,61 @@ final class SupabaseClient {
     private func isJSONNull(_ data: Data) -> Bool {
         guard let str = String(data: data, encoding: .utf8) else { return true }
         return str.trimmingCharacters(in: .whitespacesAndNewlines) == "null"
+    }
+}
+
+// MARK: - Offline buffer za metrike (Problem A: isporuka kad je sat offline na zavrsetku)
+
+struct PendingMetrics: Codable {
+    let sessionId: String
+    let activeCalories: Int?
+    let hrAvg: Int?
+    let hrMax: Int?
+    let token: String
+    let createdAt: Date
+}
+
+/// Perzistentni red (UserDefaults JSON) "pending" izvestaja metrika. HealthKit
+/// agregati su kompletni i kad je sat bio van veze TOKOM treninga; jedini problem je
+/// ISPORUKA na zavrsetku (daleko od telefona, bez WiFi). Cuvamo payload pa flush-ujemo
+/// kad se veza vrati. Pristup serijalizovan kroz privatni queue.
+final class PendingReportStore {
+    static let shared = PendingReportStore()
+    private let key = "fitlink.pendingMetrics"
+    private let defaults = UserDefaults.standard
+    private let queue = DispatchQueue(label: "fitlink.pendingReportStore")
+
+    private init() {}
+
+    func all() -> [PendingMetrics] {
+        queue.sync { loadLocked() }
+    }
+
+    func add(_ item: PendingMetrics) {
+        queue.sync {
+            var list = loadLocked()
+            list.removeAll { $0.sessionId == item.sessionId }   // jedan pending po sesiji
+            list.append(item)
+            saveLocked(list)
+        }
+    }
+
+    func remove(sessionId: String) {
+        queue.sync {
+            var list = loadLocked()
+            list.removeAll { $0.sessionId == sessionId }
+            saveLocked(list)
+        }
+    }
+
+    private func loadLocked() -> [PendingMetrics] {
+        guard let data = defaults.data(forKey: key) else { return [] }
+        return (try? JSONDecoder().decode([PendingMetrics].self, from: data)) ?? []
+    }
+
+    private func saveLocked(_ list: [PendingMetrics]) {
+        if let data = try? JSONEncoder().encode(list) {
+            defaults.set(data, forKey: key)
+        }
     }
 }

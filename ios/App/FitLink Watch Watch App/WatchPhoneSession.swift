@@ -22,6 +22,11 @@ final class WatchPhoneSession: NSObject, ObservableObject {
     // "Povezano" sa sigurnošću; ContentView retry-uje na svaki poll tick.
     @Published private(set) var tokenIsUncertain: Bool = false
 
+    // Da li je telefon u dometu (WCSession.isReachable). Default true da pre aktivacije
+    // ne palimo "telefon nije u blizini". Postaje stvaran isReachable po aktivaciji i na
+    // svaku promenu reachability-ja. "Problem" = activated && !isReachable -> ovde false.
+    @Published private(set) var isPhoneReachable: Bool = true
+
     private let tokenKey = "fitlink.pairingToken"
     private let userIdKey = "fitlink.pairedUserId"
 
@@ -172,6 +177,10 @@ extension WatchPhoneSession: WCSessionDelegate {
             requestCurrentToken()
         }
 
+        // Tek po aktivaciji isReachable ima smisla; pre toga drzimo true (bez lazne uzbune).
+        let reachable = (activationState == .activated) ? session.isReachable : true
+        DispatchQueue.main.async { [weak self] in self?.isPhoneReachable = reachable }
+
         // Pri aktivaciji, iOS automatski isporucuje POSLEDNJI applicationContext
         // koji je iPhone poslao - tako da ako je iPhone vec poslao token,
         // ovde se nista ne radi (delegate metoda ce biti pozvana zasebno).
@@ -192,6 +201,8 @@ extension WatchPhoneSession: WCSessionDelegate {
     }
 
     func sessionReachabilityDidChange(_ session: WCSession) {
-        print("[WatchPhoneSession] Reachability changed: \(session.isReachable)")
+        let reachable = session.isReachable
+        print("[WatchPhoneSession] Reachability changed: \(reachable)")
+        DispatchQueue.main.async { [weak self] in self?.isPhoneReachable = reachable }
     }
 }
