@@ -100,33 +100,42 @@ const WorkoutSummary = () => {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    const t0 = Date.now();
-    const ms = () => `+${Date.now() - t0}ms`;
     (async () => {
       const sid = sessionId;
-      console.log("[summary] load start id=", sid);
       // Nevalidan sessionId -> odmah error, ne vrti.
       if (!sid || sid === "undefined" || sid === "null") {
-        console.log("[summary] err invalid sessionId");
         if (!cancelled) setLoadError("Trening nije pronađen");
         return;
       }
 
       // 1) SESSION (kriticno): STRIKTNO read-only - bez complete_workout_session (taj
-      // viseci write je davao 15-30s). Kratak timeout + brzi retriji.
+      // viseci write je davao 15-30s). AUTO-RETRY do 3 puta sa ~2s razmaka PRE prikaza
+      // rucnog "Pokusaj ponovo" - prvi pokusaj na tek-uspostavljenoj vezi zna da padne.
+      // Tokom auto-retry-a OSTAJE brendiran "Zavrsavam trening..." (ne postavljamo loadError
+      // dok svi pokusaji ne padnu - session i loadError ostaju null -> branded ekran).
       let sess: any = null;
-      try {
-        const sessRes: any = await fetchWithRetry(() =>
-          supabase.from("workout_session_logs").select(SESSION_COLS).eq("id", sid).maybeSingle()
-        );
-        if (sessRes.error) throw sessRes.error;
-        sess = sessRes.data;
-      } catch (e: any) {
-        console.log("[summary] err session", e?.message ?? e, ms());
-        if (!cancelled) setLoadError("Ne mogu da otvorim rezime");
+      let sessErr: any = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const sessRes: any = await withTimeout(
+            supabase.from("workout_session_logs").select(SESSION_COLS).eq("id", sid).maybeSingle(),
+            3000
+          );
+          if (sessRes.error) throw sessRes.error;
+          sess = sessRes.data;
+          sessErr = null;
+          break;
+        } catch (e: any) {
+          sessErr = e;
+          if (cancelled) return;
+          if (attempt < 3) await new Promise((r) => setTimeout(r, 2000));
+        }
+      }
+      if (cancelled) return;
+      if (sessErr) {
+        setLoadError("Ne mogu da otvorim rezime");
         return;
       }
-      console.log("[summary] session rows=", sess ? 1 : 0, ms());
       if (!sess) {
         if (!cancelled) setLoadError("Trening nije pronađen");
         return;
@@ -148,9 +157,7 @@ const WorkoutSummary = () => {
           2
         );
         if (!cancelled) setSets(((setRes.data as any[]) ?? []) as SetRow[]);
-        console.log("[summary] sets rows=", (setRes.data as any[])?.length ?? 0, ms());
       } catch (e: any) {
-        console.log("[summary] sets err", e?.message ?? e, ms());
       }
 
       // 3) EXERCISES (best-effort)
@@ -165,13 +172,10 @@ const WorkoutSummary = () => {
             2
           );
           if (!cancelled) setExercises(((exRes.data as any[]) ?? []) as ExRow[]);
-          console.log("[summary] exercises rows=", (exRes.data as any[])?.length ?? 0, ms());
         } catch (e: any) {
-          console.log("[summary] exercises err", e?.message ?? e, ms());
         }
       }
 
-      console.log("[summary] done", ms());
       setTimeout(() => setShowCheck(true), 60);
     })();
     return () => {
@@ -183,11 +187,11 @@ const WorkoutSummary = () => {
   // spinner i prikazi error+retry. Restartuje se na retry (reloadKey).
   useEffect(() => {
     if (session || loadError) return;
-    // 10s: backup iznad retry-prozora (load sam postavi error ranije ako svi retriji padnu).
+    // 15s: backstop IZNAD auto-retry prozora (3 pokusaja x 3s + 2 x 2s razmak ~= 13s). load()
+    // sam postavi error cim svi auto-pokusaji padnu; ovo hvata samo neocekivano visenje.
     const t = setTimeout(() => {
-      console.log("[summary] loading timeout -> error");
       setLoadError("Ne mogu da otvorim rezime");
-    }, 10000);
+    }, 15000);
     return () => clearTimeout(t);
   }, [session, loadError, reloadKey]);
 

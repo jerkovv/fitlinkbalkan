@@ -138,10 +138,18 @@ const ActiveWorkout = () => {
 
   // Live HR (lokalni HealthKit stream na telefonu)
   const [liveHr, setLiveHr] = useState<number | null>(null);
+  // Zivi HR sa SATA preko realtime live-state (workout_live_state.current_hr). Instant izvor
+  // kad sat vozi trening - bez cekanja 2s poll-a. Poll (pos.currentHr) ostaje fallback.
+  const [watchHr, setWatchHr] = useState<number | null>(null);
 
-  // FAZA 1 - watch presence: poslednji watch_last_hr_at (epoch ms) iz workout_live_state.
-  // null = sat NIKAD nije slao (SOLO korisnik) -> NIKAD se ne zakljucava.
-  const [watchLastHrAt, setWatchLastHrAt] = useState<number | null>(null);
+  // FAZA 1 - watch presence: NE parsiramo serverski timestamp (new Date(string) u WKWebView
+  // daje pogresno/starije vreme + clock skew -> lazni lock). Umesto toga: PROMENA stringa
+  // watch_last_hr_at = signal "sat se javio", a svezinu merimo telefonskim Date.now().
+  const lastSeenWatchTsRef = useRef<string | null>(null);   // poslednja vidjena vrednost
+  const watchSignalLocalRef = useRef<number | null>(null);  // Date.now() kad se PROMENILA
+  // Reaktivni mirror "sat se IKAD javio u ovoj sesiji" (== watchSignalLocalRef.current != null).
+  // State (ne ref) da se lock/baner preracunaju ODMAH kad sat prvi put javi, ne tek na 1s tik.
+  const [watchEverPresent, setWatchEverPresent] = useState(false);
   // Trener je izabrao "Nastavi na telefonu" -> otkljucaj do kraja sesije.
   const [phoneTakeover, setPhoneTakeover] = useState(false);
   // Sinhroni ref za gejtovanje mutacija u handlerima (bez stale closure-a).
@@ -151,6 +159,12 @@ const ActiveWorkout = () => {
   // Pravi izvor je @capacitor/network (navigator.onLine je nepouzdan u WKWebView).
   // Optimisticki true; Network.getStatus() koriguje na mount.
   const [isOnline, setIsOnline] = useState<boolean>(true);
+  // Reconnect: bump-uje resubscribe realtime kanala (live-state, session-end).
+  const [realtimeEpoch, setRealtimeEpoch] = useState(0);
+  // Ref na poll funkciju (definisana u poll effektu) - da je reconnect/online forsira odmah.
+  const pollRef = useRef<(() => void) | null>(null);
+  // Sinhroni mirror isOnline (za RPC catch bez stale closure-a / bez deps po handleru).
+  const isOnlineRef = useRef(true);
   const hrSeriesRef = useRef<HRPoint[]>([]);
 
   // Wake lock
@@ -191,12 +205,10 @@ const ActiveWorkout = () => {
     if (finishedRef.current) return;
     markFinished();
     if (!sid) {
-      console.log("[finish] detektovan kraj bez sessionId -> trening lista");
       nav("/vezbac/trening", { replace: true });
       return;
     }
     setFinishingToSummary(true);
-    console.log("[finish] detektovan (vec finalizovano) -> summary id=", sid);
     nav(`/vezbac/trening/zavrsen/${sid}`, { replace: true });
   }, [nav, markFinished]);
 
@@ -209,7 +221,6 @@ const ActiveWorkout = () => {
   useEffect(() => {
     if (!finishingToSummary) return;
     const t = setTimeout(() => {
-      console.log("[finish] failsafe timeout -> error");
       setFinishError(true);
     }, 7000);
     return () => clearTimeout(t);
@@ -239,6 +250,7 @@ const ActiveWorkout = () => {
   // Ref na sessionId za async provere (resume/poll) bez zavisnosti u callback-ovima.
   const sessionIdRef = useRef<string | null>(null);
   useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
+  useEffect(() => { isOnlineRef.current = isOnline; }, [isOnline]);
 
   // Ako je sesija vec zatvorena na serveru (npr. zavrsena na satu dok je telefon
   // spavao/ubijen), idi pravo na rezime umesto da visimo na ekranu treninga.
@@ -272,7 +284,9 @@ const ActiveWorkout = () => {
   // (withTimeout u navIfSessionDone). Foreground povratak je pokriven onVis u poll effektu.
   useEffect(() => {
     if (isOnline && sessionId && !finished) {
-      void navIfSessionDone(sessionIdRef.current);
+      void navIfSessionDone(sessionIdRef.current);   // brzi kraj-sesije check
+      pollRef.current?.();                            // ODMAH osvezi POZICIJU (ne cekaj 2s tik)
+      setRealtimeEpoch((e) => e + 1);                 // resubscribe realtime kanale (ne cekaj auto-reconnect)
     }
   }, [isOnline, sessionId, finished, navIfSessionDone]);
 
@@ -482,13 +496,11 @@ const ActiveWorkout = () => {
   const finalizeAndNav = useCallback(async () => {
     // Nevalidan sessionId -> ne idi na /zavrsen/undefined; idi na trening listu.
     if (!sessionId) {
-      console.log("[finish] start id= (prazno) -> trening lista");
       nav("/vezbac/trening", { replace: true });
       return;
     }
     // Brendiran prelazni ekran ("Zavrsavam trening...") umesto belog spinnera.
     setFinishingToSummary(true);
-    console.log("[finish] start id=", sessionId);
 
     const series = hrSeriesRef.current;
     const bpms = series.map((p) => p.bpm).filter((n) => Number.isFinite(n));
@@ -512,12 +524,10 @@ const ActiveWorkout = () => {
     })();
     const timeout = new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), 4000));
     try {
-      const r = await Promise.race([rpc, timeout]);
-      console.log(r === "timeout" ? "[finish] rpc timeout" : "[finish] rpc ok");
-    } catch (e: any) {
-      console.log("[finish] rpc err", e?.message ?? e);
+      await Promise.race([rpc, timeout]);
+    } catch {
+      // timeout/greska: svejedno navigiramo na rezime (read-only ekran).
     }
-    console.log("[finish] -> summary");
     nav(`/vezbac/trening/zavrsen/${sessionId}`, { replace: true });
   }, [sessionId, nav]);
 
@@ -542,6 +552,31 @@ const ActiveWorkout = () => {
       }
 
       sawWorkoutRef.current = true;
+
+      // Watch presence + HR i iz POLL-a (HTTP), NE samo iz realtime-a. Realtime WebSocket
+      // posle pada neta zna da ostane mrtav (resubscribe ne pomaze) -> presence se zamrzne ->
+      // trajni lazni "IZGUBLJEN SIGNAL" lock dok app nije ubijena. Poll (athlete_poll_state)
+      // se pouzdano oporavi posle neta i odrzava presence/HR svake ~2s. SOLO: watch_last_hr_at
+      // je null -> signal se nikad ne postavi -> watchWasPresent=false -> nikad lock.
+      //
+      // VAZNO: poll vraca TEKUCU vrednost svaki put (za razliku od realtime-a koji fire-uje
+      // samo na PROMENE). Zato prva opservacija = SAMO baseline (kao initial-read live-state
+      // efekta) - ne postavlja signal, da sat koji je otisao PRE otvaranja ne deluje svez i ne
+      // okine lazni lock posle 15s. Signal/presence se postavlja tek na NAREDNU promenu stringa.
+      // Recovery posle pada neta nije pogodjen: tada je lastSeenWatchTsRef vec popunjen, pa nov
+      // string odmah osvezi svezinu.
+      const pollWatchRaw = workout?.watch_last_hr_at ?? null;
+      if (pollWatchRaw) {
+        if (lastSeenWatchTsRef.current == null) {
+          lastSeenWatchTsRef.current = pollWatchRaw;          // baseline only, bez signala
+        } else if (pollWatchRaw !== lastSeenWatchTsRef.current) {
+          lastSeenWatchTsRef.current = pollWatchRaw;
+          watchSignalLocalRef.current = Date.now();
+          setWatchEverPresent(true);
+        }
+      }
+      const pollHr = workout?.current_hr;
+      if (typeof pollHr === "number" && pollHr > 0) setWatchHr(pollHr);
 
       const serverRestMs =
         typeof workout.rest_ends_at_ms === "number" ? workout.rest_ends_at_ms : null;
@@ -589,12 +624,20 @@ const ActiveWorkout = () => {
       }
     };
 
+    pollRef.current = () => { void poll(); };   // reconnect/online forsira odmah jedan poll
     poll();
     const id = setInterval(poll, 2000);
     const onVis = () => {
       // Na povratak u foreground: prvo proveri da li je sesija zatvorena (npr.
       // zavrsena na satu dok je telefon spavao) -> rezime; pa onda poll.
       if (document.visibilityState === "visible") {
+        // GRACE: dok je app bio u pozadini, realtime/poll su pauzirani -> watch signal
+        // zastari -> posle 15s lazni watch-lost lock. Osvezi svezinu SAMO ako je sat vec
+        // bio prisutan (NE postavljaj na SOLO - to bi lazno reklo "sat prisutan"). Sledeci
+        // pravi watch_last_hr_at potvrdjuje; ako sata stvarno nema, posle 15s opet lock.
+        if (watchSignalLocalRef.current != null) {
+          watchSignalLocalRef.current = Date.now();
+        }
         void navIfSessionDone(sessionIdRef.current).then((done) => {
           if (!done) poll();
         });
@@ -604,6 +647,7 @@ const ActiveWorkout = () => {
 
     return () => {
       stopped = true;
+      pollRef.current = null;
       clearInterval(id);
       document.removeEventListener("visibilitychange", onVis);
     };
@@ -630,28 +674,38 @@ const ActiveWorkout = () => {
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [sessionId, finished, goToSummary]);
+  }, [sessionId, finished, goToSummary, realtimeEpoch]);
 
   /* ------------------------- FAZA 1: watch presence (live_state) ------------------------- */
-  // Citamo watch_last_hr_at iz workout_live_state. Realtime daje svez otisak svakih ~5s dok
-  // sat radi; kad sat ode offline NEMA vise dogadjaja (vrednost stane) -> lokalni `now` tik
-  // (elapsed clock, 1s) racuna (now - watchLastHrAt) i zakljucava posle FRESH praga.
+  // Signal "sat se javio" = PROMENA stringa watch_last_hr_at (samo satov HR keep-alive ga
+  // menja). Svezinu merimo telefonskim Date.now() od te promene - bez parsiranja serverskog
+  // vremena (WKWebView/clock skew bi davao lazni lock). Kad sat ode offline, string vise ne
+  // menja -> watchSignalLocalRef stari -> posle FRESH praga lock.
   useEffect(() => {
     if (!sessionId || finished) return;
     let cancelled = false;
     const apply = (row: any) => {
-      const ts = row?.watch_last_hr_at ? new Date(row.watch_last_hr_at).getTime() : null;
-      // Postavljamo SAMO kad ima vrednost - da update bez te kolone (npr pozicija) ne nuluje.
-      if (ts != null && !cancelled) setWatchLastHrAt(ts);
+      if (cancelled) return;
+      const raw = row?.watch_last_hr_at ?? null;
+      if (raw && raw !== lastSeenWatchTsRef.current) {
+        lastSeenWatchTsRef.current = raw;
+        watchSignalLocalRef.current = Date.now();   // telefonski sat = pouzdana svezina
+        setWatchEverPresent(true);                   // reaktivno: lock/baner racunaju "sat prisutan"
+      }
+      // Zivi HR sa sata stize INSTANT preko realtime-a (ne ceka 2s poll). Guard >0 da
+      // nula/null ne pregazi prikaz.
+      const chr = row?.current_hr;
+      if (typeof chr === "number" && chr > 0) setWatchHr(chr);
     };
-    // Pocetni read (sat je mozda bio aktivan pre nego sto se telefon pretplatio).
+    // Pocetni read: zapamti SAMO poslednju vidjenu vrednost (NE postavljaj signal, da prvi
+    // PRAVI realtime postavi svezinu - inace bi sat koji je otisao pre otvaranja delovao svez).
     (async () => {
       const { data } = await supabase
         .from("workout_live_state")
         .select("watch_last_hr_at")
         .eq("session_log_id", sessionId)
         .maybeSingle();
-      apply(data);
+      if (!cancelled) lastSeenWatchTsRef.current = (data as any)?.watch_last_hr_at ?? null;
     })();
     const channel = supabase
       .channel(`live-state:${sessionId}`)
@@ -662,14 +716,17 @@ const ActiveWorkout = () => {
       )
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(channel); };
-  }, [sessionId, finished]);
+  }, [sessionId, finished, realtimeEpoch]);
 
-  // Sinhroni lockedRef (za handler guard) - racuna se na svaki `now` tik (1s).
-  // SOLO (watchLastHrAt == null) -> NIKAD zakljucano.
+  // Sinhroni lockedRef (za handler guard) - racuna se na `now` tik (1s) I na promenu mreze.
+  // Lock kad: (a) sat nestao (tisina > FRESH) ILI (b) telefon offline a sat prisutan (sat vozi
+  // trening sa buffer-om). SOLO (watchEverPresent == false) -> mreza NIKAD ne zakljucava.
   useEffect(() => {
-    const stale = watchLastHrAt != null && now.getTime() - watchLastHrAt > WATCH_FRESH_MS;
-    controlsLockedRef.current = stale && !phoneTakeover;
-  }, [now, watchLastHrAt, phoneTakeover]);
+    const sig = watchSignalLocalRef.current;
+    const stale = sig != null && Date.now() - sig > WATCH_FRESH_MS;
+    const offlineWithWatch = !isOnline && watchEverPresent;
+    controlsLockedRef.current = (stale || offlineWithWatch) && !phoneTakeover;
+  }, [now, phoneTakeover, isOnline, watchEverPresent]);
 
   /* ------------------------- Heartbeat: athlete_heartbeat (samo HR + svežina) ------------------------- */
   // Dira SAMO last_heartbeat i current_hr — nikad poziciju. Drži živi red svežim
@@ -696,6 +753,21 @@ const ActiveWorkout = () => {
     };
   }, [sessionId, liveHr, finished]);
 
+  // RPC greske: kad je telefon offline (ocekivano), tiho progutaj sirovu
+  // "TypeError: Load failed"/"Failed to fetch" (ruzna i beskorisna korisniku); kad je
+  // online, prikazi pravu poruku. Telefon+sat slucaj ionako ne stigne dovde (lock guard).
+  const notifyRpcError = useCallback((error: { message?: string } | null | undefined) => {
+    if (!error) return;
+    const msg = error.message ?? "";
+    const looksOffline =
+      !isOnlineRef.current ||
+      /load failed|failed to fetch|networkerror|network connection was lost/i.test(msg);
+    if (looksOffline) {
+      return;
+    }
+    toast.error(msg || "Greška. Pokušaj ponovo.");
+  }, []);
+
   /* ------------------------- Helper: produži odmor (+30 kroz motor) ------------------------- */
   const handleAddRest = useCallback(
     async (extraSeconds: number) => {
@@ -715,9 +787,9 @@ const ActiveWorkout = () => {
         p_seconds: extraSeconds,
       } as any);
       lastActionAtRef.current = Date.now();
-      if (error) toast.error(error.message);
+      if (error) notifyRpcError(error);
     },
-    [sessionId]
+    [sessionId, notifyRpcError]
   );
 
   /* ------------------------- Handlers (dugmad -> engine RPC, optimistički prikaz) ------------------------- */
@@ -760,7 +832,7 @@ const ActiveWorkout = () => {
           p_rpe: data.rpe,
         } as any);
         if (error) {
-          toast.error(error.message);
+          notifyRpcError(error);
           finishedRef.current = false;
           setFinished(false);
           setFinishing(false);
@@ -798,9 +870,9 @@ const ActiveWorkout = () => {
         p_rpe: data.rpe,
       } as any);
       lastActionAtRef.current = Date.now();
-      if (error) toast.error(error.message);
+      if (error) notifyRpcError(error);
     },
-    [sessionId, day, finalizeAndNav, markFinished]
+    [sessionId, day, finalizeAndNav, markFinished, notifyRpcError]
   );
 
   const skipRest = useCallback(async () => {
@@ -813,8 +885,8 @@ const ActiveWorkout = () => {
       p_session_id: sessionId,
     } as any);
     lastActionAtRef.current = Date.now();
-    if (error) toast.error(error.message);
-  }, [sessionId]);
+    if (error) notifyRpcError(error);
+  }, [sessionId, notifyRpcError]);
 
   const finishWorkout = useCallback(async () => {
     if (!sessionId || finishing || finishedRef.current) return;
@@ -826,7 +898,7 @@ const ActiveWorkout = () => {
       p_session_id: sessionId,
     } as any);
     if (error) {
-      toast.error(error.message);
+      notifyRpcError(error);
       finishedRef.current = false;
       setFinished(false);
       setFinishing(false);
@@ -834,7 +906,7 @@ const ActiveWorkout = () => {
     }
     await finalizeAndNav();
     setFinishing(false);
-  }, [sessionId, finishing, finalizeAndNav, markFinished]);
+  }, [sessionId, finishing, finalizeAndNav, markFinished, notifyRpcError]);
 
   const confirmCancel = async () => {
     markFinished();
@@ -936,21 +1008,38 @@ const ActiveWorkout = () => {
   const setsForCurrent = current.sets;
   const setsList = Array.from({ length: setsForCurrent }, (_, i) => i + 1);
   const progressPct = totalSetsAll > 0 ? (completedTotal / totalSetsAll) * 100 : 0;
-  const hr = liveHr ?? pos.currentHr;
+  // Sat prisutan: realtime current_hr sa sata (watchHr) je najsvezi (instant), poll
+  // (pos.currentHr) fallback. SOLO: telefonov HealthKit (liveHr) direktno, kao do sad.
+  const hr = watchEverPresent
+    ? (watchHr ?? pos.currentHr ?? liveHr)
+    : (liveHr ?? pos.currentHr);
   const isResting = pos.state === "rest" && pos.restEndsAtMs != null;
   const restSubtitle =
     setNumber <= 1
       ? `Sledeća vežba: ${current.exercise.name_en?.trim() || current.exercise.name}`
       : `Sledeća serija ${setNumber} od ${setsForCurrent}`;
 
-  // FAZA 1 - watch presence stanje (SOLO: watchLastHrAt null -> sve false, nikad lock).
-  const watchWasPresent = watchLastHrAt != null;
-  const watchSilenceMs = watchWasPresent ? now.getTime() - (watchLastHrAt as number) : 0;
+  // FAZA 1 - watch presence (SOLO: signal nikad postavljen -> sve false, nikad lock).
+  // Svezina = telefonski Date.now() od poslednje PROMENE watch_last_hr_at (re-render ide
+  // preko `now` 1s tika). Bez parsiranja serverskog vremena.
+  const watchWasPresent = watchEverPresent;
+  const watchSilenceMs = watchWasPresent ? Date.now() - (watchSignalLocalRef.current as number) : 0;
   const watchStale = watchWasPresent && watchSilenceMs > WATCH_FRESH_MS;
-  const isWatchLost = watchStale && !phoneTakeover;
-  const canEscapeWatch = watchStale && watchSilenceMs > WATCH_ESCAPE_MS && !phoneTakeover;
+  const phoneOffline = !isOnline;
+  // INSTANT lock: telefon padne sa mreze A sat je prisutan -> sat vozi trening (ima offline
+  // buffer), telefon ne sme da menja sesiju. Ne ceka 15s watch-stale rupu.
+  const offlineWithWatch = phoneOffline && watchWasPresent;
+  // Pravi gubitak sata: tisina > 15s DOK je telefon ONLINE. (Offline tisinu pokriva
+  // offlineWithWatch i prikazuje tacnu poruku - telefon je taj bez veze, ne sat.)
+  const isWatchLost = watchStale && !phoneOffline && !phoneTakeover;
+  // Escape "Nastavi na telefonu" SAMO za pravi gubitak sata (NE za cist offline - bez mreze
+  // telefon ionako ne moze da vozi trening).
+  const canEscapeWatch = isWatchLost && watchSilenceMs > WATCH_ESCAPE_MS;
   const showMildTakeover = watchStale && phoneTakeover;
-  const controlsLocked = isWatchLost;
+  // Baner "Telefon nije na vezi. Trening ide preko sata." (lock, bez escape).
+  const showOfflineWithWatch = offlineWithWatch && !phoneTakeover;
+  // SOLO (watchWasPresent == false): mreza NIKAD ne zakljucava (telefon radi/ne radi sam).
+  const controlsLocked = !phoneTakeover && (isWatchLost || offlineWithWatch);
 
   return (
     <div className="h-[100dvh] overflow-y-auto bg-background">
@@ -999,7 +1088,9 @@ const ActiveWorkout = () => {
           </div>
         </div>
 
-        {!isOnline && (
+        {/* SOLO offline (bez sata): trening se ne cuva dok se veza ne vrati. Telefon+sat
+            slucaj ima svoj baner (showOfflineWithWatch) - tamo trening ide preko sata. */}
+        {phoneOffline && !showOfflineWithWatch && (
           <div className="px-4 pt-3">
             <div
               className="rounded-2xl border border-warning/40 bg-warning-soft text-warning-soft-foreground px-4 py-3 flex items-start gap-3"
@@ -1174,6 +1265,31 @@ const ActiveWorkout = () => {
           onAddSeconds={handleAddRest}
           disabled={controlsLocked}
         />
+      )}
+
+      {/* Telefon offline a sat prisutan: sat vozi trening (offline buffer), telefon je
+          zakljucan. Tacna poruka (telefon je bez veze, ne sat). Bez escape - bez mreze
+          telefon ionako ne moze da vozi. Iznad svega (z-60), kao i watch-lost baner. */}
+      {showOfflineWithWatch && (
+        <div
+          className="fixed top-0 left-0 right-0 z-[60] px-4"
+          style={{ paddingTop: "calc(max(env(safe-area-inset-top), 20px) + 8px)" }}
+        >
+          <div className="mx-auto w-full max-w-[440px]">
+            <div
+              className="rounded-2xl border border-warning/40 bg-warning-soft text-warning-soft-foreground px-4 py-3 shadow-xs"
+              role="status"
+              aria-live="polite"
+            >
+              <div className="flex items-start gap-3">
+                <WifiOff className="h-4 w-4 mt-0.5 shrink-0" strokeWidth={2.4} />
+                <div className="text-[13px] font-semibold leading-snug">
+                  Telefon nije na vezi. Trening ide preko sata.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* FAZA 1: izgubljen sat -> zakljucano. Baner iznad svega (z-60), i preko RestTimer-a (z-50). */}
