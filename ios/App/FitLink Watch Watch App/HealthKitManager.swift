@@ -21,8 +21,13 @@ final class HealthKitManager: NSObject, ObservableObject {
     
     private var workoutSession: HKWorkoutSession?
     private var workoutBuilder: HKLiveWorkoutBuilder?
-    
+
     var onHeartRateUpdate: ((Int) -> Void)?
+    // Periodicni keep-alive (svakih 5s dok je sesija aktivna, uklj. rest). Nezavisan od HK
+    // HR uzoraka (koji u mirovanju cute 15-30s). ContentView ovde salje poslednji HR serveru.
+    var onKeepAlive: (() -> Void)?
+    private var keepAliveTimer: Timer?
+    private var keepAliveGeneration = 0   // generation guard: samo tekuca generacija sme da tika
     
     // MARK: - Authorization
     
@@ -103,17 +108,49 @@ final class HealthKitManager: NSObject, ObservableObject {
             }
             
             isWorkoutActive = true
-            
+
+            // Periodicni keep-alive (5s) dok je sesija aktivna - nezavisan od HK uzoraka,
+            // pa watch_last_hr_at ostaje svez i tokom mirovanja (rest).
+            startKeepAliveTimer()
+
         } catch {
             print("HealthKit: failed to start workout session: \(error.localizedDescription)")
         }
+    }
+
+    private func startKeepAliveTimer() {
+        keepAliveGeneration += 1
+        let gen = keepAliveGeneration
+        keepAliveTimer?.invalidate()
+        keepAliveTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { _ in
+            // Timer closure je nonisolated; skoci na main actor (klasa je @MainActor).
+            Task { @MainActor in
+                // Generation guard: zakasneli/stari tajmer ne sme da tika za novu sesiju.
+                guard HealthKitManager.shared.keepAliveGeneration == gen else { return }
+                HealthKitManager.shared.onKeepAlive?()
+            }
+        }
+    }
+
+    private func stopKeepAliveTimer() {
+        keepAliveTimer?.invalidate()
+        keepAliveTimer = nil
+    }
+
+    // SINHRONI lifecycle stop: ugasi keep-alive + deaktiviraj ODMAH (PRE async finalize), da
+    // nova sesija odmah moze da startuje HK i da je zakasneli finalize ne pregazi.
+    func endLifecycleSync() {
+        keepAliveGeneration += 1   // ponisti tekucu generaciju (stari tajmer vise ne tika)
+        stopKeepAliveTimer()
+        isWorkoutActive = false
     }
     
     // MARK: - Stop Workout Session
     
     func stopWorkoutSession() {
         guard isWorkoutActive else { return }
-        
+
+        stopKeepAliveTimer()
         workoutSession?.end()
 
         let builder = workoutBuilder
@@ -155,7 +192,10 @@ final class HealthKitManager: NSObject, ObservableObject {
         let session = workoutSession
         workoutSession = nil
 
-        if let session = session, isWorkoutActive {
+        // NE diramo keepAliveTimer/isWorkoutActive ovde (lifecycle se gasi SINHRONO u
+        // endLifecycleSync iz handleWorkoutDeleted) - inace bi zakasneli async finalize ugasio
+        // tajmer NOVE sesije (bug 2). finalizeAndStop radi samo HK finalize + citanje metrika.
+        if let session = session {
             session.end()
         }
 
@@ -196,8 +236,7 @@ final class HealthKitManager: NSObject, ObservableObject {
             }
         }
 
-        // Tek SAD resetuj agregate (posle citanja).
-        isWorkoutActive = false
+        // Resetuj samo agregate (lifecycle: isWorkoutActive je vec sinhrono ugasen).
         currentHeartRate = 0
         averageHeartRate = 0
         maxHeartRate = 0

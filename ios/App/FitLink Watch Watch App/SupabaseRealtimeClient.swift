@@ -6,6 +6,7 @@ struct WorkoutLiveStateRow: Decodable {
     let athleteId: String?
     let currentExerciseName: String?
     let currentSetNumber: Int?
+    let currentExerciseIdx: Int?
     let totalSets: Int?
     let currentState: String?
     let currentHr: Int?
@@ -19,6 +20,7 @@ struct WorkoutLiveStateRow: Decodable {
         case athleteId = "athlete_id"
         case currentExerciseName = "current_exercise_name"
         case currentSetNumber = "current_set_number"
+        case currentExerciseIdx = "current_exercise_idx"
         case totalSets = "total_sets"
         case currentState = "current_state"
         case currentHr = "current_hr"
@@ -64,6 +66,7 @@ private struct PolledWorkout: Decodable {
     let sessionId: String?
     let currentExerciseName: String?
     let currentSetNumber: Int?
+    let currentExerciseIdx: Int?
     let totalSets: Int?
     let currentState: String?
     let currentHr: Int?
@@ -84,6 +87,7 @@ private struct PolledWorkout: Decodable {
         case sessionId = "session_id"
         case currentExerciseName = "current_exercise_name"
         case currentSetNumber = "current_set_number"
+        case currentExerciseIdx = "current_exercise_idx"
         case totalSets = "total_sets"
         case currentState = "current_state"
         case currentHr = "current_hr"
@@ -137,7 +141,8 @@ final class SupabaseRealtimeClient: ObservableObject {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 8
         config.timeoutIntervalForResource = 12
-        config.waitsForConnectivity = true
+        // false: bez veze poll padne ODMAH (umesto da visi do 12s); sledeci 2s tik proba.
+        config.waitsForConnectivity = false
         return URLSession(configuration: config)
     }()
     
@@ -162,19 +167,31 @@ final class SupabaseRealtimeClient: ObservableObject {
     }
     
     private func startPolling() {
-        pollTimer?.invalidate()
         consecutiveErrors = 0
-        
         // Prvi poll odmah
         Task { @MainActor in
             await pollOnce()
         }
-        
-        // Setup periodicno
-        pollTimer = Timer.scheduledTimer(withTimeInterval: pollInterval, repeats: true) { [weak self] _ in
+        // Periodicno na 2s (fresh start resetuje eventualni backoff).
+        restartPolling(interval: 2.0)
+    }
+
+    // Timer ne menja interval dinamicki - invalidate + nov sa datim intervalom.
+    private func restartPolling(interval: TimeInterval) {
+        pollInterval = interval
+        pollTimer?.invalidate()
+        pollTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 await self?.pollOnce()
             }
+        }
+    }
+
+    // Reconnect/foreground: ODMAH jedan poll + reset na 2s (ne cekaj sledeci tik/backoff).
+    func forceRefresh() {
+        restartPolling(interval: 2.0)
+        Task { @MainActor in
+            await pollOnce()
         }
     }
     
@@ -195,7 +212,11 @@ final class SupabaseRealtimeClient: ObservableObject {
                 print("Polling: recovered after \(consecutiveErrors) errors")
                 consecutiveErrors = 0
             }
-            
+            // BACKOFF RESET: prvi uspesan poll posle backoff-a vrati interval na 2s ODMAH.
+            if pollInterval != 2.0 {
+                restartPolling(interval: 2.0)
+            }
+
             isConnected = true
             
             guard response.success else {
@@ -245,16 +266,8 @@ final class SupabaseRealtimeClient: ObservableObject {
             
             // Posle 5 gresaka, povecaj interval (rate limit / spore mreze)
             if consecutiveErrors >= 5 && pollInterval < 10 {
-                pollInterval = min(pollInterval * 1.5, 10.0)
+                restartPolling(interval: min(pollInterval * 1.5, 10.0))
                 print("Polling: backing off to \(pollInterval)s")
-                
-                // Restart timer sa novim interval-om
-                pollTimer?.invalidate()
-                pollTimer = Timer.scheduledTimer(withTimeInterval: pollInterval, repeats: true) { [weak self] _ in
-                    Task { @MainActor in
-                        await self?.pollOnce()
-                    }
-                }
             }
         }
     }
@@ -285,6 +298,7 @@ final class SupabaseRealtimeClient: ObservableObject {
             athleteId: nil,
             currentExerciseName: exerciseName,
             currentSetNumber: setNumber,
+            currentExerciseIdx: workout.currentExerciseIdx,
             totalSets: totalSets,
             currentState: state,
             currentHr: workout.currentHr,

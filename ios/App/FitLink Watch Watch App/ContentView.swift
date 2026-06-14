@@ -44,6 +44,19 @@ extension Font {
     }
 }
 
+// KORAK B: rezultat lokalnog modela pozicije (ista logika kao server watch_compute_position).
+struct LocalPosition {
+    let complete: Bool
+    let apeId: String
+    let exerciseIdx: Int
+    let exerciseName: String
+    let setNumber: Int
+    let totalSets: Int
+    let restSeconds: Int
+    let plannedReps: Int?
+    let plannedWeight: Double?
+}
+
 struct ContentView: View {
     enum AppState {
         case idle
@@ -77,6 +90,14 @@ struct ContentView: View {
     @State private var offlineDebounceToken: Int = 0
     @State private var currentWorkout: ActiveWorkout = .mock
     @State private var heartRate: Int = 0
+
+    // KORAK B - lokalni model treninga (plan + doneCount po vezbi). Prazno = nema plana
+    // -> fallback na server-driven prikaz (kao do sad). Server ostaje autoritet (sync).
+    @State private var planExercises: [PlanExercise] = []
+    @State private var doneCounts: [String: Int] = [:]
+    @State private var planSessionId: String? = nil
+    // KORAK C: guard da replay reda set-akcija ide jedan-po-jedan (FIFO), bez paralele.
+    @State private var isFlushingActions = false
     // Sloj 0: poslednji poznati session_id iz poll-a/realtime-a. Salje se uz svaki
     // HR upis da server odrzi tacno tu sesiju zivom (keep-alive).
     @State private var currentSessionId: String? = nil
@@ -120,7 +141,7 @@ struct ContentView: View {
                 // Swipe: glavni (dense) ekran + bogat zonski ekran levo/desno.
                 TabView {
                     ActiveWorkoutView(
-                        workout: currentWorkout,
+                        workout: displayedWorkout,
                         heartRate: $heartRate,
                         startedAtMs: workoutStartedAtMs,
                         serverClockOffset: serverClockOffset,
@@ -136,9 +157,9 @@ struct ContentView: View {
                     RestTimerView(
                         restEndsAt: restEndsAt,
                         serverClockOffset: serverClockOffset,
-                        nextExerciseName: currentWorkout.exerciseName,
-                        nextSet: currentWorkout.currentSet,
-                        totalSets: currentWorkout.totalSets,
+                        nextExerciseName: displayedWorkout.exerciseName,
+                        nextSet: displayedWorkout.currentSet,
+                        totalSets: displayedWorkout.totalSets,
                         heartRate: $heartRate,
                         onComplete: handleRestComplete,
                         onSkip: handleRestSkip,
@@ -164,12 +185,16 @@ struct ContentView: View {
             }
         }
         .task {
+            // Perzistentni flush-pump okida flushQueue dok god ima baferovanih akcija.
+            FlushPump.shared.onTick = { flushQueue() }
             lastConnectedToken = effectiveToken
             // Handshake (pull): potvrdi ko je trenutno ulogovan na telefonu.
             phoneSession.requestCurrentToken()
             await initializeConnection()
-            // Isporuci eventualne offline metrike sa proslog treninga (Problem A).
+            // Isporuci eventualne offline metrike (Problem A) i set-akcije (KORAK C) sa
+            // proslog treninga - ukljucujuci osirotele redove stare sesije.
             await flushPendingMetrics()
+            flushQueue()
         }
         .onChange(of: scenePhase) { newPhase in
             // Kad sat postane aktivan, ponovo povuci aktuelni identitet.
@@ -177,13 +202,18 @@ struct ContentView: View {
                 phoneSession.requestCurrentToken()
                 // Povratak u prvi plan = vezbac obicno blizu telefona, veza obnovljena.
                 Task { await flushPendingMetrics() }
+                flushQueue()   // KORAK C: odsviraj baferovane set-akcije
             }
         }
         .onChange(of: network.isOnline) { online in
-            // NWPath se NE koristi za baner (nepouzdan na watchOS), samo kao OKIDAC da
-            // odmah flush-ujemo pending metrike kad put izgleda da se vratio. Bezbedno:
-            // ako je lazno, RPC padne i payload ostaje u redu.
-            if online { Task { await flushPendingMetrics() } }
+            // NWPath se NE koristi za baner (nepouzdan na watchOS), samo kao OKIDAC na reconnect.
+            if online {
+                // ODMAH forsiraj poll (reset interval na 2s) + identitet -> brzo uskladi poziciju.
+                realtimeClient.forceRefresh()
+                phoneSession.requestCurrentToken()
+                Task { await flushPendingMetrics() }
+                flushQueue()
+            }
         }
         .onChange(of: phoneSession.pairingToken) { _ in
             // Token primljen sa iPhone-a (login, refresh) ili obrisan (logout).
@@ -421,7 +451,7 @@ struct ContentView: View {
     // networkError (nema interneta / timeout) -> offline. Bilo koji ODGOVOR sa servera
     // (sessionEnded/httpError/invalidToken/decoding) znaci da je server dosegnut -> online.
     private func noteRpcError(_ error: Error) {
-        if let e = error as? SupabaseError, case .networkError = e {
+        if let e = error as? SupabaseError, case .networkError(let detail) = e {
             setConnectionOK(false)
         } else {
             setConnectionOK(true)
@@ -986,6 +1016,7 @@ struct ContentView: View {
                     sessionId: serverWorkout.sessionId,
                     exerciseName: serverWorkout.currentExerciseName,
                     setNumber: serverWorkout.currentSetNumber,
+                    exerciseIdx: serverWorkout.currentExerciseIdx,
                     totalSets: serverWorkout.totalSets,
                     state: serverWorkout.currentState,
                     restEndsAtMs: serverWorkout.restEndsAtMs,
@@ -1052,13 +1083,21 @@ struct ContentView: View {
         // handleFinishWorkout. Token/session uhvaceni sad jer cleanup ispod ih nil-uje.
         // HK sesiju gasi finalizeAndStop (NE stopHealthKitWorkout) da agregati ne budu
         // resetovani pre citanja.
+        // BUG 2 fix: sinhrono ugasi keep-alive + isWorkoutActive ODMAH (PRE async finalize),
+        // da nova sesija odmah moze da startuje HK i da je zakasneli finalize ne pregazi.
+        healthKit.endLifecycleSync()
+
         let token = effectiveToken
         let sessionId = currentSessionId
         Task { await finalizeAndReport(token: token, sessionId: sessionId) }
 
         healthKit.onHeartRateUpdate = nil
+        healthKit.onKeepAlive = nil
         heartRate = 0
         currentSessionId = nil
+
+        // Osiroteli red stare sesije (offline akcije) - flush-uj SVE redove (bug 1).
+        flushQueue()
 
         WKInterfaceDevice.current().play(.success)
         currentState = .completed
@@ -1096,6 +1135,7 @@ struct ContentView: View {
             sessionId: row.sessionLogId,
             exerciseName: exerciseName,
             setNumber: setNumber,
+            exerciseIdx: row.currentExerciseIdx,
             totalSets: totalSets,
             state: state,
             restEndsAtMs: row.restEndsAtMs,
@@ -1103,10 +1143,186 @@ struct ContentView: View {
         )
     }
 
+    // MARK: - KORAK B: lokalni model treninga (server ostaje autoritet)
+
+    // Ista logika kao server watch_compute_position: prva vezba (po exercise_idx/position)
+    // gde doneCount < sets; set_number = doneCount + 1; ako su sve done -> complete.
+    private func computeLocalPosition() -> LocalPosition? {
+        guard !planExercises.isEmpty else { return nil }
+        let ordered = planExercises.sorted {
+            ($0.exerciseIdx, $0.position) < ($1.exerciseIdx, $1.position)
+        }
+        for ex in ordered {
+            let done = doneCounts[ex.apeId] ?? ex.doneCount
+            if done < ex.sets {
+                return LocalPosition(
+                    complete: false,
+                    apeId: ex.apeId,
+                    exerciseIdx: ex.exerciseIdx,
+                    exerciseName: ex.exerciseName,
+                    setNumber: done + 1,
+                    totalSets: ex.sets,
+                    restSeconds: ex.restSeconds,
+                    plannedReps: ex.plannedReps,
+                    plannedWeight: ex.plannedWeight
+                )
+            }
+        }
+        return LocalPosition(complete: true, apeId: "", exerciseIdx: 0, exerciseName: "",
+                             setNumber: 0, totalSets: 0, restSeconds: 0,
+                             plannedReps: nil, plannedWeight: nil)
+    }
+
+    // Pozicija koju UI prikazuje. Renderuje iz LOKALNOG modela SAMO kad se slaze sa serverom
+    // (isti naziv vezbe + set) - garancija da je ponasanje identicno kao sad. Inace fallback
+    // na server-driven currentWorkout. (Korak C ce dozvoliti da lokalni vodi pre servera.)
+    // KORAK C: lokalni model je IZVOR prikaza (optimisticki advance pomera UI odmah).
+    // Sinhronizuje se sa serverom kad je red prazan -> online nema razlike. Nema plana
+    // (SOLO/offline bez kesa) -> server-driven fallback.
+    private var displayedWorkout: ActiveWorkout {
+        if let pos = computeLocalPosition(), !pos.complete {
+            return ActiveWorkout(
+                workoutId: currentWorkout.workoutId,
+                exerciseName: pos.exerciseName,
+                exerciseNameEn: pos.exerciseName,
+                currentSet: pos.setNumber,
+                totalSets: pos.totalSets,
+                targetReps: pos.plannedReps ?? currentWorkout.targetReps,
+                targetWeight: pos.plannedWeight ?? currentWorkout.targetWeight,
+                restSeconds: pos.restSeconds > 0 ? pos.restSeconds : currentWorkout.restSeconds
+            )
+        }
+        return currentWorkout
+    }
+
+    // Ucitaj plan jednom po sesiji. Offline / nema RPC-a -> probaj iz UserDefaults; ako ni to
+    // -> ostani server-driven (planExercises prazno). Ne rusi.
+    private func loadWorkoutPlanIfNeeded(_ sessionId: String) {
+        if planSessionId == sessionId { return }
+        planSessionId = sessionId   // jednom po sesiji (i na neuspeh -> server-driven fallback)
+        guard let token = effectiveToken else { return }
+        Task {
+            do {
+                if let plan = try await SupabaseClient.shared.getWorkoutPlan(token: token, sessionId: sessionId) {
+                    await MainActor.run { applyPlan(plan, sessionId: sessionId) }
+                    return
+                }
+            } catch {
+                print("Watch plan load error: \(error.localizedDescription)")
+            }
+            await MainActor.run { loadPersistedPlan(sessionId) }
+        }
+    }
+
+    private func applyPlan(_ plan: WorkoutPlan, sessionId: String) {
+        planExercises = plan.exercises
+        var counts: [String: Int] = [:]
+        for ex in plan.exercises { counts[ex.apeId] = ex.doneCount }
+        doneCounts = counts
+        planSessionId = sessionId
+        // Uskladi sa trenutnom serverskom pozicijom (ako je vec stigla preko realtime-a).
+        syncLocalToServer(exerciseName: currentWorkout.exerciseName, setNumber: currentWorkout.currentSet)
+        persistPlan()
+        print("Watch plan loaded: \(plan.exercises.count) vezbi [session \(sessionId)]")
+    }
+
+    private func loadPersistedPlan(_ sessionId: String) {
+        guard let p = WorkoutPlanStore.shared.load(sessionId: sessionId) else { return }
+        planExercises = p.exercises
+        doneCounts = p.doneCounts
+        planSessionId = sessionId
+        print("Watch plan iz kesa: \(p.exercises.count) vezbi [session \(sessionId)]")
+    }
+
+    private func persistPlan() {
+        guard let sid = planSessionId, !planExercises.isEmpty else { return }
+        WorkoutPlanStore.shared.save(PersistedPlan(sessionId: sid, exercises: planExercises, doneCounts: doneCounts))
+    }
+
+    // SERVER JE AUTORITET: izvedi doneCount-ove iz serverove pozicije (linearno: vezbe pre
+    // trenutne = pune, trenutna = setNumber-1, posle = 0). Ako naziv nije u planu, ne diraj
+    // (displayedWorkout tada padne na server-driven prikaz).
+    private func syncLocalToServer(exerciseName: String, setNumber: Int) {
+        guard !planExercises.isEmpty else { return }
+        let ordered = planExercises.sorted {
+            ($0.exerciseIdx, $0.position) < ($1.exerciseIdx, $1.position)
+        }
+        guard let i = ordered.firstIndex(where: { $0.exerciseName == exerciseName }) else { return }
+        var counts: [String: Int] = [:]
+        for (j, ex) in ordered.enumerated() {
+            if j < i { counts[ex.apeId] = ex.sets }
+            else if j == i { counts[ex.apeId] = max(0, setNumber - 1) }
+            else { counts[ex.apeId] = 0 }
+        }
+        if counts != doneCounts {
+            doneCounts = counts
+            persistPlan()
+        }
+    }
+
+    // KORAK C: replay reda set-akcija STRIKTNO FIFO, jedna po jedna (cekaj uspeh pre sledece),
+    // da server-racunate-pozicije padnu tacno. Mrezna greska -> zadrzi + retry; ostalo -> ukloni
+    // (da se red ne zaglavi). ON CONFLICT DO NOTHING na serveru pokriva slucajne duple.
+    // KORAK C: flush SVIH perzistovanih redova (tekuca + OSIROTELE stare sesije posle offline
+    // zavrsetka), svaki po SVOM sessionId, STRIKTNO FIFO, jedna po jedna. Tako se stara sesija
+    // finalizuje na serveru i kad si vec presao na nov trening (bug 1).
+    private func flushQueue() {
+        // Perzistentni pump: dok god ima neki neprazan red, retrira ~3s NEZAVISNO od toga da
+        // li je trening aktivan (keep-alive stane na kraju treninga). Idempotentno + sam staje
+        // kad se redovi isprazne. Svaki enqueue zove flushQueue -> ovde se pump (re)startuje.
+        FlushPump.shared.start()
+        if isFlushingActions { return }
+        let sids = PendingActionStore.shared.allSessionIds()
+        guard !sids.isEmpty else { return }
+        isFlushingActions = true
+        Task {
+            outer: for sid in sids {
+                while true {
+                    let pending = PendingActionStore.shared.all(sessionId: sid)
+                    guard let action = pending.first else { break }
+                    let remove = await sendAction(action)
+                    if remove {
+                        PendingActionStore.shared.remove(sessionId: sid, id: action.id)
+                    } else {
+                        break outer   // mrezna greska -> stani sve, retry na sledeci okidac
+                    }
+                }
+            }
+            await MainActor.run { isFlushingActions = false }
+        }
+    }
+
+    // Posalji JEDNU akciju. true = ukloni iz reda; false = zadrzi (samo mrezna greska).
+    private func sendAction(_ action: PendingAction) async -> Bool {
+        guard let token = effectiveToken else { return false }   // bez tokena -> zadrzi
+        do {
+            switch action.type {
+            case .completeSet:
+                _ = try await SupabaseClient.shared.engineCompleteSet(
+                    token: token, sessionId: action.sessionId,
+                    reps: action.reps, weight: action.weight, rpe: action.rpe)
+            case .finish:
+                _ = try await SupabaseClient.shared.engineFinishWorkout(
+                    token: token, sessionId: action.sessionId)
+            }
+            noteRpcSuccess()
+            print("[queue] poslato \(action.type.rawValue) [\(action.id.prefix(8))]")
+            return true   // server dosegnut (i benigni success=false) -> ukloni
+        } catch SupabaseError.networkError(_) {
+            noteRpcError(SupabaseError.networkError("flush"))
+            return false  // mrezna -> zadrzi + retry
+        } catch {
+            // session_ended (vec finalizovano) / invalid_token / http / decoding -> ukloni (ne zaglavi)
+            print("[queue] drop \(action.type.rawValue) na gresci: \(error.localizedDescription)")
+            return true
+        }
+    }
+
     private func applyServerState(
         sessionId: String?,
         exerciseName: String,
         setNumber: Int,
+        exerciseIdx: Int?,
         totalSets: Int,
         state: String,
         restEndsAtMs: Double?,
@@ -1114,7 +1330,30 @@ struct ContentView: View {
     ) {
         // Sloj 0: zapamti zivi session_id da HR keep-alive uvek gadja tacnu sesiju.
         if let sessionId = sessionId {
+            if currentSessionId != sessionId {
+                // NOVA sesija: resetuj connection (ne nasledi "nema veze" iz proslog offline
+                // perioda - bug 2) i ocisti stari lokalni model (nov plan se ucitava).
+                setConnectionOK(true)
+                planExercises = []
+                doneCounts = [:]
+                planSessionId = nil
+            }
             currentSessionId = sessionId
+            loadWorkoutPlanIfNeeded(sessionId)   // KORAK B: ucitaj lokalni plan jednom po sesiji
+        }
+
+        // KORAK C reconciliation: DOK red NIJE prazan, lokalni model je autoritet. Ako je server
+        // pozicija IZA lokalne (jos nije obradio nase akcije) -> ignorisi (ne vuci UI unazad).
+        if let sid = sessionId ?? currentSessionId, !PendingActionStore.shared.isEmpty(sessionId: sid) {
+            let serverIdx = exerciseIdx ?? planExercises.first(where: { $0.exerciseName == exerciseName })?.exerciseIdx
+            if let local = computeLocalPosition(), !local.complete, let sIdx = serverIdx {
+                if (sIdx, setNumber) < (local.exerciseIdx, local.setNumber) {
+                    if let serverNowMs = serverNowMs {
+                        serverClockOffset = Date(timeIntervalSince1970: serverNowMs / 1000.0).timeIntervalSince(Date())
+                    }
+                    return   // server jos nije stigao; lokalni vozi
+                }
+            }
         }
 
         currentWorkout = ActiveWorkout(
@@ -1127,6 +1366,9 @@ struct ContentView: View {
             targetWeight: nil,
             restSeconds: 90
         )
+
+        // KORAK B: server pomera lokalni model (uskladi doneCount-ove sa serverskom pozicijom).
+        syncLocalToServer(exerciseName: exerciseName, setNumber: setNumber)
 
         // Offset serverskog sata: serverNow - Date(). Display koristi Date() + offset.
         if let serverNowMs = serverNowMs {
@@ -1160,65 +1402,67 @@ struct ContentView: View {
     
     // MARK: - Watch akcije
     
+    // KORAK C: OPTIMISTICKI advance - UI predje ODMAH, akcija se baferuje i odsvira na vezi.
     private func handleCompleteSet() {
         WKInterfaceDevice.current().play(.success)
-
-        Task {
-            // Engine zove server direktno; sessionId imamo iz poll-a. Bez njega
-            // nema zive sesije -> preskoci (poll ce ga uskoro doneti).
-            guard let token = effectiveToken, let sessionId = currentSessionId else { return }
-            do {
-                // Sat prikazuje samo plan -> reps/weight/rpe = nil, server uzima
-                // planirane vrednosti. Posle upisa, prikaz prati poll.
-                try await SupabaseClient.shared.engineCompleteSet(
-                    token: token, sessionId: sessionId, reps: nil, weight: nil, rpe: nil
-                )
-                noteRpcSuccess()
-                print("Watch engine: complete_set [session \(sessionId)]")
-            } catch SupabaseError.sessionEnded {
-                noteRpcSuccess()
-                print("Watch engine: complete_set -> session ended")
-                await MainActor.run { handleWorkoutDeleted() }
-            } catch {
-                noteRpcError(error)
-                print("Complete set error: \(error.localizedDescription)")
+        guard let sessionId = currentSessionId else { return }
+        guard let pos = computeLocalPosition(), !pos.complete else {
+            // Nema lokalnog plana (offline bez kesa / jos se ucitava) -> stari server-driven put.
+            Task {
+                guard let token = effectiveToken else { return }
+                do {
+                    _ = try await SupabaseClient.shared.engineCompleteSet(token: token, sessionId: sessionId, reps: nil, weight: nil, rpe: nil)
+                    noteRpcSuccess()
+                } catch SupabaseError.sessionEnded {
+                    noteRpcSuccess(); await MainActor.run { handleWorkoutDeleted() }
+                } catch { noteRpcError(error) }
             }
+            return
+        }
+
+        // 1) Lokalni model ODMAH napreduje (ubelezi seriju za trenutnu vezbu).
+        doneCounts[pos.apeId] = (doneCounts[pos.apeId] ?? 0) + 1
+        persistPlan()
+
+        // 2) Enqueue complete_set (server racuna poziciju iz done-count-a; reps/weight = planirani).
+        PendingActionStore.shared.enqueue(PendingAction(
+            id: UUID().uuidString, type: .completeSet, sessionId: sessionId,
+            reps: pos.plannedReps, weight: pos.plannedWeight, rpe: nil, createdAt: Date()))
+
+        // 3) Optimisticki UI: rest (ima jos serija) ili lokalno completed (poslednja serija).
+        if let next = computeLocalPosition(), !next.complete {
+            restEndsAt = Date().addingTimeInterval(Double(max(pos.restSeconds, 1)))
+            currentState = .rest
+            flushQueue()
+        } else {
+            // Poslednja serija: server auto-finalizuje preko complete_set. Posalji PRE reseta.
+            flushQueue()
+            handleWorkoutDeleted()   // lokalno completed + finalizuj/buffer metrike + cleanup
         }
     }
 
     private func handleRestComplete() {
+        // Odmor istekao -> optimisticki na aktivnu sledecu seriju (vec u doneCounts).
+        restEndsAt = nil
+        currentState = .activeWorkout
+        // Tranzitorno (server ne treba za rezultat) -> fire-and-forget, NIJE u replay redu.
+        guard let token = effectiveToken, let sessionId = currentSessionId else { return }
         Task {
-            guard let token = effectiveToken, let sessionId = currentSessionId else { return }
-            do {
-                try await SupabaseClient.shared.engineSkipRest(token: token, sessionId: sessionId)
-                noteRpcSuccess()
-                print("Watch engine: skip_rest (auto) [session \(sessionId)]")
-            } catch SupabaseError.sessionEnded {
-                noteRpcSuccess()
-                await MainActor.run { handleWorkoutDeleted() }
-            } catch {
-                noteRpcError(error)
-                print("Rest complete error: \(error.localizedDescription)")
-            }
+            do { _ = try await SupabaseClient.shared.engineSkipRest(token: token, sessionId: sessionId); noteRpcSuccess() }
+            catch SupabaseError.sessionEnded { noteRpcSuccess() }
+            catch { noteRpcError(error) }
         }
     }
 
     private func handleRestSkip() {
         WKInterfaceDevice.current().play(.click)
-
+        restEndsAt = nil
+        currentState = .activeWorkout
+        guard let token = effectiveToken, let sessionId = currentSessionId else { return }
         Task {
-            guard let token = effectiveToken, let sessionId = currentSessionId else { return }
-            do {
-                try await SupabaseClient.shared.engineSkipRest(token: token, sessionId: sessionId)
-                noteRpcSuccess()
-                print("Watch engine: skip_rest [session \(sessionId)]")
-            } catch SupabaseError.sessionEnded {
-                noteRpcSuccess()
-                await MainActor.run { handleWorkoutDeleted() }
-            } catch {
-                noteRpcError(error)
-                print("Skip rest error: \(error.localizedDescription)")
-            }
+            do { _ = try await SupabaseClient.shared.engineSkipRest(token: token, sessionId: sessionId); noteRpcSuccess() }
+            catch SupabaseError.sessionEnded { noteRpcSuccess() }
+            catch { noteRpcError(error) }
         }
     }
 
@@ -1296,73 +1540,27 @@ struct ContentView: View {
         }
     }
 
+    // KORAK C: rucni prevremeni zavrsetak - optimisticki lokalno completed + enqueue finish
+    // (replay POSLEDNJI). Metrike (kalorije/HR) idu kroz handleWorkoutDeleted -> finalizeAndReport.
     private func handleFinishWorkout() {
         WKInterfaceDevice.current().play(.success)
-
-        Task {
-            guard let token = effectiveToken, let sessionId = currentSessionId else { return }
-
-            // Finalizuj HealthKit PRE citanja: na kratkom treningu aktivna energija se
-            // sumira tek posle endCollection, pa citanje pre toga vrati 0.
-            let m = await healthKit.finalizeAndStop()
-
-            // Perzistiraj metrike (offline-safe) pa pokusaj isporuku. engineFinishWorkout
-            // je primarni instant put; pending store + flush pokriva offline zavrsetak.
-            // Ne salji 0: enqueue samo ako ima bar jedna prava vrednost, i to >0 ? : nil.
-            if m.calories > 0 || m.hrAvg > 0 || m.hrMax > 0 {
-                PendingReportStore.shared.add(PendingMetrics(
-                    sessionId: sessionId,
-                    activeCalories: m.calories > 0 ? m.calories : nil,
-                    hrAvg: m.hrAvg > 0 ? m.hrAvg : nil,
-                    hrMax: m.hrMax > 0 ? m.hrMax : nil,
-                    token: token,
-                    createdAt: Date()
-                ))
-            }
-
-            do {
-                try await SupabaseClient.shared.engineFinishWorkout(
-                    token: token,
-                    sessionId: sessionId,
-                    activeCalories: m.calories > 0 ? m.calories : nil,
-                    hrAvg: m.hrAvg > 0 ? m.hrAvg : nil,
-                    hrMax: m.hrMax > 0 ? m.hrMax : nil
-                )
-                noteRpcSuccess()
-                print("Watch engine: finish_workout [session \(sessionId)] kcal=\(m.calories) hrAvg=\(m.hrAvg) hrMax=\(m.hrMax)")
-            } catch SupabaseError.sessionEnded {
-                noteRpcSuccess()
-                await MainActor.run { handleWorkoutDeleted() }
-            } catch {
-                noteRpcError(error)
-                print("Finish workout error: \(error.localizedDescription)")
-            }
-
-            // Flush pending (ukljucujuci ovaj) - uspeh brise iz store-a; offline ostaje.
-            await flushPendingMetrics()
-            schedulePendingRetry()
-        }
+        guard let sessionId = currentSessionId else { return }
+        PendingActionStore.shared.enqueue(PendingAction(
+            id: UUID().uuidString, type: .finish, sessionId: sessionId,
+            reps: nil, weight: nil, rpe: nil, createdAt: Date()))
+        flushQueue()             // posalji finish (server finalizuje) PRE reseta
+        handleWorkoutDeleted()   // lokalno completed + finalizuj/buffer metrike + cleanup
     }
 
-    // +30 ide direktno u motor (watch_extend_rest), kao complete i skip. Server
-    // doda sekunde na rest_ends_at i vrati kroz poll; sat ima optimisticki bump
-    // kroz effectiveEnd. Bez watch_button_events - radi i kad telefon spava.
+    // +30/+60 odmor: optimisticki produzi lokalni odmor; server fire-and-forget (tranzitorno,
+    // NIJE u replay redu - odmor je UI/timing, server ga ne treba za rezultat).
     private func handleAddRest(_ seconds: Int) {
+        if let end = restEndsAt { restEndsAt = end.addingTimeInterval(Double(seconds)) }
+        guard let token = effectiveToken, let sessionId = currentSessionId else { return }
         Task {
-            guard let token = effectiveToken, let sessionId = currentSessionId else { return }
-            do {
-                try await SupabaseClient.shared.engineExtendRest(
-                    token: token, sessionId: sessionId, seconds: seconds
-                )
-                noteRpcSuccess()
-                print("Watch engine: extend_rest (+\(seconds)) [session \(sessionId)]")
-            } catch SupabaseError.sessionEnded {
-                noteRpcSuccess()
-                await MainActor.run { handleWorkoutDeleted() }
-            } catch {
-                noteRpcError(error)
-                print("Extend rest error: \(error.localizedDescription)")
-            }
+            do { _ = try await SupabaseClient.shared.engineExtendRest(token: token, sessionId: sessionId, seconds: seconds); noteRpcSuccess() }
+            catch SupabaseError.sessionEnded { noteRpcSuccess() }
+            catch { noteRpcError(error) }
         }
     }
 
@@ -1435,7 +1633,9 @@ struct ContentView: View {
     // MARK: - HealthKit
 
     private func startHealthKitWorkout() {
-        guard !healthKit.isWorkoutActive else { return }
+        if healthKit.isWorkoutActive {
+            return
+        }
         
         Task {
             // Ako nema dozvole, pokušaj ponovo
@@ -1450,22 +1650,26 @@ struct ContentView: View {
             // Pokreni workout session - HR ce se automatski citati
             healthKit.startWorkoutSession()
             
-            // Listener za HR update-ove
+            // Listener za HR update-ove (azurira lokalni prikaz; salje i odmah - bezopasno).
             healthKit.onHeartRateUpdate = { bpm in
                 heartRate = bpm
+                Task { await sendHeartRateToServer() }
+            }
 
-                // Sloj 0: salji SVAKI sample dok je workout aktivan. Svaki upis
-                // ujedno odrzava sesiju zivom (keep-alive) bez budnog telefona.
-                Task {
-                    await sendHeartRateToServer()
-                }
+            // OBAVEZAN keep-alive: periodicni tajmer (5s) salje POSLEDNJI HR serveru i
+            // tokom mirovanja (rest), kad HK ne emituje uzorke -> watch_last_hr_at svez.
+            // Ujedno periodicni (5s) okidac za replay baferovanih set-akcija (KORAK C).
+            healthKit.onKeepAlive = {
+                Task { await sendHeartRateToServer() }
+                flushQueue()
             }
         }
     }
-    
+
     private func stopHealthKitWorkout() {
         healthKit.stopWorkoutSession()
         healthKit.onHeartRateUpdate = nil
+        healthKit.onKeepAlive = nil
         heartRate = 0
         currentSessionId = nil
     }

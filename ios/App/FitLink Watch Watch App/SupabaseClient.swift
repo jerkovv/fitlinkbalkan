@@ -17,6 +17,7 @@ struct ActiveWorkoutFromServer: Codable {
     let sessionId: String
     let currentExerciseName: String
     let currentSetNumber: Int
+    let currentExerciseIdx: Int?
     let totalSets: Int
     let currentState: String
     let currentHr: Int?
@@ -27,6 +28,7 @@ struct ActiveWorkoutFromServer: Codable {
         case sessionId = "session_id"
         case currentExerciseName = "current_exercise_name"
         case currentSetNumber = "current_set_number"
+        case currentExerciseIdx = "current_exercise_idx"
         case totalSets = "total_sets"
         case currentState = "current_state"
         case currentHr = "current_hr"
@@ -42,6 +44,51 @@ struct HRUpdateResponse: Codable {
 struct ButtonPressResponse: Codable {
     let success: Bool
     let error: String?
+}
+
+// Lokalni model treninga (KORAK B): pun plan dana sa servera (watch_get_workout_plan).
+struct PlanExercise: Codable, Equatable {
+    let apeId: String
+    let exerciseIdx: Int
+    let position: Int
+    let sets: Int
+    let restSeconds: Int
+    let repsText: String?
+    let plannedReps: Int?
+    let plannedWeight: Double?
+    let exerciseName: String
+    let doneCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case apeId = "ape_id"
+        case exerciseIdx = "exercise_idx"
+        case position
+        case sets
+        case restSeconds = "rest_seconds"
+        case repsText = "reps_text"
+        case plannedReps = "planned_reps"
+        case plannedWeight = "planned_weight"
+        case exerciseName = "exercise_name"
+        case doneCount = "done_count"
+    }
+}
+
+struct WorkoutPlan: Codable {
+    let success: Bool
+    let sessionId: String?
+    let dayId: String?
+    let serverNowMs: Double?
+    let complete: Bool?
+    let exercises: [PlanExercise]
+
+    enum CodingKeys: String, CodingKey {
+        case success
+        case sessionId = "session_id"
+        case dayId = "day_id"
+        case serverNowMs = "server_now_ms"
+        case complete
+        case exercises
+    }
 }
 
 enum SupabaseError: LocalizedError {
@@ -101,6 +148,18 @@ final class SupabaseClient {
         
         do {
             return try decoder.decode(UserContextResponse.self, from: data)
+        } catch {
+            throw SupabaseError.decodingFailed(error.localizedDescription)
+        }
+    }
+
+    // KORAK B: pun plan dana (vezbe + done_count) za lokalni model treninga.
+    func getWorkoutPlan(token: String, sessionId: String) async throws -> WorkoutPlan? {
+        let body: [String: Any] = ["p_token": token, "p_session_id": sessionId]
+        let data = try await callRPC(functionName: "watch_get_workout_plan", body: body)
+        if data.isEmpty || isJSONNull(data) { return nil }
+        do {
+            return try decoder.decode(WorkoutPlan.self, from: data)
         } catch {
             throw SupabaseError.decodingFailed(error.localizedDescription)
         }
@@ -372,5 +431,139 @@ final class PendingReportStore {
         if let data = try? JSONEncoder().encode(list) {
             defaults.set(data, forKey: key)
         }
+    }
+}
+
+// MARK: - Perzistencija plana treninga (KORAK B: lokalni model prezivi restart usred treninga)
+
+struct PersistedPlan: Codable {
+    let sessionId: String
+    let exercises: [PlanExercise]
+    let doneCounts: [String: Int]
+}
+
+final class WorkoutPlanStore {
+    static let shared = WorkoutPlanStore()
+    private let defaults = UserDefaults.standard
+    private init() {}
+    private func key(_ sid: String) -> String { "fitlink.plan.\(sid)" }
+
+    func save(_ plan: PersistedPlan) {
+        if let data = try? JSONEncoder().encode(plan) {
+            defaults.set(data, forKey: key(plan.sessionId))
+        }
+    }
+
+    func load(sessionId: String) -> PersistedPlan? {
+        guard let data = defaults.data(forKey: key(sessionId)) else { return nil }
+        return try? JSONDecoder().decode(PersistedPlan.self, from: data)
+    }
+}
+
+// MARK: - KORAK C: red set-akcija (perzistovan, FIFO, replay na reconnect)
+
+struct PendingAction: Codable, Equatable {
+    enum ActionType: String, Codable { case completeSet = "complete_set"; case finish }
+    let id: String
+    let type: ActionType
+    let sessionId: String
+    let reps: Int?
+    let weight: Double?
+    let rpe: Double?
+    let createdAt: Date
+    // NAPOMENA: NE cuvamo set_number/exercise_idx - server racuna poziciju iz done-count-a;
+    // FIFO replay garantuje da svaka akcija padne na tacnu sledecu poziciju.
+}
+
+final class PendingActionStore {
+    static let shared = PendingActionStore()
+    private let defaults = UserDefaults.standard
+    private let queue = DispatchQueue(label: "fitlink.pendingActionStore")
+    private init() {}
+    private func key(_ sid: String) -> String { "fitlink.actions.\(sid)" }
+
+    func all(sessionId: String) -> [PendingAction] {
+        queue.sync { loadLocked(sessionId) }
+    }
+
+    func enqueue(_ action: PendingAction) {
+        queue.sync {
+            var list = loadLocked(action.sessionId)
+            list.append(action)            // FIFO: dodaj na kraj
+            saveLocked(action.sessionId, list)
+        }
+    }
+
+    func remove(sessionId: String, id: String) {
+        queue.sync {
+            var list = loadLocked(sessionId)
+            list.removeAll { $0.id == id }
+            saveLocked(sessionId, list)
+        }
+    }
+
+    func isEmpty(sessionId: String) -> Bool {
+        queue.sync { loadLocked(sessionId).isEmpty }
+    }
+
+    // Svi sessionId-evi sa NEPRAZNIM redom (za flush osirotelih redova prethodnih sesija).
+    func allSessionIds() -> [String] {
+        queue.sync {
+            let prefix = "fitlink.actions."
+            return defaults.dictionaryRepresentation().keys
+                .filter { $0.hasPrefix(prefix) }
+                .map { String($0.dropFirst(prefix.count)) }
+                .filter { !loadLocked($0).isEmpty }
+        }
+    }
+
+    private func loadLocked(_ sid: String) -> [PendingAction] {
+        guard let data = defaults.data(forKey: key(sid)) else { return [] }
+        return (try? JSONDecoder().decode([PendingAction].self, from: data)) ?? []
+    }
+    private func saveLocked(_ sid: String, _ list: [PendingAction]) {
+        if let data = try? JSONEncoder().encode(list) {
+            defaults.set(data, forKey: key(sid))
+        }
+    }
+}
+
+/// Perzistentni flush-pump: dok god ima neki NEPRAZAN red akcija (PendingActionStore), okida
+/// onTick (~3s) NEZAVISNO od toga da li je trening aktivan. Kad su svi redovi prazni -> STAJE
+/// (stedi bateriju); ponovo krece na enqueue / app start. Resava 20s visenje posle offline
+/// zavrsetka: keep-alive tajmer stane na kraju treninga, pa flush vise ne zavisi samo od
+/// NWPath online okidaca (koji kasni zbog Bluetooth bridging-a).
+@MainActor
+final class FlushPump {
+    static let shared = FlushPump()
+    private init() {}
+
+    var onTick: (() -> Void)?
+    private var timer: Timer?
+    private let interval: TimeInterval = 3.0
+
+    /// Pokreni pump ako vec ne radi I ako ima sta da se flush-uje. Idempotentno.
+    func start() {
+        guard timer == nil else { return }
+        guard !PendingActionStore.shared.allSessionIds().isEmpty else { return }
+        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { _ in
+            // Timer closure je nonisolated; skoci na main actor (klasa je @MainActor).
+            Task { @MainActor in FlushPump.shared.tick() }
+        }
+    }
+
+    private func tick() {
+        // Kad su svi redovi prazni -> stani (stedi bateriju); ponovo krece na enqueue.
+        guard !PendingActionStore.shared.allSessionIds().isEmpty else {
+            stop()
+            return
+        }
+        onTick?()
+    }
+
+    func stop() {
+        guard timer != nil else { return }
+        timer?.invalidate()
+        timer = nil
     }
 }
