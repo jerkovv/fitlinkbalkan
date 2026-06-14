@@ -10,6 +10,8 @@ interface RestTimerProps {
   subtitle?: string;
   /** Optional: poziva se na +30/+60 kako bi parent upisao novi rest_ends_at. */
   onAddSeconds?: (seconds: number) => void;
+  /** Zakljucano (npr izgubljen sat) -> dugmad +30/+60/Preskoci onemogucena/zasivljena. */
+  disabled?: boolean;
 }
 
 const fmt = (s: number) => {
@@ -55,7 +57,7 @@ const playDing = () => {
 const remainingFrom = (endsAt: number) =>
   Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
 
-export const RestTimer = ({ endsAt, onDone, subtitle, onAddSeconds }: RestTimerProps) => {
+export const RestTimer = ({ endsAt, onDone, subtitle, onAddSeconds, disabled = false }: RestTimerProps) => {
   // Tick samo da forsira re-render; remaining se UVEK racuna iz endsAt - now,
   // pa promena endsAt (+30 sa telefona ili sata) odmah i glatko pomeri prikaz.
   const [, setTick] = useState(0);
@@ -85,14 +87,16 @@ export const RestTimer = ({ endsAt, onDone, subtitle, onAddSeconds }: RestTimerP
   const elapsed = Math.max(0, maxSeconds - remaining);
 
   useEffect(() => {
-    if (remaining <= 0 && !firedRef.current) {
+    // Dok je zakljucano (izgubljen sat) ne okidaj auto-zavrsetak (skipRest bi ionako bio
+    // no-op); na oporavku (disabled -> false) se ponovo proveri pa odmor moze da se zavrsi.
+    if (remaining <= 0 && !firedRef.current && !disabled) {
       firedRef.current = true;
       triggerHaptic();
       playDing();
       const t = setTimeout(() => onDoneRef.current(), 500);
       return () => clearTimeout(t);
     }
-  }, [remaining]);
+  }, [remaining, disabled]);
 
   const radius = 110;
   const circ = 2 * Math.PI * radius;
@@ -147,29 +151,32 @@ export const RestTimer = ({ endsAt, onDone, subtitle, onAddSeconds }: RestTimerP
         </div>
       </div>
 
-      <div className="flex items-center gap-3 mt-10 w-full max-w-[360px]">
+      <div className={`flex items-center gap-3 mt-10 w-full max-w-[360px] ${disabled ? "opacity-50" : ""}`}>
         <button
+          disabled={disabled}
           onClick={() => {
             // Parent upise novi rest_ends_at; prikaz prati endsAt (jedini izvor).
             firedRef.current = false;
             onAddSeconds?.(30);
           }}
-          className="flex-1 h-12 rounded-2xl bg-surface border border-hairline text-[14px] font-semibold inline-flex items-center justify-center gap-1.5 active:scale-95 transition"
+          className="flex-1 h-12 rounded-2xl bg-surface border border-hairline text-[14px] font-semibold inline-flex items-center justify-center gap-1.5 active:scale-95 transition disabled:opacity-60"
         >
           <Plus className="h-4 w-4" /> 30s
         </button>
         <button
+          disabled={disabled}
           onClick={() => {
             firedRef.current = false;
             onAddSeconds?.(60);
           }}
-          className="flex-1 h-12 rounded-2xl bg-surface border border-hairline text-[14px] font-semibold inline-flex items-center justify-center gap-1.5 active:scale-95 transition"
+          className="flex-1 h-12 rounded-2xl bg-surface border border-hairline text-[14px] font-semibold inline-flex items-center justify-center gap-1.5 active:scale-95 transition disabled:opacity-60"
         >
           <Plus className="h-4 w-4" /> 60s
         </button>
         <button
+          disabled={disabled}
           onClick={() => onDone()}
-          className="flex-1 h-12 rounded-2xl bg-gradient-brand text-white text-[14px] font-bold inline-flex items-center justify-center gap-1.5 active:scale-95 transition shadow-brand"
+          className="flex-1 h-12 rounded-2xl bg-gradient-brand text-white text-[14px] font-bold inline-flex items-center justify-center gap-1.5 active:scale-95 transition shadow-brand disabled:opacity-60"
         >
           <SkipForward className="h-4 w-4" /> Preskoci
         </button>

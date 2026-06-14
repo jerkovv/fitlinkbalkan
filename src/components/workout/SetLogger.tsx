@@ -15,6 +15,8 @@ interface SetLoggerProps {
     rpe: number | null;
     notes: string | null;
   }) => Promise<void> | void;
+  /** Zakljucano (npr izgubljen sat) -> dugme "zavrsi seriju" onemoguceno. */
+  disabled?: boolean;
 }
 
 const Stepper = ({
@@ -77,6 +79,7 @@ export const SetLogger = ({
   initialReps,
   initialWeightKg,
   onComplete,
+  disabled = false,
 }: SetLoggerProps) => {
   const [reps, setReps] = useState<number>(
     initialReps ?? targetReps ?? 0
@@ -196,7 +199,7 @@ export const SetLogger = ({
       <button
         type="button"
         onClick={submit}
-        disabled={submitting}
+        disabled={submitting || disabled}
         className="w-full h-14 rounded-2xl bg-gradient-brand text-white font-bold text-[15px] inline-flex items-center justify-center gap-2 active:scale-[0.98] transition shadow-brand disabled:opacity-60"
       >
         <Check className="h-5 w-5" strokeWidth={3} />

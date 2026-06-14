@@ -101,6 +101,12 @@ function withTimeout<T>(p: PromiseLike<T>, ms: number): Promise<T> {
   ]);
 }
 
+// Watch presence pragovi (FAZA 1): sat upisuje watch_last_hr_at svakih ~5s dok radi.
+// FRESH = jos povezan; preko FRESH (a watch_last_hr_at != null) = izgubljen -> zakljucaj.
+// ESCAPE = posle ovoliko nudimo "Nastavi na telefonu" (da ne ostane zaglavljeno ako sat crkne).
+const WATCH_FRESH_MS = 15000;
+const WATCH_ESCAPE_MS = 60000;
+
 const ActiveWorkout = () => {
   const { dayId } = useParams<{ dayId: string }>();
   const { user } = useAuth();
@@ -132,6 +138,14 @@ const ActiveWorkout = () => {
 
   // Live HR (lokalni HealthKit stream na telefonu)
   const [liveHr, setLiveHr] = useState<number | null>(null);
+
+  // FAZA 1 - watch presence: poslednji watch_last_hr_at (epoch ms) iz workout_live_state.
+  // null = sat NIKAD nije slao (SOLO korisnik) -> NIKAD se ne zakljucava.
+  const [watchLastHrAt, setWatchLastHrAt] = useState<number | null>(null);
+  // Trener je izabrao "Nastavi na telefonu" -> otkljucaj do kraja sesije.
+  const [phoneTakeover, setPhoneTakeover] = useState(false);
+  // Sinhroni ref za gejtovanje mutacija u handlerima (bez stale closure-a).
+  const controlsLockedRef = useRef(false);
 
   // Offline indikator: telefon nema internet -> trening se ne cuva dok se veza ne vrati.
   // Pravi izvor je @capacitor/network (navigator.onLine je nepouzdan u WKWebView).
@@ -618,6 +632,45 @@ const ActiveWorkout = () => {
     return () => { supabase.removeChannel(channel); };
   }, [sessionId, finished, goToSummary]);
 
+  /* ------------------------- FAZA 1: watch presence (live_state) ------------------------- */
+  // Citamo watch_last_hr_at iz workout_live_state. Realtime daje svez otisak svakih ~5s dok
+  // sat radi; kad sat ode offline NEMA vise dogadjaja (vrednost stane) -> lokalni `now` tik
+  // (elapsed clock, 1s) racuna (now - watchLastHrAt) i zakljucava posle FRESH praga.
+  useEffect(() => {
+    if (!sessionId || finished) return;
+    let cancelled = false;
+    const apply = (row: any) => {
+      const ts = row?.watch_last_hr_at ? new Date(row.watch_last_hr_at).getTime() : null;
+      // Postavljamo SAMO kad ima vrednost - da update bez te kolone (npr pozicija) ne nuluje.
+      if (ts != null && !cancelled) setWatchLastHrAt(ts);
+    };
+    // Pocetni read (sat je mozda bio aktivan pre nego sto se telefon pretplatio).
+    (async () => {
+      const { data } = await supabase
+        .from("workout_live_state")
+        .select("watch_last_hr_at")
+        .eq("session_log_id", sessionId)
+        .maybeSingle();
+      apply(data);
+    })();
+    const channel = supabase
+      .channel(`live-state:${sessionId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "workout_live_state", filter: `session_log_id=eq.${sessionId}` },
+        (payload) => apply(payload.new),
+      )
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(channel); };
+  }, [sessionId, finished]);
+
+  // Sinhroni lockedRef (za handler guard) - racuna se na svaki `now` tik (1s).
+  // SOLO (watchLastHrAt == null) -> NIKAD zakljucano.
+  useEffect(() => {
+    const stale = watchLastHrAt != null && now.getTime() - watchLastHrAt > WATCH_FRESH_MS;
+    controlsLockedRef.current = stale && !phoneTakeover;
+  }, [now, watchLastHrAt, phoneTakeover]);
+
   /* ------------------------- Heartbeat: athlete_heartbeat (samo HR + svežina) ------------------------- */
   // Dira SAMO last_heartbeat i current_hr — nikad poziciju. Drži živi red svežim
   // (poll filtrira last_heartbeat > now - 5min).
@@ -648,6 +701,7 @@ const ActiveWorkout = () => {
     async (extraSeconds: number) => {
       const p = posRef.current;
       if (!sessionId || !p || !p.restEndsAtMs) return;
+      if (controlsLockedRef.current) return; // sat izgubljen -> ne menjaj odmor
 
       // Optimistički bump prikaza; poll uskladi sa serverskim rest_ends_at.
       const newClientEnd = p.restEndsAtMs + extraSeconds * 1000;
@@ -671,6 +725,7 @@ const ActiveWorkout = () => {
     async (data: { reps: number; weight_kg: number; rpe: number | null; notes: string | null }) => {
       const p = posRef.current;
       if (!sessionId || !p || !day) return;
+      if (controlsLockedRef.current) return; // sat izgubljen -> bez mutacije sesije
       triggerHaptic();
 
       const ex = day.exercises[p.exerciseIdx];
@@ -751,6 +806,7 @@ const ActiveWorkout = () => {
   const skipRest = useCallback(async () => {
     const p = posRef.current;
     if (!sessionId || !p) return;
+    if (controlsLockedRef.current) return; // sat izgubljen -> ne preskaci/ne advance-uj
     lastActionAtRef.current = Date.now();
     setPos((prev) => (prev ? { ...prev, state: "active", restEndsAtMs: null } : prev));
     const { error } = await supabase.rpc("athlete_skip_rest", {
@@ -762,6 +818,7 @@ const ActiveWorkout = () => {
 
   const finishWorkout = useCallback(async () => {
     if (!sessionId || finishing || finishedRef.current) return;
+    if (controlsLockedRef.current) return; // sat izgubljen -> ne zavrsavaj sa telefona
     setFinishing(true);
     markFinished();
     lastActionAtRef.current = Date.now();
@@ -885,6 +942,15 @@ const ActiveWorkout = () => {
     setNumber <= 1
       ? `Sledeća vežba: ${current.exercise.name_en?.trim() || current.exercise.name}`
       : `Sledeća serija ${setNumber} od ${setsForCurrent}`;
+
+  // FAZA 1 - watch presence stanje (SOLO: watchLastHrAt null -> sve false, nikad lock).
+  const watchWasPresent = watchLastHrAt != null;
+  const watchSilenceMs = watchWasPresent ? now.getTime() - (watchLastHrAt as number) : 0;
+  const watchStale = watchWasPresent && watchSilenceMs > WATCH_FRESH_MS;
+  const isWatchLost = watchStale && !phoneTakeover;
+  const canEscapeWatch = watchStale && watchSilenceMs > WATCH_ESCAPE_MS && !phoneTakeover;
+  const showMildTakeover = watchStale && phoneTakeover;
+  const controlsLocked = isWatchLost;
 
   return (
     <div className="h-[100dvh] overflow-y-auto bg-background">
@@ -1085,13 +1151,14 @@ const ActiveWorkout = () => {
             initialReps={initialFor(exerciseIdx, setNumber)?.reps ?? null}
             initialWeightKg={initialFor(exerciseIdx, setNumber)?.weight_kg ?? null}
             onComplete={handleSetComplete}
+            disabled={controlsLocked}
           />
 
           {/* Manual finish */}
           <button
             type="button"
             onClick={() => finishWorkout()}
-            disabled={finishing}
+            disabled={finishing || controlsLocked}
             className="w-full text-[12px] font-semibold text-muted-foreground py-3 disabled:opacity-50"
           >
             {finishing ? "Završavam..." : "Završi trening odmah"}
@@ -1105,7 +1172,53 @@ const ActiveWorkout = () => {
           subtitle={restSubtitle}
           onDone={skipRest}
           onAddSeconds={handleAddRest}
+          disabled={controlsLocked}
         />
+      )}
+
+      {/* FAZA 1: izgubljen sat -> zakljucano. Baner iznad svega (z-60), i preko RestTimer-a (z-50). */}
+      {isWatchLost && (
+        <div
+          className="fixed top-0 left-0 right-0 z-[60] px-4"
+          style={{ paddingTop: "calc(max(env(safe-area-inset-top), 20px) + 8px)" }}
+        >
+          <div className="mx-auto w-full max-w-[440px]">
+            <div
+              className="rounded-2xl border border-destructive/40 bg-destructive-soft text-destructive-soft-foreground px-4 py-3 shadow-xs"
+              role="alert"
+              aria-live="assertive"
+            >
+              <div className="flex items-start gap-3">
+                <WifiOff className="h-4 w-4 mt-0.5 shrink-0" strokeWidth={2.4} />
+                <div className="text-[13px] font-semibold leading-snug">
+                  IZGUBLJEN SIGNAL SA SATOM. Nastavi na satu ili ga približi telefonu.
+                </div>
+              </div>
+              {canEscapeWatch && (
+                <button
+                  type="button"
+                  onClick={() => setPhoneTakeover(true)}
+                  className="mt-2.5 w-full h-10 rounded-xl bg-surface text-foreground text-[13px] font-semibold active:scale-95 transition"
+                >
+                  Nastavi na telefonu
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showMildTakeover && (
+        <div
+          className="fixed top-0 left-0 right-0 z-[60] px-4"
+          style={{ paddingTop: "calc(max(env(safe-area-inset-top), 20px) + 8px)" }}
+        >
+          <div className="mx-auto w-full max-w-[440px]">
+            <div className="rounded-2xl border border-hairline bg-surface/90 backdrop-blur text-muted-foreground px-4 py-2 text-[12px] font-medium text-center">
+              Nastavljaš na telefonu
+            </div>
+          </div>
+        </div>
       )}
 
       <AlertDialog open={closeOpen} onOpenChange={setCloseOpen}>
