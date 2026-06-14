@@ -915,7 +915,20 @@ struct ContentView: View {
         // putanje. Deluje (i loguje) samo na prelazu iz treninga u neutralno.
         guard currentState != .completed && currentState != .idle else { return }
         print("No active workout (poll null / session ended) - leaving workout screen")
-        stopHealthKitWorkout()
+
+        // Auto-finish (poslednja serija / server zavrsio): finalizuj HealthKit i upisi
+        // metrike PRE reseta - inace se kalorije gube jer ova putanja ne ide kroz
+        // handleFinishWorkout. Token/session uhvaceni sad jer cleanup ispod ih nil-uje.
+        // HK sesiju gasi finalizeAndStop (NE stopHealthKitWorkout) da agregati ne budu
+        // resetovani pre citanja.
+        let token = effectiveToken
+        let sessionId = currentSessionId
+        Task { await finalizeAndReport(token: token, sessionId: sessionId) }
+
+        healthKit.onHeartRateUpdate = nil
+        heartRate = 0
+        currentSessionId = nil
+
         WKInterfaceDevice.current().play(.success)
         currentState = .completed
 
@@ -1004,20 +1017,11 @@ struct ContentView: View {
             startHealthKitWorkout()
 
         case "completed":
+            // Phone-driven auto-finish: ista putanja kao poll null -> finalizuj HealthKit
+            // i upisi metrike (kalorije/HR), pa pređi u completed/idle.
             restEndsAt = nil
-            stopHealthKitWorkout()
-            WKInterfaceDevice.current().play(.success)
-            currentState = .completed
-            
-            Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 2_500_000_000)
-                if currentState == .completed {
-                    currentState = .idle
-                    currentWorkout = .mock
-                    lastServerSignature = ""
-                }
-            }
-            
+            handleWorkoutDeleted()
+
         default:
             break
         }
@@ -1078,27 +1082,67 @@ struct ContentView: View {
         }
     }
 
+    // Finalizuj HealthKit (endCollection pa procitaj FINALNE agregate) i upisi metrike
+    // preko watch_report_metrics. Koristi se na auto-finish putanji; server GREATEST
+    // stiti od kasne nule / duplikata. Token i sessionId se hvataju PRE reseta.
+    private func finalizeAndReport(token: String?, sessionId: String?) async {
+        let m = await healthKit.finalizeAndStop()
+        guard let token = token, let sessionId = sessionId else { return }
+        guard m.calories > 0 || m.hrAvg > 0 || m.hrMax > 0 else { return }
+        do {
+            try await SupabaseClient.shared.reportMetrics(
+                token: token,
+                sessionId: sessionId,
+                activeCalories: m.calories,
+                hrAvg: m.hrAvg,
+                hrMax: m.hrMax,
+                hrSeries: nil
+            )
+            print("Watch: reportMetrics kcal=\(m.calories) hrAvg=\(m.hrAvg) hrMax=\(m.hrMax) [session \(sessionId)]")
+        } catch {
+            print("Watch reportMetrics error: \(error.localizedDescription)")
+        }
+    }
+
     private func handleFinishWorkout() {
         WKInterfaceDevice.current().play(.success)
 
-        // Procitaj HealthKit agregate DOK je sesija jos ziva (stopWorkoutSession
-        // ih resetuje na 0). 0 -> nil, da se ne salje lazna nula.
-        let kcal = healthKit.activeCalories
-        let hrAvg = healthKit.averageHeartRate
-        let hrMax = healthKit.maxHeartRate
-
         Task {
             guard let token = effectiveToken, let sessionId = currentSessionId else { return }
+
+            // Finalizuj HealthKit PRE citanja: na kratkom treningu aktivna energija se
+            // sumira tek posle endCollection, pa citanje pre toga vrati 0.
+            let m = await healthKit.finalizeAndStop()
+
             do {
                 try await SupabaseClient.shared.engineFinishWorkout(
                     token: token,
                     sessionId: sessionId,
-                    activeCalories: kcal > 0 ? kcal : nil,
-                    hrAvg: hrAvg > 0 ? hrAvg : nil,
-                    hrMax: hrMax > 0 ? hrMax : nil
+                    activeCalories: m.calories > 0 ? m.calories : nil,
+                    hrAvg: m.hrAvg > 0 ? m.hrAvg : nil,
+                    hrMax: m.hrMax > 0 ? m.hrMax : nil
                 )
-                print("Watch engine: finish_workout [session \(sessionId)] kcal=\(kcal) hrAvg=\(hrAvg) hrMax=\(hrMax)")
+                // Dodatno upisi FINALNE metrike (GREATEST stiti od kasne nule/duplikata).
+                try? await SupabaseClient.shared.reportMetrics(
+                    token: token,
+                    sessionId: sessionId,
+                    activeCalories: m.calories,
+                    hrAvg: m.hrAvg,
+                    hrMax: m.hrMax,
+                    hrSeries: nil
+                )
+                print("Watch engine: finish_workout [session \(sessionId)] kcal=\(m.calories) hrAvg=\(m.hrAvg) hrMax=\(m.hrMax)")
             } catch SupabaseError.sessionEnded {
+                // Sesija vec zavrsena na serveru -> svejedno upisi metrike (server pise
+                // i na zavrsenu sesiju), pa napusti ekran.
+                try? await SupabaseClient.shared.reportMetrics(
+                    token: token,
+                    sessionId: sessionId,
+                    activeCalories: m.calories,
+                    hrAvg: m.hrAvg,
+                    hrMax: m.hrMax,
+                    hrSeries: nil
+                )
                 await MainActor.run { handleWorkoutDeleted() }
             } catch {
                 print("Finish workout error: \(error.localizedDescription)")

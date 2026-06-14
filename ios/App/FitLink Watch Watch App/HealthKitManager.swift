@@ -137,6 +137,75 @@ final class HealthKitManager: NSObject, ObservableObject {
         maxHeartRate = 0
         activeCalories = 0
     }
+
+    // MARK: - Finalize (graceful)
+
+    /// Zatvori sesiju, SACEKAJ endCollection da builder finalizuje statistiku, pa
+    /// procitaj FINALNE agregate (kalorije + HR) i tek onda resetuj. Resava kratke
+    /// treninge gde se aktivna energija sumira tek na endCollection (citanje pre toga
+    /// vrati 0). Int(...rounded()) da 0.6 kcal ne padne na 0.
+    /// Race-safe: builder ref se nil-uje sinhrono pre await, pa paralelni poziv
+    /// (auto-finish + rucni finish istovremeno) ne finalizuje dvaput.
+    func finalizeAndStop() async -> (calories: Int, hrAvg: Int, hrMax: Int) {
+        guard let builder = workoutBuilder else {
+            // Vec finalizovano (ili nikad pokrenuto) -> vrati zadnje poznate vrednosti.
+            return (activeCalories, averageHeartRate, maxHeartRate)
+        }
+        workoutBuilder = nil
+        let session = workoutSession
+        workoutSession = nil
+
+        if let session = session, isWorkoutActive {
+            session.end()
+        }
+
+        let endDate = Date()
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            builder.endCollection(withEnd: endDate) { _, _ in cont.resume() }
+        }
+
+        let hrUnit = HKUnit.count().unitDivided(by: HKUnit.minute())
+        let energyStats = builder.statistics(for: HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!)
+        let hrStats = builder.statistics(for: HKQuantityType.quantityType(forIdentifier: .heartRate)!)
+
+        let kcal: Int
+        if let sum = energyStats?.sumQuantity() {
+            kcal = Int(sum.doubleValue(for: HKUnit.kilocalorie()).rounded())
+        } else {
+            kcal = activeCalories
+        }
+        let avg: Int
+        if let q = hrStats?.averageQuantity() {
+            avg = Int(q.doubleValue(for: hrUnit).rounded())
+        } else {
+            avg = averageHeartRate
+        }
+        let mx: Int
+        if let q = hrStats?.maximumQuantity() {
+            mx = Int(q.doubleValue(for: hrUnit).rounded())
+        } else {
+            mx = maxHeartRate
+        }
+
+        // Snimi HKWorkout u Health (kao i ranije). Fire-and-forget.
+        builder.finishWorkout { _, error in
+            if let error = error {
+                print("HealthKit: finishWorkout error: \(error.localizedDescription)")
+            } else {
+                print("HealthKit: workout finished (finalize)")
+            }
+        }
+
+        // Tek SAD resetuj agregate (posle citanja).
+        isWorkoutActive = false
+        currentHeartRate = 0
+        averageHeartRate = 0
+        maxHeartRate = 0
+        activeCalories = 0
+
+        print("HealthKit: finalize -> kcal=\(kcal), hrAvg=\(avg), hrMax=\(mx)")
+        return (kcal, avg, mx)
+    }
 }
 
 // MARK: - HKWorkoutSessionDelegate

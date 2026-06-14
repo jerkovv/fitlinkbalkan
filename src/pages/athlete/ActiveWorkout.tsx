@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, X, Check, ChevronRight, MessageCircle, Heart } from "lucide-react";
+import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell } from "lucide-react";
 import { getHrColor } from "@/lib/workout/hrZone";
 import {
   AlertDialog,
@@ -97,6 +97,8 @@ const ActiveWorkout = () => {
   const nav = useNavigate();
 
   const [loading, setLoading] = useState(true);
+  // Greska pri ucitavanju dana / pokretanju sesije -> prikazi poruku, ne spinner.
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [day, setDay] = useState<DayFull | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [now, setNow] = useState<Date>(new Date());
@@ -192,14 +194,20 @@ const ActiveWorkout = () => {
       );
       if (unmountedRef.current) return;
       if (dayErr || !dayRaw) {
-        toast.error(dayErr?.message ?? "Trening nije pronađen");
+        setLoadError(dayErr?.message ?? "Trening nije pronađen");
         setLoading(false);
         return;
       }
       const dayData = (Array.isArray(dayRaw) ? dayRaw[0] : dayRaw) as DayFull;
-      if (!dayData || !dayData.exercises?.length) {
-        toast.error("Ovaj dan nema vežbe");
-        setDay(dayData ?? null);
+      if (!dayData) {
+        setLoadError("Trening nije pronađen");
+        setLoading(false);
+        return;
+      }
+      // Legitiman prazan dan (0 aktivnih vezbi - soft-delete ili custom dan bez
+      // dodatih vezbi): NE pokrecemo sesiju; render pokazuje uredan prazan state.
+      if (!dayData.exercises?.length) {
+        setDay(dayData);
         setLoading(false);
         return;
       }
@@ -219,7 +227,7 @@ const ActiveWorkout = () => {
       );
       if (unmountedRef.current) return;
       if (startErr || !sid) {
-        toast.error(startErr?.message ?? "Ne mogu da pokrenem trening");
+        setLoadError(startErr?.message ?? "Ne mogu da pokrenem trening");
         setLoading(false);
         return;
       }
@@ -646,7 +654,8 @@ const ActiveWorkout = () => {
   };
 
   /* ------------------------- Render ------------------------- */
-  if (loading || !pos) {
+  // 1) LOADING: spinner samo dok ucitavamo dan / pokrecemo sesiju.
+  if (loading) {
     return (
       <div className="h-[100dvh] bg-background flex items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -654,18 +663,34 @@ const ActiveWorkout = () => {
     );
   }
 
-  if (!day || !current) {
+  // 2) GRESKA ili DAN BEZ VEZBI (0 aktivnih): uredan prazan state, nikako spinner.
+  if (loadError || !day || day.exercises.length === 0) {
+    const emptyMsg =
+      loadError ??
+      (day && day.exercises.length === 0 ? "Ovaj dan nema vežbe" : "Trening nije dostupan");
     return (
       <div className="h-[100dvh] bg-background flex items-center justify-center px-6 text-center">
-        <div className="space-y-3">
-          <p className="text-muted-foreground">Trening nije dostupan.</p>
+        <div className="space-y-4 max-w-[300px]">
+          <div className="h-14 w-14 mx-auto rounded-2xl bg-surface-2 flex items-center justify-center">
+            <Dumbbell className="h-6 w-6 text-muted-foreground" strokeWidth={2} />
+          </div>
+          <p className="text-[15px] font-semibold text-foreground">{emptyMsg}</p>
           <button
-            onClick={() => nav("/vezbac")}
-            className="text-primary font-semibold"
+            onClick={() => nav("/vezbac/trening")}
+            className="inline-flex items-center justify-center h-11 px-6 rounded-2xl bg-gradient-brand text-white font-semibold shadow-brand active:scale-95 transition"
           >
             Nazad
           </button>
         </div>
+      </div>
+    );
+  }
+
+  // 3) Dan ima vezbe; cekamo sesiju / prvi poll sa serverskom pozicijom (kratko).
+  if (!pos || !current) {
+    return (
+      <div className="h-[100dvh] bg-background flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }

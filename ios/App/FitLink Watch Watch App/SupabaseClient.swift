@@ -192,6 +192,27 @@ final class SupabaseClient {
     }
 
     @discardableResult
+    func reportMetrics(
+        token: String,
+        sessionId: String,
+        activeCalories: Int?,
+        hrAvg: Int?,
+        hrMax: Int?,
+        hrSeries: [Int]? = nil
+    ) async throws -> Bool {
+        // Upisuje FINALNE metrike i na VEC ZAVRSENU sesiju (server radi GREATEST pa
+        // kasna nula ne moze da pregazi vec upisanu vrednost). Kalorije se salju kao
+        // stvarna vrednost (i 0 je validno) - ne pretvaramo 0 u nil. Nil kljuce
+        // izostavljamo da ne pisemo null preko postojeceg.
+        var body: [String: Any] = ["p_token": token, "p_session_id": sessionId]
+        if let kcal = activeCalories { body["p_active_calories"] = kcal }
+        if let avg = hrAvg { body["p_hr_avg"] = avg }
+        if let mx = hrMax { body["p_hr_max"] = mx }
+        if let series = hrSeries { body["p_hr_series"] = series }
+        return try await callEngine(rpcName: "watch_report_metrics", body: body)
+    }
+
+    @discardableResult
     func engineExtendRest(token: String, sessionId: String, seconds: Int = 30) async throws -> Bool {
         // +30 sada ide kroz motor (server doda p_seconds na rest_ends_at samo ako je
         // current_state rest). Radi i kad telefon spava. Prikaz prati poll; sat ima

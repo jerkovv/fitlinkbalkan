@@ -139,6 +139,57 @@ const WorkoutSummary = () => {
     };
   }, [sessionId, user]);
 
+  // Sat upisuje metrike (kcal + HR) preko reportMetrics par sekundi POSLE otvaranja
+  // ovog ekrana (auto-finish / rucni finish). Osvezi plocice kad stignu: realtime
+  // UPDATE na red sesije (preferirano) + backstop refetch na 2s i 5s. Popunjavamo
+  // samo prisutne vrednosti (?? prev) da kasna nula ne pregazi vec prikazanu.
+  useEffect(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+
+    const applyMetrics = (row: any) => {
+      if (!row || cancelled) return;
+      setSession((prev) =>
+        prev
+          ? {
+              ...prev,
+              active_calories: row.active_calories ?? prev.active_calories,
+              live_hr_avg: row.live_hr_avg ?? prev.live_hr_avg,
+              live_hr_max: row.live_hr_max ?? prev.live_hr_max,
+            }
+          : prev
+      );
+    };
+
+    const refetch = async () => {
+      const { data } = await supabase
+        .from("workout_session_logs")
+        .select("active_calories, live_hr_avg, live_hr_max")
+        .eq("id", sessionId)
+        .maybeSingle();
+      applyMetrics(data);
+    };
+
+    const channel = supabase
+      .channel(`session-metrics:${sessionId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "workout_session_logs", filter: `id=eq.${sessionId}` },
+        (payload) => applyMetrics(payload.new)
+      )
+      .subscribe();
+
+    const t2 = setTimeout(refetch, 2000);
+    const t5 = setTimeout(refetch, 5000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(t2);
+      clearTimeout(t5);
+      supabase.removeChannel(channel);
+    };
+  }, [sessionId]);
+
   const stats = useMemo(() => {
     if (!session) return null;
     const start = new Date(session.started_at).getTime();
@@ -256,24 +307,19 @@ const WorkoutSummary = () => {
           />
         </div>
 
-        {(stats.hrMax || stats.kcal) && (
-          <div className="grid grid-cols-2 gap-3 mt-3">
-            {stats.hrMax != null && (
-              <StatTile
-                icon={<Heart className="h-4 w-4" />}
-                label="Max puls"
-                value={`${stats.hrMax} bpm`}
-              />
-            )}
-            {stats.kcal != null && (
-              <StatTile
-                icon={<Flame className="h-4 w-4" />}
-                label="Aktivne kcal"
-                value={String(Math.round(stats.kcal))}
-              />
-            )}
-          </div>
-        )}
+        {/* Uvek vidljive (sat upise kcal/HR par sekundi posle finish-a; "—" dok ne stigne). */}
+        <div className="grid grid-cols-2 gap-3 mt-3">
+          <StatTile
+            icon={<Heart className="h-4 w-4" />}
+            label="Max puls"
+            value={stats.hrMax ? `${stats.hrMax} bpm` : "—"}
+          />
+          <StatTile
+            icon={<Flame className="h-4 w-4" />}
+            label="Aktivne kcal"
+            value={stats.kcal ? `${Math.round(stats.kcal)} kcal` : "—"}
+          />
+        </div>
 
         {/* Exercises summary */}
         <section className="mt-7">
