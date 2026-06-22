@@ -25,6 +25,9 @@ interface InAppSet {
   reps: number | null;
   weight_kg: number | null;
   rpe: number | null;
+  // Kardio (is_duration_based): serija nosi minute umesto reps/weight. Optional da
+  // stari podaci (bez ovog polja) ne puknu.
+  duration_minutes: number | null;
   done: boolean;
 }
 
@@ -33,6 +36,9 @@ interface InAppExercise {
   planned_sets: number;
   planned_reps: string | null;
   planned_weight_kg: number | null;
+  // Vezbe trcanja/hodanja (is_duration_based): plan se prikazuje u minutima.
+  is_duration_based: boolean;
+  planned_duration_minutes: number | null;
   done_count: number;
   sets: InAppSet[];
 }
@@ -227,10 +233,18 @@ export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange }: Prop
                           <div className="font-semibold text-[14px] tracking-tight truncate">
                             {ex.exercise_name}
                           </div>
-                          <div className="text-[11.5px] text-muted-foreground mt-0.5">
-                            Plan: {ex.planned_sets} × {ex.planned_reps ?? "-"}
-                            {ex.planned_weight_kg != null ? ` @ ${ex.planned_weight_kg} kg` : ""}
-                          </div>
+                          {ex.is_duration_based ? (
+                            ex.planned_duration_minutes != null ? (
+                              <div className="text-[11.5px] text-muted-foreground mt-0.5">
+                                Plan: {ex.planned_duration_minutes} min
+                              </div>
+                            ) : null
+                          ) : (
+                            <div className="text-[11.5px] text-muted-foreground mt-0.5">
+                              Plan: {ex.planned_sets} × {ex.planned_reps ?? "-"}
+                              {ex.planned_weight_kg != null ? ` @ ${ex.planned_weight_kg} kg` : ""}
+                            </div>
+                          )}
                         </div>
                         <span className="shrink-0 text-[11px] font-bold tnum px-2 py-0.5 rounded-full bg-success-soft text-success-soft-foreground">
                           {ex.done_count}/{ex.planned_sets}
@@ -254,9 +268,15 @@ export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange }: Prop
                                   s.done ? "text-foreground" : "text-muted-foreground/50",
                                 )}
                               >
-                                Serija {s.set_number}: {s.reps ?? "-"}
-                                {s.weight_kg != null ? ` x ${s.weight_kg} kg` : ""}
-                                {s.rpe != null ? ` - RPE ${s.rpe}` : ""}
+                                {ex.is_duration_based ? (
+                                  <>Serija {s.set_number}: {s.duration_minutes != null ? `${s.duration_minutes} min` : "-"}</>
+                                ) : (
+                                  <>
+                                    Serija {s.set_number}: {s.reps ?? "-"}
+                                    {s.weight_kg != null ? ` x ${s.weight_kg} kg` : ""}
+                                    {s.rpe != null ? ` - RPE ${s.rpe}` : ""}
+                                  </>
+                                )}
                               </span>
                               {wDelta != null && wDelta !== 0 && s.done && (
                                 <span

@@ -40,7 +40,8 @@ type ExRow = {
   id: string;
   position: number;
   sets: number;
-  exercises: { name: string; primary_muscle: string | null } | null;
+  duration_minutes: number | null;
+  exercises: { name: string; primary_muscle: string | null; is_duration_based: boolean | null } | null;
 };
 
 const fmtDuration = (ms: number) => {
@@ -166,7 +167,7 @@ const WorkoutSummary = () => {
           const exRes: any = await fetchWithRetry(() =>
             supabase
               .from("assigned_program_exercises")
-              .select("id, position, sets, exercises(name, primary_muscle)")
+              .select("id, position, sets, duration_minutes, exercises(name, primary_muscle, is_duration_based)")
               .eq("day_id", sessionRow.day_id)
               .order("position", { ascending: true }),
             2
@@ -281,6 +282,8 @@ const WorkoutSummary = () => {
         id: ex.id,
         name: ex.exercises?.name ?? "Vežba",
         muscle: ex.exercises?.primary_muscle ?? null,
+        isDuration: ex.exercises?.is_duration_based ?? false,
+        durationMinutes: ex.duration_minutes ?? null,
         doneSets: done.length,
         totalSets: ex.sets,
         reps,
@@ -433,10 +436,16 @@ const WorkoutSummary = () => {
                   <div className="text-[14px] font-semibold text-foreground truncate">
                     {ex.name}
                   </div>
-                  <div className="text-[12px] text-muted-foreground">
-                    {ex.doneSets}/{ex.totalSets} serija · {ex.reps} ponavljanja
-                    {ex.maxWeight > 0 ? ` · ${ex.maxWeight} kg` : ""}
-                  </div>
+                  {ex.isDuration ? (
+                    ex.durationMinutes != null ? (
+                      <div className="text-[12px] text-muted-foreground">{ex.durationMinutes} min</div>
+                    ) : null
+                  ) : (
+                    <div className="text-[12px] text-muted-foreground">
+                      {ex.doneSets}/{ex.totalSets} serija · {ex.reps} ponavljanja
+                      {ex.maxWeight > 0 ? ` · ${ex.maxWeight} kg` : ""}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

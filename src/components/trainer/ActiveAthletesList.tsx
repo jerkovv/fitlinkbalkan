@@ -1,67 +1,17 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/hooks/useAuth";
 import { Avatar, Card, SectionTitle } from "@/components/ui-bits";
-import { Heart, ChevronRight, Activity } from "lucide-react";
+import { Heart, ChevronRight, Activity, Flame, ArrowRight } from "lucide-react";
 import { getHrColor, formatDuration } from "@/lib/workout/hrZone";
+import { isHrLive } from "@/lib/liveWorkout";
+import { useActiveAthletes } from "@/hooks/useActiveAthletes";
 
-type ActiveAthlete = {
-  athlete_id: string;
-  athlete_name: string | null;
-  session_log_id: string;
-  started_at: string;
-  current_exercise_idx: number | null;
-  current_exercise_name: string | null;
-  current_set_number: number | null;
-  total_sets: number | null;
-  current_hr: number | null;
-  total_completed_sets: number | null;
-  last_heartbeat: string | null;
-};
+// Pocetna trenera: prikazuje prva 3 aktivna vezbaca (posle istog sortiranja kao
+// stranica "Trenira uzivo"), pa dugme "Pogledaj sve" ako ih ima vise. Izvor podataka,
+// realtime i 1s tik su u deljenom hook-u useActiveAthletes (isti kao /trener/uzivo).
+const MAX_ON_HOME = 3;
 
 export const ActiveAthletesList = () => {
-  const { user } = useAuth();
-  const [athletes, setAthletes] = useState<ActiveAthlete[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [now, setNow] = useState(Date.now());
-
-  const fetchAthletes = async () => {
-    const { data } = await supabase.rpc("get_active_athletes_for_trainer" as any);
-    setAthletes(((data as any[]) ?? []) as ActiveAthlete[]);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    if (!user) return;
-    fetchAthletes();
-    const id = setInterval(fetchAthletes, 10000);
-    return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  // Realtime: any change to workout_live_state triggers a refresh
-  useEffect(() => {
-    if (!user) return;
-    const channel = supabase
-      .channel(`trainer-active:${user.id}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "workout_live_state" },
-        () => fetchAthletes(),
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  // Tick for elapsed time
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 30000);
-    return () => clearInterval(id);
-  }, []);
+  const { athletes, now, loading } = useActiveAthletes();
 
   if (loading) return null;
 
@@ -79,11 +29,14 @@ export const ActiveAthletesList = () => {
     );
   }
 
+  const total = athletes.length;
+  const visible = athletes.slice(0, MAX_ON_HOME);
+
   return (
     <section>
       <SectionTitle>Aktivni vežbači</SectionTitle>
       <ul className="space-y-2">
-        {athletes.map((a) => {
+        {visible.map((a) => {
           const elapsed = a.started_at ? now - new Date(a.started_at).getTime() : 0;
           const initials = (a.athlete_name ?? "??").slice(0, 2).toUpperCase();
           const hrColor = getHrColor(a.current_hr);
@@ -96,41 +49,72 @@ export const ActiveAthletesList = () => {
                 to={`/trener/vezbac/${a.athlete_id}/live`}
                 className="flex items-center gap-3 card-premium-hover px-4 py-3.5"
               >
-                <div className="relative">
+                <div className="relative shrink-0">
                   <Avatar initials={initials} tone="brand" />
                   <span
                     className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-success ring-2 ring-card animate-pulse"
                     aria-label="Aktivan"
                   />
                 </div>
+
+                {/* Srednja kolona dobija punu sirinu (samo avatar i strelica je flankiraju),
+                    pa se ime i vezba lepo vide; metrike idu u svoj red ispod. */}
                 <div className="flex-1 min-w-0">
+                  {/* Ime + vreme treninga (tika 1s -> tacno) */}
                   <div className="flex items-center gap-2">
-                    <span className="text-[15px] font-semibold leading-tight tracking-tight truncate">
+                    <span className="flex-1 min-w-0 text-[15px] font-semibold leading-tight tracking-tight truncate">
                       {a.athlete_name ?? "Vežbač"}
                     </span>
                     <span className="text-[11px] font-semibold text-success-soft-foreground tnum shrink-0">
                       trenira {formatDuration(elapsed)}
                     </span>
                   </div>
+
+                  {/* Koja vezba - puna sirina reda, znatno manje secenja */}
                   <div className="text-[12.5px] text-muted-foreground mt-0.5 truncate">
                     {exerciseLabel}
                   </div>
-                </div>
-                {a.current_hr != null && (
-                  <div
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-bold tnum text-white shrink-0"
-                    style={{ background: hrColor }}
-                  >
-                    <Heart className="h-3 w-3" strokeWidth={2.6} />
-                    {a.current_hr}
+
+                  {/* Metrike u svom redu: puls (isti prag svezine kao detalj) + aktivne kalorije */}
+                  <div className="flex items-center gap-1.5 mt-2">
+                    {isHrLive(a.watch_last_hr_at) ? (
+                      <div
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-bold tnum text-white"
+                        style={{ background: hrColor }}
+                      >
+                        <Heart className="h-3 w-3" strokeWidth={2.6} />
+                        {a.current_hr ?? "-"}
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-bold tnum border border-hairline text-muted-foreground">
+                        <Heart className="h-3 w-3" strokeWidth={2.6} />
+                        -
+                      </div>
+                    )}
+                    <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-bold tnum border border-hairline text-foreground">
+                      <Flame className="h-3 w-3" strokeWidth={2.6} />
+                      {Math.round(a.current_active_calories ?? 0)} kcal
+                    </div>
                   </div>
-                )}
-                <ChevronRight className="h-4 w-4 text-muted-foreground/60 shrink-0" />
+                </div>
+
+                <ChevronRight className="h-4 w-4 text-muted-foreground/60 shrink-0 self-center" />
               </Link>
             </li>
           );
         })}
       </ul>
+
+      {/* Vise od 3 aktivna -> dugme ka punoj listi (/trener/uzivo). */}
+      {total > MAX_ON_HOME && (
+        <Link
+          to="/trener/uzivo"
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-2xl bg-gradient-brand px-4 py-3.5 text-[13px] font-semibold text-white shadow-brand transition active:scale-[0.98]"
+        >
+          Pogledaj sve vežbače ({total})
+          <ArrowRight className="h-4 w-4" strokeWidth={2.4} />
+        </Link>
+      )}
     </section>
   );
 };

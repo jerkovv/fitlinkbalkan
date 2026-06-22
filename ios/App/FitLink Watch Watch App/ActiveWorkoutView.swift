@@ -23,11 +23,36 @@ struct ActiveWorkoutView: View {
     let startedAtMs: Double?
     let serverClockOffset: TimeInterval
     let onCompleteSet: () -> Void
+    // Kardio (is_duration_based): zavrsetak vezbe nosi unete minute.
+    let onCompleteCardio: (Int) -> Void
     let onFinishWorkout: () -> Void
 
     // "Završi trening" se ne vidi na glavnom ekranu - otvara se dugim pritiskom
     // (long press) bilo gde, pa potvrda da/ne, da ne dođe do slučajnog kraja.
     @State private var showFinishConfirm = false
+
+    // Kardio stepper: minute za tekucu vezbu. cardioCrown je Double izvor za Digital Crown,
+    // sinhronizovan sa cardioMinutes. cardioInitedFor: po promeni vezbe re-init iz plana
+    // (ne resetuje se na obican re-render, pa korisnikovo podesavanje ostaje).
+    @State private var cardioMinutes: Int = 20
+    @State private var cardioCrown: Double = 20
+    @State private var cardioInitedFor: String? = nil
+
+    private func ensureCardioInit() {
+        guard workout.isDurationBased else { return }
+        if cardioInitedFor != workout.exerciseName {
+            cardioInitedFor = workout.exerciseName
+            let v = max(1, min(240, workout.durationMinutes ?? 20))
+            cardioMinutes = v
+            cardioCrown = Double(v)
+        }
+    }
+
+    private func setCardioMinutes(_ v: Int) {
+        let c = max(1, min(240, v))
+        cardioMinutes = c
+        cardioCrown = Double(c)
+    }
 
     private var zone: HRZone {
         HRZone.zone(for: heartRate)
@@ -43,26 +68,18 @@ struct ActiveWorkoutView: View {
     }
     
     var body: some View {
-        // Bez skrola: sve staje na jedan ekran, unutar safe zone. Black pozadina
-        // ide ispod ivica, ali sadržaj poštuje safe area.
-        ZStack {
-            Color.black.ignoresSafeArea()
-
-            VStack(spacing: 8) {
-                exerciseHeader
-                heartRateDisplay
-                targetInfo
-                completeSetButton
+        // Kardio: ScrollView sa svim u vertikalnom toku (dugme ispod steppera). Snaga:
+        // postojeci jednoekranski raspored. Zajednicki: long-press za kraj treninga + init.
+        Group {
+            if workout.isDurationBased {
+                cardioBody
+            } else {
+                strengthBody
             }
-            // Sadržaj prislonjen uz vrh (ispod sata), vazduh ispod primarnog
-            // dugmeta - nije nabijeno na dno.
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .padding(.horizontal, 10)
-            // Gornji vazduh: gornji red nikad ne ulazi u zonu sistemskog sata.
-            .padding(.top, 20)
-            // Donji vazduh unutar safe zone.
-            .padding(.bottom, 16)
         }
+        // Kardio: init stepper iz plana na prvi prikaz i na prelaz na novu vezbu.
+        .onAppear { ensureCardioInit() }
+        .onChange(of: workout.exerciseName) { _ in ensureCardioInit() }
         // Dugi pritisak bilo gde otvara potvrdu za kraj treninga.
         .contentShape(Rectangle())
         .onLongPressGesture(minimumDuration: 0.6) {
@@ -81,14 +98,72 @@ struct ActiveWorkoutView: View {
             Button("Otkaži", role: .cancel) {}
         }
     }
-    
+
+    // Snaga: postojeci jednoekranski raspored (bez skrola, sve unutar safe zone).
+    private var strengthBody: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            VStack(spacing: 8) {
+                exerciseHeader
+                heartRateDisplay
+                targetInfo
+                completeSetButton
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .padding(.horizontal, 10)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
+        }
+    }
+
+    // Kardio: BEZ ScrollView-a (Digital Crown vozi stepper, ne skrol). Sadrzaj (naziv, HR,
+    // stepper, "Cilj") centriran preko Spacer-a u VStack-u koji popunjava ekran; dugme "Zavrsi
+    // vezbu" u safeAreaInset(.bottom) -> rezervise svoju visinu, sadrzaj se slaze IZNAD njega,
+    // pa nema ni preklapanja ni secenja. Sve staje na jedan ekran.
+    private var cardioBody: some View {
+        VStack(spacing: 6) {
+            Spacer(minLength: 0)
+
+            Text(workout.exerciseName)
+                .font(.zoneNum(15, .bold))
+                .foregroundColor(.white)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.8)
+
+            cardioHrBadge
+
+            cardioMinutesControl
+
+            if let target = workout.durationMinutes {
+                Text("Cilj: \(target) min")
+                    .font(.zoneNum(11, .semibold))
+                    .foregroundColor(.textMuted)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 8)
+        .background(Color.black.ignoresSafeArea())
+        .safeAreaInset(edge: .bottom) {
+            cardioFinishButton
+                .padding(.horizontal)
+                .padding(.bottom, 2)
+        }
+    }
+
     private var exerciseHeader: some View {
         VStack(spacing: 2) {
-            Text("SET \(workout.currentSet) / \(workout.totalSets)")
-                .font(.zoneNum(10, .bold))
-                .tracking(1.5)
-                .monospacedDigit()
-                .foregroundColor(.textMuted)
+            // Kardio: bez "SET X / Y" (prikazuje se samo naziv vezbe).
+            if !workout.isDurationBased {
+                Text("SET \(workout.currentSet) / \(workout.totalSets)")
+                    .font(.zoneNum(10, .bold))
+                    .tracking(1.5)
+                    .monospacedDigit()
+                    .foregroundColor(.textMuted)
+            }
 
             Text(workout.exerciseName)
                 .font(.zoneNum(14, .bold))
@@ -159,7 +234,7 @@ struct ActiveWorkoutView: View {
     private var targetInfo: some View {
         HStack(spacing: 8) {
             VStack(spacing: 0) {
-                Text("\(workout.targetReps)")
+                Text(workout.targetRepsText ?? "\(workout.targetReps)")
                     .font(.zoneNum(16, .bold))
                     .monospacedDigit()
                     .foregroundColor(.white)
@@ -228,6 +303,103 @@ struct ActiveWorkoutView: View {
         .shadow(color: Color.brandViolet.opacity(0.4), radius: 6, y: 3)
     }
 
+    // MARK: - Kardio (na minute)
+
+    // Sitan HR badge (zadrzan, ne zatrpava ekran).
+    private var cardioHrBadge: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "heart.fill")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(zone.color)
+            Text("\(heartRate)")
+                .font(.zoneNum(13, .bold))
+                .monospacedDigit()
+                .foregroundColor(zone.color)
+            Text("BPM")
+                .font(.zoneNum(8, .bold))
+                .tracking(0.6)
+                .foregroundColor(.textMuted)
+        }
+    }
+
+    // VELIKI broj minuta u centru + "min", flankiran sitnim minus/plus (korak 1, opseg 1-240).
+    // Ceo red je focusable -> Digital Crown menja vrednost (sinhronizovan preko cardioCrown).
+    // cardioMinutes je PRIKAZANA i POSLATA vrednost (sto korisnik vidi, to se salje).
+    private var cardioMinutesControl: some View {
+        HStack(spacing: 8) {
+            Button(action: {
+                WKInterfaceDevice.current().play(.click)
+                setCardioMinutes(cardioMinutes - 1)
+            }) {
+                Image(systemName: "minus")
+                    .font(.system(size: 15, weight: .bold))
+                    .frame(width: 30, height: 30)
+            }
+            .buttonStyle(.plain)
+            .background(Color.surfaceCard)
+            .clipShape(Circle())
+            .foregroundColor(.white)
+            .disabled(cardioMinutes <= 1)
+
+            HStack(alignment: .lastTextBaseline, spacing: 3) {
+                Text("\(cardioMinutes)")
+                    .font(.zoneNum(50, .heavy))
+                    .monospacedDigit()
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .contentTransition(.numericText())
+                Text("min")
+                    .font(.zoneNum(13, .bold))
+                    .foregroundColor(.textMuted)
+            }
+            .frame(minWidth: 86)
+
+            Button(action: {
+                WKInterfaceDevice.current().play(.click)
+                setCardioMinutes(cardioMinutes + 1)
+            }) {
+                Image(systemName: "plus")
+                    .font(.system(size: 15, weight: .bold))
+                    .frame(width: 30, height: 30)
+            }
+            .buttonStyle(.plain)
+            .background(Color.surfaceCard)
+            .clipShape(Circle())
+            .foregroundColor(.white)
+            .disabled(cardioMinutes >= 240)
+        }
+        .focusable(true)
+        .digitalCrownRotation(
+            $cardioCrown,
+            from: 1,
+            through: 240,
+            by: 1,
+            sensitivity: .low,
+            isContinuous: false,
+            isHapticFeedbackEnabled: true
+        )
+        .onChange(of: cardioCrown) { newVal in
+            let v = min(240, max(1, Int(newVal.rounded())))
+            if v != cardioMinutes { cardioMinutes = v }
+        }
+    }
+
+    // Puna sirina, .borderedProminent. Stoji ISPOD steppera u vertikalnom toku (horizontalni
+    // razmak nosi roditeljski VStack), salje TRENUTNU prikazanu vrednost (ne init).
+    private var cardioFinishButton: some View {
+        Button(action: {
+            WKInterfaceDevice.current().play(.success)
+            onCompleteCardio(cardioMinutes)
+        }) {
+            Text("Završi vežbu")
+                .font(.zoneNum(15, .semibold))
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(Color.brandViolet)
+    }
+
 }
 
 #Preview {
@@ -237,6 +409,7 @@ struct ActiveWorkoutView: View {
         startedAtMs: Date().addingTimeInterval(-750).timeIntervalSince1970 * 1000,
         serverClockOffset: 0,
         onCompleteSet: { print("Set completed") },
+        onCompleteCardio: { print("Cardio completed: \($0) min") },
         onFinishWorkout: { print("Finish workout") }
     )
 }

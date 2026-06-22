@@ -180,7 +180,7 @@ const Progress = () => {
       // Top 5 PR-ova (po e1rm, najsvežiji prvo za remi)
       const { data: prData } = await supabase
         .from("personal_records")
-        .select("id, exercise_id, best_weight_kg, best_weight_reps, best_e1rm_kg, best_e1rm_at, exercises(name)")
+        .select("id, exercise_id, best_weight_kg, best_weight_reps, best_e1rm_kg, best_e1rm_at, exercises(name, is_duration_based)")
         .eq("athlete_id", user.id)
         .order("best_e1rm_kg", { ascending: false, nullsFirst: false })
         .limit(8);

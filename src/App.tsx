@@ -36,6 +36,7 @@ import TrainerPayments from "./pages/trainer/Payments.tsx";
 import TrainerChatList from "./pages/trainer/ChatList.tsx";
 import TrainerChatThread from "./pages/trainer/ChatThread.tsx";
 import TrainerLiveWorkout from "./pages/trainer/LiveWorkoutView.tsx";
+import TrainerLiveAthletes from "./pages/trainer/LiveAthletesView.tsx";
 
 
 import AthleteHome from "./pages/athlete/Home.tsx";
@@ -76,6 +77,7 @@ const App = () => (
             {/* Trener — protected */}
             <Route path="/trener/onboarding" element={trainer(<TrainerOnboarding />)} />
             <Route path="/trener" element={trainer(<TrainerDashboard />)} />
+            <Route path="/trener/uzivo" element={trainer(<TrainerLiveAthletes />)} />
             <Route path="/trener/vezbaci" element={trainer(<TrainerAthletes />)} />
             <Route path="/trener/vezbaci/:id" element={trainer(<TrainerAthleteProfile />)} />
             <Route path="/trener/program" element={trainer(<TrainerProgram />)} />

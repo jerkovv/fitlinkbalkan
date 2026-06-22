@@ -12,7 +12,7 @@ export type ExerciseFilters = {
   searchQuery: string;
 };
 
-const SELECT = "id, name, name_en, description, primary_muscle, thumbnail_url, video_url";
+const SELECT = "id, name, name_en, description, primary_muscle, thumbnail_url, video_url, is_duration_based";
 
 export const useExercises = (filters: ExerciseFilters) => {
   const { user } = useAuth();

@@ -33,10 +33,47 @@ export const useAddExercisesToDay = ({ dayId, table = "program_template_exercise
         rest_seconds: 90,
       }));
 
-      const { error } = await supabase
+      // Vrati nove id-eve (+ exercise_id) da odmah kreiramo pocetne per-set redove.
+      const { data: inserted, error } = await supabase
         .from(table)
-        .insert(rows as any);
+        .insert(rows as any)
+        .select("id, exercise_id");
       if (error) throw error;
+
+      // Pocetni per-set redovi (3 seta, isto kao parent default) za NE-kardio vezbe.
+      // Kardio (is_duration_based) koristi minute, ne setove -> preskace.
+      const setsTable = table === "assigned_program_exercises"
+        ? "assigned_program_exercise_sets"
+        : "program_template_exercise_sets";
+      const setsFk = table === "assigned_program_exercises"
+        ? "assigned_exercise_id"
+        : "template_exercise_id";
+
+      const insertedRows = (inserted as any[]) ?? [];
+      if (insertedRows.length) {
+        const { data: exMeta } = await supabase
+          .from("exercises")
+          .select("id, is_duration_based")
+          .in("id", insertedRows.map((r) => r.exercise_id));
+        const durationIds = new Set(
+          ((exMeta as any[]) ?? []).filter((e) => e.is_duration_based).map((e) => e.id),
+        );
+        const setRows = insertedRows
+          .filter((r) => !durationIds.has(r.exercise_id))
+          .flatMap((r) =>
+            [1, 2, 3].map((sn) => ({
+              [setsFk]: r.id,
+              set_number: sn,
+              reps: "10",
+              weight_kg: null,
+              rest_seconds: 90,
+            })),
+          );
+        if (setRows.length) {
+          await supabase.from(setsTable as any).insert(setRows as any);
+        }
+      }
+
       return rows.length;
     },
     onSuccess: (n) => {

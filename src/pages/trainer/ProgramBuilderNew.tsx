@@ -16,7 +16,7 @@ import {
   FullScreenSheetFooter,
 } from "@/components/ui/full-screen-sheet";
 import {
-  Plus, Loader2, Dumbbell, Trash2, GripVertical, ChevronDown, ChevronUp, UserPlus, Check, Send,
+  Plus, Loader2, Dumbbell, Trash2, GripVertical, ChevronDown, ChevronUp, UserPlus, Check, Send, X, Settings2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ExercisePickerSheet } from "@/components/exercises/ExercisePickerSheet";
@@ -29,9 +29,19 @@ type Exercise = {
   sets: number;
   reps: string;
   weight_kg: number | null;
+  // Vezbe trcanja/hodanja (exercises.is_duration_based) se unose i prikazuju u minutima.
+  duration_minutes: number | null;
   rest_seconds: number | null;
   notes: string | null;
-  exercises: { name: string; name_en: string | null; primary_muscle: string } | null;
+  exercises: { name: string; name_en: string | null; primary_muscle: string; is_duration_based: boolean | null; thumbnail_url: string | null } | null;
+};
+// Per-set cilj (izvor istine). id je DB id ili privremeni (React key); ne salje se u upsert.
+type SetRow = {
+  id: string;
+  set_number: number;
+  reps: string;
+  weight_kg: number | null;
+  rest_seconds: number | null;
 };
 type Athlete = { id: string; full_name: string | null; email: string };
 
@@ -49,6 +59,8 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
         daysTable: "assigned_program_days",
         exTable: "assigned_program_exercises",
         parentCol: "assigned_program_id",
+        setsTable: "assigned_program_exercise_sets",
+        setsFk: "assigned_exercise_id",
         softDelete: true,
       } as const
     : {
@@ -56,6 +68,8 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
         daysTable: "program_template_days",
         exTable: "program_template_exercises",
         parentCol: "template_id",
+        setsTable: "program_template_exercise_sets",
+        setsFk: "template_exercise_id",
         softDelete: false,
       } as const;
   const confirm = useConfirm();
@@ -63,7 +77,12 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
   const [templateName, setTemplateName] = useState("");
   const [days, setDays] = useState<Day[]>([]);
   const [exByDay, setExByDay] = useState<Record<string, Exercise[]>>({});
+  // Per-set redovi po vezbi (parent ex.id -> sortirani set redovi). Izvor istine za editor.
+  const [setsByEx, setSetsByEx] = useState<Record<string, SetRow[]>>({});
   const [openDay, setOpenDay] = useState<string | null>(null);
+  // Otvorena (expand) vezba za per-set editor; "napredno" (Pauza) toggle po vezbi.
+  const [openExId, setOpenExId] = useState<string | null>(null);
+  const [advancedByEx, setAdvancedByEx] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
 
   // Add day dialog
@@ -98,17 +117,48 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
       const dayIds = dList.map((d: any) => d.id);
       let exQ = supabase
         .from(cfg.exTable)
-        .select("*, exercises(name, name_en, primary_muscle)")
+        .select("*, exercises(name, name_en, primary_muscle, is_duration_based, thumbnail_url)")
         .in("day_id", dayIds);
       if (cfg.softDelete) exQ = exQ.is("deleted_at", null);
       const { data: exs } = await exQ.order("position");
+      const exList = (exs as any[]) ?? [];
       const grouped: Record<string, Exercise[]> = {};
-      (exs as any ?? []).forEach((e: Exercise) => {
+      exList.forEach((e: Exercise) => {
         const k = (e as any).day_id;
         grouped[k] = grouped[k] ?? [];
         grouped[k].push(e);
       });
       setExByDay(grouped);
+
+      // Per-set redovi za sve vezbe dana (sort set_number). Vezbe bez redova (legacy / nove
+      // jos bez upisa) -> init iz parent sazetka; cardio (is_duration_based) preskace (koristi minute).
+      const exIds = exList.map((e) => e.id);
+      const setsNext: Record<string, SetRow[]> = {};
+      if (exIds.length) {
+        const { data: setRows } = await supabase
+          .from(cfg.setsTable as any)
+          .select("*")
+          .in(cfg.setsFk, exIds)
+          .order("set_number", { ascending: true });
+        for (const s of ((setRows as any[]) ?? [])) {
+          const fk = s[cfg.setsFk] as string;
+          (setsNext[fk] ??= []).push({
+            id: s.id, set_number: s.set_number, reps: s.reps ?? "",
+            weight_kg: s.weight_kg, rest_seconds: s.rest_seconds,
+          });
+        }
+      }
+      for (const e of exList) {
+        if (e.exercises?.is_duration_based) continue;
+        if (!setsNext[e.id]?.length) {
+          const n = Math.max(1, e.sets ?? 1);
+          setsNext[e.id] = Array.from({ length: n }, (_, i) => ({
+            id: crypto.randomUUID(), set_number: i + 1,
+            reps: e.reps ?? "", weight_kg: e.weight_kg, rest_seconds: e.rest_seconds,
+          }));
+        }
+      }
+      setSetsByEx(setsNext);
       if (!openDay) setOpenDay(dList[0].id);
     }
     setLoading(false);
@@ -166,6 +216,35 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
     const { error } = await supabase.from(cfg.exTable).update(patch as any).eq("id", exId);
     if (error) { toast.error(error.message); return; }
     load();
+  };
+
+  // Snimanje per-set redova jedne vezbe (auto, onBlur) ATOMICNO preko RPC-a
+  // save_exercise_sets: server radi upsert + brisanje viska + renumeraciju 1..n (po REDOSLEDU
+  // u p_sets) + sync parenta (sets/reps/weight_kg) u jednoj transakciji. FE ne dira parent
+  // ni viskove. Redosled p_sets = redosled setova; id i set_number se NE salju (server dodeljuje).
+  // (Bez load() na uspeh - lokalni setsByEx je vec azuriran optimisticki, da input ne treperi.)
+  const saveSets = async (exId: string, rows: SetRow[]) => {
+    const p_sets = rows.map((r) => ({
+      reps: r.reps?.trim() ? r.reps.trim() : null,
+      weight_kg: r.weight_kg,
+      rest_seconds: r.rest_seconds,
+      notes: null,
+    }));
+    const { data, error } = await supabase.rpc("save_exercise_sets" as any, {
+      p_scope: mode,            // "template" | "assigned"
+      p_exercise_id: exId,
+      p_sets: p_sets,
+    } as any);
+    if (error || (data && (data as any).success === false)) {
+      toast.error(error?.message ?? (data as any)?.error ?? "Greška pri snimanju setova");
+      load();   // revert: RPC je atomican -> neuspeh = nepromenjeno; ponovo ucitaj iz baze
+    }
+  };
+
+  // Optimisticki lokalni update + snimanje (bez reload-a na uspeh, fokus/unos ostaju).
+  const applySets = (exId: string, rows: SetRow[]) => {
+    setSetsByEx((prev) => ({ ...prev, [exId]: rows }));
+    void saveSets(exId, rows);
   };
 
   const removeExercise = async (exId: string) => {
@@ -301,66 +380,157 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                     {exList.length === 0 && (
                       <p className="text-xs text-muted-foreground text-center py-3">Nema vežbi u ovom danu</p>
                     )}
-                    {exList.map((ex) => (
-                      <div key={ex.id} className="bg-surface rounded-lg p-3 space-y-2">
-                        <div className="flex items-start gap-2">
-                          <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <div className="font-semibold text-sm truncate">{ex.exercises?.name_en?.trim() || ex.exercises?.name || "—"}</div>
-                            {ex.exercises?.name_en && ex.exercises.name_en.trim() && ex.exercises.name_en.trim() !== ex.exercises.name && (
-                              <div className="text-[11px] text-muted-foreground truncate">{ex.exercises.name}</div>
-                            )}
-                            <div className="text-[11px] text-muted-foreground capitalize">{ex.exercises?.primary_muscle?.replace("_", " ")}</div>
+                    {exList.map((ex) => {
+                      const rows = setsByEx[ex.id] ?? [];
+                      const isDuration = !!ex.exercises?.is_duration_based;
+                      const open = openExId === ex.id;
+                      const advanced = !!advancedByEx[ex.id];
+                      const name = ex.exercises?.name_en?.trim() || ex.exercises?.name || "—";
+                      const thumb = ex.exercises?.thumbnail_url;
+                      const setCount = rows.length || ex.sets;
+                      const summary = isDuration
+                        ? (ex.duration_minutes != null ? `${ex.duration_minutes} min` : "Trajanje")
+                        : `${setCount} ${setCount === 1 ? "serija" : "serije"}${rows[0]?.weight_kg != null ? ` · ${rows[0].weight_kg} kg` : ""}`;
+                      const cols = advanced ? "28px 1fr 1fr 60px 24px" : "28px 1fr 1fr 24px";
+                      return (
+                        <div key={ex.id} className="bg-surface rounded-lg overflow-hidden">
+                          {/* Sazeti red: thumbnail iz baze + ime + sazetak + expand; brisanje desno */}
+                          <div className="flex items-center gap-2.5 p-2.5">
+                            <button
+                              onClick={() => setOpenExId(open ? null : ex.id)}
+                              className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
+                            >
+                              {thumb ? (
+                                <img src={thumb} alt="" loading="lazy" className="h-12 w-12 rounded-lg object-cover bg-surface-2 shrink-0" />
+                              ) : (
+                                <div className="h-12 w-12 rounded-lg bg-surface-2 flex items-center justify-center shrink-0">
+                                  <Dumbbell className="h-5 w-5 text-muted-foreground/60" />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="font-display font-semibold text-sm truncate">{name}</div>
+                                <div className="text-[12px] text-muted-foreground truncate">{summary}</div>
+                              </div>
+                              {open ? <ChevronUp className="h-4 w-4 text-primary shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
+                            </button>
+                            <button
+                              onClick={() => removeExercise(ex.id)}
+                              aria-label="Ukloni vežbu"
+                              className="h-8 w-8 rounded-md hover:bg-destructive-soft flex items-center justify-center transition shrink-0"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                            </button>
                           </div>
-                          <button
-                            onClick={() => removeExercise(ex.id)}
-                            className="h-7 w-7 rounded-md hover:bg-destructive-soft flex items-center justify-center transition"
-                          >
-                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                          </button>
+
+                          {open && (
+                            <div className="border-t border-hairline px-3 py-3">
+                              {isDuration ? (
+                                // Vezba na minute (trcanje/hodanje): jedno polje "Minuti".
+                                <div>
+                                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-semibold">Minuti</div>
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    defaultValue={ex.duration_minutes ?? ""}
+                                    onBlur={(e) => {
+                                      const v = e.target.value === "" ? null : parseInt(e.target.value);
+                                      if (v !== ex.duration_minutes) updateExercise(ex.id, { duration_minutes: v });
+                                    }}
+                                    className="h-8 text-sm"
+                                    placeholder="npr. 20"
+                                  />
+                                </div>
+                              ) : (
+                                // Per-set tabela (izvor istine). Pauza skrivena dok se ne ukey "napredno".
+                                <div>
+                                  <div className="grid items-center gap-2 mb-1.5" style={{ gridTemplateColumns: cols }}>
+                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">Set</span>
+                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">Kg</span>
+                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">Reps</span>
+                                    {advanced && <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">Pauza (s)</span>}
+                                    <span />
+                                  </div>
+
+                                  {rows.map((r, idx) => (
+                                    <div key={r.id} className="grid items-center gap-2 mb-2" style={{ gridTemplateColumns: cols }}>
+                                      <span className="h-6 w-6 mx-auto rounded-md bg-primary-soft text-primary text-[12px] font-bold flex items-center justify-center">
+                                        {idx + 1}
+                                      </span>
+                                      <Input
+                                        key={`w-${r.id}`}
+                                        type="number"
+                                        step="0.5"
+                                        defaultValue={r.weight_kg ?? ""}
+                                        onBlur={(e) => {
+                                          const v = e.target.value === "" ? null : parseFloat(e.target.value);
+                                          if (v !== r.weight_kg) applySets(ex.id, rows.map((row, i) => (i === idx ? { ...row, weight_kg: v } : row)));
+                                        }}
+                                        className="h-8 text-sm text-center"
+                                        placeholder="—"
+                                      />
+                                      <Input
+                                        key={`r-${r.id}`}
+                                        defaultValue={r.reps}
+                                        onBlur={(e) => {
+                                          if (e.target.value !== r.reps) applySets(ex.id, rows.map((row, i) => (i === idx ? { ...row, reps: e.target.value } : row)));
+                                        }}
+                                        className="h-8 text-sm text-center"
+                                        placeholder="8-12"
+                                      />
+                                      {advanced && (
+                                        <Input
+                                          key={`p-${r.id}`}
+                                          type="number"
+                                          defaultValue={r.rest_seconds ?? ""}
+                                          onBlur={(e) => {
+                                            const v = e.target.value === "" ? null : parseInt(e.target.value);
+                                            if (v !== r.rest_seconds) applySets(ex.id, rows.map((row, i) => (i === idx ? { ...row, rest_seconds: v } : row)));
+                                          }}
+                                          className="h-8 text-sm text-center"
+                                          placeholder="90"
+                                        />
+                                      )}
+                                      <button
+                                        onClick={() => { if (rows.length > 1) applySets(ex.id, rows.filter((_, i) => i !== idx)); }}
+                                        disabled={rows.length <= 1}
+                                        aria-label="Ukloni set"
+                                        className="h-7 w-7 mx-auto rounded-md hover:bg-destructive-soft flex items-center justify-center transition disabled:opacity-30"
+                                      >
+                                        <X className="h-3.5 w-3.5 text-muted-foreground" />
+                                      </button>
+                                    </div>
+                                  ))}
+
+                                  <div className="flex items-center justify-between mt-1">
+                                    <button
+                                      onClick={() => {
+                                        const last = rows[rows.length - 1];
+                                        applySets(ex.id, [...rows, {
+                                          id: crypto.randomUUID(),
+                                          set_number: rows.length + 1,
+                                          reps: last?.reps ?? "10",
+                                          weight_kg: last?.weight_kg ?? null,
+                                          rest_seconds: last?.rest_seconds ?? 90,
+                                        }]);
+                                      }}
+                                      className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary"
+                                    >
+                                      <Plus className="h-4 w-4" /> Dodaj set
+                                    </button>
+                                    <button
+                                      onClick={() => setAdvancedByEx((p) => ({ ...p, [ex.id]: !advanced }))}
+                                      className={`inline-flex items-center gap-1.5 text-[12px] font-medium ${advanced ? "text-primary" : "text-muted-foreground"}`}
+                                    >
+                                      <Settings2 className="h-3.5 w-3.5" /> Pauza
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <div>
-                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-semibold">Setovi</div>
-                            <Input
-                              type="number"
-                              min={1}
-                              defaultValue={ex.sets}
-                              onBlur={(e) => {
-                                const v = parseInt(e.target.value);
-                                if (v && v !== ex.sets) updateExercise(ex.id, { sets: v });
-                              }}
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                          <div>
-                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-semibold">Ponavljanja</div>
-                            <Input
-                              defaultValue={ex.reps}
-                              onBlur={(e) => {
-                                if (e.target.value !== ex.reps) updateExercise(ex.id, { reps: e.target.value });
-                              }}
-                              className="h-8 text-sm"
-                              placeholder="8-12"
-                            />
-                          </div>
-                          <div>
-                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-semibold">Težina (kg)</div>
-                            <Input
-                              type="number"
-                              step="0.5"
-                              defaultValue={ex.weight_kg ?? ""}
-                              onBlur={(e) => {
-                                const v = e.target.value === "" ? null : parseFloat(e.target.value);
-                                if (v !== ex.weight_kg) updateExercise(ex.id, { weight_kg: v });
-                              }}
-                              className="h-8 text-sm"
-                              placeholder="—"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
 
                     <button
                       onClick={() => openExercisePicker(d.id)}

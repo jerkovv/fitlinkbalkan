@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ChevronLeft, Heart, Loader2, Activity, Pause } from "lucide-react";
+import { ChevronLeft, Heart, Loader2, Activity, Pause, Flame } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { Card } from "@/components/ui-bits";
 import { QuickMessagePanel } from "@/components/trainer/QuickMessagePanel";
 import { getHrColor, getZoneVar } from "@/lib/workout/hrZone";
+import { isHrLive } from "@/lib/liveWorkout";
 
 type LiveState = {
   session_log_id: string;
@@ -15,6 +16,8 @@ type LiveState = {
   current_set_number: number | null;
   total_sets: number | null;
   current_hr: number | null;
+  // Vreme poslednjeg HR upisa sa sata (workout_live_state.watch_last_hr_at) - prag svezine.
+  watch_last_hr_at: string | null;
   total_completed_sets: number | null;
   last_heartbeat: string | null;
   current_state: string | null;
@@ -80,6 +83,9 @@ const LiveWorkoutView = () => {
   // u get_active_athletes_for_trainer (puls / efektivni max iz konfiga/godina),
   // pa zonu citamo iz te RPC za ovog vezbaca. null = ne prikazuj zonu.
   const [hrZone, setHrZone] = useState<number | null>(null);
+  // Zive aktivne kalorije sa sata - dolaze iz istog RPC reda kao zona
+  // (get_active_athletes_for_trainer.current_active_calories), pa se osvezavaju istim refetch-om.
+  const [liveCalories, setLiveCalories] = useState<number>(0);
   const [session, setSession] = useState<SessionRow | null>(null);
   const [athleteName, setAthleteName] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -140,6 +146,7 @@ const LiveWorkoutView = () => {
     const { data } = await supabase.rpc("get_active_athletes_for_trainer" as any);
     const row = ((data as any[]) ?? []).find((r) => r.athlete_id === athleteId);
     setHrZone(row?.hr_zone ?? null);
+    setLiveCalories(Math.round(row?.current_active_calories ?? 0));
   };
 
   useEffect(() => {
@@ -256,6 +263,9 @@ const LiveWorkoutView = () => {
   }
 
   const hr = state?.current_hr ?? null;
+  // Prag svezine (deljen sa listom): puls se prikazuje samo ako ga je sat osvezio u
+  // poslednjih HR_FRESH_SECONDS. `now` tika 1s pa se gejt re-evaluira i bez novog fetch-a.
+  const hrLive = isHrLive(state?.watch_last_hr_at ?? null);
   // Boja iz FitLink rampe (brand tokeni) kad imamo serversku zonu; inace
   // fallback na puls-baziranu boju. Bez hardkodiranog hex-a.
   const zoneVar = getZoneVar(hrZone);
@@ -414,7 +424,7 @@ const LiveWorkoutView = () => {
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="font-display text-[40px] font-bold tracking-tightest leading-none tnum">
-                  {hr != null && hr > 0 ? hr : "-"}
+                  {hr != null && hr > 0 && hrLive ? hr : "-"}
                 </span>
                 <span className="text-[12px] font-semibold text-muted-foreground">bpm</span>
               </div>
@@ -426,6 +436,20 @@ const LiveWorkoutView = () => {
                   Zona {hrZone}
                 </div>
               )}
+            </div>
+            {/* Zive aktivne kalorije pored HR-a (isti refetch kao zona). Uvek vidljivo
+                (0 kcal kad nema podatka) da trener zna da je metrika ziva. */}
+            <div className="shrink-0 flex flex-col items-end">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                Kalorije
+              </div>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <Flame className="h-5 w-5 text-warning-soft-foreground" strokeWidth={2.4} />
+                <span className="font-display text-[28px] font-bold tracking-tightest leading-none tnum">
+                  {Math.round(liveCalories ?? 0)}
+                </span>
+                <span className="text-[12px] font-semibold text-muted-foreground">kcal</span>
+              </div>
             </div>
           </div>
 

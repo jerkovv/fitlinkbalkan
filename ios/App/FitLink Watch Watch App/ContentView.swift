@@ -55,6 +55,11 @@ struct LocalPosition {
     let restSeconds: Int
     let plannedReps: Int?
     let plannedWeight: Double?
+    // Cilj reps kao tekst za prikaz (npr "8-12"); per-set iz set_details, fallback reps_text.
+    let plannedRepsText: String?
+    // Kardio: trenutna vezba se izvodi na minute (is_duration_based) + cilj minuta.
+    let isDurationBased: Bool
+    let durationMinutes: Int?
 }
 
 struct ContentView: View {
@@ -146,6 +151,7 @@ struct ContentView: View {
                         startedAtMs: workoutStartedAtMs,
                         serverClockOffset: serverClockOffset,
                         onCompleteSet: handleCompleteSet,
+                        onCompleteCardio: handleCardioComplete,
                         onFinishWorkout: handleFinishWorkout
                     )
                     heartRateZoneView
@@ -1139,7 +1145,9 @@ struct ContentView: View {
             totalSets: totalSets,
             state: state,
             restEndsAtMs: row.restEndsAtMs,
-            serverNowMs: row.serverNowMs
+            serverNowMs: row.serverNowMs,
+            isDurationBased: row.isDurationBased ?? false,
+            durationMinutes: row.currentDurationMinutes
         )
     }
 
@@ -1155,6 +1163,13 @@ struct ContentView: View {
         for ex in ordered {
             let done = doneCounts[ex.apeId] ?? ex.doneCount
             if done < ex.sets {
+                // Cilj BAS tekuceg seta iz set_details; fallback na parent (jedna vrednost).
+                let sd = ex.setDetails?.first(where: { $0.setNumber == done + 1 })
+                let repsText = sd?.reps ?? ex.repsText
+                let repsNum = sd != nil
+                    ? Int(String((sd?.reps ?? "").prefix(while: { $0.isNumber })))   // "8-12" -> 8
+                    : ex.plannedReps
+                let weight = sd != nil ? sd?.weightKg : ex.plannedWeight
                 return LocalPosition(
                     complete: false,
                     apeId: ex.apeId,
@@ -1162,15 +1177,19 @@ struct ContentView: View {
                     exerciseName: ex.exerciseName,
                     setNumber: done + 1,
                     totalSets: ex.sets,
-                    restSeconds: ex.restSeconds,
-                    plannedReps: ex.plannedReps,
-                    plannedWeight: ex.plannedWeight
+                    restSeconds: sd?.restSeconds ?? ex.restSeconds,
+                    plannedReps: repsNum,
+                    plannedWeight: weight,
+                    plannedRepsText: repsText,
+                    isDurationBased: ex.isDurationBased ?? false,
+                    durationMinutes: ex.durationMinutes
                 )
             }
         }
         return LocalPosition(complete: true, apeId: "", exerciseIdx: 0, exerciseName: "",
                              setNumber: 0, totalSets: 0, restSeconds: 0,
-                             plannedReps: nil, plannedWeight: nil)
+                             plannedReps: nil, plannedWeight: nil, plannedRepsText: nil,
+                             isDurationBased: false, durationMinutes: nil)
     }
 
     // Pozicija koju UI prikazuje. Renderuje iz LOKALNOG modela SAMO kad se slaze sa serverom
@@ -1189,7 +1208,10 @@ struct ContentView: View {
                 totalSets: pos.totalSets,
                 targetReps: pos.plannedReps ?? currentWorkout.targetReps,
                 targetWeight: pos.plannedWeight ?? currentWorkout.targetWeight,
-                restSeconds: pos.restSeconds > 0 ? pos.restSeconds : currentWorkout.restSeconds
+                restSeconds: pos.restSeconds > 0 ? pos.restSeconds : currentWorkout.restSeconds,
+                isDurationBased: pos.isDurationBased,
+                durationMinutes: pos.durationMinutes,
+                targetRepsText: pos.plannedRepsText
             )
         }
         return currentWorkout
@@ -1298,9 +1320,12 @@ struct ContentView: View {
         do {
             switch action.type {
             case .completeSet:
+                // Kardio akcija (durationMinutes != nil) salje p_duration_minutes; reps/weight/rpe
+                // su nil pa se izostavljaju. Obican set ide tacno kao pre (durationMinutes nil).
                 _ = try await SupabaseClient.shared.engineCompleteSet(
                     token: token, sessionId: action.sessionId,
-                    reps: action.reps, weight: action.weight, rpe: action.rpe)
+                    reps: action.reps, weight: action.weight, rpe: action.rpe,
+                    durationMinutes: action.durationMinutes)
             case .finish:
                 _ = try await SupabaseClient.shared.engineFinishWorkout(
                     token: token, sessionId: action.sessionId)
@@ -1326,7 +1351,9 @@ struct ContentView: View {
         totalSets: Int,
         state: String,
         restEndsAtMs: Double?,
-        serverNowMs: Double?
+        serverNowMs: Double?,
+        isDurationBased: Bool = false,
+        durationMinutes: Int? = nil
     ) {
         // Sloj 0: zapamti zivi session_id da HR keep-alive uvek gadja tacnu sesiju.
         if let sessionId = sessionId {
@@ -1364,7 +1391,9 @@ struct ContentView: View {
             totalSets: totalSets,
             targetReps: 10,
             targetWeight: nil,
-            restSeconds: 90
+            restSeconds: 90,
+            isDurationBased: isDurationBased,
+            durationMinutes: durationMinutes
         )
 
         // KORAK B: server pomera lokalni model (uskladi doneCount-ove sa serverskom pozicijom).
@@ -1438,6 +1467,47 @@ struct ContentView: View {
             // Poslednja serija: server auto-finalizuje preko complete_set. Posalji PRE reseta.
             flushQueue()
             handleWorkoutDeleted()   // lokalno completed + finalizuj/buffer metrike + cleanup
+        }
+    }
+
+    // Kardio "Zavrsi vezbu": kardio = TACNO 1 set, pa zavrsetak vezbe = zavrsetak njenog jedinog
+    // seta. IDE KROZ ISTI red akcija kao obican set (FIFO, idempotentnost, replay) - samo nosi
+    // durationMinutes umesto reps/weight, pa radi i offline. Ponasanje obicnog seta nepromenjeno.
+    private func handleCardioComplete(_ minutes: Int) {
+        WKInterfaceDevice.current().play(.success)
+        guard let sessionId = currentSessionId else { return }
+        let clamped = min(240, max(1, minutes))
+        guard let pos = computeLocalPosition(), !pos.complete else {
+            // Nema lokalnog plana (offline bez kesa / jos se ucitava) -> server-driven put, sa minutima.
+            Task {
+                guard let token = effectiveToken else { return }
+                do {
+                    _ = try await SupabaseClient.shared.engineCompleteSet(token: token, sessionId: sessionId, durationMinutes: clamped)
+                    noteRpcSuccess()
+                } catch SupabaseError.sessionEnded {
+                    noteRpcSuccess(); await MainActor.run { handleWorkoutDeleted() }
+                } catch { noteRpcError(error) }
+            }
+            return
+        }
+
+        // 1) Lokalni model napreduje (kardio sets=1 -> done postaje 1 -> vezba gotova).
+        doneCounts[pos.apeId] = (doneCounts[pos.apeId] ?? 0) + 1
+        persistPlan()
+
+        // 2) Enqueue complete_set sa MINUTIMA (reps/weight/rpe = nil). Isti red kao obican set.
+        PendingActionStore.shared.enqueue(PendingAction(
+            id: UUID().uuidString, type: .completeSet, sessionId: sessionId,
+            reps: nil, weight: nil, rpe: nil, durationMinutes: clamped, createdAt: Date()))
+
+        // 3) Optimisticki UI: rest (ima jos vezbi) ili lokalno completed (poslednja vezba).
+        if let next = computeLocalPosition(), !next.complete {
+            restEndsAt = Date().addingTimeInterval(Double(max(pos.restSeconds, 1)))
+            currentState = .rest
+            flushQueue()
+        } else {
+            flushQueue()
+            handleWorkoutDeleted()
         }
     }
 
@@ -1681,10 +1751,14 @@ struct ContentView: View {
               let sessionId = currentSessionId else { return }
 
         do {
+            // Posalji i kumulativne aktivne kalorije (HealthKit) uz HR, da ih trener vidi
+            // uzivo. Dok kcal nije dostupan (0 na pocetku) -> nil -> server NULL = "ne diraj".
+            let kcal = healthKit.activeCalories
             try await SupabaseClient.shared.updateHeartRate(
                 token: token,
                 heartRate: heartRate,
-                sessionId: sessionId
+                sessionId: sessionId,
+                activeCalories: kcal > 0 ? kcal : nil
             )
             noteRpcSuccess()
         } catch SupabaseError.sessionEnded {

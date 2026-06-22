@@ -9,7 +9,13 @@ struct ActiveWorkout: Codable, Equatable {
     let targetReps: Int
     let targetWeight: Double?
     let restSeconds: Int
-    
+    // Kardio (trcanje/hodanje/bicikl): vezba se izvodi na minute umesto serija/ponavljanja.
+    // isDurationBased == true -> UI prikazuje stepper Minuti i "Zavrsi vezbu".
+    var isDurationBased: Bool = false
+    var durationMinutes: Int? = nil
+    // Cilj reps kao tekst za TEKUCI set (npr "8-12"); per-set iz plana. nil -> koristi targetReps.
+    var targetRepsText: String? = nil
+
     static let mock = ActiveWorkout(
         workoutId: "test-123",
         exerciseName: "Potisak sa ravne klupe",
@@ -18,7 +24,9 @@ struct ActiveWorkout: Codable, Equatable {
         totalSets: 4,
         targetReps: 8,
         targetWeight: 80.0,
-        restSeconds: 90
+        restSeconds: 90,
+        isDurationBased: false,
+        durationMinutes: nil
     )
 }
 

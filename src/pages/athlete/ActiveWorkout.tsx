@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff } from "lucide-react";
+import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff, Plus, Minus } from "lucide-react";
 import { getHrColor } from "@/lib/workout/hrZone";
 import {
   AlertDialog,
@@ -21,6 +21,14 @@ import { SetLogger } from "@/components/workout/SetLogger";
 import { RestTimer } from "@/components/workout/RestTimer";
 import { Network } from "@capacitor/network";
 
+// Cilj jednog seta iz get_workout_day_full.set_details (izvor istine, per-set).
+// reps je sirov tekst (npr "8" ili "8-12"), weight/rest broj ili null.
+type SetDetail = {
+  set_number: number;
+  reps: string | null;
+  weight_kg: number | null;
+  rest_seconds: number | null;
+};
 type DayExercise = {
   id: string;
   position: number;
@@ -28,6 +36,10 @@ type DayExercise = {
   reps: number | null;
   weight_kg: number | null;
   rest_seconds: number | null;
+  // Vezbe trcanja/hodanja (exercise.is_duration_based): prikaz u minutima.
+  duration_minutes: number | null;
+  // Per-set ciljevi (prazno za stare programe pre per-set -> fallback na sets/reps/weight_kg).
+  set_details: SetDetail[] | null;
   exercise_id: string;
   exercise: {
     name: string;
@@ -36,7 +48,27 @@ type DayExercise = {
     video_url: string | null;
     thumbnail_url: string | null;
     instructions: string | null;
+    is_duration_based: boolean | null;
   };
+};
+
+// Cilj za odredjeni set (1-based): iz set_details kad postoji, inace fallback na stari
+// parent (jedna vrednost za sve setove). reps (broj) za stepper prefil; repsText za prikaz.
+const targetForSet = (
+  ex: DayExercise,
+  setNum: number,
+): { reps: number | null; weight: number | null; repsText: string | null; rest: number | null } => {
+  const sd = ex.set_details?.find((s) => s.set_number === setNum);
+  if (sd) {
+    const repsNum = sd.reps != null && /^\d+/.test(sd.reps.trim()) ? parseInt(sd.reps, 10) : null;
+    return {
+      reps: repsNum,
+      weight: sd.weight_kg,
+      repsText: sd.reps ?? (repsNum != null ? String(repsNum) : null),
+      rest: sd.rest_seconds ?? ex.rest_seconds,   // per-set pauza, fallback na parent
+    };
+  }
+  return { reps: ex.reps, weight: ex.weight_kg, repsText: ex.reps != null ? String(ex.reps) : null, rest: ex.rest_seconds };
 };
 
 type DayFull = {
@@ -141,6 +173,11 @@ const ActiveWorkout = () => {
   // Zivi HR sa SATA preko realtime live-state (workout_live_state.current_hr). Instant izvor
   // kad sat vozi trening - bez cekanja 2s poll-a. Poll (pos.currentHr) ostaje fallback.
   const [watchHr, setWatchHr] = useState<number | null>(null);
+
+  // Kardio (is_duration_based): stepper Minuti za tekucu vezbu (init iz plana ili 20) +
+  // busy guard da "Zavrsi vezbu" ne okine dvaput dok RPC traje.
+  const [cardioMinutes, setCardioMinutes] = useState(20);
+  const [cardioBusy, setCardioBusy] = useState(false);
 
   // FAZA 1 - watch presence: NE parsiramo serverski timestamp (new Date(string) u WKWebView
   // daje pogresno/starije vreme + clock skew -> lazni lock). Umesto toga: PROMENA stringa
@@ -488,6 +525,15 @@ const ActiveWorkout = () => {
     );
     return found ? { reps: found.reps, weight_kg: found.weight_kg } : null;
   };
+
+  // Kardio: kad tekuca vezba postane is_duration_based, inicijalizuj stepper iz plana
+  // (duration_minutes) ili 20. Zavisi od exerciseIdx -> re-init na prelazu na sledecu
+  // vezbu; NE resetuje se na obican re-render (poll), pa korisnikovo podesavanje ostaje.
+  useEffect(() => {
+    if (current?.exercise.is_duration_based) {
+      setCardioMinutes(current.duration_minutes ?? 20);
+    }
+  }, [pos?.exerciseIdx, current?.exercise.is_duration_based, current?.duration_minutes]);
 
   /* ------------------------- Finalizacija (HR statistika + nav) ------------------------- */
   // Engine (athlete_complete_set zadnje serije / athlete_finish_workout) već zatvara
@@ -844,7 +890,10 @@ const ActiveWorkout = () => {
       }
 
       // Optimistički: uđi u odmor sa predviđenom sledećom pozicijom; poll koriguje.
-      const restSec = ex?.rest_seconds && ex.rest_seconds > 0 ? ex.rest_seconds : 60;
+      // Pauza BAS zavrsenog seta (p.setNumber) iz set_details; fallback na parent (targetForSet),
+      // pa na 60s kad nema/0.
+      const perSetRest = ex ? targetForSet(ex, p.setNumber).rest : null;
+      const restSec = perSetRest && perSetRest > 0 ? perSetRest : 60;
       const nextIdx = isLastSet ? p.exerciseIdx + 1 : p.exerciseIdx;
       const nextSet = isLastSet ? 1 : p.setNumber + 1;
       const nextEx = day.exercises[nextIdx];
@@ -873,6 +922,71 @@ const ActiveWorkout = () => {
       if (error) notifyRpcError(error);
     },
     [sessionId, day, finalizeAndNav, markFinished, notifyRpcError]
+  );
+
+  // Kardio "Zavrsi vezbu": kardio = TACNO 1 set, pa zavrsetak vezbe = zavrsetak njenog
+  // jedinog seta -> isti put kao zadnji set u snazi (athlete_complete_set), samo nosi
+  // p_duration_minutes umesto reps/weight/rpe. Posle: prelaz na sledecu / rest / kraj.
+  const handleCardioComplete = useCallback(
+    async (minutes: number) => {
+      const p = posRef.current;
+      if (!sessionId || !p || !day) return;
+      if (controlsLockedRef.current) return;   // sat izgubljen -> bez mutacije sesije
+      if (cardioBusy) return;                   // anti dvostruki tap
+      setCardioBusy(true);
+      triggerHaptic();
+
+      const ex = day.exercises[p.exerciseIdx];
+      const isLastExercise = p.exerciseIdx >= day.exercises.length - 1;
+      const isWorkoutDone = isLastExercise;   // kardio (1 set) -> zavrsetak vezbe je i kraj ako je poslednja
+
+      lastActionAtRef.current = Date.now();
+
+      if (isWorkoutDone) {
+        setFinishing(true);
+        markFinished();
+        const { error } = await supabase.rpc("athlete_complete_set", {
+          p_session_id: sessionId,
+          p_duration_minutes: minutes,
+        } as any);
+        if (error) {
+          notifyRpcError(error);
+          finishedRef.current = false;
+          setFinished(false);
+          setFinishing(false);
+          setCardioBusy(false);
+          return;
+        }
+        await finalizeAndNav();
+        setFinishing(false);
+        return;
+      }
+
+      // Optimisticki: predji u odmor sa sledecom vezbom (kardio je uvek "poslednji set" svoje vezbe).
+      const restSec = ex?.rest_seconds && ex.rest_seconds > 0 ? ex.rest_seconds : 60;
+      const nextIdx = p.exerciseIdx + 1;
+      const nextEx = day.exercises[nextIdx];
+      const serverNowMs = Date.now() + clockOffsetRef.current;
+      const serverRestEndMs = serverNowMs + restSec * 1000;
+      setPos({
+        exerciseIdx: nextIdx,
+        setNumber: 1,
+        totalSets: nextEx?.sets ?? p.totalSets,
+        state: "rest",
+        restEndsAtMs: serverRestEndMs - clockOffsetRef.current,
+        startedAtMs: p.startedAtMs,
+        currentHr: p.currentHr,
+      });
+
+      const { error } = await supabase.rpc("athlete_complete_set", {
+        p_session_id: sessionId,
+        p_duration_minutes: minutes,
+      } as any);
+      lastActionAtRef.current = Date.now();
+      if (error) notifyRpcError(error);
+      setCardioBusy(false);
+    },
+    [sessionId, day, cardioBusy, finalizeAndNav, markFinished, notifyRpcError]
   );
 
   const skipRest = useCallback(async () => {
@@ -1007,6 +1121,8 @@ const ActiveWorkout = () => {
   const setNumber = pos.setNumber;
   const setsForCurrent = current.sets;
   const setsList = Array.from({ length: setsForCurrent }, (_, i) => i + 1);
+  // Cilj TRENUTNOG seta (per-set iz set_details, fallback na parent) - za prikaz i prefil.
+  const curTarget = targetForSet(current, setNumber);
   const progressPct = totalSetsAll > 0 ? (completedTotal / totalSetsAll) * 100 : 0;
   // Sat prisutan: realtime current_hr sa sata (watchHr) je najsvezi (instant), poll
   // (pos.currentHr) fallback. SOLO: telefonov HealthKit (liveHr) direktno, kao do sad.
@@ -1062,7 +1178,8 @@ const ActiveWorkout = () => {
                 Aktivan trening{pos.startedAtMs ? ` · ${fmtElapsed(elapsedMs)}` : ""}
               </div>
               <div className="text-[13px] font-bold text-foreground truncate">
-                Vežba {exerciseIdx + 1} od {exercises.length} · Serija {setNumber} od {setsForCurrent}
+                Vežba {exerciseIdx + 1} od {exercises.length}
+                {current.exercise.is_duration_based ? "" : ` · Serija ${setNumber} od ${setsForCurrent}`}
               </div>
             </div>
             <div
@@ -1154,96 +1271,156 @@ const ActiveWorkout = () => {
             instructions={current.exercise.instructions}
           />
 
-          {/* Target stats */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-2xl bg-surface border border-hairline p-3 text-center">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Serije
-              </div>
-              <div className="font-display text-[22px] font-bold tracking-tightest tnum mt-0.5">
-                {Math.min(setNumber, setsForCurrent)}
-                <span className="text-muted-foreground">/{setsForCurrent}</span>
-              </div>
-            </div>
-            <div className="rounded-2xl bg-surface border border-hairline p-3 text-center">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Cilj reps
-              </div>
-              <div className="font-display text-[22px] font-bold tracking-tightest tnum mt-0.5">
-                {current.reps ?? "-"}
-              </div>
-            </div>
-            <div className="rounded-2xl bg-surface border border-hairline p-3 text-center">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Cilj kg
-              </div>
-              <div className="font-display text-[22px] font-bold tracking-tightest tnum mt-0.5">
-                {current.weight_kg ?? "-"}
-              </div>
-            </div>
-          </div>
-
-          {/* Sets list */}
-          <div className="rounded-3xl bg-surface border border-hairline overflow-hidden">
-            {setsList.map((n) => {
-              // Markeri "urađeno" se izvode iz pozicije (server), ne iz lokalnog loga.
-              const done = n < setNumber;
-              const active = n === setNumber && pos.state === "active";
-              const completed = completedSets.find(
-                (c) => c.exerciseIndex === exerciseIdx && c.setNumber === n
-              );
-              return (
-                <div
-                  key={n}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-3 border-b border-hairline last:border-b-0",
-                    active && "bg-primary-soft/30"
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "h-7 w-7 rounded-full flex items-center justify-center text-[12px] font-bold tnum",
-                      done
-                        ? "bg-success text-white"
-                        : active
-                          ? "bg-gradient-brand text-white"
-                          : "bg-surface-2 text-muted-foreground"
-                    )}
-                  >
-                    {done ? <Check className="h-4 w-4" strokeWidth={3} /> : n}
-                  </div>
-                  <div className="flex-1 text-[13px]">
-                    <span className="font-semibold text-foreground">Serija {n}</span>
-                    {completed ? (
-                      <span className="text-muted-foreground">
-                        {" · "}
-                        {completed.reps} reps · {completed.weight_kg} kg
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">
-                        {" · cilj "}
-                        {current.reps ?? "-"} × {current.weight_kg ?? "-"} kg
-                      </span>
-                    )}
-                  </div>
-                  {active && <ChevronRight className="h-4 w-4 text-primary" />}
+          {current.exercise.is_duration_based ? (
+            /* KARDIO (na minute): cilj iz plana + veliki stepper Minuti + "Zavrsi vezbu".
+               Bez serija/reps/kg/RPE i bez liste serija. Zavrsetak ide kroz isti
+               athlete_complete_set, samo sa p_duration_minutes (kardio = 1 set). */
+            <div className="space-y-3">
+              {/* Cilj trajanja iz plana (prikaz iznad steppera) */}
+              <div className="rounded-2xl bg-surface border border-hairline p-3 text-center">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Cilj
                 </div>
-              );
-            })}
-          </div>
+                <div className="font-display text-[22px] font-bold tracking-tightest tnum mt-0.5">
+                  {current.duration_minutes != null ? `${current.duration_minutes} min` : "-"}
+                </div>
+              </div>
 
-          {/* Active set logger */}
-          <SetLogger
-            key={`${exerciseIdx}-${setNumber}`}
-            setNumber={setNumber}
-            totalSets={setsForCurrent}
-            targetReps={current.reps}
-            targetWeightKg={current.weight_kg}
-            initialReps={initialFor(exerciseIdx, setNumber)?.reps ?? null}
-            initialWeightKg={initialFor(exerciseIdx, setNumber)?.weight_kg ?? null}
-            onComplete={handleSetComplete}
-            disabled={controlsLocked}
-          />
+              {/* Stepper: Minuti (korak 1, opseg 1-240) */}
+              <div className="rounded-3xl bg-surface border border-hairline p-4">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground text-center mb-3">
+                  Minuti
+                </div>
+                <div className="flex items-center justify-center gap-5">
+                  <button
+                    type="button"
+                    onClick={() => setCardioMinutes((m) => Math.max(1, m - 1))}
+                    disabled={controlsLocked || cardioMinutes <= 1}
+                    aria-label="Manje"
+                    className="h-12 w-12 rounded-2xl bg-surface-2 border border-hairline flex items-center justify-center text-foreground disabled:opacity-40 active:scale-95 transition"
+                  >
+                    <Minus className="h-5 w-5" strokeWidth={2.6} />
+                  </button>
+                  <div className="font-display text-[44px] font-bold tracking-tightest tnum w-24 text-center">
+                    {cardioMinutes}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCardioMinutes((m) => Math.min(240, m + 1))}
+                    disabled={controlsLocked || cardioMinutes >= 240}
+                    aria-label="Više"
+                    className="h-12 w-12 rounded-2xl bg-surface-2 border border-hairline flex items-center justify-center text-foreground disabled:opacity-40 active:scale-95 transition"
+                  >
+                    <Plus className="h-5 w-5" strokeWidth={2.6} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Zavrsi vezbu -> athlete_complete_set sa p_duration_minutes; pa prelaz/rest/kraj */}
+              <button
+                type="button"
+                onClick={() => handleCardioComplete(cardioMinutes)}
+                disabled={cardioBusy || finishing || controlsLocked}
+                className="w-full h-14 rounded-2xl bg-gradient-brand text-white font-bold text-[15px] shadow-brand active:scale-95 transition disabled:opacity-50"
+              >
+                {cardioBusy || finishing ? "Završavam..." : "Završi vežbu"}
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Target stats */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="rounded-2xl bg-surface border border-hairline p-3 text-center">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    Serije
+                  </div>
+                  <div className="font-display text-[22px] font-bold tracking-tightest tnum mt-0.5">
+                    {Math.min(setNumber, setsForCurrent)}
+                    <span className="text-muted-foreground">/{setsForCurrent}</span>
+                  </div>
+                </div>
+                <div className="rounded-2xl bg-surface border border-hairline p-3 text-center">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    Cilj reps
+                  </div>
+                  <div className="font-display text-[22px] font-bold tracking-tightest tnum mt-0.5">
+                    {curTarget.repsText ?? "-"}
+                  </div>
+                </div>
+                <div className="rounded-2xl bg-surface border border-hairline p-3 text-center">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    Cilj kg
+                  </div>
+                  <div className="font-display text-[22px] font-bold tracking-tightest tnum mt-0.5">
+                    {curTarget.weight ?? "-"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Sets list */}
+              <div className="rounded-3xl bg-surface border border-hairline overflow-hidden">
+                {setsList.map((n) => {
+                  // Markeri "urađeno" se izvode iz pozicije (server), ne iz lokalnog loga.
+                  const done = n < setNumber;
+                  const active = n === setNumber && pos.state === "active";
+                  const completed = completedSets.find(
+                    (c) => c.exerciseIndex === exerciseIdx && c.setNumber === n
+                  );
+                  const t = targetForSet(current, n);   // cilj BAS ovog seta
+                  return (
+                    <div
+                      key={n}
+                      className={cn(
+                        "flex items-center gap-3 px-4 py-3 border-b border-hairline last:border-b-0",
+                        active && "bg-primary-soft/30"
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "h-7 w-7 rounded-full flex items-center justify-center text-[12px] font-bold tnum",
+                          done
+                            ? "bg-success text-white"
+                            : active
+                              ? "bg-gradient-brand text-white"
+                              : "bg-surface-2 text-muted-foreground"
+                        )}
+                      >
+                        {done ? <Check className="h-4 w-4" strokeWidth={3} /> : n}
+                      </div>
+                      <div className="flex-1 text-[13px]">
+                        <span className="font-semibold text-foreground">Serija {n}</span>
+                        {completed ? (
+                          <span className="text-muted-foreground">
+                            {" · "}
+                            {completed.reps} reps · {completed.weight_kg} kg
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            {" · cilj "}
+                            {t.repsText ?? "-"} × {t.weight ?? "-"} kg
+                          </span>
+                        )}
+                      </div>
+                      {active && <ChevronRight className="h-4 w-4 text-primary" />}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Active set logger */}
+              <SetLogger
+                key={`${exerciseIdx}-${setNumber}`}
+                setNumber={setNumber}
+                totalSets={setsForCurrent}
+                targetReps={curTarget.reps}
+                targetWeightKg={curTarget.weight}
+                initialReps={initialFor(exerciseIdx, setNumber)?.reps ?? null}
+                initialWeightKg={initialFor(exerciseIdx, setNumber)?.weight_kg ?? null}
+                onComplete={handleSetComplete}
+                disabled={controlsLocked}
+              />
+            </>
+          )}
 
           {/* Manual finish */}
           <button

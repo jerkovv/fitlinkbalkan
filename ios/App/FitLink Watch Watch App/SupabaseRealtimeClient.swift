@@ -14,6 +14,9 @@ struct WorkoutLiveStateRow: Decodable {
     // Sloj 2: apsolutni kraj odmora i serverski sat, epoch ms (Double da decode ne pukne na decimalama).
     let restEndsAtMs: Double?
     let serverNowMs: Double?
+    // Kardio za TRENUTNU vezbu (fallback kad nema lokalnog plana).
+    var isDurationBased: Bool? = nil
+    var currentDurationMinutes: Int? = nil
 
     enum CodingKeys: String, CodingKey {
         case sessionLogId = "session_log_id"
@@ -27,6 +30,8 @@ struct WorkoutLiveStateRow: Decodable {
         case totalCompletedSets = "total_completed_sets"
         case restEndsAtMs = "rest_ends_at_ms"
         case serverNowMs = "server_now_ms"
+        case isDurationBased = "is_duration_based"
+        case currentDurationMinutes = "current_duration_minutes"
     }
 }
 
@@ -82,6 +87,9 @@ private struct PolledWorkout: Decodable {
     let hrZoneName: String?
     // Apsolutni pocetak treninga, epoch ms - za proteklo vreme na zonskom ekranu.
     let startedAtMs: Double?
+    // Kardio za TRENUTNU vezbu (fallback kad nema lokalnog plana): is_duration_based + cilj.
+    let isDurationBased: Bool?
+    let currentDurationMinutes: Int?
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
@@ -97,6 +105,8 @@ private struct PolledWorkout: Decodable {
         case hrZone = "hr_zone"
         case hrZoneName = "hr_zone_name"
         case startedAtMs = "started_at_ms"
+        case isDurationBased = "is_duration_based"
+        case currentDurationMinutes = "current_duration_minutes"
     }
 }
 
@@ -304,7 +314,9 @@ final class SupabaseRealtimeClient: ObservableObject {
             currentHr: workout.currentHr,
             totalCompletedSets: nil,
             restEndsAtMs: workout.restEndsAtMs,
-            serverNowMs: serverNowMs
+            serverNowMs: serverNowMs,
+            isDurationBased: workout.isDurationBased,
+            currentDurationMinutes: workout.currentDurationMinutes
         )
 
         onWorkoutStateChange?(row)

@@ -47,6 +47,22 @@ struct ButtonPressResponse: Codable {
 }
 
 // Lokalni model treninga (KORAK B): pun plan dana sa servera (watch_get_workout_plan).
+// Cilj jednog seta iz watch_get_workout_plan.set_details (izvor istine, per-set).
+// reps je sirov tekst (npr "8" ili "8-12"); weight/rest broj ili null.
+struct PlannedSet: Codable, Equatable {
+    let setNumber: Int
+    let reps: String?
+    let weightKg: Double?
+    let restSeconds: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case setNumber = "set_number"
+        case reps
+        case weightKg = "weight_kg"
+        case restSeconds = "rest_seconds"
+    }
+}
+
 struct PlanExercise: Codable, Equatable {
     let apeId: String
     let exerciseIdx: Int
@@ -58,6 +74,14 @@ struct PlanExercise: Codable, Equatable {
     let plannedWeight: Double?
     let exerciseName: String
     let doneCount: Int
+    // Kardio: is_duration_based == true -> minute umesto serija. duration_minutes = cilj.
+    // Optional (decodeIfPresent) da STAR kesirani plan (UserDefaults) bez ovih polja i dalje
+    // dekodira (nil -> tretira se kao ne-kardio).
+    let isDurationBased: Bool?
+    let durationMinutes: Int?
+    // Per-set ciljevi (izvor istine). Optional/prazno za stare programe pre per-set -> fallback
+    // na repsText/plannedReps/plannedWeight.
+    let setDetails: [PlannedSet]?
 
     enum CodingKeys: String, CodingKey {
         case apeId = "ape_id"
@@ -70,6 +94,9 @@ struct PlanExercise: Codable, Equatable {
         case plannedWeight = "planned_weight"
         case exerciseName = "exercise_name"
         case doneCount = "done_count"
+        case isDurationBased = "is_duration_based"
+        case durationMinutes = "duration_minutes"
+        case setDetails = "set_details"
     }
 }
 
@@ -166,14 +193,17 @@ final class SupabaseClient {
     }
     
     @discardableResult
-    func updateHeartRate(token: String, heartRate: Int, sessionId: String) async throws -> Bool {
+    func updateHeartRate(token: String, heartRate: Int, sessionId: String, activeCalories: Int? = nil) async throws -> Bool {
         // Sloj 0 (HR keep-alive): server prima tri parametra i odrzava TACNO ovu
         // sesiju zivom bez 5-min uslova, pa puls stize i kad telefon spava.
-        let body: [String: Any] = [
+        // p_active_calories (4. opcioni): kumulativne aktivne kcal sa HealthKita, da ih
+        // trener vidi uzivo. Nil se IZOSTAVLJA -> server NULL = "ne diraj" (ne pise 0 preko).
+        var body: [String: Any] = [
             "p_token": token,
             "p_heart_rate": heartRate,
             "p_session_id": sessionId
         ]
+        if let kcal = activeCalories { body["p_active_calories"] = kcal }
         let data = try await callRPC(functionName: "watch_update_workout_hr", body: body)
         
         do {
@@ -225,13 +255,16 @@ final class SupabaseClient {
         sessionId: String,
         reps: Int? = nil,
         weight: Double? = nil,
-        rpe: Double? = nil
+        rpe: Double? = nil,
+        durationMinutes: Int? = nil
     ) async throws -> Bool {
-        // Nil parametri se IZOSTAVLJAJU -> server uzima planirane vrednosti (DEFAULT).
+        // Nil parametri se IZOSTAVLJAJU -> server uzima planirane vrednosti (DEFAULT NULL).
+        // Kardio: prosledi se SAMO p_duration_minutes (reps/weight/rpe ostaju nil -> izostaju).
         var body: [String: Any] = ["p_token": token, "p_session_id": sessionId]
         if let reps = reps { body["p_reps"] = reps }
         if let weight = weight { body["p_weight"] = weight }
         if let rpe = rpe { body["p_rpe"] = rpe }
+        if let durationMinutes = durationMinutes { body["p_duration_minutes"] = durationMinutes }
         return try await callEngine(rpcName: "watch_complete_set", body: body)
     }
 
@@ -470,6 +503,9 @@ struct PendingAction: Codable, Equatable {
     let reps: Int?
     let weight: Double?
     let rpe: Double?
+    // Kardio: ako je postavljeno, replay salje p_duration_minutes (a reps/weight/rpe su nil).
+    // Optional -> star perzistovan red (bez ovog kljuca) i dalje dekodira (decodeIfPresent -> nil).
+    var durationMinutes: Int? = nil
     let createdAt: Date
     // NAPOMENA: NE cuvamo set_number/exercise_idx - server racuna poziciju iz done-count-a;
     // FIFO replay garantuje da svaka akcija padne na tacnu sledecu poziciju.

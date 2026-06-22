@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import type { PickerExercise } from "@/components/exercises/ExerciseCard";
 import type { ExerciseFilters } from "@/hooks/useExercises";
 
-const SELECT = "id, name, name_en, description, primary_muscle, thumbnail_url, video_url";
+const SELECT = "id, name, name_en, description, primary_muscle, thumbnail_url, video_url, is_duration_based";
 const PAGE_SIZE = 50;
 
 export const useInfiniteExercises = (filters: ExerciseFilters) => {

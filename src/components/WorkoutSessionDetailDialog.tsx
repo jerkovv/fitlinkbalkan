@@ -29,6 +29,9 @@ type ExerciseRow = {
   sets: number;
   planned_reps: string | null;
   planned_weight: number | null;
+  // Vezbe trcanja/hodanja (exercises.is_duration_based): prikaz u minutima.
+  is_duration_based: boolean | null;
+  duration_minutes: number | null;
   exercise_name: string;
   primary_muscle: string | null;
   set_logs: Array<{
@@ -107,7 +110,7 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
       const { data: exData } = await supabase
         .from("assigned_program_exercises")
         .select(
-          "id, position, sets, reps, weight_kg, exercise_id, exercises(name, primary_muscle)"
+          "id, position, sets, reps, weight_kg, duration_minutes, exercise_id, exercises(name, primary_muscle, is_duration_based)"
         )
         .eq("day_id", s.day_id)
         .order("position", { ascending: true });
@@ -116,7 +119,7 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
       const { data: logs, error: logsErr } = await supabase
         .from("set_logs")
         .select(
-          "exercise_id, set_number, reps, weight_kg, rpe, done, assigned_program_exercises(id, position, sets, reps, weight_kg, exercises(name, primary_muscle))"
+          "exercise_id, set_number, reps, weight_kg, rpe, done, assigned_program_exercises(id, position, sets, reps, weight_kg, duration_minutes, exercises(name, primary_muscle, is_duration_based))"
         )
         .eq("session_log_id", sessionId);
 
@@ -139,6 +142,8 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
           sets: ex.sets,
           planned_reps: ex.reps,
           planned_weight: ex.weight_kg,
+          is_duration_based: ex.exercises?.is_duration_based ?? null,
+          duration_minutes: ex.duration_minutes ?? null,
           exercise_name: ex.exercises?.name ?? "Vežba",
           primary_muscle: ex.exercises?.primary_muscle ?? null,
           set_logs: (logsByEx[ex.id] ?? []).sort((a, b) => a.set_number - b.set_number),
@@ -155,6 +160,8 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
           sets: sample?.sets ?? logsByEx[exId].length,
           planned_reps: sample?.reps ?? null,
           planned_weight: sample?.weight_kg ?? null,
+          is_duration_based: sample?.exercises?.is_duration_based ?? null,
+          duration_minutes: sample?.duration_minutes ?? null,
           exercise_name: sample?.exercises?.name ?? "Vežba (uklonjena iz plana)",
           primary_muscle: sample?.exercises?.primary_muscle ?? null,
           set_logs: logsByEx[exId].sort((a, b) => a.set_number - b.set_number),
@@ -278,10 +285,18 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
                       <div className="font-semibold text-[14px] tracking-tight truncate">
                         {ex.exercise_name}
                       </div>
-                      <div className="text-[11.5px] text-muted-foreground mt-0.5">
-                        Plan: {ex.sets} × {ex.planned_reps ?? "—"}
-                        {ex.planned_weight ? ` @ ${ex.planned_weight} kg` : ""}
-                      </div>
+                      {ex.is_duration_based ? (
+                        ex.duration_minutes != null ? (
+                          <div className="text-[11.5px] text-muted-foreground mt-0.5">
+                            Plan: {ex.duration_minutes} min
+                          </div>
+                        ) : null
+                      ) : (
+                        <div className="text-[11.5px] text-muted-foreground mt-0.5">
+                          Plan: {ex.sets} × {ex.planned_reps ?? "—"}
+                          {ex.planned_weight ? ` @ ${ex.planned_weight} kg` : ""}
+                        </div>
+                      )}
                     </div>
 
                     <div className="px-3.5 py-2">
