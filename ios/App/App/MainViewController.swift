@@ -11,6 +11,14 @@ class MainViewController: CAPBridgeViewController {
 
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
+        // Eksplicitna registracija lokalnog plugina. WatchSyncPlugin nema npm
+        // paket (zivi u App targetu: WatchSyncPlugin.swift + .m), pa ga
+        // `cap sync` brise iz packageClassList i plugin tiho otpadne.
+        // Registracijom ovde vise ne zavisi od config-a.
+        // NAPOMENA: Health (HealthPlugin) i HealthKitLive (HealthKitLivePlugin)
+        // su npm/SPM plugini koje cap sync sam pronadje i registruje, pa se
+        // ovde NE registruju (inace bi bila dupla registracija).
+        bridge?.registerPluginInstance(WatchSyncPlugin())
         disableWebViewBounce()
     }
 
