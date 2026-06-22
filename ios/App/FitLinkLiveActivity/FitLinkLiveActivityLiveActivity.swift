@@ -9,22 +9,9 @@ import ActivityKit
 import WidgetKit
 import SwiftUI
 
-// MARK: - Podaci (Live Activity vezbaca: njegov sopstveni trening)
-
-struct FitLinkLiveActivityAttributes: ActivityAttributes {
-    public struct ContentState: Codable, Hashable {
-        var exerciseName: String      // tekuca vezba
-        var setNumber: Int            // tekuci set
-        var totalSets: Int            // ukupno setova
-        var heartRate: Int?           // puls, nil ako nema
-        var hrZone: String            // "rest"/"easy"/"moderate"/"hard"/"max"
-        var isResting: Bool           // true = pauza, false = aktivan set
-        var restEndsAt: Date?         // kraj pauze (za odbrojavanje), nil ako nije pauza
-        var isDurationBased: Bool     // kardio (minuti) umesto setova
-        var durationMinutes: Int?     // ciljani minuti za kardio
-    }
-    var athleteName: String           // fiksno, ime vezbaca (za sad nas trening)
-}
+// Podatkovni tip (FitLinkLiveActivityAttributes) je premesten u zaseban fajl
+// FitLinkLiveActivityAttributes.swift, deljen izmedju App targeta (manager/plugin)
+// i ove ekstenzije (prikaz). Ovde ostaju samo View-ovi i helperi.
 
 // MARK: - Boje / helperi (dele ih lock screen i Dynamic Island)
 

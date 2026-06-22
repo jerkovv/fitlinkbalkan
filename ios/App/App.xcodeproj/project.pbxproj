@@ -13,6 +13,9 @@
 		02C0701B2FE9810F000EF5D8 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02C0701A2FE9810F000EF5D8 /* WidgetKit.framework */; };
 		02C0701D2FE9810F000EF5D8 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02C0701C2FE9810F000EF5D8 /* SwiftUI.framework */; };
 		02C0702C2FE98111000EF5D8 /* FitLinkLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 02C070182FE9810F000EF5D8 /* FitLinkLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		02C4AA5F2FE98FE40060AAAC /* LiveActivityPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = 02C4AA5D2FE98FE40060AAAC /* LiveActivityPlugin.m */; };
+		02C4AA602FE98FE40060AAAC /* LiveActivityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02C4AA5E2FE98FE40060AAAC /* LiveActivityPlugin.swift */; };
+		02C4AA612FE98FE40060AAAC /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02C4AA5C2FE98FE40060AAAC /* LiveActivityManager.swift */; };
 		0A1B2C3D4E5F60718293A4B5 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F60718293A4B6 /* MainViewController.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
@@ -75,6 +78,9 @@
 		02C070182FE9810F000EF5D8 /* FitLinkLiveActivityExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FitLinkLiveActivityExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		02C0701A2FE9810F000EF5D8 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		02C0701C2FE9810F000EF5D8 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		02C4AA5C2FE98FE40060AAAC /* LiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityManager.swift; sourceTree = "<group>"; };
+		02C4AA5D2FE98FE40060AAAC /* LiveActivityPlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LiveActivityPlugin.m; sourceTree = "<group>"; };
+		02C4AA5E2FE98FE40060AAAC /* LiveActivityPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityPlugin.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F60718293A4B6 /* MainViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
@@ -96,11 +102,18 @@
 			);
 			target = 02C070172FE9810F000EF5D8 /* FitLinkLiveActivityExtension */;
 		};
+		02C070672FE98C98000EF5D8 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				FitLinkLiveActivityAttributes.swift,
+			);
+			target = 504EC3031FED79650016851F /* App */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		0273F2022FA8C25F008EF96F /* FitLink Watch Watch App */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "FitLink Watch Watch App"; sourceTree = "<group>"; };
-		02C0701E2FE9810F000EF5D8 /* FitLinkLiveActivity */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (02C070302FE98111000EF5D8 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = FitLinkLiveActivity; sourceTree = "<group>"; };
+		02C0701E2FE9810F000EF5D8 /* FitLinkLiveActivity */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (02C070672FE98C98000EF5D8 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, 02C070302FE98111000EF5D8 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = FitLinkLiveActivity; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -165,6 +178,9 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
+				02C4AA5C2FE98FE40060AAAC /* LiveActivityManager.swift */,
+				02C4AA5D2FE98FE40060AAAC /* LiveActivityPlugin.m */,
+				02C4AA5E2FE98FE40060AAAC /* LiveActivityPlugin.swift */,
 				0207A7722FA9F67400C553C5 /* WatchSyncPlugin.m */,
 				0207A7732FA9F67400C553C5 /* WatchSyncPlugin.swift */,
 				02193B812FA4B445006184E4 /* App.entitlements */,
@@ -348,6 +364,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				02C4AA5F2FE98FE40060AAAC /* LiveActivityPlugin.m in Sources */,
+				02C4AA602FE98FE40060AAAC /* LiveActivityPlugin.swift in Sources */,
+				02C4AA612FE98FE40060AAAC /* LiveActivityManager.swift in Sources */,
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				0A1B2C3D4E5F60718293A4B5 /* MainViewController.swift in Sources */,
 				0207A7742FA9F67400C553C5 /* WatchSyncPlugin.m in Sources */,

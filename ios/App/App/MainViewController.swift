@@ -19,6 +19,9 @@ class MainViewController: CAPBridgeViewController {
         // su npm/SPM plugini koje cap sync sam pronadje i registruje, pa se
         // ovde NE registruju (inace bi bila dupla registracija).
         bridge?.registerPluginInstance(WatchSyncPlugin())
+        // LiveActivityPlugin je takodje lokalni (App target, nije npm) -> ista
+        // eksplicitna registracija da ga cap sync ne obori brisanjem iz config-a.
+        bridge?.registerPluginInstance(LiveActivityPlugin())
         disableWebViewBounce()
     }
 
