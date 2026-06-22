@@ -133,11 +133,30 @@ function withTimeout<T>(p: PromiseLike<T>, ms: number): Promise<T> {
   ]);
 }
 
+// Postgres timestamptz preko realtime-a zna da stigne kao "2026-06-22 13:05:57.12+00"
+// (razmak umesto 'T', offset "+00" umesto "+00:00"). Safari/WKWebView Date.parse je
+// strog i to ume da vrati NaN -> normalizujemo u ISO pre parsiranja. Vraca server
+// epoch ms (NE klijent - pozivalac oduzme clockOffset), ili null ako ne uspe.
+function pgTsToMs(raw: string | null | undefined): number | null {
+  if (!raw) return null;
+  let s = raw.trim().replace(" ", "T");
+  const off = s.match(/([+-])(\d{2})(?::?(\d{2}))?$/);   // "+00" / "+0000" / "+02:00"
+  if (off) s = s.slice(0, off.index) + `${off[1]}${off[2]}:${off[3] ?? "00"}`;
+  const ms = Date.parse(s);
+  return Number.isFinite(ms) ? ms : null;
+}
+
 // Watch presence pragovi (FAZA 1): sat upisuje watch_last_hr_at svakih ~5s dok radi.
 // FRESH = jos povezan; preko FRESH (a watch_last_hr_at != null) = izgubljen -> zakljucaj.
 // ESCAPE = posle ovoliko nudimo "Nastavi na telefonu" (da ne ostane zaglavljeno ako sat crkne).
 const WATCH_FRESH_MS = 15000;
 const WATCH_ESCAPE_MS = 60000;
+
+// Realtime pozicija: koliko dugo POSLE korisnicke akcije optimisticki prikaz ima
+// prednost nad realtime payload-om (da zakasneli pred-akcijski event ne vrati prikaz
+// na staro). Poll (2s) je korektor posle isteka. Vazi samo za telefonove SOPSTVENE
+// akcije; watch-driven izmene (telefon zakljucan, bez akcija) prolaze instant.
+const RT_POS_GUARD_MS = 1500;
 
 const ActiveWorkout = () => {
   const { dayId } = useParams<{ dayId: string }>();
@@ -577,6 +596,33 @@ const ActiveWorkout = () => {
     nav(`/vezbac/trening/zavrsen/${sessionId}`, { replace: true });
   }, [sessionId, nav]);
 
+  /* ------------------------- Zajednicka primena pozicije (poll + realtime) ------------------------- */
+  // Jedna tacka istine za upis u `pos`. Zovu je i applyPoll (HTTP, 2s) i live-state
+  // realtime handler, da se ponasaju IDENTICNO (isti fallback-ovi). restEndsAtMs MORA
+  // vec biti u KLIJENT epohu (serverMs - clockOffset), kao i do sad u applyPoll.
+  const applyPosition = useCallback(
+    (n: {
+      exerciseIdx: number | null | undefined;
+      setNumber: number | null | undefined;
+      totalSets: number | null | undefined;
+      state: unknown;
+      restEndsAtMs: number | null;
+      startedAtMs: number | null;
+      currentHr: number | null;
+    }) => {
+      setPos({
+        exerciseIdx: n.exerciseIdx ?? 0,
+        setNumber: n.setNumber ?? 1,
+        totalSets: n.totalSets ?? 1,
+        state: (n.state as WorkoutPos["state"]) ?? "active",
+        restEndsAtMs: n.restEndsAtMs,
+        startedAtMs: n.startedAtMs,
+        currentHr: n.currentHr,
+      });
+    },
+    []
+  );
+
   /* ------------------------- Poll: athlete_poll_state (render iz servera) ------------------------- */
   const applyPoll = useCallback(
     (workout: any, serverNowMs: number | null | undefined) => {
@@ -629,18 +675,18 @@ const ActiveWorkout = () => {
       const restEndsAtMs =
         serverRestMs != null ? serverRestMs - clockOffsetRef.current : null;
 
-      setPos({
-        exerciseIdx: workout.current_exercise_idx ?? 0,
-        setNumber: workout.current_set_number ?? 1,
-        totalSets: workout.total_sets ?? 1,
-        state: (workout.current_state as WorkoutPos["state"]) ?? "active",
+      applyPosition({
+        exerciseIdx: workout.current_exercise_idx,
+        setNumber: workout.current_set_number,
+        totalSets: workout.total_sets,
+        state: workout.current_state,
         restEndsAtMs,
         startedAtMs:
           typeof workout.started_at_ms === "number" ? workout.started_at_ms : null,
         currentHr: typeof workout.current_hr === "number" ? workout.current_hr : null,
       });
     },
-    [goToSummary]
+    [goToSummary, applyPosition]
   );
 
   useEffect(() => {
@@ -742,6 +788,31 @@ const ActiveWorkout = () => {
       // nula/null ne pregazi prikaz.
       const chr = row?.current_hr;
       if (typeof chr === "number" && chr > 0) setWatchHr(chr);
+
+      // POZICIJA iz realtime-a (instant; poll na 2s ostaje rezerva/korektor). Ista
+      // logika kao applyPoll preko deljene applyPosition.
+      // - finishedRef: posle kraja ne diramo poziciju.
+      // - bez baseline pozicije (prvi poll jos nije stigao) ne diramo - poll je uspostavlja
+      //   (i nosi startedAtMs/server_now_ms kojih realtime red NEMA).
+      // - staleness: ako je korisnik upravo uradio optimisticku akciju, optimisticki
+      //   prikaz ima prednost RT_POS_GUARD_MS; poll posle isteka uskladi.
+      // - startedAtMs se SACUVA iz postojece pozicije (realtime nema started_at).
+      // - rest_ends_at je timestamptz string -> pgTsToMs (server ms) - clockOffset (poll ga odrzava).
+      if (finishedRef.current) return;
+      const prevPos = posRef.current;
+      if (!prevPos) return;
+      if (Date.now() - lastActionAtRef.current < RT_POS_GUARD_MS) return;
+      const restServerMs = pgTsToMs(row?.rest_ends_at);
+      const restEndsAtMs = restServerMs != null ? restServerMs - clockOffsetRef.current : null;
+      applyPosition({
+        exerciseIdx: row?.current_exercise_idx,
+        setNumber: row?.current_set_number,
+        totalSets: row?.total_sets,
+        state: row?.current_state,
+        restEndsAtMs,
+        startedAtMs: prevPos.startedAtMs,
+        currentHr: typeof row?.current_hr === "number" ? row.current_hr : null,
+      });
     };
     // Pocetni read: zapamti SAMO poslednju vidjenu vrednost (NE postavljaj signal, da prvi
     // PRAVI realtime postavi svezinu - inace bi sat koji je otisao pre otvaranja delovao svez).
@@ -762,7 +833,7 @@ const ActiveWorkout = () => {
       )
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(channel); };
-  }, [sessionId, finished, realtimeEpoch]);
+  }, [sessionId, finished, realtimeEpoch, applyPosition]);
 
   // Sinhroni lockedRef (za handler guard) - racuna se na `now` tik (1s) I na promenu mreze.
   // Lock kad: (a) sat nestao (tisina > FRESH) ILI (b) telefon offline a sat prisutan (sat vozi
