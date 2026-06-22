@@ -45,11 +45,14 @@ struct RestTimerView: View {
     }
 
     // Racuna se iz ZIVOG prop-a restEndsAt (+ optimistic) i now. Uvek svez.
-    // ceil (.up), ne round: na startu pun broj sekundi, a nulu pogodi tacno na
-    // kraju. Isto pravilo kao na telefonu, da se prikazi slazu.
+    // round (.toNearestOrAwayFromZero), ne ceil(.up): mala latencija/clock-offset
+    // rezidua cini da prvi interval bude npr 30.00x s -> ceil bi pokazao 31 za pauzu
+    // od 30. round pogadja postavljenu vrednost (30); tick je 1s pa se interval smanjuje
+    // tacno za 1 -> odbrojavanje 30,29,...,1,0 bez preskoka i bez dupliranja, a kroz 0
+    // prolazi pa onComplete (newValue==0 && oldValue>0) okine. Isto pravilo kao na telefonu.
     private var secondsRemaining: Int {
         guard let end = effectiveEnd else { return 0 }
-        return max(0, Int(end.timeIntervalSince(serverNow()).rounded(.up)))
+        return max(0, Int(end.timeIntervalSince(serverNow()).rounded()))
     }
 
     private var progress: Double {

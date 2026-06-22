@@ -52,10 +52,13 @@ const playDing = () => {
   }
 };
 
-// ceil (ne round/floor): na startu pokaže pun broj sekundi, a nulu pogodi tačno
-// na kraju. Isto pravilo kao na satu, da se prikazi slažu.
+// round (ne ceil): mala latencija/clock-offset rezidua cini da prvi (endsAt-now)
+// bude npr 30.00x s -> ceil bi pokazao 31 za pauzu od 30. round pogadja postavljenu
+// vrednost (30); tick je 1s pa se interval smanjuje tacno za 1 -> odbrojavanje
+// 30,29,...,1,0 bez preskoka i bez dupliranja (dva uzastopna tika se razlikuju za 1).
+// Fire na remaining<=0 ostaje, pa stigne do 0. Isto pravilo kao na satu, da se slazu.
 const remainingFrom = (endsAt: number) =>
-  Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+  Math.max(0, Math.round((endsAt - Date.now()) / 1000));
 
 export const RestTimer = ({ endsAt, onDone, subtitle, onAddSeconds, disabled = false }: RestTimerProps) => {
   // Tick samo da forsira re-render; remaining se UVEK racuna iz endsAt - now,
