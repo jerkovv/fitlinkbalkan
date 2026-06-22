@@ -10,6 +10,9 @@
 		0207A7742FA9F67400C553C5 /* WatchSyncPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = 0207A7722FA9F67400C553C5 /* WatchSyncPlugin.m */; };
 		0207A7752FA9F67400C553C5 /* WatchSyncPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0207A7732FA9F67400C553C5 /* WatchSyncPlugin.swift */; };
 		0273F20B2FA8C260008EF96F /* FitLink Watch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 0273F2012FA8C25F008EF96F /* FitLink Watch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		02C0701B2FE9810F000EF5D8 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02C0701A2FE9810F000EF5D8 /* WidgetKit.framework */; };
+		02C0701D2FE9810F000EF5D8 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02C0701C2FE9810F000EF5D8 /* SwiftUI.framework */; };
+		02C0702C2FE98111000EF5D8 /* FitLinkLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 02C070182FE9810F000EF5D8 /* FitLinkLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		0A1B2C3D4E5F60718293A4B5 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F60718293A4B6 /* MainViewController.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
@@ -29,6 +32,13 @@
 			remoteGlobalIDString = 0273F2002FA8C25F008EF96F;
 			remoteInfo = "FitLink Watch Watch App";
 		};
+		02C0702A2FE98111000EF5D8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 02C070172FE9810F000EF5D8;
+			remoteInfo = FitLinkLiveActivityExtension;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -43,6 +53,17 @@
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		02C0702D2FE98111000EF5D8 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				02C0702C2FE98111000EF5D8 /* FitLinkLiveActivityExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -51,6 +72,9 @@
 		0207A7762FA9F67D00C553C5 /* FitLink Watch Watch App-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "FitLink Watch Watch App-Bridging-Header.h"; sourceTree = "<group>"; };
 		02193B812FA4B445006184E4 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		0273F2012FA8C25F008EF96F /* FitLink Watch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "FitLink Watch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		02C070182FE9810F000EF5D8 /* FitLinkLiveActivityExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FitLinkLiveActivityExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		02C0701A2FE9810F000EF5D8 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		02C0701C2FE9810F000EF5D8 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		0A1B2C3D4E5F60718293A4B6 /* MainViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
@@ -64,8 +88,19 @@
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		02C070302FE98111000EF5D8 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 02C070172FE9810F000EF5D8 /* FitLinkLiveActivityExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		0273F2022FA8C25F008EF96F /* FitLink Watch Watch App */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "FitLink Watch Watch App"; sourceTree = "<group>"; };
+		02C0701E2FE9810F000EF5D8 /* FitLinkLiveActivity */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (02C070302FE98111000EF5D8 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = FitLinkLiveActivity; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -73,6 +108,15 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		02C070152FE9810F000EF5D8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				02C0701D2FE9810F000EF5D8 /* SwiftUI.framework in Frameworks */,
+				02C0701B2FE9810F000EF5D8 /* WidgetKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -87,12 +131,23 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		02C070192FE9810F000EF5D8 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				02C0701A2FE9810F000EF5D8 /* WidgetKit.framework */,
+				02C0701C2FE9810F000EF5D8 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		504EC2FB1FED79650016851F = {
 			isa = PBXGroup;
 			children = (
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
 				0273F2022FA8C25F008EF96F /* FitLink Watch Watch App */,
+				02C0701E2FE9810F000EF5D8 /* FitLinkLiveActivity */,
+				02C070192FE9810F000EF5D8 /* Frameworks */,
 				504EC3051FED79650016851F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -102,6 +157,7 @@
 			children = (
 				504EC3041FED79650016851F /* App.app */,
 				0273F2012FA8C25F008EF96F /* FitLink Watch Watch App.app */,
+				02C070182FE9810F000EF5D8 /* FitLinkLiveActivityExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -151,6 +207,28 @@
 			productReference = 0273F2012FA8C25F008EF96F /* FitLink Watch Watch App.app */;
 			productType = "com.apple.product-type.application";
 		};
+		02C070172FE9810F000EF5D8 /* FitLinkLiveActivityExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 02C070312FE98111000EF5D8 /* Build configuration list for PBXNativeTarget "FitLinkLiveActivityExtension" */;
+			buildPhases = (
+				02C070142FE9810F000EF5D8 /* Sources */,
+				02C070152FE9810F000EF5D8 /* Frameworks */,
+				02C070162FE9810F000EF5D8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				02C0701E2FE9810F000EF5D8 /* FitLinkLiveActivity */,
+			);
+			name = FitLinkLiveActivityExtension;
+			packageProductDependencies = (
+			);
+			productName = FitLinkLiveActivityExtension;
+			productReference = 02C070182FE9810F000EF5D8 /* FitLinkLiveActivityExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		504EC3031FED79650016851F /* App */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 504EC3161FED79650016851F /* Build configuration list for PBXNativeTarget "App" */;
@@ -159,11 +237,13 @@
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
 				0273F20C2FA8C260008EF96F /* Embed Watch Content */,
+				02C0702D2FE98111000EF5D8 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				0273F20A2FA8C260008EF96F /* PBXTargetDependency */,
+				02C0702B2FE98111000EF5D8 /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -180,12 +260,15 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastSwiftUpdateCheck = 2640;
+				LastSwiftUpdateCheck = 2650;
 				LastUpgradeCheck = 2640;
 				TargetAttributes = {
 					0273F2002FA8C25F008EF96F = {
 						CreatedOnToolsVersion = 26.4.1;
 						LastSwiftMigration = 2640;
+					};
+					02C070172FE9810F000EF5D8 = {
+						CreatedOnToolsVersion = 26.5;
 					};
 					504EC3031FED79650016851F = {
 						CreatedOnToolsVersion = 9.2;
@@ -211,12 +294,20 @@
 			targets = (
 				504EC3031FED79650016851F /* App */,
 				0273F2002FA8C25F008EF96F /* FitLink Watch Watch App */,
+				02C070172FE9810F000EF5D8 /* FitLinkLiveActivityExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		0273F1FF2FA8C25F008EF96F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		02C070162FE9810F000EF5D8 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -246,6 +337,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		02C070142FE9810F000EF5D8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3001FED79650016851F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -264,6 +362,11 @@
 			isa = PBXTargetDependency;
 			target = 0273F2002FA8C25F008EF96F /* FitLink Watch Watch App */;
 			targetProxy = 0273F2092FA8C260008EF96F /* PBXContainerItemProxy */;
+		};
+		02C0702B2FE98111000EF5D8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 02C070172FE9810F000EF5D8 /* FitLinkLiveActivityExtension */;
+			targetProxy = 02C0702A2FE98111000EF5D8 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -382,6 +485,81 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
 				WATCHOS_DEPLOYMENT_TARGET = 26.4;
+			};
+			name = Release;
+		};
+		02C0702E2FE98111000EF5D8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 385537A359;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FitLinkLiveActivity/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FitLinkLiveActivity;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = rs.fitlink.app.FitLinkLiveActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		02C0702F2FE98111000EF5D8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 385537A359;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FitLinkLiveActivity/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FitLinkLiveActivity;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = rs.fitlink.app.FitLinkLiveActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -570,6 +748,15 @@
 			buildConfigurations = (
 				0273F20D2FA8C260008EF96F /* Debug */,
 				0273F20E2FA8C260008EF96F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		02C070312FE98111000EF5D8 /* Build configuration list for PBXNativeTarget "FitLinkLiveActivityExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				02C0702E2FE98111000EF5D8 /* Debug */,
+				02C0702F2FE98111000EF5D8 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
