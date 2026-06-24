@@ -22,6 +22,11 @@ public class LiveActivityPlugin: CAPPlugin {
             call.reject("Live Activities zahtevaju iOS 16.2+")
             return
         }
+        // Emituj push token (kad ActivityKit isporuci) ka JS-u preko "laPushToken" eventa.
+        // Postaviti PRE start-a, da listener bude spreman kad token stigne.
+        LiveActivityManager.shared.onPushToken = { [weak self] hex in
+            self?.notifyListeners("laPushToken", data: ["token": hex])
+        }
         let athleteName = call.getString("athleteName") ?? ""
         let startedAt: Date
         if let ms = call.getDouble("workoutStartedAtMs") {

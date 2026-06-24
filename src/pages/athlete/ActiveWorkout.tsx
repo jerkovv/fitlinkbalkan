@@ -20,7 +20,7 @@ import { ExerciseHeader } from "@/components/workout/ExerciseHeader";
 import { SetLogger } from "@/components/workout/SetLogger";
 import { RestTimer } from "@/components/workout/RestTimer";
 import { Network } from "@capacitor/network";
-import { Capacitor, registerPlugin } from "@capacitor/core";
+import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor/core";
 
 // ---- Nativni Live Activity plugin (iOS-only: lock screen / Dynamic Island) ----
 // Most ka nativnom LiveActivityPlugin-u ("LiveActivity": start/update/end). Na
@@ -44,6 +44,10 @@ interface LiveActivityPluginDef {
   start(options: LiveActivityFields & { athleteName: string; workoutStartedAtMs: number }): Promise<{ success: boolean }>;
   update(options: LiveActivityFields): Promise<{ success: boolean }>;
   end(): Promise<{ success: boolean }>;
+  addListener(
+    eventName: "laPushToken",
+    listenerFunc: (data: { token: string }) => void,
+  ): Promise<PluginListenerHandle>;
 }
 const LiveActivity = registerPlugin<LiveActivityPluginDef>("LiveActivity");
 const liveActivitySupported = Capacitor.getPlatform() === "ios";
@@ -1006,6 +1010,32 @@ const ActiveWorkout = () => {
   // END i na napustanje ekrana (unmount), za svaki slucaj (idempotentno).
   useEffect(() => {
     return () => { laEnd(); };
+  }, []);
+
+  // FAZA 1 push: native emituje "laPushToken" kad ActivityKit isporuci token ->
+  // upisemo ga u bazu (athlete_set_la_token). iOS-only, tih na gresku.
+  useEffect(() => {
+    if (!liveActivitySupported) return;
+    let handle: PluginListenerHandle | null = null;
+    let cancelled = false;
+    (async () => {
+      try {
+        const h = await LiveActivity.addListener("laPushToken", (data) => {
+          const token = data?.token;
+          if (!token) return;
+          supabase.rpc("athlete_set_la_token", { p_token: token } as any)
+            .then(() => undefined, () => undefined);
+        });
+        if (cancelled) { h.remove(); return; }
+        handle = h;
+      } catch {
+        /* plugin/listener nedostupan -> no-op */
+      }
+    })();
+    return () => {
+      cancelled = true;
+      handle?.remove();
+    };
   }, []);
 
   // RPC greske: kad je telefon offline (ocekivano), tiho progutaj sirovu

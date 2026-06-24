@@ -22,6 +22,10 @@ final class LiveActivityManager {
     private var lastState: FitLinkLiveActivityAttributes.ContentState?
     // URL slike koju trenutno ocekujemo (da zakasneo download stare vezbe ne pregazi novu).
     private var pendingThumbUrl: String?
+    // Plugin postavi ovo da emituje push token (hex) ka JS-u kad stigne.
+    var onPushToken: ((String) -> Void)?
+    // Task koji slusa pushTokenUpdates; otkazujemo ga na end().
+    private var pushTokenTask: Task<Void, Never>?
 
     // Da li korisnik dozvoljava Live Activities (Settings). Ako je iskljuceno,
     // start je no-op (Activity.request bi ionako bacio).
@@ -54,16 +58,40 @@ final class LiveActivityManager {
         lastState = initial
 
         let attributes = FitLinkLiveActivityAttributes(athleteName: athleteName, workoutStartedAt: startedAt)
+        let content = ActivityContent(state: initial, staleDate: nil)
+
+        // Otkazi eventualni stari token-listener pre novog starta.
+        pushTokenTask?.cancel()
+        pushTokenTask = nil
+
+        // Primarno pushType: .token (za remote push, Faza 2). Ako baci (npr. simulator/
+        // uredjaj bez podrske), fallback na pushType: nil da lokalni rad ostane.
+        var act: Activity<FitLinkLiveActivityAttributes>?
+        var usedPush = false
         do {
-            let act = try Activity.request(
-                attributes: attributes,
-                content: ActivityContent(state: initial, staleDate: nil),
-                pushType: nil
-            )
-            activity = act
-            NSLog("[LiveActivity] started id=\(act.id)")
+            act = try Activity.request(attributes: attributes, content: content, pushType: .token)
+            usedPush = true
         } catch {
-            NSLog("[LiveActivity] start failed: \(error.localizedDescription)")
+            NSLog("[LiveActivity] request .token failed: \(error.localizedDescription) -> fallback pushType nil")
+            do {
+                act = try Activity.request(attributes: attributes, content: content, pushType: nil)
+            } catch {
+                NSLog("[LiveActivity] request (fallback nil) failed: \(error.localizedDescription)")
+            }
+        }
+
+        if let act {
+            activity = act
+            NSLog("[LiveActivity] started id=\(act.id) push=\(usedPush)")
+            // Slusaj push token update-ove i prosledi ih (hex) kroz onPushToken.
+            if usedPush {
+                pushTokenTask = Task {
+                    for await tokenData in act.pushTokenUpdates {
+                        let hex = tokenData.map { String(format: "%02x", $0) }.joined()
+                        await MainActor.run { self.onPushToken?(hex) }
+                    }
+                }
+            }
         }
 
         // Zavrsi zaostale (bez novog koji smo upravo napravili).
@@ -107,6 +135,8 @@ final class LiveActivityManager {
     // Zavrsava sve tekuce Live Activity-je naseg tipa (nas ref + eventualni
     // zaostali), dismissalPolicy .immediate.
     func end() {
+        pushTokenTask?.cancel()
+        pushTokenTask = nil
         let running = Activity<FitLinkLiveActivityAttributes>.activities
         activity = nil
         lastState = nil
