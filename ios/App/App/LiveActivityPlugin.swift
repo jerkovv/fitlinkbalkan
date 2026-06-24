@@ -23,8 +23,16 @@ public class LiveActivityPlugin: CAPPlugin {
             return
         }
         let athleteName = call.getString("athleteName") ?? ""
+        let startedAt: Date
+        if let ms = call.getDouble("workoutStartedAtMs") {
+            startedAt = Date(timeIntervalSince1970: ms / 1000.0)
+        } else {
+            startedAt = Date()
+        }
         LiveActivityManager.shared.start(
             athleteName: athleteName,
+            startedAt: startedAt,
+            thumbnailUrl: call.getString("thumbnailUrl"),
             state: Self.contentState(from: call)
         )
         call.resolve(["success": true])
@@ -35,7 +43,7 @@ public class LiveActivityPlugin: CAPPlugin {
             call.reject("Live Activities zahtevaju iOS 16.2+")
             return
         }
-        LiveActivityManager.shared.update(state: Self.contentState(from: call))
+        LiveActivityManager.shared.update(thumbnailUrl: call.getString("thumbnailUrl"), state: Self.contentState(from: call))
         call.resolve(["success": true])
     }
 
@@ -69,7 +77,8 @@ public class LiveActivityPlugin: CAPPlugin {
             durationMinutes: call.getInt("durationMinutes"),
             weightText: call.getString("weightText"),
             nextExerciseName: call.getString("nextExerciseName"),
-            nextInfo: call.getString("nextInfo")
+            nextInfo: call.getString("nextInfo"),
+            watchConnected: call.getBool("watchConnected") ?? false
         )
     }
 }

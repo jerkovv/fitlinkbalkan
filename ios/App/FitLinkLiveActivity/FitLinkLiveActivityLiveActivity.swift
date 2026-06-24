@@ -8,6 +8,7 @@
 import ActivityKit
 import WidgetKit
 import SwiftUI
+import UIKit
 
 // Podatkovni tip (FitLinkLiveActivityAttributes) je u zasebnom fajlu
 // FitLinkLiveActivityAttributes.swift, deljen izmedju App targeta i ekstenzije.
@@ -15,21 +16,21 @@ import SwiftUI
 
 // MARK: - Podesive konstante (fino stelovanje gabarita; menjaj ove i rebuild)
 
-private let laThumbSize: CGFloat = 56     // slika-mesto (kvadrat)
-private let laThumbIcon: CGFloat = 24     // ikonica u slici-mestu
+private let laThumbSize: CGFloat = 62     // slika-mesto (kvadrat) - Lyfta
+private let laThumbIcon: CGFloat = 26     // ikonica u slici-mestu
 private let laRingSize: CGFloat = 48      // HR prsten (precnik); deli ga i Dynamic Island
 private let laRingLine: CGFloat = 3       // debljina prstena
-private let laBlockSpacing: CGFloat = 8   // razmak redova: head / glavni / next
-private let laMainSpacing: CGFloat = 12   // razmak: slika | sredina | prsten
-private let laCardPadH: CGFloat = 16      // horizontalni padding kartice
-private let laCardPadV: CGFloat = 14      // donji padding kartice
-private let laCardPadTop: CGFloat = 16    // gornji padding (malo vise, da header ne dodiruje vrh)
-private let laExNameSize: CGFloat = 16.5  // ime vezbe
-private let laSubSize: CGFloat = 12.5     // serija/weight ispod imena
-private let laCountSize: CGFloat = 23     // countdown u pauzi (NE 30)
+private let laBlockSpacing: CGFloat = 14  // razmak head -> sadrzaj (Lyfta generozno)
+private let laMainSpacing: CGFloat = 14   // razmak: slika | ime/serija
+private let laCardPadH: CGFloat = 18      // horizontalni padding kartice
+private let laCardPadV: CGFloat = 16      // donji padding kartice
+private let laCardPadTop: CGFloat = 16    // gornji padding
+private let laExNameSize: CGFloat = 14    // ime vezbe (premium, refined; duga srpska imena)
+private let laSubSize: CGFloat = 12       // serija/weight ispod imena
+private let laCountSize: CGFloat = 23     // countdown u pauzi
 private let laBpmSize: CGFloat = 17       // bpm u prstenu
-private let laBrandSize: CGFloat = 13     // "FitLink"
-private let laLiveSize: CGFloat = 10      // UZIVO/PAUZA
+private let laBrandSize: CGFloat = 14     // "FitLink" (kao "LYFTA")
+private let laLiveSize: CGFloat = 14      // vreme u head-u (kao "0:35")
 private let laZoneSize: CGFloat = 9       // naziv zone ispod prstena
 private let laNextSize: CGFloat = 11      // SLEDECE red
 
@@ -70,53 +71,64 @@ private func setOrDurationText(_ s: FitLinkLiveActivityAttributes.ContentState) 
     s.isDurationBased ? "\(s.durationMinutes ?? 0) min" : "Serija \(s.setNumber)/\(s.totalSets)"
 }
 
-// MARK: - Deljeni View-ovi
-
-// HEAD (tanak red): "FitLink" levo, tackica + UŽIVO/PAUZA desno.
-struct LiveActivityHead: View {
-    let isResting: Bool
-    var body: some View {
-        HStack(spacing: 0) {
-            (Text("Fit").foregroundColor(.white)
-             + Text("Link").foregroundColor(laVioletBright))
-                .font(.system(size: laBrandSize, weight: .heavy))
-            Spacer(minLength: 8)
-            HStack(spacing: 5) {
-                Circle()
-                    .fill(isResting ? laViolet : Color(hue: 0.0, saturation: 0.84, brightness: 0.60))
-                    .frame(width: 6, height: 6)
-                Text(isResting ? "PAUZA" : "UŽIVO")
-                    .font(.system(size: laLiveSize, weight: .heavy))
-                    .tracking(0.6)
-                    .foregroundColor(laTxtDim)
-            }
-        }
-    }
+// Stoperica treninga: broji UNAPRED od pocetka. timerInterval (showsHours:false) ->
+// uvek mm:ss, uza rezervacija ("119:59"); kapirano na 2h (realan max). Pozivaoci je
+// stavljaju u .frame(maxWidth:.infinity, alignment:.trailing) (lock/expanded) ili uzak
+// trailing frame (compact) da broj bude SKROZ desno.
+private func workoutTimerText(_ start: Date) -> Text {
+    Text(timerInterval: start ... start.addingTimeInterval(60 * 60 * 2),
+         pauseTime: nil, countsDown: false, showsHours: false)
 }
 
-// Slika-mesto (prava slika kasnije): tamni violet gradijent + ikonica.
+// MARK: - Deljeni View-ovi
+
+// (LiveActivityHead uklonjen - LAYOUT A ima jednostavan inline head: FitLink + vreme.)
+
+// Slika-mesto: prava slika iz App Group kesa (bela pozadina, Lyfta stil) ako je
+// skinuta; inace tamni violet placeholder sa ikonicom.
 struct LiveActivityThumb: View {
+    let imageFileName: String?
+    var size: CGFloat = laThumbSize     // default = lock screen (60); Dynamic Island salje manje
+    var corner: CGFloat = 13
+    var iconSize: CGFloat = laThumbIcon
+
     var body: some View {
-        RoundedRectangle(cornerRadius: 13)
-            .fill(
-                LinearGradient(
-                    colors: [
-                        Color(hue: 268.0 / 360.0, saturation: 0.40, brightness: 0.30),
-                        Color(hue: 255.0 / 360.0, saturation: 0.30, brightness: 0.14),
-                    ],
-                    startPoint: .topLeading, endPoint: .bottomTrailing
+        if let name = imageFileName,
+           let url = liveActivityThumbURL(fileName: name),
+           let uiImage = UIImage(contentsOfFile: url.path) {
+            Image(uiImage: uiImage)
+                .resizable()
+                .scaledToFit()
+                .padding(size > 48 ? 4 : 3)
+                .frame(width: size, height: size)
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: corner))
+                .overlay(
+                    RoundedRectangle(cornerRadius: corner)
+                        .stroke(Color.white.opacity(0.10), lineWidth: 1)
                 )
-            )
-            .frame(width: laThumbSize, height: laThumbSize)
-            .overlay(
-                Image(systemName: "figure.strengthtraining.traditional")
-                    .font(.system(size: laThumbIcon, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.55))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 13)
-                    .stroke(Color.white.opacity(0.10), lineWidth: 1)
-            )
+        } else {
+            RoundedRectangle(cornerRadius: corner)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(hue: 268.0 / 360.0, saturation: 0.40, brightness: 0.30),
+                            Color(hue: 255.0 / 360.0, saturation: 0.30, brightness: 0.14),
+                        ],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: size, height: size)
+                .overlay(
+                    Image(systemName: "figure.strengthtraining.traditional")
+                        .font(.system(size: iconSize, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.55))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: corner)
+                        .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                )
+        }
     }
 }
 
@@ -150,24 +162,46 @@ struct LiveActivityHRRing: View {
     }
 }
 
-// MARK: - Lock screen (NISKA crna kartica, bez vertikalnog razvlacenja)
+// MARK: - Lock screen (LAYOUT A: cist Lyfta blok - bez prstena, bez NEXT reda)
 
 struct LiveActivityLockScreenView: View {
     let state: FitLinkLiveActivityAttributes.ContentState
+    let startedAt: Date
 
     var body: some View {
-        // VStack hugguje sadrzaj po visini (nema Spacer-a ni maxHeight) -> niska kartica.
         VStack(alignment: .leading, spacing: laBlockSpacing) {
-            LiveActivityHead(isResting: state.isResting)
-
-            HStack(alignment: .center, spacing: laMainSpacing) {
-                LiveActivityThumb()
-                middle
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                LiveActivityHRRing(heartRate: state.heartRate, hrZone: state.hrZone)
+            // HEAD: FitLink levo, vreme treninga SKROZ desno (Spacer gura; .frame(maxWidth:.infinity)
+            // forsira da se red rasiri preko cele sirine pa Spacer ima sta da rastegne).
+            HStack(spacing: 8) {
+                (Text("Fit").foregroundColor(.white)
+                 + Text("Link").foregroundColor(laVioletBright))
+                    .font(.system(size: laBrandSize, weight: .heavy))
+                    .layoutPriority(1)
+                // maxWidth:.infinity + trailing -> vreme popuni preostalo i ide SKROZ desno.
+                workoutTimerText(startedAt)
+                    .font(.system(size: laLiveSize, weight: .semibold))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .multilineTextAlignment(.trailing)
+                    .foregroundColor(laTxtDim)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
             }
 
-            nextRow
+            // BODY: slika levo + ime/serija. Bez HR prstena, bez NEXT reda.
+            HStack(alignment: .center, spacing: laMainSpacing) {
+                LiveActivityThumb(imageFileName: state.imageFileName)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(state.exerciseName)
+                        .font(.system(size: laExNameSize, weight: .bold))
+                        .foregroundColor(.white)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
+                        .fixedSize(horizontal: false, vertical: true)
+                    subtitle
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, laCardPadH)
@@ -175,81 +209,27 @@ struct LiveActivityLockScreenView: View {
         .padding(.bottom, laCardPadV)
     }
 
-    // Sredina: ime + serija (aktivno) ILI sledece + countdown (pauza). Ista (niska) visina.
-    @ViewBuilder private var middle: some View {
-        if state.isResting {
-            // ISTA (niska) visina kao aktivno: 3 reda teksta, BEZ Spacer-a / maxHeight /
-            // fixedSize. (Stari .fixedSize() na timerInterval tekstu je razvlacio karticu.)
-            // Countdown je iste velicine kao ime vezbe u aktivnom, da se visina poklopi.
-            VStack(alignment: .leading, spacing: 3) {
-                Text("PAUZA")
-                    .font(.system(size: laSubSize, weight: .heavy))
-                    .tracking(0.5)
+    // Ispod imena: "Serija s/t" (ili "n min"); u pauzi "Pauza · countdown".
+    @ViewBuilder private var subtitle: some View {
+        if state.isResting, let end = state.restEndsAt {
+            HStack(spacing: 5) {
+                Text("Pauza")
+                    .font(.system(size: laSubSize, weight: .bold))
                     .foregroundColor(laVioletBright)
-                    .lineLimit(1)
-                if let end = state.restEndsAt {
-                    Text(timerInterval: restCountdownRange(end), countsDown: true)
-                        .font(.system(size: laExNameSize, weight: .heavy, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-                }
-                Text("Sledeće: \(state.nextExerciseName ?? state.exerciseName) serija \(state.setNumber)/\(state.totalSets)")
-                    .font(.system(size: laNextSize, weight: .semibold))
-                    .foregroundColor(laTxtDim)
-                    .lineLimit(1)
-            }
-        } else {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(state.exerciseName)
-                    .font(.system(size: laExNameSize, weight: .heavy))
+                Text("·")
+                    .font(.system(size: laSubSize, weight: .bold))
+                    .foregroundColor(laTxtFaint)
+                Text(timerInterval: restCountdownRange(end), countsDown: true)
+                    .font(.system(size: laSubSize, weight: .bold, design: .rounded))
+                    .monospacedDigit()
                     .foregroundColor(.white)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.85)
-                    .fixedSize(horizontal: false, vertical: true)
-                exSub
             }
-        }
-    }
-
-    // "Serija s/t" (violet) + " · weightText" (dim) ili "n min" za kardio.
-    @ViewBuilder private var exSub: some View {
-        let primary = state.isDurationBased
-            ? "\(state.durationMinutes ?? 0) min"
-            : "Serija \(state.setNumber)/\(state.totalSets)"
-        if let w = state.weightText, !w.isEmpty {
-            (Text(primary).font(.system(size: laSubSize, weight: .bold)).foregroundColor(laVioletBright)
-             + Text(" · \(w)").font(.system(size: laSubSize, weight: .medium)).foregroundColor(laTxtDim))
-                .lineLimit(1)
+            .lineLimit(1)
         } else {
-            Text(primary)
-                .font(.system(size: laSubSize, weight: .bold))
-                .foregroundColor(laVioletBright)
+            Text(setOrDurationText(state))
+                .font(.system(size: laSubSize, weight: .medium))
+                .foregroundColor(laTxtDim)
                 .lineLimit(1)
-        }
-    }
-
-    // SLEDEĆE red - tanak, samo aktivno i ako ima sledece vezbe.
-    @ViewBuilder private var nextRow: some View {
-        if !state.isResting, let next = state.nextExerciseName, !next.isEmpty {
-            HStack(spacing: 6) {
-                Text("SLEDEĆE")
-                    .font(.system(size: 8, weight: .heavy))
-                    .tracking(0.8)
-                    .foregroundColor(laViolet)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 2)
-                    .background(RoundedRectangle(cornerRadius: 4).fill(laViolet.opacity(0.16)))
-                Text(next + (state.nextInfo.map { " · \($0)" } ?? ""))
-                    .font(.system(size: laNextSize, weight: .medium))
-                    .foregroundColor(laTxtDim)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                Spacer(minLength: 0)
-            }
-            .overlay(alignment: .top) {
-                Rectangle().fill(Color.white.opacity(0.09)).frame(height: 1).offset(y: -laBlockSpacing / 2)
-            }
         }
     }
 }
@@ -260,108 +240,110 @@ struct FitLinkLiveActivityLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: FitLinkLiveActivityAttributes.self) { context in
             // Lock screen / banner - crna kartica (tamni tint; sistem daje chrome).
-            LiveActivityLockScreenView(state: context.state)
+            LiveActivityLockScreenView(state: context.state, startedAt: context.attributes.workoutStartedAt)
                 .activityBackgroundTint(Color(white: 0.06))
                 .activitySystemActionForegroundColor(Color.white)
 
         } dynamicIsland: { context in
             let state = context.state
             let isRest = state.isResting
+            let startedAt = context.attributes.workoutStartedAt
             let heartColor = state.heartRate != nil ? hrZoneColor(state.hrZone) : Color(white: 0.50)
             let bpmText = state.heartRate.map { "\($0)" } ?? "--"
             return DynamicIsland {
-                // EXPANDED (kad se rasiri na dodir)
+                // EXPANDED (kad se klikne pilula) = LYFTA kartica:
+                // gore levo brend, gore desno vreme, dole slika + ime + serija.
                 DynamicIslandExpandedRegion(.leading) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(state.exerciseName)
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
-                            .lineLimit(1)
-                        Text(setOrDurationText(state))
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .monospacedDigit()
-                            .foregroundColor(laVioletBright)
-                    }
+                    (Text("Fit").foregroundColor(.white)
+                     + Text("Link").foregroundColor(laVioletBright))
+                        .font(.system(size: 15, weight: .heavy))
+                        .padding(.leading, 6)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    if isRest, let end = state.restEndsAt {
-                        VStack(alignment: .trailing, spacing: 0) {
-                            Text(timerInterval: restCountdownRange(end), countsDown: true)
-                                .font(.system(size: 18, weight: .heavy, design: .rounded))
-                                .monospacedDigit()
-                                .multilineTextAlignment(.trailing)
-                                .foregroundColor(laVioletBright)
-                                .frame(maxWidth: 86, alignment: .trailing)
-                            Text("PAUZA")
-                                .font(.system(size: 9, weight: .heavy))
-                                .tracking(0.5)
-                                .foregroundColor(laTxtDim)
-                        }
-                    } else {
-                        VStack(alignment: .trailing, spacing: 0) {
-                            HStack(spacing: 3) {
-                                Image(systemName: "heart.fill")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(heartColor)
-                                Text(bpmText)
-                                    .font(.system(size: 18, weight: .heavy, design: .rounded))
-                                    .monospacedDigit()
-                                    .foregroundColor(.white)
-                            }
-                            Text(hrZoneLabelSr(state.hrZone))
-                                .font(.system(size: 9, weight: .heavy))
-                                .tracking(0.5)
-                                .foregroundColor(heartColor)
-                        }
-                    }
+                    // Premium margina od ivice ostrva (ne skroz uz rub, da se "0:12" ne sece).
+                    workoutTimerText(startedAt)
+                        .font(.system(size: 14, weight: .semibold))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .multilineTextAlignment(.trailing)
+                        .foregroundColor(laTxtDim)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .padding(.trailing, 8)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    if isRest {
-                        Text("Sledeće: serija \(state.setNumber)/\(state.totalSets)")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(laTxtDim)
-                            .lineLimit(1)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    } else if let next = state.nextExerciseName, !next.isEmpty {
-                        HStack(spacing: 5) {
-                            Text("SLEDEĆE")
-                                .font(.system(size: 8, weight: .heavy))
-                                .tracking(0.6)
-                                .foregroundColor(laViolet)
-                            Text(next + (state.nextInfo.map { " · \($0)" } ?? ""))
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(laTxtDim)
+                    HStack(spacing: 12) {
+                        LiveActivityThumb(imageFileName: state.imageFileName, size: 50, corner: 11, iconSize: 22)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(state.exerciseName)
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.white)
+                                .lineLimit(2)
+                                .minimumScaleFactor(0.85)
+                            if isRest, let end = state.restEndsAt {
+                                HStack(spacing: 5) {
+                                    Text("Pauza")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(laVioletBright)
+                                    Text("·")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(laTxtFaint)
+                                    Text(timerInterval: restCountdownRange(end), countsDown: true)
+                                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                                        .monospacedDigit()
+                                        .foregroundColor(.white)
+                                }
                                 .lineLimit(1)
-                            Spacer(minLength: 0)
+                            } else {
+                                Text(setOrDurationText(state))
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(laTxtDim)
+                                    .lineLimit(1)
+                            }
+                        }
+                        Spacer(minLength: 0)
+                        if state.watchConnected {
+                            VStack(alignment: .trailing, spacing: 0) {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "heart.fill")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundColor(heartColor)
+                                    Text(bpmText)
+                                        .font(.system(size: 16, weight: .heavy, design: .rounded))
+                                        .monospacedDigit()
+                                        .foregroundColor(.white)
+                                }
+                                Text(hrZoneLabelSr(state.hrZone))
+                                    .font(.system(size: 9, weight: .heavy))
+                                    .foregroundColor(heartColor)
+                            }
                         }
                     }
+                    .padding(.top, 2)
                 }
             } compactLeading: {
-                if isRest {
-                    Image(systemName: "pause.fill")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(laViolet)
-                } else {
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(heartColor)
-                }
+                // Brend usko (hugguje), manji font -> pilula kraca, premium kao LYFTA.
+                (Text("Fit").foregroundColor(.white)
+                 + Text("Link").foregroundColor(laVioletBright))
+                    .font(.system(size: 11, weight: .heavy))
+                    .lineLimit(1)
+                    .fixedSize()
             } compactTrailing: {
-                if isRest, let end = state.restEndsAt {
-                    Text(timerInterval: restCountdownRange(end), countsDown: true)
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundColor(laVioletBright)
-                } else {
-                    Text(bpmText)
-                        .font(.system(size: 14, weight: .heavy, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundColor(heartColor)
-                }
+                // Uzak okvir + trailing align + mm:ss (sekunde su uvek krajnje desno u
+                // rezervaciji) -> vreme SKROZ do desne ivice pilule, kratka pilula.
+                workoutTimerText(startedAt)
+                    .font(.system(size: 11, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 42, alignment: .trailing)
             } minimal: {
-                Image(systemName: isRest ? "pause.fill" : "heart.fill")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(isRest ? laViolet : heartColor)
+                // Brend znak (umesto srca).
+                Text("F")
+                    .font(.system(size: 13, weight: .heavy))
+                    .foregroundColor(laVioletBright)
             }
             .keylineTint(laViolet)
         }
