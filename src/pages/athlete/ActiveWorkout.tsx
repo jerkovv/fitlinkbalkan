@@ -36,16 +36,18 @@ type LiveActivityFields = {
   restEndsAtMs?: number;
   isDurationBased: boolean;
   durationMinutes?: number;
+  watchConnected: boolean;   // sat prisutan -> native prikazuje puls
+  thumbnailUrl?: string;     // URL slike vezbe (native kesira u App Group)
 };
 interface LiveActivityPluginDef {
-  start(options: LiveActivityFields & { athleteName: string }): Promise<{ success: boolean }>;
+  start(options: LiveActivityFields & { athleteName: string; workoutStartedAtMs: number }): Promise<{ success: boolean }>;
   update(options: LiveActivityFields): Promise<{ success: boolean }>;
   end(): Promise<{ success: boolean }>;
 }
 const LiveActivity = registerPlugin<LiveActivityPluginDef>("LiveActivity");
 const liveActivitySupported = Capacitor.getPlatform() === "ios";
 
-const laStart = async (opts: LiveActivityFields & { athleteName: string }) => {
+const laStart = async (opts: LiveActivityFields & { athleteName: string; workoutStartedAtMs: number }) => {
   if (!liveActivitySupported) return;
   try { await LiveActivity.start(opts); } catch { /* iOS < 16.2 / plugin nedostupan -> no-op */ }
 };
@@ -945,13 +947,15 @@ const ActiveWorkout = () => {
       restEndsAtMs: isResting && pos.restEndsAtMs ? pos.restEndsAtMs : undefined,
       isDurationBased: !!ex.exercise.is_duration_based,
       durationMinutes: ex.exercise.is_duration_based ? (ex.duration_minutes ?? undefined) : undefined,
+      watchConnected: watchEverPresent,
+      thumbnailUrl: ex.exercise.thumbnail_url ?? undefined,
     };
 
-    // Strukturni kljuc = sve sem same brojke pulsa (zona je unutra) -> promena salje odmah.
+    // Strukturni kljuc = sve sem same brojke pulsa (zona/watchConnected/slika unutra) -> promena salje odmah.
     const structKey = [
       fields.exerciseName, fields.setNumber, fields.totalSets, fields.isResting,
       fields.restEndsAtMs ?? "", fields.isDurationBased, fields.durationMinutes ?? "",
-      fields.hrZone,
+      fields.hrZone, fields.watchConnected, fields.thumbnailUrl ?? "",
     ].join("|");
     const nowMs = Date.now();
 
@@ -960,7 +964,7 @@ const ActiveWorkout = () => {
       laLastKeyRef.current = structKey;
       laLastHrRef.current = hr;
       laLastSentAtRef.current = nowMs;
-      laStart({ athleteName: "", ...fields });
+      laStart({ athleteName: "", workoutStartedAtMs: pos.startedAtMs ?? Date.now(), ...fields });
       return;
     }
 
