@@ -62,6 +62,17 @@ public class LiveActivityPlugin: CAPPlugin {
         call.resolve(["success": true])
     }
 
+    // Pred-kesira sve slike vezbi tog treninga u App Group (da budu spremne kad sat
+    // prebaci vezbu dok je telefon zakljucan). Fire-and-forget; resolve odmah.
+    // Nije #available-ogradjeno: kes je obican URLSession/UIImage (radi na svakom iOS).
+    @objc func precache(_ call: CAPPluginCall) {
+        let urls = call.getArray("urls", String.self) ?? []
+        for url in urls where !url.isEmpty {
+            LiveActivityImageCache.download(url) { _ in }   // download sam preskace ako je kesirano
+        }
+        call.resolve()
+    }
+
     // Gradi ContentState iz JS poziva. restEndsAtMs je epoch ms (Double) -> Date?;
     // heartRate i durationMinutes su opcioni (nil ako nisu prosledjeni).
     @available(iOS 16.2, *)

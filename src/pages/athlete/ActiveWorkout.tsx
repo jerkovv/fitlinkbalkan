@@ -44,6 +44,7 @@ interface LiveActivityPluginDef {
   start(options: LiveActivityFields & { athleteName: string; workoutStartedAtMs: number }): Promise<{ success: boolean }>;
   update(options: LiveActivityFields): Promise<{ success: boolean }>;
   end(): Promise<{ success: boolean }>;
+  precache(options: { urls: string[] }): Promise<void>;
   addListener(
     eventName: "laPushToken",
     listenerFunc: (data: { token: string }) => void,
@@ -63,6 +64,10 @@ const laUpdate = async (opts: LiveActivityFields) => {
 const laEnd = async () => {
   if (!liveActivitySupported) return;
   try { await LiveActivity.end(); } catch { /* no-op */ }
+};
+const laPrecache = async (urls: string[]) => {
+  if (!liveActivitySupported || urls.length === 0) return;
+  try { await LiveActivity.precache({ urls }); } catch { /* no-op */ }
 };
 
 // Cilj jednog seta iz get_workout_day_full.set_details (izvor istine, per-set).
@@ -985,6 +990,15 @@ const ActiveWorkout = () => {
       laLastHrRef.current = hr;
       laLastSentAtRef.current = nowMs;
       laStart({ athleteName: "", workoutStartedAtMs: pos.startedAtMs ?? Date.now(), ...fields });
+      // Pred-kesiraj slike SVIH vezbi dana (isti thumbnail_url string kao laStart/laUpdate ->
+      // hash se poklapa), da budu u App Group kesu kad sat prebaci vezbu dok je zakljucano.
+      laPrecache(
+        Array.from(new Set(
+          day.exercises
+            .map((e) => e.exercise.thumbnail_url)
+            .filter((u): u is string => !!u),
+        )),
+      );
       return;
     }
 
