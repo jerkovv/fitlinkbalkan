@@ -66,7 +66,10 @@ public class LiveActivityPlugin: CAPPlugin {
             isResting: call.getBool("isResting") ?? false,
             restEndsAt: restEndsAt,
             isDurationBased: call.getBool("isDurationBased") ?? false,
-            durationMinutes: call.getInt("durationMinutes")
+            durationMinutes: call.getInt("durationMinutes"),
+            weightText: call.getString("weightText"),
+            nextExerciseName: call.getString("nextExerciseName"),
+            nextInfo: call.getString("nextInfo")
         )
     }
 }

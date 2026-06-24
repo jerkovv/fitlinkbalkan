@@ -29,6 +29,9 @@ struct FitLinkLiveActivityAttributes: ActivityAttributes {
         var restEndsAt: Date?         // kraj pauze (za odbrojavanje), nil ako nije pauza
         var isDurationBased: Bool     // kardio (minuti) umesto setova
         var durationMinutes: Int?     // ciljani minuti za kardio
+        var weightText: String?       // npr "100 kg x 8" ili nil (bodyweight/kardio)
+        var nextExerciseName: String? // ime sledece vezbe, nil ako je poslednja
+        var nextInfo: String?         // npr "4 serije" ili nil
     }
     var athleteName: String           // fiksno, ime vezbaca (za sad nas trening)
 }
