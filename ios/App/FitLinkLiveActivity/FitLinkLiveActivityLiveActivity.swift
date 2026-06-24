@@ -21,8 +21,9 @@ private let laRingSize: CGFloat = 48      // HR prsten (precnik); deli ga i Dyna
 private let laRingLine: CGFloat = 3       // debljina prstena
 private let laBlockSpacing: CGFloat = 8   // razmak redova: head / glavni / next
 private let laMainSpacing: CGFloat = 12   // razmak: slika | sredina | prsten
-private let laCardPadH: CGFloat = 14      // horizontalni padding kartice
-private let laCardPadV: CGFloat = 10      // vertikalni padding kartice (NIZAK)
+private let laCardPadH: CGFloat = 16      // horizontalni padding kartice
+private let laCardPadV: CGFloat = 14      // donji padding kartice
+private let laCardPadTop: CGFloat = 16    // gornji padding (malo vise, da header ne dodiruje vrh)
 private let laExNameSize: CGFloat = 16.5  // ime vezbe
 private let laSubSize: CGFloat = 12.5     // serija/weight ispod imena
 private let laCountSize: CGFloat = 23     // countdown u pauzi (NE 30)
@@ -168,8 +169,10 @@ struct LiveActivityLockScreenView: View {
 
             nextRow
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, laCardPadH)
-        .padding(.vertical, laCardPadV)
+        .padding(.top, laCardPadTop)
+        .padding(.bottom, laCardPadV)
     }
 
     // Sredina: ime + serija (aktivno) ILI sledece + countdown (pauza). Ista (niska) visina.
