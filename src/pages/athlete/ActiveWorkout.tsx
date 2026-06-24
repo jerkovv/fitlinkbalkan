@@ -38,6 +38,7 @@ type LiveActivityFields = {
   durationMinutes?: number;
   watchConnected: boolean;   // sat prisutan -> native prikazuje puls
   thumbnailUrl?: string;     // URL slike vezbe (native kesira u App Group)
+  weightText?: string;       // npr "15 kg × 10" ili "10 pon." (samo snaga, ne kardio)
 };
 interface LiveActivityPluginDef {
   start(options: LiveActivityFields & { athleteName: string; workoutStartedAtMs: number }): Promise<{ success: boolean }>;
@@ -937,6 +938,20 @@ const ActiveWorkout = () => {
       : (liveHr ?? pos.currentHr);
     const hr = typeof hrRaw === "number" && hrRaw > 0 ? hrRaw : null;
 
+    // weightText tekuceg seta (samo snaga). Kardio -> izostavi (vec ide "n min").
+    // "{kg} kg × {reps}" (× = U+00D7), ili "{reps} pon." ako nema tezine, inace nista.
+    let weightText: string | undefined;
+    if (!ex.exercise.is_duration_based) {
+      const tgt = targetForSet(ex, pos.setNumber);
+      const reps = tgt.repsText?.trim() || null;
+      if (tgt.weight != null && tgt.weight > 0) {
+        const kg = String(Math.round(tgt.weight * 100) / 100);   // 15 ne 15.0, 2.5 ostaje 2.5
+        weightText = reps ? `${kg} kg × ${reps}` : `${kg} kg`;
+      } else if (reps) {
+        weightText = `${reps} pon.`;
+      }
+    }
+
     const fields: LiveActivityFields = {
       exerciseName: ex.exercise.name,
       setNumber: pos.setNumber,
@@ -949,13 +964,14 @@ const ActiveWorkout = () => {
       durationMinutes: ex.exercise.is_duration_based ? (ex.duration_minutes ?? undefined) : undefined,
       watchConnected: watchEverPresent,
       thumbnailUrl: ex.exercise.thumbnail_url ?? undefined,
+      weightText,
     };
 
-    // Strukturni kljuc = sve sem same brojke pulsa (zona/watchConnected/slika unutra) -> promena salje odmah.
+    // Strukturni kljuc = sve sem same brojke pulsa (zona/watchConnected/slika/weightText unutra) -> promena salje odmah.
     const structKey = [
       fields.exerciseName, fields.setNumber, fields.totalSets, fields.isResting,
       fields.restEndsAtMs ?? "", fields.isDurationBased, fields.durationMinutes ?? "",
-      fields.hrZone, fields.watchConnected, fields.thumbnailUrl ?? "",
+      fields.hrZone, fields.watchConnected, fields.thumbnailUrl ?? "", fields.weightText ?? "",
     ].join("|");
     const nowMs = Date.now();
 

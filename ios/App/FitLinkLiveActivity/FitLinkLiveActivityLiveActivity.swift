@@ -71,6 +71,15 @@ private func setOrDurationText(_ s: FitLinkLiveActivityAttributes.ContentState) 
     s.isDurationBased ? "\(s.durationMinutes ?? 0) min" : "Serija \(s.setNumber)/\(s.totalSets)"
 }
 
+// "Serija x/y" (ili "n min") + " · weightText" (samo snaga, ako stigne). Lyfta stil.
+private func setLineText(_ s: FitLinkLiveActivityAttributes.ContentState) -> String {
+    var base = setOrDurationText(s)
+    if !s.isDurationBased, let w = s.weightText, !w.isEmpty {
+        base += " · \(w)"
+    }
+    return base
+}
+
 // Stoperica treninga: broji UNAPRED od pocetka. timerInterval (showsHours:false) ->
 // uvek mm:ss, uza rezervacija ("119:59"); kapirano na 2h (realan max). Pozivaoci je
 // stavljaju u .frame(maxWidth:.infinity, alignment:.trailing) (lock/expanded) ili uzak
@@ -226,7 +235,7 @@ struct LiveActivityLockScreenView: View {
             }
             .lineLimit(1)
         } else {
-            Text(setOrDurationText(state))
+            Text(setLineText(state))
                 .font(.system(size: laSubSize, weight: .medium))
                 .foregroundColor(laTxtDim)
                 .lineLimit(1)
@@ -295,7 +304,7 @@ struct FitLinkLiveActivityLiveActivity: Widget {
                                 }
                                 .lineLimit(1)
                             } else {
-                                Text(setOrDurationText(state))
+                                Text(setLineText(state))
                                     .font(.system(size: 14, weight: .medium))
                                     .foregroundColor(laTxtDim)
                                     .lineLimit(1)
