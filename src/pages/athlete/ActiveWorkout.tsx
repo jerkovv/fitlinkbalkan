@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff, Plus, Minus } from "lucide-react";
-import { getHrColor } from "@/lib/workout/hrZone";
+import { getHrColor, getHrZone } from "@/lib/workout/hrZone";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +20,43 @@ import { ExerciseHeader } from "@/components/workout/ExerciseHeader";
 import { SetLogger } from "@/components/workout/SetLogger";
 import { RestTimer } from "@/components/workout/RestTimer";
 import { Network } from "@capacitor/network";
+import { Capacitor, registerPlugin } from "@capacitor/core";
+
+// ---- Nativni Live Activity plugin (iOS-only: lock screen / Dynamic Island) ----
+// Most ka nativnom LiveActivityPlugin-u ("LiveActivity": start/update/end). Na
+// ne-iOS platformi ili ako plugin / iOS verzija nije podrzana, sve je no-op
+// (try/catch + platforma guard) - ne rusi web/Android.
+type LiveActivityFields = {
+  exerciseName: string;
+  setNumber: number;
+  totalSets: number;
+  heartRate?: number;
+  hrZone: string;            // rest/easy/moderate/hard/max (isti kao nativni helper)
+  isResting: boolean;
+  restEndsAtMs?: number;
+  isDurationBased: boolean;
+  durationMinutes?: number;
+};
+interface LiveActivityPluginDef {
+  start(options: LiveActivityFields & { athleteName: string }): Promise<{ success: boolean }>;
+  update(options: LiveActivityFields): Promise<{ success: boolean }>;
+  end(): Promise<{ success: boolean }>;
+}
+const LiveActivity = registerPlugin<LiveActivityPluginDef>("LiveActivity");
+const liveActivitySupported = Capacitor.getPlatform() === "ios";
+
+const laStart = async (opts: LiveActivityFields & { athleteName: string }) => {
+  if (!liveActivitySupported) return;
+  try { await LiveActivity.start(opts); } catch { /* iOS < 16.2 / plugin nedostupan -> no-op */ }
+};
+const laUpdate = async (opts: LiveActivityFields) => {
+  if (!liveActivitySupported) return;
+  try { await LiveActivity.update(opts); } catch { /* no-op */ }
+};
+const laEnd = async () => {
+  if (!liveActivitySupported) return;
+  try { await LiveActivity.end(); } catch { /* no-op */ }
+};
 
 // Cilj jednog seta iz get_workout_day_full.set_details (izvor istine, per-set).
 // reps je sirov tekst (npr "8" ili "8-12"), weight/rest broj ili null.
@@ -245,6 +282,13 @@ const ActiveWorkout = () => {
   // Ref na poziciju za stabilne handlere (watch eventi).
   const posRef = useRef<WorkoutPos | null>(null);
   useEffect(() => { posRef.current = pos; }, [pos]);
+
+  // Live Activity (iOS): start se okida JEDNOM po sesiji; throttle za update
+  // (strukturni kljuc + delta pulsa + max 1x/5s) da ne spamuje na svaki tik.
+  const liveActivityStartedRef = useRef(false);
+  const laLastKeyRef = useRef<string>("");
+  const laLastHrRef = useRef<number | null>(null);
+  const laLastSentAtRef = useRef(0);
 
   // Jedinstveni prelaz u "završeno": sinhroni ref (za async zatvaranja) + state
   // (da poll/heartbeat effekti urade teardown i prestanu da rade ODMAH).
@@ -869,6 +913,80 @@ const ActiveWorkout = () => {
       clearInterval(id);
     };
   }, [sessionId, liveHr, finished]);
+
+  /* ------------------------- Live Activity (iOS lock screen) ------------------------- */
+  // START kad postoji aktivna sesija + pozicija (jednom), UPDATE na promenu
+  // pozicije/zone, uz throttle za sam puls. END ide kroz `finished` (finish/cancel/
+  // poll-disappeared sve setuju finished) i kroz unmount (napustanje ekrana).
+  // Citamo SAMO state - ne diramo poll, RPC-ove, optimisticki prelaz.
+  useEffect(() => {
+    if (!liveActivitySupported) return;
+    if (finished || finishedRef.current) return;
+    if (!sessionId || !pos || !day) return;
+    if (pos.state === "completed") return;
+    const ex = day.exercises[pos.exerciseIdx];
+    if (!ex) return;
+
+    const isResting = pos.state === "rest";
+    // Isti izvor HR kao prikaz: sat (watchHr) instant kad je prisutan, poll fallback;
+    // SOLO -> telefonov HealthKit (liveHr).
+    const hrRaw = watchEverPresent
+      ? (watchHr ?? pos.currentHr ?? liveHr)
+      : (liveHr ?? pos.currentHr);
+    const hr = typeof hrRaw === "number" && hrRaw > 0 ? hrRaw : null;
+
+    const fields: LiveActivityFields = {
+      exerciseName: ex.exercise.name,
+      setNumber: pos.setNumber,
+      totalSets: ex.sets ?? pos.totalSets,
+      heartRate: hr ?? undefined,
+      hrZone: getHrZone(hr),
+      isResting,
+      restEndsAtMs: isResting && pos.restEndsAtMs ? pos.restEndsAtMs : undefined,
+      isDurationBased: !!ex.exercise.is_duration_based,
+      durationMinutes: ex.exercise.is_duration_based ? (ex.duration_minutes ?? undefined) : undefined,
+    };
+
+    // Strukturni kljuc = sve sem same brojke pulsa (zona je unutra) -> promena salje odmah.
+    const structKey = [
+      fields.exerciseName, fields.setNumber, fields.totalSets, fields.isResting,
+      fields.restEndsAtMs ?? "", fields.isDurationBased, fields.durationMinutes ?? "",
+      fields.hrZone,
+    ].join("|");
+    const nowMs = Date.now();
+
+    if (!liveActivityStartedRef.current) {
+      liveActivityStartedRef.current = true;
+      laLastKeyRef.current = structKey;
+      laLastHrRef.current = hr;
+      laLastSentAtRef.current = nowMs;
+      laStart({ athleteName: "", ...fields });
+      return;
+    }
+
+    const structChanged = structKey !== laLastKeyRef.current;
+    const hrDelta = Math.abs((hr ?? 0) - (laLastHrRef.current ?? 0));
+    const stale = nowMs - laLastSentAtRef.current > 5000;
+    if (structChanged || hrDelta > 3 || stale) {
+      laLastKeyRef.current = structKey;
+      laLastHrRef.current = hr;
+      laLastSentAtRef.current = nowMs;
+      laUpdate(fields);
+    }
+  }, [sessionId, pos, day, watchHr, liveHr, watchEverPresent, finished]);
+
+  // END: kraj treninga (finish / cancel / poll-disappeared -> svi setuju `finished`).
+  useEffect(() => {
+    if (finished && liveActivityStartedRef.current) {
+      liveActivityStartedRef.current = false;
+      laEnd();
+    }
+  }, [finished]);
+
+  // END i na napustanje ekrana (unmount), za svaki slucaj (idempotentno).
+  useEffect(() => {
+    return () => { laEnd(); };
+  }, []);
 
   // RPC greske: kad je telefon offline (ocekivano), tiho progutaj sirovu
   // "TypeError: Load failed"/"Failed to fetch" (ruzna i beskorisna korisniku); kad je
