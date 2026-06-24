@@ -175,19 +175,23 @@ struct LiveActivityLockScreenView: View {
     // Sredina: ime + serija (aktivno) ILI sledece + countdown (pauza). Ista (niska) visina.
     @ViewBuilder private var middle: some View {
         if state.isResting {
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Pauza do sledeće")
-                    .font(.system(size: laNextSize, weight: .semibold))
-                    .foregroundColor(laTxtDim)
+            // ISTA (niska) visina kao aktivno: 3 reda teksta, BEZ Spacer-a / maxHeight /
+            // fixedSize. (Stari .fixedSize() na timerInterval tekstu je razvlacio karticu.)
+            // Countdown je iste velicine kao ime vezbe u aktivnom, da se visina poklopi.
+            VStack(alignment: .leading, spacing: 3) {
+                Text("PAUZA")
+                    .font(.system(size: laSubSize, weight: .heavy))
+                    .tracking(0.5)
+                    .foregroundColor(laVioletBright)
                     .lineLimit(1)
                 if let end = state.restEndsAt {
                     Text(timerInterval: restCountdownRange(end), countsDown: true)
-                        .font(.system(size: laCountSize, weight: .heavy, design: .rounded))
+                        .font(.system(size: laExNameSize, weight: .heavy, design: .rounded))
                         .monospacedDigit()
-                        .foregroundColor(laVioletBright)
-                        .fixedSize()
+                        .foregroundColor(.white)
+                        .lineLimit(1)
                 }
-                Text("Sledeće: serija \(state.setNumber)/\(state.totalSets)")
+                Text("Sledeće: \(state.nextExerciseName ?? state.exerciseName) serija \(state.setNumber)/\(state.totalSets)")
                     .font(.system(size: laNextSize, weight: .semibold))
                     .foregroundColor(laTxtDim)
                     .lineLimit(1)
@@ -259,56 +263,102 @@ struct FitLinkLiveActivityLiveActivity: Widget {
 
         } dynamicIsland: { context in
             let state = context.state
-            let zoneColor = hrZoneColor(state.hrZone)
+            let isRest = state.isResting
+            let heartColor = state.heartRate != nil ? hrZoneColor(state.hrZone) : Color(white: 0.50)
+            let bpmText = state.heartRate.map { "\($0)" } ?? "--"
             return DynamicIsland {
+                // EXPANDED (kad se rasiri na dodir)
                 DynamicIslandExpandedRegion(.leading) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(state.exerciseName)
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.white)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.85)
+                            .lineLimit(1)
                         Text(setOrDurationText(state))
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
                             .monospacedDigit()
                             .foregroundColor(laVioletBright)
                     }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    LiveActivityHRRing(heartRate: state.heartRate, hrZone: state.hrZone)
-                }
-                DynamicIslandExpandedRegion(.bottom) {
-                    if state.isResting, let end = state.restEndsAt {
-                        HStack(spacing: 6) {
-                            Image(systemName: "pause.circle.fill")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(laViolet)
-                            Text("Pauza")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(laTxtDim)
-                            Spacer()
+                    if isRest, let end = state.restEndsAt {
+                        VStack(alignment: .trailing, spacing: 0) {
                             Text(timerInterval: restCountdownRange(end), countsDown: true)
-                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                                .font(.system(size: 18, weight: .heavy, design: .rounded))
                                 .monospacedDigit()
                                 .multilineTextAlignment(.trailing)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: 70, alignment: .trailing)
+                                .foregroundColor(laVioletBright)
+                                .frame(maxWidth: 86, alignment: .trailing)
+                            Text("PAUZA")
+                                .font(.system(size: 9, weight: .heavy))
+                                .tracking(0.5)
+                                .foregroundColor(laTxtDim)
+                        }
+                    } else {
+                        VStack(alignment: .trailing, spacing: 0) {
+                            HStack(spacing: 3) {
+                                Image(systemName: "heart.fill")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(heartColor)
+                                Text(bpmText)
+                                    .font(.system(size: 18, weight: .heavy, design: .rounded))
+                                    .monospacedDigit()
+                                    .foregroundColor(.white)
+                            }
+                            Text(hrZoneLabelSr(state.hrZone))
+                                .font(.system(size: 9, weight: .heavy))
+                                .tracking(0.5)
+                                .foregroundColor(heartColor)
+                        }
+                    }
+                }
+                DynamicIslandExpandedRegion(.bottom) {
+                    if isRest {
+                        Text("Sledeće: serija \(state.setNumber)/\(state.totalSets)")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(laTxtDim)
+                            .lineLimit(1)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else if let next = state.nextExerciseName, !next.isEmpty {
+                        HStack(spacing: 5) {
+                            Text("SLEDEĆE")
+                                .font(.system(size: 8, weight: .heavy))
+                                .tracking(0.6)
+                                .foregroundColor(laViolet)
+                            Text(next + (state.nextInfo.map { " · \($0)" } ?? ""))
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(laTxtDim)
+                                .lineLimit(1)
+                            Spacer(minLength: 0)
                         }
                     }
                 }
             } compactLeading: {
-                Image(systemName: "heart.fill")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(zoneColor)
+                if isRest {
+                    Image(systemName: "pause.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(laViolet)
+                } else {
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(heartColor)
+                }
             } compactTrailing: {
-                Text(state.heartRate.map { "\($0)" } ?? "--")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundColor(.white)
+                if isRest, let end = state.restEndsAt {
+                    Text(timerInterval: restCountdownRange(end), countsDown: true)
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundColor(laVioletBright)
+                } else {
+                    Text(bpmText)
+                        .font(.system(size: 14, weight: .heavy, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundColor(heartColor)
+                }
             } minimal: {
-                Image(systemName: "heart.fill")
+                Image(systemName: isRest ? "pause.fill" : "heart.fill")
                     .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(zoneColor)
+                    .foregroundColor(isRest ? laViolet : heartColor)
             }
             .keylineTint(laViolet)
         }
