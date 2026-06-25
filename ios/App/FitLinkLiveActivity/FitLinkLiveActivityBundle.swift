@@ -13,5 +13,6 @@ struct FitLinkLiveActivityBundle: WidgetBundle {
     var body: some Widget {
         FitLinkLiveActivity()
         FitLinkLiveActivityLiveActivity()
+        TrainerLiveActivityWidget()
     }
 }

@@ -73,6 +73,80 @@ public class LiveActivityPlugin: CAPPlugin {
         call.resolve()
     }
 
+    // MARK: - Trenerova Live Activity (zaseban tip/menadzer)
+
+    @objc func trainerStart(_ call: CAPPluginCall) {
+        guard #available(iOS 16.2, *) else {
+            call.reject("Live Activities zahtevaju iOS 16.2+")
+            return
+        }
+        // Push token (kad stigne) ka JS-u preko "trainerLaPushToken". Pre start-a.
+        TrainerLiveActivityManager.shared.onPushToken = { [weak self] hex in
+            self?.notifyListeners("trainerLaPushToken", data: ["token": hex])
+        }
+        let startedAt: Date
+        if let ms = call.getDouble("sessionStartedAtMs") {
+            startedAt = Date(timeIntervalSince1970: ms / 1000.0)
+        } else {
+            startedAt = Date()
+        }
+        TrainerLiveActivityManager.shared.start(
+            trainerName: call.getString("trainerName"),
+            sessionStartedAt: startedAt,
+            state: Self.trainerContentState(from: call)
+        )
+        call.resolve(["success": true])
+    }
+
+    @objc func trainerUpdate(_ call: CAPPluginCall) {
+        guard #available(iOS 16.2, *) else {
+            call.reject("Live Activities zahtevaju iOS 16.2+")
+            return
+        }
+        TrainerLiveActivityManager.shared.update(state: Self.trainerContentState(from: call))
+        call.resolve(["success": true])
+    }
+
+    @objc func trainerEnd(_ call: CAPPluginCall) {
+        guard #available(iOS 16.2, *) else {
+            call.resolve(["success": true])
+            return
+        }
+        TrainerLiveActivityManager.shared.end()
+        call.resolve(["success": true])
+    }
+
+    // Da li trenerova aktivnost trenutno radi (po sistemu). React ovo cita na mount
+    // da vrati toggle u tacno stanje (preziva izlazak sa ekrana / restart app-a).
+    @objc func trainerStatus(_ call: CAPPluginCall) {
+        guard #available(iOS 16.2, *) else {
+            call.resolve(["active": false])
+            return
+        }
+        call.resolve(["active": TrainerLiveActivityManager.shared.isRunning])
+    }
+
+    // Gradi trenerov ContentState iz JS poziva. athletes = niz {name,hr,zone,isResting}.
+    @available(iOS 16.2, *)
+    private static func trainerContentState(from call: CAPPluginCall) -> TrainerLiveActivityAttributes.ContentState {
+        var athletes: [TrainerAthlete] = []
+        if let raw = call.getArray("athletes", JSObject.self) {
+            for item in raw {
+                let name = item["name"] as? String ?? ""
+                let hr = (item["hr"] as? NSNumber)?.intValue
+                let zone = item["zone"] as? String ?? "rest"
+                let isResting = item["isResting"] as? Bool ?? false
+                let cal = (item["cal"] as? NSNumber)?.intValue
+                athletes.append(TrainerAthlete(name: name, hr: hr, zone: zone, isResting: isResting, cal: cal))
+            }
+        }
+        return TrainerLiveActivityAttributes.ContentState(
+            athletes: athletes,
+            activeCount: call.getInt("activeCount") ?? athletes.count,
+            moreCount: call.getInt("moreCount") ?? 0
+        )
+    }
+
     // Gradi ContentState iz JS poziva. restEndsAtMs je epoch ms (Double) -> Date?;
     // heartRate i durationMinutes su opcioni (nil ako nisu prosledjeni).
     @available(iOS 16.2, *)
