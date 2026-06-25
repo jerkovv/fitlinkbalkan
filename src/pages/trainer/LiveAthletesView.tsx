@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { getHrColor, formatDuration } from "@/lib/workout/hrZone";
 import { isHrLive } from "@/lib/liveWorkout";
 import { useActiveAthletes } from "@/hooks/useActiveAthletes";
+import { WatchSlash } from "@/components/trainer/WatchSlash";
 
 // Puna lista aktivnih vezbaca ("Trenira uzivo"). Isti izvor/sort kao pocetna
 // (useActiveAthletes), bogate kartice; klik -> isti detaljni LiveWorkoutView.
@@ -77,32 +78,18 @@ const LiveAthletesView = () => {
                   <Link
                     to={`/trener/vezbac/${a.athlete_id}/live`}
                     className={cn(
-                      "relative block overflow-hidden card-premium-hover",
+                      "block card-premium-hover",
                       // Odmor: suptilno sivlja pozadina, da se mirnije razlikuje od aktivnih.
                       isResting && "bg-surface-2",
                     )}
                   >
-                    {/* Linija zone + sadrzaj u jednom flex redu: items-stretch -> linija je
-                        pune visine, rounded-l prati zaobljenje kartice, pa sve kartice izgledaju
-                        identicno (bez krivljenja na uglovima kao kod absolute pristupa). */}
-                    <div className="flex items-stretch">
-                      <div
-                        className={cn(
-                          "w-1.5 shrink-0 self-stretch rounded-l-xl",
-                          // Boja zone kad je ziv i ne odmara; inace miran muted ton.
-                          (!live || isResting) && "bg-muted-foreground/25",
-                        )}
-                        style={live && !isResting ? { background: hrColor } : undefined}
-                      />
-                      <div className="flex flex-1 min-w-0 items-center gap-3 pl-3 pr-4 py-3.5">
+                    <div className="flex items-center gap-3 px-4 py-3.5">
                       <div className="relative shrink-0">
                         <Avatar initials={initials} tone="brand" />
+                        {/* Uvek zeleno: prikazan ovde = trenira = aktivan (nezavisno od sata). */}
                         <span
-                          className={cn(
-                            "absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full ring-2 ring-card",
-                            live ? "bg-success animate-pulse" : "bg-muted-foreground/40",
-                          )}
-                          aria-label={live ? "Aktivan" : "Bez živog pulsa"}
+                          className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full ring-2 ring-card bg-success animate-pulse"
+                          aria-label="Aktivan"
                         />
                       </div>
 
@@ -125,22 +112,23 @@ const LiveAthletesView = () => {
                       </div>
 
                       <div className="flex flex-col items-end text-right shrink-0">
-                        <div
-                          className={cn(
-                            "flex items-center justify-end gap-1",
-                            !live && "text-muted-foreground",
-                          )}
-                          style={live ? { color: hrColor } : undefined}
-                        >
-                          <Heart className="h-3.5 w-3.5" strokeWidth={2.4} fill={live ? "currentColor" : "none"} />
-                          <span className="font-display text-[20px] font-bold tnum leading-none">
-                            {live ? (a.current_hr ?? "-") : "-"}
-                          </span>
-                        </div>
+                        {live ? (
+                          <div
+                            className="flex items-center justify-end gap-1"
+                            style={{ color: hrColor }}
+                          >
+                            <Heart className="h-3.5 w-3.5" strokeWidth={2.4} fill="currentColor" />
+                            <span className="font-display text-[20px] font-bold tnum leading-none">
+                              {a.current_hr ?? "-"}
+                            </span>
+                          </div>
+                        ) : (
+                          // Bez sata -> precrtan sat (kao LA kartica), na mestu pulsa.
+                          <WatchSlash size={18} />
+                        )}
                         <div className="text-[12.5px] text-muted-foreground mt-1 tnum">
-                          {kcal} kcal · {timeLabel}
+                          {live ? `${kcal} kcal · ${timeLabel}` : timeLabel}
                         </div>
-                      </div>
                       </div>
                     </div>
                   </Link>

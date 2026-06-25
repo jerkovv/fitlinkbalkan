@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { Card } from "@/components/ui-bits";
 import { QuickMessagePanel } from "@/components/trainer/QuickMessagePanel";
+import { WatchSlash } from "@/components/trainer/WatchSlash";
 import { getHrColor, getZoneVar } from "@/lib/workout/hrZone";
 import { isHrLive } from "@/lib/liveWorkout";
 
@@ -413,6 +414,7 @@ const LiveWorkoutView = () => {
             className="card-premium p-5 transition-colors"
             style={{ background: hrColorSoft }}
           >
+            {hrLive ? (
             <div className="grid grid-cols-2 gap-4">
               {/* PULS */}
               <div className="flex flex-col gap-1.5">
@@ -426,7 +428,10 @@ const LiveWorkoutView = () => {
                   Puls
                 </div>
                 <div className="flex items-baseline gap-1">
-                  <span className="font-display text-4xl font-bold tracking-tightest leading-none tnum">
+                  <span
+                    className="font-display text-4xl font-bold tracking-tightest leading-none tnum"
+                    style={{ color: hr != null && hr > 0 && hrLive ? hrColor : "hsl(var(--muted-foreground))" }}
+                  >
                     {hr != null && hr > 0 && hrLive ? hr : "-"}
                   </span>
                   <span className="text-sm font-semibold text-muted-foreground">bpm</span>
@@ -455,10 +460,17 @@ const LiveWorkoutView = () => {
                 </div>
               </div>
             </div>
+            ) : (
+              // Nema sata -> jedno cisto stanje (kao precrtan sat na listama).
+              <div className="flex flex-col items-center justify-center gap-2 py-3">
+                <WatchSlash size={30} />
+                <span className="text-sm font-medium text-muted-foreground">Sat nije povezan</span>
+              </div>
+            )}
           </div>
 
-          {/* HR mini chart */}
-          <HrMiniChart points={(session.hr_series as any) ?? []} />
+          {/* HR mini chart - sakriven kad nema sata (stanje iznad ga pokriva) */}
+          {hrLive && <HrMiniChart points={(session.hr_series as any) ?? []} />}
 
           {/* Quick messages */}
           <Card className="p-4">

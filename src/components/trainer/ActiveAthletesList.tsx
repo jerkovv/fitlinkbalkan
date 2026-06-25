@@ -4,6 +4,7 @@ import { Heart, ChevronRight, Activity, Flame, ArrowRight } from "lucide-react";
 import { getHrColor, formatDuration } from "@/lib/workout/hrZone";
 import { isHrLive } from "@/lib/liveWorkout";
 import { useActiveAthletes } from "@/hooks/useActiveAthletes";
+import { WatchSlash } from "@/components/trainer/WatchSlash";
 
 // Pocetna trenera: prikazuje prva 3 aktivna vezbaca (posle istog sortiranja kao
 // stranica "Trenira uzivo"), pa dugme "Pogledaj sve" ako ih ima vise. Izvor podataka,
@@ -60,14 +61,13 @@ export const ActiveAthletesList = () => {
                 {/* Srednja kolona dobija punu sirinu (samo avatar i strelica je flankiraju),
                     pa se ime i vezba lepo vide; metrike idu u svoj red ispod. */}
                 <div className="flex-1 min-w-0">
-                  {/* Ime + vreme treninga (tika 1s -> tacno) */}
+                  {/* Ime levo + status (zelena tackica + tekst) prirodno desno, bez flush. */}
                   <div className="flex items-center gap-2">
                     <span className="flex-1 min-w-0 font-display text-[16px] font-semibold leading-tight tracking-tight truncate">
                       {a.athlete_name ?? "Vežbač"}
                     </span>
-                    {/* Smiren meta-tekst; "zivo" nosi mala zelena tackica, ne boja teksta */}
-                    <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground tnum shrink-0">
-                      <span className="h-2 w-2 rounded-full bg-success shrink-0" aria-hidden="true" />
+                    <span className="inline-flex items-center gap-1.5 shrink-0 text-[11px] font-medium text-muted-foreground tnum whitespace-nowrap">
+                      <span className="h-2 w-2 rounded-full bg-green-500 shrink-0" aria-hidden="true" />
                       trenira {formatDuration(elapsed)}
                     </span>
                   </div>
@@ -82,22 +82,23 @@ export const ActiveAthletesList = () => {
                   <div className="flex items-center gap-2 mt-2">
                     {isHrLive(a.watch_last_hr_at) ? (
                       <div
-                        className="inline-flex w-fit items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-semibold tnum text-white"
-                        style={{ background: hrColor }}
+                        className="inline-flex w-fit shrink-0 items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-semibold tnum whitespace-nowrap bg-muted"
+                        style={{ color: hrColor }}
                       >
                         <Heart className="h-3.5 w-3.5" strokeWidth={2.4} />
                         {a.current_hr ?? "-"}
                       </div>
                     ) : (
-                      <div className="inline-flex w-fit items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-semibold tnum bg-muted text-muted-foreground">
-                        <Heart className="h-3.5 w-3.5" strokeWidth={2.4} />
-                        -
+                      // Bez sata -> precrtan sat (kao LA kartica), na mestu pulsa.
+                      <WatchSlash size={16} />
+                    )}
+                    {/* Kcal samo kad ima sat (isti uslov kao puls/precrtan sat). */}
+                    {isHrLive(a.watch_last_hr_at) && (
+                      <div className="inline-flex w-fit shrink-0 items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-semibold tnum whitespace-nowrap bg-muted text-foreground">
+                        <Flame className="h-3.5 w-3.5" strokeWidth={2.4} />
+                        {Math.round(a.current_active_calories ?? 0)} kcal
                       </div>
                     )}
-                    <div className="inline-flex w-fit items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-semibold tnum bg-muted text-foreground">
-                      <Flame className="h-3.5 w-3.5" strokeWidth={2.4} />
-                      {Math.round(a.current_active_calories ?? 0)} kcal
-                    </div>
                   </div>
                 </div>
 
