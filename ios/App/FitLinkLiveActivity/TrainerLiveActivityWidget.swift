@@ -34,12 +34,19 @@ struct TrainerAthleteRow: View {
     var colWidth: CGFloat = 62    // fiksna sirina HR/KCAL kolona (DI salje uze)
     var valueSize: CGFloat = 16   // font brojeva (DI salje manje)
 
+    // Tackica: neutralno siva kad nema sata (bez violet, bez zone); inace boja zone
+    // (siva samo ako nema pulsa uz sat).
+    private var dotColor: Color {
+        if !athlete.watchConnected { return laTxtDim }
+        return athlete.hr != nil ? hrZoneColor(athlete.zone) : Color(white: 0.40)
+    }
+
     var body: some View {
         // .center: tackica vertikalno centrirana sa imenom (NE .firstTextBaseline).
         HStack(alignment: .center, spacing: 10) {
             // Tackica zone: fixedSize da je layout nikad ne skuplja/lomi u novi red.
             Circle()
-                .fill(athlete.hr != nil ? hrZoneColor(athlete.zone) : Color(white: 0.40))
+                .fill(dotColor)
                 .frame(width: 8, height: 8)
                 .fixedSize()
             // layoutPriority(1): ime uzme prostor i SKRATI se umesto da gura tackicu.
@@ -51,45 +58,52 @@ struct TrainerAthleteRow: View {
                 .layoutPriority(1)
             Spacer(minLength: 8)
 
-            // HR kolona (puls belo i primaran; "pauza" u odmoru). Fiksna sirina -> poravnanje.
-            Group {
-                if athlete.isResting {
-                    Text("pauza")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(laVioletBright)
-                } else if let hr = athlete.hr {
-                    HStack(spacing: 3) {
-                        Image(systemName: "heart.fill")
-                            .font(.system(size: 10))
-                            .foregroundStyle(laTxtFaint)
-                        Text("\(hr)")
-                            .font(.system(size: valueSize, weight: .semibold))
-                            .monospacedDigit()
-                            .foregroundStyle(.white)
+            // Bez sata -> desno samo ikonica precrtanog sata (bez pulsa/kalorija/teksta).
+            if !athlete.watchConnected {
+                Image(systemName: "applewatch.slash")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(laTxtDim)
+            } else {
+                // HR kolona (puls belo i primaran; "pauza" u odmoru). Fiksna sirina -> poravnanje.
+                Group {
+                    if athlete.isResting {
+                        Text("pauza")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(laVioletBright)
+                    } else if let hr = athlete.hr {
+                        HStack(spacing: 3) {
+                            Image(systemName: "heart.fill")
+                                .font(.system(size: 10))
+                                .foregroundStyle(laTxtFaint)
+                            Text("\(hr)")
+                                .font(.system(size: valueSize, weight: .semibold))
+                                .monospacedDigit()
+                                .foregroundStyle(.white)
+                        }
+                    } else {
+                        Color.clear.frame(width: colWidth)
                     }
-                } else {
-                    Color.clear.frame(width: colWidth)
                 }
-            }
-            .frame(width: colWidth, alignment: .trailing)
+                .frame(width: colWidth, alignment: .trailing)
 
-            // KCAL kolona (dim, sekundarna). Placeholder iste sirine kad nema -> kolone poravnate.
-            Group {
-                if let cal = athlete.cal, cal > 0 {
-                    HStack(spacing: 3) {
-                        Image(systemName: "flame.fill")
-                            .font(.system(size: 10))
-                            .foregroundStyle(laTxtFaint)
-                        Text("\(cal)")
-                            .font(.system(size: valueSize, weight: .semibold))
-                            .monospacedDigit()
-                            .foregroundStyle(laTxtDim)
+                // KCAL kolona (dim, sekundarna). Placeholder iste sirine kad nema -> kolone poravnate.
+                Group {
+                    if let cal = athlete.cal, cal > 0 {
+                        HStack(spacing: 3) {
+                            Image(systemName: "flame.fill")
+                                .font(.system(size: 10))
+                                .foregroundStyle(laTxtFaint)
+                            Text("\(cal)")
+                                .font(.system(size: valueSize, weight: .semibold))
+                                .monospacedDigit()
+                                .foregroundStyle(laTxtDim)
+                        }
+                    } else {
+                        Color.clear.frame(width: colWidth)
                     }
-                } else {
-                    Color.clear.frame(width: colWidth)
                 }
+                .frame(width: colWidth, alignment: .trailing)
             }
-            .frame(width: colWidth, alignment: .trailing)
         }
     }
 }

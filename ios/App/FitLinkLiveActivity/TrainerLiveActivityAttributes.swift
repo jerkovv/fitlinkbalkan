@@ -18,7 +18,8 @@ struct TrainerAthlete: Codable, Hashable {
     var hr: Int?
     var zone: String     // rest/easy/moderate/hard/max (iste zone kao kod atlete)
     var isResting: Bool
-    var cal: Int?        // potroseno kcal (opciono; prikazi samo ako > 0)
+    var cal: Int?           // potroseno kcal (opciono; prikazi samo ako > 0)
+    var watchConnected: Bool // bez sata -> desna strana prazna, siva tackica
 }
 
 @available(iOS 16.1, *)

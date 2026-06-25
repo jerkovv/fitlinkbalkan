@@ -137,7 +137,8 @@ public class LiveActivityPlugin: CAPPlugin {
                 let zone = item["zone"] as? String ?? "rest"
                 let isResting = item["isResting"] as? Bool ?? false
                 let cal = (item["cal"] as? NSNumber)?.intValue
-                athletes.append(TrainerAthlete(name: name, hr: hr, zone: zone, isResting: isResting, cal: cal))
+                let watchConnected = (item["watchConnected"] as? Bool) ?? true
+                athletes.append(TrainerAthlete(name: name, hr: hr, zone: zone, isResting: isResting, cal: cal, watchConnected: watchConnected))
             }
         }
         return TrainerLiveActivityAttributes.ContentState(
