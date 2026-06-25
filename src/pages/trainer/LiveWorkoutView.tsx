@@ -378,7 +378,7 @@ const LiveWorkoutView = () => {
 
           {/* Hero card: current exercise */}
           <Card className="p-5 space-y-3">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Trenutna vežba
             </div>
             <div className="font-display text-[24px] font-bold tracking-tighter leading-tight">
@@ -407,48 +407,52 @@ const LiveWorkoutView = () => {
             </div>
           </Card>
 
-          {/* Big HR display */}
+          {/* PULS / KALORIJE - identican stat par (grid 2 kolone): obe vrednosti iste
+              velicine (text-4xl), tabular, jedinica na baseline-u. Card je zona-tintovan. */}
           <div
-            className="card-premium p-5 flex items-center gap-4 transition-colors"
+            className="card-premium p-5 transition-colors"
             style={{ background: hrColorSoft }}
           >
-            <div
-              className={`h-16 w-16 rounded-2xl inline-flex items-center justify-center shrink-0 ${hr != null && hr > 0 ? "animate-pulse" : ""}`}
-              style={{ background: hrColor }}
-            >
-              <Heart className="h-7 w-7 text-white" strokeWidth={2.4} fill="white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Puls
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="font-display text-[40px] font-bold tracking-tightest leading-none tnum">
-                  {hr != null && hr > 0 && hrLive ? hr : "-"}
-                </span>
-                <span className="text-[12px] font-semibold text-muted-foreground">bpm</span>
-              </div>
-              {hrZone != null && zoneVar && (
-                <div
-                  className="text-[12px] font-semibold mt-1"
-                  style={{ color: `hsl(var(${zoneVar}))` }}
-                >
-                  Zona {hrZone}
+            <div className="grid grid-cols-2 gap-4">
+              {/* PULS */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <Heart
+                    className="h-4 w-4"
+                    strokeWidth={2.4}
+                    fill="currentColor"
+                    style={{ color: hr != null && hr > 0 && hrLive ? hrColor : "hsl(var(--muted-foreground))" }}
+                  />
+                  Puls
                 </div>
-              )}
-            </div>
-            {/* Zive aktivne kalorije pored HR-a (isti refetch kao zona). Uvek vidljivo
-                (0 kcal kad nema podatka) da trener zna da je metrika ziva. */}
-            <div className="shrink-0 flex flex-col items-end">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Kalorije
+                <div className="flex items-baseline gap-1">
+                  <span className="font-display text-4xl font-bold tracking-tightest leading-none tnum">
+                    {hr != null && hr > 0 && hrLive ? hr : "-"}
+                  </span>
+                  <span className="text-sm font-semibold text-muted-foreground">bpm</span>
+                </div>
+                {hrZone != null && zoneVar && (
+                  <div
+                    className="text-[12px] font-semibold"
+                    style={{ color: `hsl(var(${zoneVar}))` }}
+                  >
+                    Zona {hrZone}
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <Flame className="h-5 w-5 text-warning-soft-foreground" strokeWidth={2.4} />
-                <span className="font-display text-[28px] font-bold tracking-tightest leading-none tnum">
-                  {Math.round(liveCalories ?? 0)}
-                </span>
-                <span className="text-[12px] font-semibold text-muted-foreground">kcal</span>
+
+              {/* KALORIJE - ista forma kao PULS (uvek vidljivo, 0 kad nema podatka) */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <Flame className="h-4 w-4 text-muted-foreground" strokeWidth={2.4} />
+                  Kalorije
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="font-display text-4xl font-bold tracking-tightest leading-none tnum">
+                    {Math.round(liveCalories ?? 0)}
+                  </span>
+                  <span className="text-sm font-semibold text-muted-foreground">kcal</span>
+                </div>
               </div>
             </div>
           </div>
@@ -458,7 +462,7 @@ const LiveWorkoutView = () => {
 
           {/* Quick messages */}
           <Card className="p-4">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-3">
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3">
               Pošalji poruku
             </div>
             <QuickMessagePanel sessionId={session.id} />

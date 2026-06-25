@@ -1,16 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { registerPlugin, Capacitor, type PluginListenerHandle } from "@capacitor/core";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Avatar, Card, Chip, SectionTitle, StatCard } from "@/components/ui-bits";
 import {
   Clock, ChevronRight, ClipboardList, Apple, Package, Wallet,
-  Calendar as CalIcon, Users, Settings, AlertTriangle,
+  Calendar as CalIcon, Users, Settings, AlertTriangle, Radio,
 } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ChatBell } from "@/components/ChatBell";
 import { ActiveAthletesList } from "@/components/trainer/ActiveAthletesList";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -32,6 +34,40 @@ const monthNames = [
 
 const fmtTime = (t: string) => t?.slice(0, 5) ?? "";
 
+// Trenerov "Uzivo monitor" (Live Activity). Plugin JS ime "LiveActivity"; ovde samo
+// trainer* podskup nativnih metoda. Web/non-iOS = no-op (guard liveActivitySupported).
+interface TrainerAthleteContent {
+  name: string;
+  hr: number | null;
+  zone: string;
+  isResting: boolean;
+}
+interface TrainerLiveContent {
+  athletes: TrainerAthleteContent[];
+  activeCount: number;
+  moreCount: number;
+}
+interface TrainerLiveActivityDef {
+  trainerStatus(): Promise<{ active: boolean }>;
+  trainerStart(
+    options: TrainerLiveContent & { sessionStartedAtMs: number; trainerName?: string },
+  ): Promise<{ success: boolean }>;
+  trainerUpdate(options: TrainerLiveContent): Promise<{ success: boolean }>;
+  trainerEnd(): Promise<{ success: boolean }>;
+  addListener(
+    eventName: "trainerLaPushToken",
+    listenerFunc: (data: { token: string }) => void,
+  ): Promise<PluginListenerHandle>;
+}
+const LiveActivity = registerPlugin<TrainerLiveActivityDef>("LiveActivity");
+const liveActivitySupported = Capacitor.getPlatform() === "ios";
+
+const readTrainerContent = (raw: any): TrainerLiveContent => ({
+  athletes: Array.isArray(raw?.athletes) ? raw.athletes : [],
+  activeCount: Number(raw?.activeCount ?? 0),
+  moreCount: Number(raw?.moreCount ?? 0),
+});
+
 const Dashboard = () => {
   const { user } = useAuth();
   const today = useMemo(() => new Date(), []);
@@ -47,6 +83,86 @@ const Dashboard = () => {
   const [atRisk, setAtRisk] = useState<{ athlete_id: string; full_name: string | null; days_inactive: number }[]>([]);
   const [referrers, setReferrers] = useState<{ referrer_id: string; referrer_name: string | null; referred_count: number; referred_active: number }[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // --- Uzivo monitor (Live Activity toggle) ---
+  const [monitorOn, setMonitorOn] = useState(false);
+  const [monitorBusy, setMonitorBusy] = useState(false);
+  const monitorListenerRef = useRef<PluginListenerHandle | null>(null);
+  const monitorPollRef = useRef<number | null>(null);
+
+  const clearMonitorPoll = () => {
+    if (monitorPollRef.current != null) {
+      window.clearInterval(monitorPollRef.current);
+      monitorPollRef.current = null;
+    }
+  };
+
+  // Na mount: vrati toggle u tacno stanje (aktivnost preziva izlazak sa ekrana/restart).
+  useEffect(() => {
+    if (!liveActivitySupported) return;
+    LiveActivity.trainerStatus()
+      .then((r) => setMonitorOn(!!r?.active))
+      .catch(() => undefined);
+  }, []);
+
+  // Cleanup na unmount: poll + listener. NE gasi aktivnost (gasi je samo toggle OFF).
+  useEffect(() => {
+    return () => {
+      clearMonitorPoll();
+      monitorListenerRef.current?.remove();
+      monitorListenerRef.current = null;
+    };
+  }, []);
+
+  // Dok je monitor ON: lagani poll na 5s -> lokalni update kartice (push je Faza 2b).
+  useEffect(() => {
+    if (!monitorOn || !liveActivitySupported) return;
+    clearMonitorPoll();
+    monitorPollRef.current = window.setInterval(async () => {
+      const { data } = await (supabase.rpc as any)("trainer_la_content");
+      LiveActivity.trainerUpdate(readTrainerContent(data)).catch(() => undefined);
+    }, 5000);
+    return () => clearMonitorPoll();
+  }, [monitorOn]);
+
+  const toggleMonitor = async (next: boolean) => {
+    if (monitorBusy || !liveActivitySupported) return;
+    setMonitorBusy(true);
+    try {
+      if (next) {
+        const { data } = await (supabase.rpc as any)("trainer_la_start");
+        const c = readTrainerContent(data?.content);
+        await LiveActivity.trainerStart({
+          ...c,
+          sessionStartedAtMs: Date.now(),
+          trainerName: trainerName || undefined,
+        }).catch(() => undefined);
+        // Push token (kad stigne) -> u bazu za Fazu 2b.
+        monitorListenerRef.current?.remove();
+        monitorListenerRef.current = await LiveActivity.addListener(
+          "trainerLaPushToken",
+          (d) => {
+            if (d?.token) {
+              (supabase.rpc as any)("trainer_set_la_token", { p_token: d.token }).then(
+                () => undefined,
+                () => undefined,
+              );
+            }
+          },
+        ).catch(() => null as any);
+        setMonitorOn(true);
+      } else {
+        clearMonitorPoll();
+        monitorListenerRef.current?.remove();
+        monitorListenerRef.current = null;
+        await LiveActivity.trainerEnd().catch(() => undefined);
+        (supabase.rpc as any)("trainer_la_stop").then(() => undefined, () => undefined);
+        setMonitorOn(false);
+      }
+    } finally {
+      setMonitorBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -169,6 +285,25 @@ const Dashboard = () => {
         }
       >
         <ActiveAthletesList />
+
+        {/* Uzivo monitor toggle - Live Activity sa aktivnim vezbacima */}
+        <div className="flex items-center gap-3 rounded-2xl bg-surface border border-hairline px-4 py-3">
+          <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <Radio className="h-[18px] w-[18px] text-primary" strokeWidth={2} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[14px] font-semibold">Uživo monitor</div>
+            <div className="text-[12px] text-muted-foreground truncate">
+              Live Activity sa aktivnim vežbačima
+            </div>
+          </div>
+          <Switch
+            checked={monitorOn}
+            onCheckedChange={toggleMonitor}
+            disabled={monitorBusy || !liveActivitySupported}
+            aria-label="Uživo monitor"
+          />
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <StatCard tone="brand" value={String(activeAthletes)} unit="članova" label="Aktivnih" />

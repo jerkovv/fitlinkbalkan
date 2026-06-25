@@ -82,15 +82,19 @@ const LiveAthletesView = () => {
                       isResting && "bg-surface-2",
                     )}
                   >
-                    {/* Tanak akcenat u boji zone; miran (muted) kad je odmor ili puls nije ziv */}
-                    <span
-                      className={cn(
-                        "absolute left-0 top-0 bottom-0 w-[3px]",
-                        (!live || isResting) && "bg-muted-foreground/25",
-                      )}
-                      style={live && !isResting ? { background: hrColor } : undefined}
-                    />
-                    <div className="flex items-center gap-3 pl-5 pr-4 py-3.5">
+                    {/* Linija zone + sadrzaj u jednom flex redu: items-stretch -> linija je
+                        pune visine, rounded-l prati zaobljenje kartice, pa sve kartice izgledaju
+                        identicno (bez krivljenja na uglovima kao kod absolute pristupa). */}
+                    <div className="flex items-stretch">
+                      <div
+                        className={cn(
+                          "w-1.5 shrink-0 self-stretch rounded-l-xl",
+                          // Boja zone kad je ziv i ne odmara; inace miran muted ton.
+                          (!live || isResting) && "bg-muted-foreground/25",
+                        )}
+                        style={live && !isResting ? { background: hrColor } : undefined}
+                      />
+                      <div className="flex flex-1 min-w-0 items-center gap-3 pl-3 pr-4 py-3.5">
                       <div className="relative shrink-0">
                         <Avatar initials={initials} tone="brand" />
                         <span
@@ -120,7 +124,7 @@ const LiveAthletesView = () => {
                         </div>
                       </div>
 
-                      <div className="text-right shrink-0">
+                      <div className="flex flex-col items-end text-right shrink-0">
                         <div
                           className={cn(
                             "flex items-center justify-end gap-1",
@@ -128,14 +132,15 @@ const LiveAthletesView = () => {
                           )}
                           style={live ? { color: hrColor } : undefined}
                         >
-                          <Heart className="h-4 w-4" strokeWidth={2.4} fill={live ? "currentColor" : "none"} />
-                          <span className="font-display text-[22px] font-bold tnum leading-none">
+                          <Heart className="h-3.5 w-3.5" strokeWidth={2.4} fill={live ? "currentColor" : "none"} />
+                          <span className="font-display text-[20px] font-bold tnum leading-none">
                             {live ? (a.current_hr ?? "-") : "-"}
                           </span>
                         </div>
-                        <div className="text-[11px] text-muted-foreground mt-1 tnum">
+                        <div className="text-[12.5px] text-muted-foreground mt-1 tnum">
                           {kcal} kcal · {timeLabel}
                         </div>
+                      </div>
                       </div>
                     </div>
                   </Link>

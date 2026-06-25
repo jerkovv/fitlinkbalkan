@@ -62,10 +62,12 @@ export const ActiveAthletesList = () => {
                 <div className="flex-1 min-w-0">
                   {/* Ime + vreme treninga (tika 1s -> tacno) */}
                   <div className="flex items-center gap-2">
-                    <span className="flex-1 min-w-0 text-[15px] font-semibold leading-tight tracking-tight truncate">
+                    <span className="flex-1 min-w-0 font-display text-[16px] font-semibold leading-tight tracking-tight truncate">
                       {a.athlete_name ?? "Vežbač"}
                     </span>
-                    <span className="text-[11px] font-semibold text-success-soft-foreground tnum shrink-0">
+                    {/* Smiren meta-tekst; "zivo" nosi mala zelena tackica, ne boja teksta */}
+                    <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground tnum shrink-0">
+                      <span className="h-2 w-2 rounded-full bg-success shrink-0" aria-hidden="true" />
                       trenira {formatDuration(elapsed)}
                     </span>
                   </div>
@@ -75,24 +77,25 @@ export const ActiveAthletesList = () => {
                     {exerciseLabel}
                   </div>
 
-                  {/* Metrike u svom redu: puls (isti prag svezine kao detalj) + aktivne kalorije */}
-                  <div className="flex items-center gap-1.5 mt-2">
+                  {/* Metrike: pilule-blizanci (ista visina/padding/radius/font). Jedina razlika
+                      je boja: puls nosi boju zone (brzo citanje), kcal neutralna. */}
+                  <div className="flex items-center gap-2 mt-2">
                     {isHrLive(a.watch_last_hr_at) ? (
                       <div
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-bold tnum text-white"
+                        className="inline-flex w-fit items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-semibold tnum text-white"
                         style={{ background: hrColor }}
                       >
-                        <Heart className="h-3 w-3" strokeWidth={2.6} />
+                        <Heart className="h-3.5 w-3.5" strokeWidth={2.4} />
                         {a.current_hr ?? "-"}
                       </div>
                     ) : (
-                      <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-bold tnum border border-hairline text-muted-foreground">
-                        <Heart className="h-3 w-3" strokeWidth={2.6} />
+                      <div className="inline-flex w-fit items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-semibold tnum bg-muted text-muted-foreground">
+                        <Heart className="h-3.5 w-3.5" strokeWidth={2.4} />
                         -
                       </div>
                     )}
-                    <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-bold tnum border border-hairline text-foreground">
-                      <Flame className="h-3 w-3" strokeWidth={2.6} />
+                    <div className="inline-flex w-fit items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-semibold tnum bg-muted text-foreground">
+                      <Flame className="h-3.5 w-3.5" strokeWidth={2.4} />
                       {Math.round(a.current_active_calories ?? 0)} kcal
                     </div>
                   </div>
