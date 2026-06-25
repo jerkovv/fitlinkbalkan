@@ -18,7 +18,7 @@ struct TrainerLiveBadge: View {
             Circle()
                 .fill(Color(red: 0.20, green: 0.78, blue: 0.35))
                 .frame(width: 6, height: 6)
-            Text("UZIVO")
+            Text("UŽIVO")
                 .font(.system(size: 11, weight: .semibold))
                 .tracking(1.2)
                 .foregroundStyle(laTxtDim)
@@ -64,13 +64,10 @@ struct TrainerAthleteRow: View {
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(laTxtDim)
             } else {
-                // HR kolona (puls belo i primaran; "pauza" u odmoru). Fiksna sirina -> poravnanje.
+                // HR kolona (puls belo i primaran). Uvek metrike kad ima sata - bez "pauza"
+                // grane (pauza se vidi samo u aplikaciji, ne na kartici). Fiksna sirina -> poravnanje.
                 Group {
-                    if athlete.isResting {
-                        Text("pauza")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(laVioletBright)
-                    } else if let hr = athlete.hr {
+                    if let hr = athlete.hr {
                         HStack(spacing: 3) {
                             Image(systemName: "heart.fill")
                                 .font(.system(size: 10))
