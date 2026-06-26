@@ -44,7 +44,7 @@ const Auth = () => {
         toast.success("Nalog kreiran! Proveri email za potvrdu.");
       } else if (mode === "forgot") {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
+          redirectTo: `${window.location.origin}/resetovanje-lozinke`,
         });
         if (error) throw error;
         toast.success("Poslali smo ti link za resetovanje na email.");

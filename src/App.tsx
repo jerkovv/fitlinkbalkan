@@ -71,7 +71,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/invite/:code" element={<Invite />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/resetovanje-lozinke" element={<ResetPassword />} />
             <Route path="/t/:slug" element={<TrainerPublic />} />
 
             {/* Trener — protected */}

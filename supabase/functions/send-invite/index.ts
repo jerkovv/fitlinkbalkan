@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
     }
 
     // 2) Šalji invite mejl
-    const PUBLIC_SITE_URL = "https://fitlinkbalkan.lovable.app";
+    const PUBLIC_SITE_URL = "https://fitlink.rs";
     const redirectTo = `${PUBLIC_SITE_URL}/invite/${code}`;
 
     const { error: emailErr } = await admin.auth.admin.inviteUserByEmail(
