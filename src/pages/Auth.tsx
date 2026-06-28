@@ -16,6 +16,10 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Reset lozinke u tri koraka (OTP kod, sve u app-u, bez linka)
+  const [forgotStep, setForgotStep] = useState<"email" | "code" | "newpass">("email");
+  const [resetCode, setResetCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
 
   // Ako je već ulogovan, redirect
   useEffect(() => {
@@ -43,12 +47,35 @@ const Auth = () => {
         if (error) throw error;
         toast.success("Nalog kreiran! Proveri email za potvrdu.");
       } else if (mode === "forgot") {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/resetovanje-lozinke`,
-        });
-        if (error) throw error;
-        toast.success("Poslali smo ti link za resetovanje na email.");
-        setMode("login");
+        if (forgotStep === "email") {
+          // korak 1: posalji kod (OTP) na mejl - bez redirectTo (ne idemo na link)
+          const { error } = await supabase.auth.resetPasswordForEmail(email);
+          if (error) throw error;
+          toast.success("Kod je poslat na tvoj email.");
+          setForgotStep("code");
+        } else if (forgotStep === "code") {
+          // korak 2: provera koda
+          const { error } = await supabase.auth.verifyOtp({
+            email,
+            token: resetCode.trim(),
+            type: "recovery",
+          });
+          if (error) throw new Error("Kod nije ispravan ili je istekao.");
+          setForgotStep("newpass");
+        } else {
+          // korak 3: postavi novu lozinku
+          if (newPassword.length < 6) {
+            throw new Error("Lozinka mora imati bar 6 karaktera.");
+          }
+          const { error } = await supabase.auth.updateUser({ password: newPassword });
+          if (error) throw error;
+          await supabase.auth.signOut();
+          toast.success("Lozinka je promenjena, prijavi se.");
+          setForgotStep("email");
+          setResetCode("");
+          setNewPassword("");
+          setMode("login");
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -77,7 +104,9 @@ const Auth = () => {
         <p className="mt-2 text-sm text-muted-foreground">
           {mode === "login" && "Uloguj se na svoj FitLink nalog."}
           {mode === "signup" && "Kreiraj nalog i pozovi svoje vežbače."}
-          {mode === "forgot" && "Unesi email — poslaćemo ti link za resetovanje."}
+          {mode === "forgot" && forgotStep === "email" && "Unesi email — poslaćemo ti kod za resetovanje."}
+          {mode === "forgot" && forgotStep === "code" && "Unesi kod koji smo poslali na tvoj email."}
+          {mode === "forgot" && forgotStep === "newpass" && "Postavi novu lozinku za svoj nalog."}
         </p>
       </div>
 
@@ -95,18 +124,20 @@ const Auth = () => {
           </div>
         )}
 
-        <div>
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="mt-1.5"
-            autoComplete="email"
-          />
-        </div>
+        {(mode !== "forgot" || forgotStep === "email") && (
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="mt-1.5"
+              autoComplete="email"
+            />
+          </div>
+        )}
 
         {mode !== "forgot" && (
           <div>
@@ -115,7 +146,7 @@ const Auth = () => {
               {mode === "login" && (
                 <button
                   type="button"
-                  onClick={() => setMode("forgot")}
+                  onClick={() => { setForgotStep("email"); setMode("forgot"); }}
                   className="text-[11px] text-muted-foreground hover:text-foreground transition"
                 >
                   Zaboravljena?
@@ -135,16 +166,59 @@ const Auth = () => {
           </div>
         )}
 
+        {mode === "forgot" && forgotStep === "code" && (
+          <div>
+            <Label htmlFor="code">Kod iz emaila</Label>
+            <Input
+              id="code"
+              inputMode="numeric"
+              maxLength={6}
+              value={resetCode}
+              onChange={(e) => setResetCode(e.target.value)}
+              required
+              className="mt-1.5 text-center tracking-[0.3em]"
+              placeholder="______"
+              autoComplete="one-time-code"
+            />
+            <button
+              type="button"
+              onClick={() => setForgotStep("email")}
+              className="mt-2 text-[11px] text-muted-foreground hover:text-foreground transition"
+            >
+              Pošalji ponovo
+            </button>
+          </div>
+        )}
+
+        {mode === "forgot" && forgotStep === "newpass" && (
+          <div>
+            <Label htmlFor="newpass">Nova lozinka</Label>
+            <Input
+              id="newpass"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+              minLength={6}
+              className="mt-1.5"
+              autoComplete="new-password"
+              placeholder="Bar 6 karaktera"
+            />
+          </div>
+        )}
+
         <Button type="submit" className="w-full mt-6" disabled={submitting}>
           {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
           {mode === "login" && "Uloguj se"}
           {mode === "signup" && "Kreiraj nalog"}
-          {mode === "forgot" && "Pošalji link"}
+          {mode === "forgot" && forgotStep === "email" && "Pošalji kod"}
+          {mode === "forgot" && forgotStep === "code" && "Potvrdi kod"}
+          {mode === "forgot" && forgotStep === "newpass" && "Sačuvaj lozinku"}
         </Button>
       </form>
 
       <button
-        onClick={() => setMode(mode === "login" ? "signup" : "login")}
+        onClick={() => { setForgotStep("email"); setMode(mode === "login" ? "signup" : "login"); }}
         className="mt-6 text-xs text-center text-muted-foreground hover:text-foreground transition"
       >
         {mode === "login" && "Nemaš nalog? Registruj se kao trener"}
