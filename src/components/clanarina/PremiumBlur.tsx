@@ -17,10 +17,19 @@ export const PremiumBlur = ({ active, children, label = "Ishrana je zaključana"
 
   return (
     <div className="relative">
+      {/* Skracen frosted pregled plana (tizer): ogranicena visina + meki fade na dnu,
+          da odsecen plan izgleda namerno. Ostatak se ne skroluje dok je zakljucano. */}
       <div
         aria-hidden
-        className="select-none"
-        style={{ filter: "blur(6px)", opacity: 0.6, pointerEvents: "none" }}
+        className="select-none overflow-hidden"
+        style={{
+          filter: "blur(6px)",
+          opacity: 0.6,
+          pointerEvents: "none",
+          maxHeight: "clamp(280px, 42vh, 380px)",
+          WebkitMaskImage: "linear-gradient(to bottom, black 62%, transparent)",
+          maskImage: "linear-gradient(to bottom, black 62%, transparent)",
+        }}
       >
         {children}
       </div>

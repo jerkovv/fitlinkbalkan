@@ -188,11 +188,7 @@ const Booking = () => {
   return (
     <>
       <PhoneShell hasBottomNav title="Rezerviši trening" eyebrow={trainerName ? `Kod ${trainerName}` : "Rezervacije"}>
-        {!hasMembership && trainerId && (
-          <div className="rounded-2xl bg-warning-soft text-warning-soft-foreground border border-warning/20 px-4 py-3 text-[13px]">
-            Potrebna ti je aktivna članarina da bi rezervisao termin.
-          </div>
-        )}
+        {/* Narandzasti "nema clanarine" baner uklonjen: lock sheet sada nosi tu poruku. */}
 
         {cancelCutoff > 0 && trainerId && (
           <div className="rounded-2xl bg-surface-2 border border-hairline px-4 py-2.5 text-[12px] text-muted-foreground">
