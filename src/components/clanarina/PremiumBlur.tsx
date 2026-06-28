@@ -27,17 +27,17 @@ export const PremiumBlur = ({ active, children, label = "Ishrana je zaključana"
           opacity: 0.6,
           pointerEvents: "none",
           maxHeight: "clamp(280px, 42vh, 380px)",
-          WebkitMaskImage: "linear-gradient(to bottom, black 82%, transparent)",
-          maskImage: "linear-gradient(to bottom, black 82%, transparent)",
+          WebkitMaskImage: "linear-gradient(to bottom, black 50%, transparent)",
+          maskImage: "linear-gradient(to bottom, black 50%, transparent)",
         }}
       >
         {children}
       </div>
 
-      {/* Lock grupa tacno na sredini tizer boksa. Maska je solidna do 82% pa
-          centrirana kartica sedi na violet-u, a tek sam dno blago bledi. */}
+      {/* Lock grupa u DONJEM, izbledelom delu tizera (violet bledi ka pozadini od 50%),
+          spustena ka dnu (justify-end) sa malim odmakom da ne dodiruje ivicu. */}
       <div
-        className="absolute inset-0 z-10 flex flex-col items-center justify-center px-6 text-center"
+        className="absolute inset-0 z-10 flex flex-col items-center justify-end px-6 pb-8 text-center"
         style={{ pointerEvents: "auto" }}
         role="button"
         onClick={openLock}
