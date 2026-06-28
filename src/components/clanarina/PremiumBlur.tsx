@@ -40,22 +40,26 @@ export const PremiumBlur = ({ active, children, label = "Ishrana je zaključana"
         role="button"
         onClick={openLock}
       >
-        <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
-          <Lock className="h-6 w-6 text-primary" strokeWidth={2.2} />
+        {/* Grupa lagano navise: maska bledi sadrzaj nadole, pa vizuelni centar
+            pomeramo u gornji, jasno vidljivi deo tizera. */}
+        <div className="flex flex-col items-center" style={{ transform: "translateY(-6%)" }}>
+          <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
+            <Lock className="h-6 w-6 text-primary" strokeWidth={2.2} />
+          </div>
+          <div className="font-display text-[16px] font-bold tracking-tight text-foreground">
+            {label}
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              openLock();
+            }}
+            className="mt-4 inline-flex items-center justify-center gap-2 h-10 px-5 rounded-2xl bg-gradient-brand text-white font-semibold text-[13.5px] shadow-brand active:scale-[0.98] transition"
+          >
+            <MessageCircle className="h-4 w-4" strokeWidth={2.2} />
+            Piši treneru
+          </button>
         </div>
-        <div className="font-display text-[16px] font-bold tracking-tight text-foreground">
-          {label}
-        </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            openLock();
-          }}
-          className="mt-4 inline-flex items-center justify-center gap-2 h-10 px-5 rounded-2xl bg-gradient-brand text-white font-semibold text-[13.5px] shadow-brand active:scale-[0.98] transition"
-        >
-          <MessageCircle className="h-4 w-4" strokeWidth={2.2} />
-          Piši treneru
-        </button>
       </div>
     </div>
   );
