@@ -34,32 +34,31 @@ export const PremiumBlur = ({ active, children, label = "Ishrana je zaključana"
         {children}
       </div>
 
+      {/* Overlay pokriva samo gornjih ~60% (solidni, vidljivi deo tizera; donjih
+          ~40% je izbledelo maskom), pa je grupa centrirana bas u vidljivom delu i
+          ne pada u izbledeli/beli deo. */}
       <div
-        className="absolute inset-0 z-10 flex flex-col items-center justify-center px-6 text-center"
-        style={{ pointerEvents: "auto" }}
+        className="absolute left-0 right-0 top-0 z-10 flex flex-col items-center justify-center px-6 text-center"
+        style={{ pointerEvents: "auto", bottom: "40%" }}
         role="button"
         onClick={openLock}
       >
-        {/* Grupa lagano navise: maska bledi sadrzaj nadole, pa vizuelni centar
-            pomeramo u gornji, jasno vidljivi deo tizera. */}
-        <div className="flex flex-col items-center" style={{ transform: "translateY(-6%)" }}>
-          <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
-            <Lock className="h-6 w-6 text-primary" strokeWidth={2.2} />
-          </div>
-          <div className="font-display text-[16px] font-bold tracking-tight text-foreground">
-            {label}
-          </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              openLock();
-            }}
-            className="mt-4 inline-flex items-center justify-center gap-2 h-10 px-5 rounded-2xl bg-gradient-brand text-white font-semibold text-[13.5px] shadow-brand active:scale-[0.98] transition"
-          >
-            <MessageCircle className="h-4 w-4" strokeWidth={2.2} />
-            Piši treneru
-          </button>
+        <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
+          <Lock className="h-6 w-6 text-primary" strokeWidth={2.2} />
         </div>
+        <div className="font-display text-[16px] font-bold tracking-tight text-foreground">
+          {label}
+        </div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            openLock();
+          }}
+          className="mt-4 inline-flex items-center justify-center gap-2 h-10 px-5 rounded-2xl bg-gradient-brand text-white font-semibold text-[13.5px] shadow-brand active:scale-[0.98] transition"
+        >
+          <MessageCircle className="h-4 w-4" strokeWidth={2.2} />
+          Piši treneru
+        </button>
       </div>
     </div>
   );
