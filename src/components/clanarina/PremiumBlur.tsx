@@ -27,19 +27,18 @@ export const PremiumBlur = ({ active, children, label = "Ishrana je zaključana"
           opacity: 0.6,
           pointerEvents: "none",
           maxHeight: "clamp(280px, 42vh, 380px)",
-          WebkitMaskImage: "linear-gradient(to bottom, black 62%, transparent)",
-          maskImage: "linear-gradient(to bottom, black 62%, transparent)",
+          WebkitMaskImage: "linear-gradient(to bottom, black 82%, transparent)",
+          maskImage: "linear-gradient(to bottom, black 82%, transparent)",
         }}
       >
         {children}
       </div>
 
-      {/* Overlay pokriva samo gornjih ~60% (solidni, vidljivi deo tizera; donjih
-          ~40% je izbledelo maskom), pa je grupa centrirana bas u vidljivom delu i
-          ne pada u izbledeli/beli deo. */}
+      {/* Lock grupa tacno na sredini tizer boksa. Maska je solidna do 82% pa
+          centrirana kartica sedi na violet-u, a tek sam dno blago bledi. */}
       <div
-        className="absolute left-0 right-0 top-0 z-10 flex flex-col items-center justify-center px-6 text-center"
-        style={{ pointerEvents: "auto", bottom: "40%" }}
+        className="absolute inset-0 z-10 flex flex-col items-center justify-center px-6 text-center"
+        style={{ pointerEvents: "auto" }}
         role="button"
         onClick={openLock}
       >
