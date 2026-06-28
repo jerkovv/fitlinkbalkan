@@ -20,13 +20,15 @@ const Auth = () => {
   const [forgotStep, setForgotStep] = useState<"email" | "code" | "newpass">("email");
   const [resetCode, setResetCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Ako je već ulogovan, redirect
+  // Ako je već ulogovan, redirect - ALI ne tokom reset toka (verifyOtp pravi
+  // privremenu sesiju, ne smemo da uletimo u app pre nego što se lozinka postavi).
   useEffect(() => {
-    if (!authLoading && user && role) {
+    if (!authLoading && user && role && mode !== "forgot") {
       navigate(role === "trainer" ? "/trener" : "/vezbac", { replace: true });
     }
-  }, [user, role, authLoading, navigate]);
+  }, [user, role, authLoading, navigate, mode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +69,9 @@ const Auth = () => {
           if (newPassword.length < 6) {
             throw new Error("Lozinka mora imati bar 6 karaktera.");
           }
+          if (newPassword !== confirmPassword) {
+            throw new Error("Lozinke se ne poklapaju.");
+          }
           const { error } = await supabase.auth.updateUser({ password: newPassword });
           if (error) throw error;
           await supabase.auth.signOut();
@@ -74,6 +79,7 @@ const Auth = () => {
           setForgotStep("email");
           setResetCode("");
           setNewPassword("");
+          setConfirmPassword("");
           setMode("login");
         }
       } else {
@@ -174,7 +180,7 @@ const Auth = () => {
               inputMode="numeric"
               maxLength={6}
               value={resetCode}
-              onChange={(e) => setResetCode(e.target.value)}
+              onChange={(e) => setResetCode(e.target.value.replace(/\D/g, ""))}
               required
               className="mt-1.5 text-center tracking-[0.3em]"
               placeholder="______"
@@ -191,20 +197,36 @@ const Auth = () => {
         )}
 
         {mode === "forgot" && forgotStep === "newpass" && (
-          <div>
-            <Label htmlFor="newpass">Nova lozinka</Label>
-            <Input
-              id="newpass"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
-              minLength={6}
-              className="mt-1.5"
-              autoComplete="new-password"
-              placeholder="Bar 6 karaktera"
-            />
-          </div>
+          <>
+            <div>
+              <Label htmlFor="newpass">Nova lozinka</Label>
+              <Input
+                id="newpass"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+                minLength={6}
+                className="mt-1.5"
+                autoComplete="new-password"
+                placeholder="Bar 6 karaktera"
+              />
+            </div>
+            <div>
+              <Label htmlFor="confirmpass">Ponovi lozinku</Label>
+              <Input
+                id="confirmpass"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={6}
+                className="mt-1.5"
+                autoComplete="new-password"
+                placeholder="Ista lozinka još jednom"
+              />
+            </div>
+          </>
         )}
 
         <Button type="submit" className="w-full mt-6" disabled={submitting}>
