@@ -73,7 +73,16 @@ const Auth = () => {
             throw new Error("Lozinke se ne poklapaju.");
           }
           const { error } = await supabase.auth.updateUser({ password: newPassword });
-          if (error) throw error;
+          if (error) {
+            let poruka = "Greška pri promeni lozinke. Pokušaj ponovo.";
+            const m = error.message?.toLowerCase() ?? "";
+            if (m.includes("different from the old password")) {
+              poruka = "Nova lozinka mora biti različita od stare.";
+            } else if (m.includes("at least") || m.includes("password should be")) {
+              poruka = "Lozinka mora imati bar 6 karaktera.";
+            }
+            throw new Error(poruka);
+          }
           await supabase.auth.signOut();
           toast.success("Lozinka je promenjena, prijavi se.");
           setForgotStep("email");
