@@ -150,20 +150,14 @@ const Invite = () => {
         signup_source: signupSource,
       } as any);
 
-      // 4) Označi invite kao iskorišćen (samo ako postoji per-athlete invite zapis)
+      // 4) Označi invite kao iskorišćen preko RPC-a (RLS-safe; direktan update tiho padne).
       if (hasInviteRow) {
-        await supabase
-          .from("invites")
-          .update({
-            status: "accepted",
-            used_by: sessionUserId,
-            referred_by_athlete_id: referredBy || null,
-          } as any)
-          .eq("code", code!);
+        await (supabase.rpc as any)("accept_invite", { p_code: code });
       }
 
       toast.success("Dobrodošao u FitLink!");
-      navigate("/vezbac");
+      await supabase.auth.signOut();
+      navigate("/spremno?tip=registracija");
     } catch (err: any) {
       toast.error(err.message ?? "Greška pri završetku registracije");
     } finally {
@@ -180,7 +174,7 @@ const Invite = () => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/vezbac`,
+          emailRedirectTo: `${window.location.origin}/spremno?tip=registracija`,
           data: {
             full_name: fullName,
             role: "athlete",
@@ -207,14 +201,7 @@ const Invite = () => {
         } as any);
 
         if (hasInviteRow) {
-          await supabase
-            .from("invites")
-            .update({
-              status: "accepted",
-              used_by: data.user.id,
-              referred_by_athlete_id: referredBy || null,
-            } as any)
-            .eq("code", code!);
+          await (supabase.rpc as any)("accept_invite", { p_code: code });
         }
       }
 

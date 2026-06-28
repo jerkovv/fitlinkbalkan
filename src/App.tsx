@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound.tsx";
 import Auth from "./pages/Auth.tsx";
 import Invite from "./pages/Invite.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
+import Spremno from "./pages/Spremno.tsx";
 import TrainerPublic from "./pages/TrainerPublic.tsx";
 
 import TrainerOnboarding from "./pages/trainer/Onboarding.tsx";
@@ -72,6 +73,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/invite/:code" element={<Invite />} />
             <Route path="/resetovanje-lozinke" element={<ResetPassword />} />
+            <Route path="/spremno" element={<Spremno />} />
             <Route path="/t/:slug" element={<TrainerPublic />} />
 
             {/* Trener — protected */}

@@ -44,7 +44,7 @@ const ResetPassword = () => {
       if (error) throw error;
       toast.success("Lozinka uspešno promenjena!");
       await supabase.auth.signOut();
-      navigate("/auth", { replace: true });
+      navigate("/spremno?tip=reset", { replace: true });
     } catch (err: any) {
       toast.error(err.message ?? "Greška pri promeni lozinke");
     } finally {

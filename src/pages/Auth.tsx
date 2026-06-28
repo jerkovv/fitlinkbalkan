@@ -33,7 +33,7 @@ const Auth = () => {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/trener`,
+            emailRedirectTo: `${window.location.origin}/spremno?tip=potvrda`,
             data: {
               full_name: fullName,
               role: "trainer", // Treneri se slobodno registruju
