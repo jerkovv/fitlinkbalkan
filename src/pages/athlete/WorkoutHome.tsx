@@ -4,9 +4,10 @@ import { PhoneShell } from "@/components/PhoneShell";
 import { AthleteOnboardingTour } from "@/components/AthleteOnboardingTour";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui-bits";
-import { Loader2, Play, Dumbbell, History, CalendarDays, Flame, AlertTriangle, RefreshCw } from "lucide-react";
+import { Loader2, Play, Dumbbell, History, CalendarDays, Flame, AlertTriangle, RefreshCw, Lock } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { useClanarinaLock } from "@/components/clanarina/useClanarinaLock";
 import { getNextWorkoutDay, type NextWorkoutDay } from "@/lib/workouts";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -23,6 +24,7 @@ type ProgramDay = {
 const WorkoutHome = () => {
   const { user } = useAuth();
   const nav = useNavigate();
+  const { hasAccess, guard } = useClanarinaLock();
   const [loading, setLoading] = useState(true);
   const [next, setNext] = useState<NextWorkoutDay | null>(null);
   const [exerciseCount, setExerciseCount] = useState(0);
@@ -127,7 +129,7 @@ const WorkoutHome = () => {
               </Card>
             )}
             <button
-              onClick={() => nav(`/vezbac/trening/${next.day_id}`)}
+              onClick={guard(() => nav(`/vezbac/trening/${next.day_id}`))}
               className="block w-full text-left"
             >
             <Card className="p-5 bg-gradient-brand text-white border-0 shadow-brand relative overflow-hidden">
@@ -146,7 +148,7 @@ const WorkoutHome = () => {
                   {exerciseCount} {exerciseCount === 1 ? "vežba" : "vežbi"} na rasporedu
                 </div>
                 <div className="mt-5 inline-flex items-center gap-2 bg-white text-foreground rounded-full px-4 py-2 text-[13px] font-bold shadow-soft">
-                  <Play className="h-3.5 w-3.5 fill-foreground" /> Počni trening
+                  {hasAccess ? <Play className="h-3.5 w-3.5 fill-foreground" /> : <Lock className="h-3.5 w-3.5" />} Počni trening
                 </div>
               </div>
             </Card>
@@ -178,7 +180,7 @@ const WorkoutHome = () => {
                 return (
                   <button
                     key={d.id}
-                    onClick={() => nav(`/vezbac/trening/${d.id}`)}
+                    onClick={guard(() => nav(`/vezbac/trening/${d.id}`))}
                     className="block w-full text-left"
                   >
                     <Card
@@ -206,7 +208,11 @@ const WorkoutHome = () => {
                           {isNext && " · sledeći u rotaciji"}
                         </div>
                       </div>
-                      <Play className="h-4 w-4 text-primary fill-primary" />
+                      {hasAccess ? (
+                        <Play className="h-4 w-4 text-primary fill-primary" />
+                      ) : (
+                        <Lock className="h-4 w-4 text-primary" />
+                      )}
                     </Card>
                   </button>
                 );

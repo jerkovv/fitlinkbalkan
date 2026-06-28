@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/full-screen-sheet";
 import { Apple, Plus, Loader2, Search, Trash2, Flame } from "lucide-react";
 import { toast } from "sonner";
+import { useClanarinaLock } from "@/components/clanarina/useClanarinaLock";
+import { PremiumBlur } from "@/components/clanarina/PremiumBlur";
 
 type Plan = {
   id: string;
@@ -51,6 +53,7 @@ const macros = (it: MealItem) => {
 
 const Nutrition = () => {
   const { user } = useAuth();
+  const { hasAccess, guard } = useClanarinaLock();
   const today = new Date();
   const weekday = today.getDay(); // 0 ned ... 6 sub
   const todayStr = today.toISOString().slice(0, 10);
@@ -245,6 +248,7 @@ const Nutrition = () => {
             </p>
           </div>
         ) : (
+          <PremiumBlur active={!hasAccess} label="Ishrana je zaključana">
           <div className="space-y-4 pb-24">
             {/* Today's totals card */}
             <div className="card-premium p-5 bg-gradient-brand text-white border-0 shadow-brand relative overflow-hidden">
@@ -299,7 +303,7 @@ const Nutrition = () => {
                             <div className="text-[11px] text-muted-foreground">{Math.round(mKcal)} kcal</div>
                           </div>
                           <button
-                            onClick={() => openLog(m.name)}
+                            onClick={guard(() => openLog(m.name))}
                             className="h-8 px-3 rounded-full bg-primary-soft text-primary-soft-foreground text-xs font-semibold flex items-center gap-1"
                           >
                             <Plus className="h-3 w-3" /> Loguj
@@ -370,6 +374,7 @@ const Nutrition = () => {
               )}
             </section>
           </div>
+          </PremiumBlur>
         )}
 
       </PhoneShell>

@@ -5,7 +5,7 @@ import { Card, SectionTitle } from "@/components/ui-bits";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
-  Camera, Loader2, Plus, Trash2, Eye, EyeOff, X, GitCompare,
+  Camera, Loader2, Plus, Trash2, Eye, EyeOff, X, GitCompare, Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -33,9 +33,13 @@ interface Props {
   canManage: boolean;
   /** U trener pogledu prikazujemo samo deljene. */
   sharedOnly?: boolean;
+  /** Clanarinski lock: dodavanje fotke je zakljucano (prikazi katanac, ne otvaraj picker). */
+  addLocked?: boolean;
+  /** Sta da se desi na klik kad je zakljucano (npr. otvori lock sheet). */
+  onAddLocked?: () => void;
 }
 
-export const ProgressPhotos = ({ athleteId, canManage, sharedOnly = false }: Props) => {
+export const ProgressPhotos = ({ athleteId, canManage, sharedOnly = false, addLocked = false, onAddLocked }: Props) => {
   const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
   const [photos, setPhotos] = useState<PhotoView[]>([]);
@@ -175,12 +179,18 @@ export const ProgressPhotos = ({ athleteId, canManage, sharedOnly = false }: Pro
         <SectionTitle>{sharedOnly ? "Progress fotke" : "Moje fotke"}</SectionTitle>
         {canManage && (
           <button
-            onClick={onPickFile}
+            onClick={addLocked ? onAddLocked : onPickFile}
             disabled={uploading}
             className="h-9 w-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-brand active:scale-95 transition disabled:opacity-50"
             aria-label="Dodaj fotku"
           >
-            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" strokeWidth={2.5} />}
+            {uploading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : addLocked ? (
+              <Lock className="h-4 w-4" strokeWidth={2.5} />
+            ) : (
+              <Plus className="h-4 w-4" strokeWidth={2.5} />
+            )}
           </button>
         )}
       </div>

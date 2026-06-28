@@ -11,11 +11,12 @@ import {
   FullScreenSheetFooter,
 } from "@/components/ui/full-screen-sheet";
 import { cn } from "@/lib/utils";
-import { TrendingUp, TrendingDown, Plus, Loader2, Dumbbell, Scale, Flame, CalendarCheck, Target, Sparkles } from "lucide-react";
+import { TrendingUp, TrendingDown, Plus, Loader2, Dumbbell, Scale, Flame, CalendarCheck, Target, Sparkles, Lock } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { ProgressPhotos } from "@/components/ProgressPhotos";
+import { useClanarinaLock } from "@/components/clanarina/useClanarinaLock";
 
 const tabs = ["Treninzi", "Telo"] as const;
 
@@ -41,6 +42,7 @@ const formatDate = (iso: string) =>
 
 const Progress = () => {
   const { user } = useAuth();
+  const { hasAccess, guard, openLock } = useClanarinaLock();
   const [tab, setTab] = useState<(typeof tabs)[number]>("Treninzi");
   const [loading, setLoading] = useState(true);
 
@@ -521,10 +523,11 @@ const Progress = () => {
               <div className="flex items-center justify-between mb-2">
                 <SectionTitle>Merenja</SectionTitle>
                 <button
-                  onClick={() => setAddOpen(true)}
+                  onClick={guard(() => setAddOpen(true))}
                   className="h-9 w-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-brand active:scale-95 transition"
+                  aria-label="Dodaj merenje"
                 >
-                  <Plus className="h-4 w-4" strokeWidth={2.5} />
+                  {hasAccess ? <Plus className="h-4 w-4" strokeWidth={2.5} /> : <Lock className="h-4 w-4" strokeWidth={2.5} />}
                 </button>
               </div>
               {metrics.length === 0 ? (
@@ -554,7 +557,7 @@ const Progress = () => {
               )}
             </section>
 
-            {user && <ProgressPhotos athleteId={user.id} canManage />}
+            {user && <ProgressPhotos athleteId={user.id} canManage addLocked={!hasAccess} onAddLocked={openLock} />}
           </>
         )}
 

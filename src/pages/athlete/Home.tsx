@@ -1,19 +1,22 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Card, SectionTitle, StatCard } from "@/components/ui-bits";
-import { Play, CalendarPlus, Apple, Loader2, Dumbbell, UserRound } from "lucide-react";
+import { Play, CalendarPlus, Apple, Loader2, Dumbbell, UserRound, Lock } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import { MessageTrainerCard } from "@/components/MessageTrainerCard";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ChatBell } from "@/components/ChatBell";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { useClanarinaLock } from "@/components/clanarina/useClanarinaLock";
 import { getNextWorkoutDay, type NextWorkoutDay } from "@/lib/workouts";
 
 const Home = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { hasAccess, guard } = useClanarinaLock();
   const [loading, setLoading] = useState(true);
   const [next, setNext] = useState<NextWorkoutDay | null>(null);
   const [exerciseCount, setExerciseCount] = useState<number>(0);
@@ -132,7 +135,10 @@ const Home = () => {
             <div className="h-9 w-36 rounded-full bg-muted" />
           </Card>
         ) : next ? (
-          <Link to={`/vezbac/trening/aktivan/${next.day_id}`} className="block">
+          <button
+            onClick={guard(() => navigate(`/vezbac/trening/aktivan/${next.day_id}`))}
+            className="block w-full text-left"
+          >
             <Card className="p-5 bg-gradient-brand text-white border-0 shadow-brand relative overflow-hidden">
               <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
               <div className="relative">
@@ -152,11 +158,11 @@ const Home = () => {
                 </div>
 
                 <div className="mt-5 inline-flex items-center gap-2 bg-white text-foreground rounded-full px-4 py-2 text-[13px] font-bold shadow-soft">
-                  <Play className="h-3.5 w-3.5 fill-foreground" /> Počni trening
+                  {hasAccess ? <Play className="h-3.5 w-3.5 fill-foreground" /> : <Lock className="h-3.5 w-3.5" />} Počni trening
                 </div>
               </div>
             </Card>
-          </Link>
+          </button>
         ) : (
           <Card className="p-6 text-center space-y-3">
             <div className="h-12 w-12 mx-auto rounded-2xl bg-muted flex items-center justify-center">

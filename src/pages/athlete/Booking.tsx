@@ -3,8 +3,9 @@ import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { SectionTitle } from "@/components/ui-bits";
 import { cn } from "@/lib/utils";
-import { Clock, Users, User, Check, Loader2, X } from "lucide-react";
+import { Clock, Users, User, Check, Loader2, X, Lock } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useClanarinaLock } from "@/components/clanarina/useClanarinaLock";
 import { friendlyDbError } from "@/lib/dbError";
 import { useConfirm } from "@/hooks/useConfirm";
 import { useAuth } from "@/hooks/useAuth";
@@ -40,6 +41,7 @@ type MyBooking = {
 
 const Booking = () => {
   const { user } = useAuth();
+  const { hasAccess, guard } = useClanarinaLock();
   const confirm = useConfirm();
   const today = useMemo(() => new Date(), []);
   const [trainerId, setTrainerId] = useState<string | null>(null);
@@ -315,11 +317,12 @@ const Booking = () => {
                         <Button
                           variant={full ? "outline" : "default"}
                           size="sm"
-                          disabled={full || acting || !hasMembership}
-                          onClick={() => book(s)}
+                          disabled={full || acting}
+                          onClick={guard(() => book(s))}
                           className="w-full"
                         >
                           {acting && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
+                          {!hasAccess && !full && <Lock className="h-3.5 w-3.5 mr-1.5" />}
                           {full ? "Popunjeno" : "Rezerviši"}
                         </Button>
                       )}
