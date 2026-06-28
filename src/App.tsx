@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ConfirmProvider } from "@/hooks/useConfirm";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ClanarinaGate } from "@/components/ClanarinaGate";
 
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -57,6 +58,13 @@ const queryClient = new QueryClient();
 
 const trainer = (el: JSX.Element) => <ProtectedRoute requireRole="trainer">{el}</ProtectedRoute>;
 const athlete = (el: JSX.Element) => <ProtectedRoute requireRole="athlete">{el}</ProtectedRoute>;
+// Vezbac povrsine koje zahtevaju aktivnu clanarinu (trening/ishrana/progres/zakazivanje).
+// Chat, profil, clanarina, notifikacije, integracije ostaju OTVORENI (obican athlete()).
+const athleteGated = (el: JSX.Element) => (
+  <ProtectedRoute requireRole="athlete">
+    <ClanarinaGate>{el}</ClanarinaGate>
+  </ProtectedRoute>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -101,21 +109,23 @@ const App = () => (
             <Route path="/trener/chat/:athleteId" element={trainer(<TrainerChatThread />)} />
             <Route path="/trener/vezbac/:athleteId/live" element={trainer(<TrainerLiveWorkout />)} />
 
-            {/* Vežbač — protected */}
-            <Route path="/vezbac" element={athlete(<AthleteHome />)} />
-            <Route path="/vezbac/trening" element={athlete(<AthleteWorkoutHome />)} />
-            <Route path="/vezbac/trening/aktivan/:dayId" element={athlete(<AthleteWorkout />)} />
-            <Route path="/vezbac/trening/zavrsen/:sessionId" element={athlete(<AthleteWorkoutSummary />)} />
-            <Route path="/vezbac/trening/:dayId" element={athlete(<AthleteWorkout />)} />
-            <Route path="/vezbac/rezervacija" element={athlete(<AthleteBooking />)} />
-            <Route path="/vezbac/napredak" element={athlete(<AthleteProgress />)} />
+            {/* Vežbač — protected. Gate (clanarina) na trening/ishrana/progres/zakazivanje. */}
+            <Route path="/vezbac" element={athleteGated(<AthleteHome />)} />
+            <Route path="/vezbac/trening" element={athleteGated(<AthleteWorkoutHome />)} />
+            <Route path="/vezbac/trening/aktivan/:dayId" element={athleteGated(<AthleteWorkout />)} />
+            <Route path="/vezbac/trening/zavrsen/:sessionId" element={athleteGated(<AthleteWorkoutSummary />)} />
+            <Route path="/vezbac/trening/:dayId" element={athleteGated(<AthleteWorkout />)} />
+            <Route path="/vezbac/rezervacija" element={athleteGated(<AthleteBooking />)} />
+            <Route path="/vezbac/napredak" element={athleteGated(<AthleteProgress />)} />
+            <Route path="/vezbac/ishrana" element={athleteGated(<AthleteNutrition />)} />
+            <Route path="/vezbac/treninzi" element={athleteGated(<AthleteTreninzi />)} />
+
+            {/* Vežbač — OTVORENO (bez clanarina gate-a) */}
             <Route path="/vezbac/clanarina" element={athlete(<AthleteMembership />)} />
-            <Route path="/vezbac/ishrana" element={athlete(<AthleteNutrition />)} />
             <Route path="/vezbac/notifikacije" element={athlete(<AthleteNotifications />)} />
             <Route path="/vezbac/profil" element={athlete(<AthleteProfile />)} />
             <Route path="/vezbac/chat" element={athlete(<AthleteChat />)} />
             <Route path="/vezbac/integracije" element={athlete(<AthleteIntegracije />)} />
-            <Route path="/vezbac/treninzi" element={athlete(<AthleteTreninzi />)} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
