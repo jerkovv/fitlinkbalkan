@@ -53,7 +53,7 @@ export const ClanarinaLockSheet = ({
   };
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
+    <Drawer open={open} onOpenChange={onOpenChange} shouldScaleBackground={false}>
       <DrawerContent>
         <DrawerHeader className="items-center text-center">
           <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-1">

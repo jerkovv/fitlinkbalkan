@@ -276,18 +276,6 @@ const Membership = () => {
     load();
   };
 
-  const markPaid = async (id: string) => {
-    if (!(await confirm({
-      title: "Potvrđuješ da si izvršio uplatu?",
-      description: "Trener će dobiti notifikaciju.",
-      confirmLabel: "Potvrdi",
-    }))) return;
-    const { error } = await supabase.rpc("mark_membership_paid", { p_purchase_id: id });
-    if (error) return toast.error(error.message);
-    toast.success("Trener je obavešten o uplati");
-    load();
-  };
-
   const sessionsLeft =
     active?.sessions_total != null
       ? Math.max(0, active.sessions_total - active.sessions_used)
@@ -416,7 +404,6 @@ const Membership = () => {
                           <div className="text-[12px] text-muted-foreground">
                             {p.price_rsd.toLocaleString("sr-Latn-RS")} RSD ·{" "}
                             {p.payment_method === "cash" ? "Keš" : "Račun"}
-                            {p.payment_marked_at ? " · uplata označena" : ""}
                           </div>
                         </div>
                         {p.status === "pending" ? (
@@ -430,16 +417,7 @@ const Membership = () => {
                           <Chip tone="warning">Odbijen</Chip>
                         )}
                       </div>
-                      {p.status === "pending" && p.payment_method === "bank" && !p.payment_marked_at && (
-                        <Button
-                          onClick={() => markPaid(p.id)}
-                          variant="outline"
-                          className="w-full mt-3 h-9 text-[12.5px] font-semibold"
-                        >
-                          Označi kao plaćeno
-                        </Button>
-                      )}
-                      {p.status === "pending" && p.payment_marked_at && (
+                      {p.status === "pending" && (
                         <div className="mt-3 text-[11.5px] text-muted-foreground text-center">
                           Čeka se potvrda trenera…
                         </div>
