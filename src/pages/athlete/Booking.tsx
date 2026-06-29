@@ -30,16 +30,12 @@ type Slot = {
   booked_count: number;
   is_canceled: boolean;
   template_id: string | null;
+  // id MOJE rezervacije (status booked) za ovaj slot, null ako je otkazana ili je nemam.
+  // Jedini izvor istine za "Rezervisano" + Otkazi (resava bag sa otkazanim rezervacijama).
+  my_booking_id: string | null;
   // Waitlist: koliko ih ceka na ovaj slot + id MOG reda cekanja (null ako nisam na listi).
   waitlist_count: number;
   my_waitlist_id: string | null;
-};
-
-type MyBooking = {
-  id: string;
-  date: string;
-  start_time: string;
-  session_type_id: string;
 };
 
 const Booking = () => {
@@ -52,7 +48,6 @@ const Booking = () => {
   const [hasMembership, setHasMembership] = useState<boolean>(false);
   const [selectedDate, setSelectedDate] = useState<Date>(today);
   const [slots, setSlots] = useState<Slot[]>([]);
-  const [myBookings, setMyBookings] = useState<MyBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [actingKey, setActingKey] = useState<string | null>(null);
   const [showAttendees, setShowAttendees] = useState<boolean>(false);
@@ -112,30 +107,19 @@ const Booking = () => {
     if (!user || !trainerId) return;
     setLoading(true);
     const dateISO = toIsoDate(selectedDate);
-    const [slotsRes, bookRes] = await Promise.all([
-      supabase.rpc("get_day_slots", {
-        p_trainer_id: trainerId,
-        p_date: dateISO,
-      }),
-      supabase
-        .from("session_bookings")
-        .select("id, date, start_time, session_type_id")
-        .eq("athlete_id", user.id)
-        .eq("date", dateISO),
-    ]);
-    setSlots((slotsRes.data as any) ?? []);
-    setMyBookings((bookRes.data as any) ?? []);
+    const { data } = await supabase.rpc("get_day_slots", {
+      p_trainer_id: trainerId,
+      p_date: dateISO,
+    });
+    setSlots((data as any) ?? []);
     setLoading(false);
   };
 
   useEffect(() => { loadDay(); }, [user, trainerId, selectedDate]);
 
-  const isMineKey = (s: Slot) =>
+  // Kljuc slota (React key + actingKey); ne zavisi od rezervacija.
+  const slotKey = (s: Slot) =>
     `${formatTime(s.start_time)}__${s.session_type_id}`;
-
-  const myKeys = new Set(
-    myBookings.map((b) => `${formatTime(b.start_time)}__${b.session_type_id}`),
-  );
 
   const book = async (s: Slot) => {
     if (!trainerId) return;
@@ -143,7 +127,7 @@ const Booking = () => {
       toast.error("Potrebna ti je aktivna članarina za rezervaciju");
       return;
     }
-    const key = isMineKey(s);
+    const key = slotKey(s);
     setActingKey(key);
     const { error } = await supabase.rpc("book_session", {
       p_trainer_id: trainerId,
@@ -158,16 +142,12 @@ const Booking = () => {
   };
 
   const cancel = async (s: Slot) => {
-    if (!user) return;
-    const myBook = myBookings.find(
-      (b) => formatTime(b.start_time) === formatTime(s.start_time)
-        && b.session_type_id === s.session_type_id,
-    );
-    if (!myBook) return;
+    // Izvor istine je my_booking_id iz get_day_slots (samo status booked).
+    if (!s.my_booking_id) return;
     if (!(await confirm({ title: "Otkazati rezervaciju?", destructive: true }))) return;
-    const key = isMineKey(s);
+    const key = slotKey(s);
     setActingKey(key);
-    const { error } = await supabase.rpc("cancel_session_booking", { p_booking_id: myBook.id });
+    const { error } = await supabase.rpc("cancel_session_booking", { p_booking_id: s.my_booking_id });
     setActingKey(null);
     if (error) { toast.error(error.message); return; }
     toast.success("Rezervacija otkazana");
@@ -184,7 +164,7 @@ const Booking = () => {
 
   const joinWaitlist = async (s: Slot) => {
     if (!trainerId) return;
-    const key = isMineKey(s);
+    const key = slotKey(s);
     setActingKey(key);
     // join_waitlist baca greske vec na srpskom -> prikazi error.message direktno.
     const { error } = await supabase.rpc("join_waitlist", {
@@ -201,7 +181,7 @@ const Booking = () => {
 
   const leaveWaitlist = async (s: Slot) => {
     if (!s.my_waitlist_id) return;
-    const key = isMineKey(s);
+    const key = slotKey(s);
     setActingKey(key);
     const { error } = await supabase.rpc("leave_waitlist", {
       p_waitlist_id: s.my_waitlist_id,
@@ -312,9 +292,10 @@ const Booking = () => {
           ) : (
             <ul className="space-y-2.5">
               {slots.filter((s) => !s.is_canceled).map((s) => {
-                const key = isMineKey(s);
-                const mine = myKeys.has(key);
-                const full = s.booked_count >= s.capacity && !mine;
+                const key = slotKey(s);
+                // Odluka iskljucivo iz get_day_slots: my_booking_id je jedini izvor "Rezervisano".
+                const booked = !!s.my_booking_id;
+                const hasFreeSpot = s.booked_count < s.capacity;
                 const colors = sessionColorClasses(s.type_color);
                 const endTime = addMinutesToTime(formatTime(s.start_time), s.duration_min);
                 const acting = actingKey === key;
@@ -373,7 +354,9 @@ const Booking = () => {
                         </div>
                       )}
 
-                      {mine ? (
+                      {booked ? (
+                        // Rezervisano: jedini izvor je my_booking_id. Otkazi -> cancel_session_booking
+                        // sa my_booking_id (bez membership guard-a).
                         <div className="flex items-center gap-2">
                           <span className="flex-1 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-success-soft text-success-soft-foreground text-[12.5px] font-semibold">
                             <Check className="h-3.5 w-3.5" /> Rezervisano
@@ -389,9 +372,8 @@ const Booking = () => {
                             Otkaži
                           </Button>
                         </div>
-                      ) : !full ? (
-                        // Ima slobodno mesto -> rezervisi ima prednost. Pokriva i slucaj kad se
-                        // mesto oslobodi (npr. trener uklonio nekoga) dok sam jos na listi cekanja.
+                      ) : hasFreeSpot ? (
+                        // Ima slobodno mesto -> Rezervisi (isti guard kao i dosad).
                         <Button
                           variant="default"
                           size="sm"
