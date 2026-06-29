@@ -28,6 +28,9 @@ export function computeMaxHR(birthYear: number | null | undefined): number {
 
 export interface HRSample { ts: string; bpm: number; }
 
+/** In-app rezime serija: par [t, hr], t = sekunde od pocetka treninga, hr ceo broj. */
+export type HRPair = [number, number];
+
 export interface ZoneBucket {
   zone: 1 | 2 | 3 | 4 | 5;
   zone_name: string;

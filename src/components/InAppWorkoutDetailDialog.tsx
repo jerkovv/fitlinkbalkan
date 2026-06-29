@@ -9,7 +9,7 @@ import { Card } from "@/components/ui-bits";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import {
-  computeMaxHR, computeZones, formatDuration, type HRSample,
+  computeMaxHR, formatDuration, type HRPair, type ZoneBucket,
 } from "@/lib/wearable/hrZones";
 import { HRTimeSeriesChart } from "@/components/wearables/HRTimeSeriesChart";
 import { HRZonesChart } from "@/components/wearables/HRZonesChart";
@@ -54,7 +54,11 @@ interface InAppDetail {
   active_calories: number | null;
   hr_avg: number | null;
   hr_max: number | null;
-  hr_series: HRSample[] | null;
+  // Novi format: niz parova [t, hr], t = sekunde od pocetka treninga.
+  hr_series: HRPair[] | null;
+  // Server vec racuna zone (5 stavki) i max puls koriscen za zone.
+  zones: ZoneBucket[] | null;
+  max_hr: number | null;
   notes: string | null;
   program_name: string | null;
   day_name: string | null;
@@ -91,10 +95,17 @@ export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange }: Prop
 
   const detail = data && data.success ? data : null;
 
-  const maxHR = computeMaxHR(detail?.birth_year ?? null);
-  const zones = useMemo(
-    () => (detail?.hr_series ? computeZones(detail.hr_series, maxHR) : []),
-    [detail, maxHR],
+  // Boja bara prati zonu; koristi serverski max_hr (isti kao za zones), fallback po godini.
+  const maxHR = detail?.max_hr ?? computeMaxHR(detail?.birth_year ?? null);
+  // Zone dolaze gotove sa servera (5 stavki: zone, zone_name, min_bpm, max_bpm, seconds_in_zone).
+  const zones = detail?.zones ?? [];
+  // Validni parovi [t, hr] za grafik; manje od 2 -> sakrij ceo grafik (bez prazne ose).
+  const validPairs = useMemo(
+    () =>
+      (detail?.hr_series ?? []).filter(
+        (p) => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1]) && p[1] > 0,
+      ),
+    [detail],
   );
 
   const whenISO = detail?.completed_at ?? detail?.started_at ?? null;
@@ -194,8 +205,8 @@ export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange }: Prop
               </Card>
             )}
 
-            {/* HR time series */}
-            {detail.hr_series && detail.hr_series.length > 0 && (
+            {/* HR time series (samo ako ima bar 2 validna para [t, hr]) */}
+            {validPairs.length >= 2 && (
               <Card className="p-4">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-2">
                   Puls tokom treninga
@@ -209,11 +220,11 @@ export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange }: Prop
               </Card>
             )}
 
-            {/* Zone */}
+            {/* Zone tokom treninga (sakrij celu sekciju kad je ukupno vreme 0) */}
             {zones.some((z) => z.seconds_in_zone > 0) && (
               <Card className="p-4">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-3">
-                  Zone pulsa
+                  Zone tokom treninga
                 </div>
                 <HRZonesChart zones={zones} />
               </Card>

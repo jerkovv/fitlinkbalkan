@@ -25,6 +25,10 @@ export const HRZonesChart = ({ zones }: Props) => {
         const row = byZone.get(def.zone);
         const sec = row?.seconds_in_zone ?? 0;
         const pct = total > 0 ? Math.round((sec / total) * 100) : 0;
+        const range =
+          row?.min_bpm != null && row?.max_bpm != null
+            ? `${row.min_bpm}-${row.max_bpm}`
+            : null;
         return (
           <div key={def.zone} className="space-y-1">
             <div className="flex items-center justify-between text-[12px]">
@@ -33,12 +37,17 @@ export const HRZonesChart = ({ zones }: Props) => {
                   className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
                   style={{ background: def.color }}
                 />
-                <span className="font-semibold text-foreground">
+                <span className="font-semibold text-foreground shrink-0">
                   Zona {def.zone}
                 </span>
                 <span className="text-muted-foreground truncate">
                   {def.name}
                 </span>
+                {range && (
+                  <span className="text-muted-foreground/60 tnum shrink-0">
+                    {range}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2 text-muted-foreground tnum shrink-0">
                 <span className="font-semibold text-foreground">
