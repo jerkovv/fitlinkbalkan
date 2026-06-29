@@ -29,6 +29,17 @@ type Slot = {
   booked_count: number;
   is_canceled: boolean;
   template_id: string | null;
+  // Waitlist: koliko vezbaca ceka na ovaj slot (trener prikaz, samo za citanje).
+  waitlist_count: number;
+  my_waitlist_id: string | null;
+};
+
+type WaitlistRow = {
+  waitlist_id: string;
+  athlete_id: string;
+  athlete_name: string;
+  queue_position: number;
+  created_at: string;
 };
 
 type Booking = {
@@ -73,6 +84,9 @@ const Calendar = () => {
 
   // Slot detail dialog
   const [openSlot, setOpenSlot] = useState<Slot | null>(null);
+  // Lista cekanja za otvoreni slot (samo citanje), lenjo dohvacena.
+  const [waitlist, setWaitlist] = useState<WaitlistRow[]>([]);
+  const [waitlistLoading, setWaitlistLoading] = useState(false);
 
   // 28 dana napred počev od danas (današnji dan = prvi)
   const days = useMemo(() => {
@@ -129,6 +143,30 @@ const Calendar = () => {
   };
 
   useEffect(() => { load(); }, [user, selectedDate]);
+
+  // Lenjo dohvati listu cekanja kad se otvori slot koji ima nekoga na cekanju.
+  useEffect(() => {
+    if (!user || !openSlot || openSlot.waitlist_count <= 0) {
+      setWaitlist([]);
+      setWaitlistLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setWaitlistLoading(true);
+    (async () => {
+      const { data, error } = await supabase.rpc("get_slot_waitlist", {
+        p_trainer_id: user.id,
+        p_date: toIsoDate(selectedDate),
+        p_start_time: formatTime(openSlot.start_time),
+        p_session_type_id: openSlot.session_type_id,
+      });
+      if (cancelled) return;
+      setWaitlistLoading(false);
+      if (error) { toast.error(error.message); return; }
+      setWaitlist((data as WaitlistRow[]) ?? []);
+    })();
+    return () => { cancelled = true; };
+  }, [openSlot, user, selectedDate]);
 
   const athleteName = (id: string) =>
     athletes.find((a) => a.id === id)?.full_name ?? "Vežbač";
@@ -310,13 +348,18 @@ const Calendar = () => {
                       <div className="flex-1 p-3 min-w-0">
                         <div className="flex items-start justify-between gap-2 mb-1.5">
                           <div className="font-semibold text-[14px] truncate">{s.type_name}</div>
-                          {s.is_canceled ? (
-                            <Chip tone="warning">Otkazano</Chip>
-                          ) : full ? (
-                            <Chip tone="success">Pun</Chip>
-                          ) : (
-                            <Chip tone="info">{s.capacity - slotBookings.length} slob.</Chip>
-                          )}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {s.is_canceled ? (
+                              <Chip tone="warning">Otkazano</Chip>
+                            ) : full ? (
+                              <Chip tone="success">Pun</Chip>
+                            ) : (
+                              <Chip tone="info">{s.capacity - slotBookings.length} slob.</Chip>
+                            )}
+                            {!s.is_canceled && s.waitlist_count > 0 && (
+                              <Chip tone="brand">{s.waitlist_count} na čekanju</Chip>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center gap-3 text-[12px] text-muted-foreground">
                           <span className="flex items-center gap-1">
@@ -434,6 +477,38 @@ const Calendar = () => {
                     </ul>
                   )}
                 </div>
+
+                {/* Lista cekanja (samo citanje, po redu prijave) */}
+                {openSlot.waitlist_count > 0 && (
+                  <div>
+                    <div className="eyebrow text-muted-foreground mb-2">Lista čekanja</div>
+                    {waitlistLoading ? (
+                      <div className="flex justify-center py-4">
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : waitlist.length === 0 ? (
+                      <div className="text-[13px] text-muted-foreground bg-surface-2 rounded-xl p-4 text-center">
+                        Niko nije na listi čekanja.
+                      </div>
+                    ) : (
+                      <ul className="space-y-1.5">
+                        {waitlist.map((w) => (
+                          <li
+                            key={w.waitlist_id}
+                            className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-surface-2"
+                          >
+                            <div className="h-7 w-7 rounded-full bg-primary-soft text-primary-soft-foreground flex items-center justify-center text-[11px] font-bold shrink-0 tnum">
+                              {w.queue_position}
+                            </div>
+                            <span className="font-semibold text-[13px] truncate flex-1 min-w-0">
+                              {w.athlete_name}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
 
                 {!openSlot.is_canceled && openSlot.template_id && (
                   <div className="pt-3 border-t border-hairline">

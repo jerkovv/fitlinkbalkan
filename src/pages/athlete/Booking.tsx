@@ -30,6 +30,9 @@ type Slot = {
   booked_count: number;
   is_canceled: boolean;
   template_id: string | null;
+  // Waitlist: koliko ih ceka na ovaj slot + id MOG reda cekanja (null ako nisam na listi).
+  waitlist_count: number;
+  my_waitlist_id: string | null;
 };
 
 type MyBooking = {
@@ -57,6 +60,8 @@ const Booking = () => {
   const [attendeesSlot, setAttendeesSlot] = useState<Slot | null>(null);
   const [attendees, setAttendees] = useState<{ athlete_id: string; full_name: string; is_me: boolean }[]>([]);
   const [attendeesLoading, setAttendeesLoading] = useState(false);
+  // Moja pozicija na listi cekanja, kljuc = my_waitlist_id (lenjo dohvaceno po slotu).
+  const [positions, setPositions] = useState<Record<string, number>>({});
 
   // 7 dana napred (počinjući od danas)
   const days = useMemo(() => {
@@ -169,6 +174,70 @@ const Booking = () => {
     loadDay();
   };
 
+  // Da li je termin vec prosao (selektovani dan + start_time < sada).
+  const isPast = (s: Slot) => {
+    const d = new Date(selectedDate);
+    const [hh, mm] = formatTime(s.start_time).split(":").map(Number);
+    d.setHours(hh || 0, mm || 0, 0, 0);
+    return d.getTime() < Date.now();
+  };
+
+  const joinWaitlist = async (s: Slot) => {
+    if (!trainerId) return;
+    const key = isMineKey(s);
+    setActingKey(key);
+    // join_waitlist baca greske vec na srpskom -> prikazi error.message direktno.
+    const { error } = await supabase.rpc("join_waitlist", {
+      p_trainer_id: trainerId,
+      p_date: toIsoDate(selectedDate),
+      p_start_time: formatTime(s.start_time),
+      p_session_type_id: s.session_type_id,
+    });
+    setActingKey(null);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Dodat si na listu čekanja");
+    loadDay();
+  };
+
+  const leaveWaitlist = async (s: Slot) => {
+    if (!s.my_waitlist_id) return;
+    const key = isMineKey(s);
+    setActingKey(key);
+    const { error } = await supabase.rpc("leave_waitlist", {
+      p_waitlist_id: s.my_waitlist_id,
+    });
+    setActingKey(null);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Skinut si sa liste čekanja");
+    loadDay();
+  };
+
+  // Lenjo dohvati moju poziciju za slotove na kojima sam na listi cekanja.
+  useEffect(() => {
+    if (!user || !trainerId) return;
+    const onList = slots.filter((s) => s.my_waitlist_id && !s.is_canceled);
+    if (onList.length === 0) { setPositions({}); return; }
+    let cancelled = false;
+    (async () => {
+      const entries: Record<string, number> = {};
+      await Promise.all(
+        onList.map(async (s) => {
+          const { data, error } = await supabase.rpc("get_slot_waitlist", {
+            p_trainer_id: trainerId,
+            p_date: toIsoDate(selectedDate),
+            p_start_time: formatTime(s.start_time),
+            p_session_type_id: s.session_type_id,
+          });
+          if (error || !data) return;
+          const mine = (data as any[]).find((r) => r.athlete_id === user.id);
+          if (mine && s.my_waitlist_id) entries[s.my_waitlist_id] = mine.queue_position;
+        }),
+      );
+      if (!cancelled) setPositions(entries);
+    })();
+    return () => { cancelled = true; };
+  }, [slots, user, trainerId, selectedDate]);
+
   const openAttendees = async (s: Slot) => {
     if (!trainerId || !showAttendees) return;
     setAttendeesSlot(s);
@@ -249,6 +318,9 @@ const Booking = () => {
                 const colors = sessionColorClasses(s.type_color);
                 const endTime = addMinutesToTime(formatTime(s.start_time), s.duration_min);
                 const acting = actingKey === key;
+                const onWaitlist = !!s.my_waitlist_id;
+                const past = isPast(s);
+                const myPosition = s.my_waitlist_id ? positions[s.my_waitlist_id] : undefined;
 
                 return (
                   <li key={key} className="rounded-2xl bg-surface border border-hairline overflow-hidden">
@@ -293,6 +365,14 @@ const Booking = () => {
                         {trainerName}
                       </div>
 
+                      {/* Diskretno: koliko ih ceka (nealarmantno, muted) */}
+                      {s.waitlist_count > 0 && (
+                        <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground mb-3">
+                          <Clock className="h-3.5 w-3.5" />
+                          <span className="tnum">{s.waitlist_count}</span> na čekanju
+                        </div>
+                      )}
+
                       {mine ? (
                         <div className="flex items-center gap-2">
                           <span className="flex-1 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-success-soft text-success-soft-foreground text-[12.5px] font-semibold">
@@ -309,17 +389,57 @@ const Booking = () => {
                             Otkaži
                           </Button>
                         </div>
-                      ) : (
+                      ) : !full ? (
+                        // Ima slobodno mesto -> rezervisi ima prednost. Pokriva i slucaj kad se
+                        // mesto oslobodi (npr. trener uklonio nekoga) dok sam jos na listi cekanja.
                         <Button
-                          variant={full ? "outline" : "default"}
+                          variant="default"
                           size="sm"
-                          disabled={full || acting}
+                          disabled={acting}
                           onClick={guard(() => book(s))}
                           className="w-full"
                         >
                           {acting && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
-                          {!hasAccess && !full && <Lock className="h-3.5 w-3.5 mr-1.5" />}
-                          {full ? "Popunjeno" : "Rezerviši"}
+                          {!hasAccess && <Lock className="h-3.5 w-3.5 mr-1.5" />}
+                          Rezerviši
+                        </Button>
+                      ) : onWaitlist ? (
+                        // Pun slot, na listi cekanja: miran violet status + Otkazi (leave_waitlist)
+                        <div className="flex items-center gap-2">
+                          <span className="flex-1 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary-soft text-primary-soft-foreground text-[12.5px] font-semibold">
+                            <Clock className="h-3.5 w-3.5" />
+                            Na listi čekanja
+                            {myPosition != null && (
+                              <span className="opacity-80">· Pozicija {myPosition}</span>
+                            )}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => leaveWaitlist(s)}
+                            disabled={acting}
+                            className="text-destructive hover:bg-destructive-soft"
+                          >
+                            {acting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                            Otkaži
+                          </Button>
+                        </div>
+                      ) : past ? (
+                        <Button variant="outline" size="sm" disabled className="w-full">
+                          Popunjeno
+                        </Button>
+                      ) : (
+                        // Pun slot, nisam na listi, nije prosao -> ponudi listu cekanja (uz isti membership guard)
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={acting}
+                          onClick={guard(() => joinWaitlist(s))}
+                          className="w-full"
+                        >
+                          {acting && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
+                          {!hasAccess && <Lock className="h-3.5 w-3.5 mr-1.5" />}
+                          Lista čekanja
                         </Button>
                       )}
                     </div>
