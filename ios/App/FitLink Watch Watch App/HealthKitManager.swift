@@ -22,6 +22,12 @@ final class HealthKitManager: NSObject, ObservableObject {
     private var workoutSession: HKWorkoutSession?
     private var workoutBuilder: HKLiveWorkoutBuilder?
 
+    // Akumulirani HR uzorci za zone vezbanja: niz parova [t, hr] (t = cele sekunde od
+    // pocetka treninga, hr ceo broj). Punjen u didCollect (throttle ~2s), poslat na kraju.
+    private(set) var hrSamples: [[Int]] = []
+    private var workoutStartDate: Date?
+    private var lastHRSampleAt: Date?
+
     var onHeartRateUpdate: ((Int) -> Void)?
     // Periodicni keep-alive (svakih 5s dok je sesija aktivna, uklj. rest). Nezavisan od HK
     // HR uzoraka (koji u mirovanju cute 15-30s). ContentView ovde salje poslednji HR serveru.
@@ -96,8 +102,11 @@ final class HealthKitManager: NSObject, ObservableObject {
             averageHeartRate = 0
             maxHeartRate = 0
             activeCalories = 0
+            hrSamples = []
+            lastHRSampleAt = nil
 
             let startDate = Date()
+            workoutStartDate = startDate
             workoutSession?.startActivity(with: startDate)
             workoutBuilder?.beginCollection(withStart: startDate) { success, error in
                 if let error = error {
@@ -183,10 +192,10 @@ final class HealthKitManager: NSObject, ObservableObject {
     /// vrati 0). Int(...rounded()) da 0.6 kcal ne padne na 0.
     /// Race-safe: builder ref se nil-uje sinhrono pre await, pa paralelni poziv
     /// (auto-finish + rucni finish istovremeno) ne finalizuje dvaput.
-    func finalizeAndStop() async -> (calories: Int, hrAvg: Int, hrMax: Int) {
+    func finalizeAndStop() async -> (calories: Int, hrAvg: Int, hrMax: Int, series: [[Int]]) {
         guard let builder = workoutBuilder else {
             // Vec finalizovano (ili nikad pokrenuto) -> vrati zadnje poznate vrednosti.
-            return (activeCalories, averageHeartRate, maxHeartRate)
+            return (activeCalories, averageHeartRate, maxHeartRate, hrSamples)
         }
         workoutBuilder = nil
         let session = workoutSession
@@ -236,14 +245,20 @@ final class HealthKitManager: NSObject, ObservableObject {
             }
         }
 
+        // Snimi seriju PRE reseta pa je vrati za slanje (zone na rezimeu).
+        let series = hrSamples
+
         // Resetuj samo agregate (lifecycle: isWorkoutActive je vec sinhrono ugasen).
         currentHeartRate = 0
         averageHeartRate = 0
         maxHeartRate = 0
         activeCalories = 0
+        hrSamples = []
+        lastHRSampleAt = nil
+        workoutStartDate = nil
 
-        print("HealthKit: finalize -> kcal=\(kcal), hrAvg=\(avg), hrMax=\(mx)")
-        return (kcal, avg, mx)
+        print("HealthKit: finalize -> kcal=\(kcal), hrAvg=\(avg), hrMax=\(mx), hrSamples=\(series.count)")
+        return (kcal, avg, mx, series)
     }
 }
 
@@ -305,6 +320,15 @@ extension HealthKitManager: HKLiveWorkoutBuilderDelegate {
                         self.currentHeartRate = bpm
                         if avg > 0 { self.averageHeartRate = avg }
                         if mx > 0 { self.maxHeartRate = mx }
+                        // Akumuliraj uzorak za zone: najvise jedan na ~2s, par [t, hr].
+                        if let start = self.workoutStartDate {
+                            let now = Date()
+                            if self.lastHRSampleAt == nil || now.timeIntervalSince(self.lastHRSampleAt!) >= 2 {
+                                self.lastHRSampleAt = now
+                                let t = max(0, Int(now.timeIntervalSince(start)))
+                                self.hrSamples.append([t, bpm])
+                            }
+                        }
                         self.onHeartRateUpdate?(bpm)
                         print("HealthKit: HR \(bpm) BPM, avg \(avg), max \(mx)")
                     }

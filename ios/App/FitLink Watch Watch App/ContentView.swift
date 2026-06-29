@@ -1550,6 +1550,7 @@ struct ContentView: View {
             activeCalories: m.calories > 0 ? m.calories : nil,
             hrAvg: m.hrAvg > 0 ? m.hrAvg : nil,
             hrMax: m.hrMax > 0 ? m.hrMax : nil,
+            hrSeries: m.series.isEmpty ? nil : m.series,
             token: token,
             createdAt: Date()
         ))
@@ -1583,14 +1584,14 @@ struct ContentView: View {
         do {
             _ = try await SupabaseClient.shared.reportMetrics(
                 token: item.token, sessionId: item.sessionId,
-                activeCalories: item.activeCalories, hrAvg: item.hrAvg, hrMax: item.hrMax, hrSeries: nil)
+                activeCalories: item.activeCalories, hrAvg: item.hrAvg, hrMax: item.hrMax, hrSeries: item.hrSeries)
             return true
         } catch SupabaseError.invalidToken {
             guard let current = effectiveToken, current != item.token else { return false }
             do {
                 _ = try await SupabaseClient.shared.reportMetrics(
                     token: current, sessionId: item.sessionId,
-                    activeCalories: item.activeCalories, hrAvg: item.hrAvg, hrMax: item.hrMax, hrSeries: nil)
+                    activeCalories: item.activeCalories, hrAvg: item.hrAvg, hrMax: item.hrMax, hrSeries: item.hrSeries)
                 return true
             } catch {
                 return false

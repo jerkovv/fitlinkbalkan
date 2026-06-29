@@ -293,7 +293,7 @@ final class SupabaseClient {
         activeCalories: Int?,
         hrAvg: Int?,
         hrMax: Int?,
-        hrSeries: [Int]? = nil
+        hrSeries: [[Int]]? = nil
     ) async throws -> Bool {
         // Upisuje FINALNE metrike i na VEC ZAVRSENU sesiju (server radi GREATEST pa
         // kasna nula ne moze da pregazi vec upisanu vrednost). Kalorije se salju kao
@@ -418,6 +418,9 @@ struct PendingMetrics: Codable {
     let activeCalories: Int?
     let hrAvg: Int?
     let hrMax: Int?
+    // Niz parova [t, hr] (t = sekundi od pocetka, hr ceo broj). Stari perzistirani
+    // zapisi bez ovog kljuca se dekoduju kao nil (Codable decodeIfPresent).
+    let hrSeries: [[Int]]?
     let token: String
     let createdAt: Date
 }
