@@ -176,6 +176,49 @@ enum SupabaseError: LocalizedError {
     }
 }
 
+// MARK: - Pokretanje treninga sa sata (watch_list_workouts / watch_start_workout)
+
+struct WatchProgram: Codable {
+    let id: String
+    let name: String
+    let currentDay: Int?
+    enum CodingKeys: String, CodingKey {
+        case id, name
+        case currentDay = "current_day"
+    }
+}
+
+struct WatchWorkoutDay: Codable, Identifiable {
+    let dayId: String
+    let dayNumber: Int
+    let name: String
+    let exerciseCount: Int
+    var id: String { dayId }
+    enum CodingKeys: String, CodingKey {
+        case dayId = "day_id"
+        case dayNumber = "day_number"
+        case name
+        case exerciseCount = "exercise_count"
+    }
+}
+
+struct WatchWorkoutsResponse: Codable {
+    let success: Bool
+    let program: WatchProgram?   // null -> nema aktivan program
+    let days: [WatchWorkoutDay]
+}
+
+struct WatchStartWorkoutResponse: Codable {
+    let success: Bool
+    let sessionId: String?
+    let error: String?
+    enum CodingKeys: String, CodingKey {
+        case success
+        case sessionId = "session_id"
+        case error
+    }
+}
+
 final class SupabaseClient {
     static let shared = SupabaseClient()
     
@@ -223,7 +266,35 @@ final class SupabaseClient {
             throw SupabaseError.decodingFailed(error.localizedDescription)
         }
     }
-    
+
+    // Lista programa/dana za pokretanje treninga SA SATA. Mrezni neuspeh baca (picker
+    // prikaze "pokusaj ponovo"); ne pravi se nista offline.
+    func listWorkouts(token: String) async throws -> WatchWorkoutsResponse {
+        let body: [String: String] = ["p_token": token]
+        let data = try await callRPC(functionName: "watch_list_workouts", body: body)
+        do {
+            return try decoder.decode(WatchWorkoutsResponse.self, from: data)
+        } catch {
+            throw SupabaseError.decodingFailed(error.localizedDescription)
+        }
+    }
+
+    // Pokrece sesiju na serveru. Na success sat NE gradi stanje rucno - oslanja se na
+    // poll (forceRefresh) da preuzme novu sesiju kroz postojeci tok aktivnog treninga.
+    func startWorkout(token: String, assignedProgramId: String, dayId: String) async throws -> WatchStartWorkoutResponse {
+        let body: [String: Any] = [
+            "p_token": token,
+            "p_assigned_program_id": assignedProgramId,
+            "p_day_id": dayId,
+        ]
+        let data = try await callRPC(functionName: "watch_start_workout", body: body)
+        do {
+            return try decoder.decode(WatchStartWorkoutResponse.self, from: data)
+        } catch {
+            throw SupabaseError.decodingFailed(error.localizedDescription)
+        }
+    }
+
     @discardableResult
     func updateHeartRate(token: String, heartRate: Int, sessionId: String, activeCalories: Int? = nil) async throws -> Bool {
         // Sloj 0 (HR keep-alive): server prima tri parametra i odrzava TACNO ovu

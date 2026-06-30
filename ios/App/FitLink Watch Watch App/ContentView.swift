@@ -84,6 +84,8 @@ struct ContentView: View {
     @State private var currentState: AppState = .idle
     @State private var isPaired: Bool = false
     @State private var isLoading: Bool = false
+    // Pokretanje treninga sa sata: sheet sa listom programa/dana (samo iz idle stanja).
+    @State private var showWorkoutPicker: Bool = false
     @State private var connectionError: String?
     // Indikator veze vodjen ISHODOM RPC-a (ne poseban network monitor): stvaran
     // uspeh/neuspeh poziva je pravi signal "mogu li da posaljem akciju".
@@ -287,22 +289,54 @@ struct ContentView: View {
                 
                 Spacer()
                 
-                Text("Pokreni trening na iPhone-u")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(.textMuted)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 8)
-                    .background(Color.white.opacity(0.05))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                if effectiveToken != nil {
+                    // Trening se sada moze pokrenuti direktno sa sata.
+                    Button {
+                        WKInterfaceDevice.current().play(.click)
+                        showWorkoutPicker = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "figure.run")
+                                .font(.system(size: 13, weight: .bold))
+                            Text("Pokreni trening")
+                                .font(.system(size: 14, weight: .bold))
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 11)
+                        .background(LinearGradient.brandGradient)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Text("Uloguj se na iPhone-u")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.textMuted)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 8)
+                        .background(Color.white.opacity(0.05))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
 
                 // Build oznaka živi SAMO ovde (idle), u svom prostoru.
                 buildLabel
             }
             .padding(.horizontal, 8)
             .padding(.bottom, 6)
+        }
+        .sheet(isPresented: $showWorkoutPicker) {
+            WorkoutPickerView(
+                token: effectiveToken ?? "",
+                onStarted: {
+                    // NE gradi stanje rucno: zatvori sheet pa forsiraj poll - novu sesiju
+                    // preuzima postojeci tok aktivnog treninga (applyServerState + plan).
+                    showWorkoutPicker = false
+                    realtimeClient.forceRefresh()
+                }
+            )
         }
     }
     
