@@ -100,6 +100,16 @@ struct PlanExercise: Codable, Equatable {
     }
 }
 
+// Dekodira JEDNU vezbu bez bacanja greske: neispravan element -> value == nil.
+// Tako jedan los unos ne obori CEO plan (inace bi lokalni plan ostao krnj i watch bi
+// prerano proglasio trening gotovim posle prve vezbe).
+private struct FailablePlanExercise: Decodable {
+    let value: PlanExercise?
+    init(from decoder: Decoder) throws {
+        value = try? PlanExercise(from: decoder)
+    }
+}
+
 struct WorkoutPlan: Codable {
     let success: Bool
     let sessionId: String?
@@ -115,6 +125,28 @@ struct WorkoutPlan: Codable {
         case serverNowMs = "server_now_ms"
         case complete
         case exercises
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        success = (try? c.decode(Bool.self, forKey: .success)) ?? false
+        sessionId = try? c.decode(String.self, forKey: .sessionId)
+        dayId = try? c.decode(String.self, forKey: .dayId)
+        serverNowMs = try? c.decode(Double.self, forKey: .serverNowMs)
+        complete = try? c.decode(Bool.self, forKey: .complete)
+        // LOSSY: dekodiraj vezbu-po-vezbu (FailablePlanExercise nikad ne baca, pa indeks
+        // uvek napreduje -> nema beskonacne petlje). Neispravan element se preskace, a
+        // SVE ispravne vezbe ostaju u planu (resava "samo prva vezba" -> preuranjen kraj).
+        if var arr = try? c.nestedUnkeyedContainer(forKey: .exercises) {
+            var out: [PlanExercise] = []
+            while !arr.isAtEnd {
+                let wrapped = try arr.decode(FailablePlanExercise.self)
+                if let ex = wrapped.value { out.append(ex) }
+            }
+            exercises = out
+        } else {
+            exercises = []
+        }
     }
 }
 

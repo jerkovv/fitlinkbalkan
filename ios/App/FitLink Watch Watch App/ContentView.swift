@@ -1458,16 +1458,16 @@ struct ContentView: View {
             id: UUID().uuidString, type: .completeSet, sessionId: sessionId,
             reps: pos.plannedReps, weight: pos.plannedWeight, rpe: nil, createdAt: Date()))
 
-        // 3) Optimisticki UI: rest (ima jos serija) ili lokalno completed (poslednja serija).
+        // 3) Optimisticki UI: rest SAMO ako lokalni model vidi jos serija. Finalizaciju NE radi
+        // lokalni model (mogao bi biti krnj plan -> preuranjen kraj posle 1 seta). Engine
+        // finalizuje na stvarnoj poslednjoj seriji, a poll to otkrije (onWorkoutDeleted ->
+        // handleWorkoutDeleted). Ako je lokalni plan bio krnj, poll vrati pravu sledecu poziciju.
         if let next = computeLocalPosition(), !next.complete {
             restEndsAt = Date().addingTimeInterval(Double(max(pos.restSeconds, 1)))
             currentState = .rest
-            flushQueue()
-        } else {
-            // Poslednja serija: server auto-finalizuje preko complete_set. Posalji PRE reseta.
-            flushQueue()
-            handleWorkoutDeleted()   // lokalno completed + finalizuj/buffer metrike + cleanup
         }
+        flushQueue()
+        realtimeClient.forceRefresh()   // odmah povuci serversko stanje (sledeca serija ili kraj)
     }
 
     // Kardio "Zavrsi vezbu": kardio = TACNO 1 set, pa zavrsetak vezbe = zavrsetak njenog jedinog
@@ -1500,15 +1500,14 @@ struct ContentView: View {
             id: UUID().uuidString, type: .completeSet, sessionId: sessionId,
             reps: nil, weight: nil, rpe: nil, durationMinutes: clamped, createdAt: Date()))
 
-        // 3) Optimisticki UI: rest (ima jos vezbi) ili lokalno completed (poslednja vezba).
+        // 3) Optimisticki UI: rest samo ako lokalni model vidi jos. Finalizaciju prepusti
+        // engine-u/poll-u (lokalni plan moze biti krnj) - bez lokalnog gasenja treninga.
         if let next = computeLocalPosition(), !next.complete {
             restEndsAt = Date().addingTimeInterval(Double(max(pos.restSeconds, 1)))
             currentState = .rest
-            flushQueue()
-        } else {
-            flushQueue()
-            handleWorkoutDeleted()
         }
+        flushQueue()
+        realtimeClient.forceRefresh()
     }
 
     private func handleRestComplete() {
