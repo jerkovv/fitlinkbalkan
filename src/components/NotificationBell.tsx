@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Bell, CalendarPlus, CalendarX, Dumbbell, MessageSquare, Check, IdCard, Apple, ClipboardList, AlertTriangle, Megaphone } from "lucide-react";
+import { Bell, CalendarPlus, CalendarX, Dumbbell, MessageSquare, Check, IdCard, Apple, ClipboardList, AlertTriangle, Megaphone, CalendarClock, Clock } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,7 +32,13 @@ const KIND_META: Record<
   membership_activated: { icon: Check,          tone: "text-[hsl(var(--session-emerald-fg))] bg-[hsl(var(--session-emerald-bg))]" },
   membership_rejected:  { icon: AlertTriangle,  tone: "text-[hsl(var(--session-rose-fg))] bg-[hsl(var(--session-rose-bg))]" },
   broadcast:            { icon: Megaphone,      tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]" },
+  // waitlist
+  waitlist_promoted:    { icon: CalendarClock,  tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]" },
+  waitlist_joined:      { icon: Clock,          tone: "text-[hsl(var(--session-indigo-fg))] bg-[hsl(var(--session-indigo-bg))]" },
 };
+
+// Bezbedan fallback za nepoznat kind (nov tip sa servera) -> nikad ne rusi render.
+const FALLBACK_META = { icon: Bell, tone: "text-muted-foreground bg-surface-2" };
 
 const formatRelative = (iso: string) => {
   const diff = Date.now() - new Date(iso).getTime();
@@ -55,7 +61,7 @@ export const NotificationItem = ({
   onClick?: () => void;
   compact?: boolean;
 }) => {
-  const meta = KIND_META[n.kind];
+  const meta = KIND_META[n.kind] ?? FALLBACK_META;
   const Icon = meta.icon;
   return (
     <button

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { SectionTitle } from "@/components/ui-bits";
@@ -19,6 +20,15 @@ import {
 import { toast } from "sonner";
 
 const weekdayShort = ["PON", "UTO", "SRE", "ČET", "PET", "SUB", "NED"];
+
+// Parsira YYYY-MM-DD u lokalni Date (bez UTC pomeraja), inace null.
+const parseDateParam = (raw: string | null): Date | null => {
+  if (!raw) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isNaN(d.getTime()) ? null : d;
+};
 
 type Slot = {
   session_type_id: string;
@@ -42,11 +52,15 @@ const Booking = () => {
   const { user } = useAuth();
   const { hasAccess, guard } = useClanarinaLock();
   const confirm = useConfirm();
+  const [searchParams] = useSearchParams();
   const today = useMemo(() => new Date(), []);
   const [trainerId, setTrainerId] = useState<string | null>(null);
   const [trainerName, setTrainerName] = useState<string>("");
   const [hasMembership, setHasMembership] = useState<boolean>(false);
-  const [selectedDate, setSelectedDate] = useState<Date>(today);
+  // Notifikacija "waitlist_promoted" otvara taj dan preko ?date=YYYY-MM-DD.
+  const [selectedDate, setSelectedDate] = useState<Date>(
+    () => parseDateParam(searchParams.get("date")) ?? today,
+  );
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loading, setLoading] = useState(true);
   const [actingKey, setActingKey] = useState<string | null>(null);

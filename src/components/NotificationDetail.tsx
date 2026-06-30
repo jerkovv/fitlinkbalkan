@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import {
   Bell, CalendarPlus, CalendarX, Dumbbell, MessageSquare, Check,
   IdCard, Apple, ClipboardList, AlertTriangle, Megaphone, ArrowRight,
+  CalendarClock, Clock,
 } from "lucide-react";
 import type { AppNotification, NotificationKind } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
@@ -35,7 +36,13 @@ const KIND_META: Record<
   membership_activated: { icon: Check,         tone: "text-[hsl(var(--session-emerald-fg))] bg-[hsl(var(--session-emerald-bg))]", label: "Članarina aktivirana" },
   membership_rejected:  { icon: AlertTriangle, tone: "text-[hsl(var(--session-rose-fg))] bg-[hsl(var(--session-rose-bg))]",       label: "Zahtev odbijen" },
   broadcast:            { icon: Megaphone,     tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]",   label: "Obaveštenje" },
+  // waitlist
+  waitlist_promoted:    { icon: CalendarClock, tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]",   label: "Lista čekanja" },
+  waitlist_joined:      { icon: Clock,         tone: "text-[hsl(var(--session-indigo-fg))] bg-[hsl(var(--session-indigo-bg))]",   label: "Lista čekanja" },
 };
+
+// Bezbedan fallback za nepoznat kind (nov tip sa servera) -> nikad ne rusi render.
+const FALLBACK_META = { icon: Bell, tone: "text-muted-foreground bg-surface-2", label: "Obaveštenje" };
 
 const formatDateTime = (iso: string) => {
   const d = new Date(iso);
@@ -83,6 +90,10 @@ const getActionTarget = (
       return { path: "/trener/uplate", label: "Otvori uplate" };
     if (n.kind === "workout_completed" || n.kind === "message")
       return { path: `/trener/vezbaci/${n.athlete_id}`, label: "Otvori profil vežbača" };
+    if (n.kind === "waitlist_joined") {
+      const slotDate = n.meta?.slot_date as string | undefined;
+      return { path: slotDate ? `/trener/kalendar?date=${slotDate}` : "/trener/kalendar", label: "Otvori kalendar" };
+    }
     return null;
   }
   // athlete
@@ -91,6 +102,10 @@ const getActionTarget = (
   if (n.kind === "membership_expiring" || n.kind === "membership_expired"
       || n.kind === "membership_activated" || n.kind === "membership_rejected")
     return { path: "/vezbac/clanarina", label: "Otvori članarinu" };
+  if (n.kind === "waitlist_promoted") {
+    const slotDate = n.meta?.slot_date as string | undefined;
+    return { path: slotDate ? `/vezbac/rezervacija?date=${slotDate}` : "/vezbac/rezervacija", label: "Otvori zakazivanje" };
+  }
   return null;
 };
 
@@ -103,7 +118,7 @@ interface Props {
 export const NotificationDetail = ({ notification, open, onOpenChange }: Props) => {
   const navigate = useNavigate();
   if (!notification) return null;
-  const meta = KIND_META[notification.kind];
+  const meta = KIND_META[notification.kind] ?? FALLBACK_META;
   const Icon = meta.icon;
   const action = getActionTarget(notification);
 
