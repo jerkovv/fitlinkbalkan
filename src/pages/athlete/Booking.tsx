@@ -154,12 +154,12 @@ const Booking = () => {
     loadDay();
   };
 
-  // Da li je termin vec prosao (selektovani dan + start_time < sada).
+  // Da li je termin vec prosao (selektovani dan + start_time <= sada).
   const isPast = (s: Slot) => {
     const d = new Date(selectedDate);
     const [hh, mm] = formatTime(s.start_time).split(":").map(Number);
     d.setHours(hh || 0, mm || 0, 0, 0);
-    return d.getTime() < Date.now();
+    return d.getTime() <= Date.now();
   };
 
   const joinWaitlist = async (s: Slot) => {
@@ -354,7 +354,20 @@ const Booking = () => {
                         </div>
                       )}
 
-                      {booked ? (
+                      {past ? (
+                        booked ? (
+                          // Prosao termin na kom sam rezervisan: samo labela, bez Otkazi
+                          // (server ionako odbija otkazivanje proslog termina preko 2h pravila).
+                          <span className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-success-soft text-success-soft-foreground text-[12.5px] font-semibold">
+                            <Check className="h-3.5 w-3.5" /> Rezervisano
+                          </span>
+                        ) : (
+                          // Prosao termin: onemoguceno, bez ijedne akcije.
+                          <Button variant="outline" size="sm" disabled className="w-full">
+                            Prošao
+                          </Button>
+                        )
+                      ) : booked ? (
                         // Rezervisano: jedini izvor je my_booking_id. Otkazi -> cancel_session_booking
                         // sa my_booking_id (bez membership guard-a).
                         <div className="flex items-center gap-2">
@@ -406,10 +419,6 @@ const Booking = () => {
                             Otkaži
                           </Button>
                         </div>
-                      ) : past ? (
-                        <Button variant="outline" size="sm" disabled className="w-full">
-                          Popunjeno
-                        </Button>
                       ) : (
                         // Pun slot, nisam na listi, nije prosao -> ponudi listu cekanja (uz isti membership guard)
                         <Button
