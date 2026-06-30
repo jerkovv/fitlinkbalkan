@@ -568,7 +568,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
       {mode === "assigned" && days.length > 0 && (
         <>
           <p className="text-[12px] text-muted-foreground text-center px-4 mt-3">
-            Vežbač vidi plan tek kada ga pošaljete. Kada završite, pošaljite ga.
+            Vežbač vidi plan tek kada ga pošaljete.
           </p>
           {/* Prostor da poslednji sadrzaj ne stoji ispod sticky "Posalji vezbacu" CTA */}
           <div className="h-24" />
