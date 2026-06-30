@@ -501,11 +501,11 @@ struct ContentView: View {
         .transition(.move(edge: .top).combined(with: .opacity))
     }
 
-    // Proteklo vreme kao H:MM:SS (zivi tajmer), uvek sa satom da minuti ne predju 60:
-    // 5min -> "0:05:00", 45min -> "0:45:00", 89min -> "1:29:00".
     private func elapsedString(_ elapsed: Int) -> String {
-        let s = max(0, elapsed)
-        return String(format: "%d:%02d:%02d", s / 3600, (s % 3600) / 60, s % 60)
+        if elapsed < 3600 {
+            return String(format: "%d:%02d", elapsed / 60, elapsed % 60)
+        }
+        return String(format: "%d:%02dh", elapsed / 3600, (elapsed % 3600) / 60)
     }
 
     // Prosecan puls iz HealthKit-a (0 dok se ne skupi dovoljno) -> "—".

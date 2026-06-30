@@ -58,11 +58,13 @@ struct ActiveWorkoutView: View {
         HRZone.zone(for: heartRate)
     }
 
-    // Proteklo vreme kao H:MM:SS (zivi tajmer otkucava sekunde), uvek sa satom da
-    // minuti nikad ne predju 60: 5min -> "0:05:00", 45min -> "0:45:00", 89min -> "1:29:00".
+    // Do 1h -> M:SS (0:45, 12:30, 59:59). Od 1h -> sati i minuti sa "h"
+    // (1:05h, 2:15h), bez sekundi.
     private func durationString(_ elapsed: Int) -> String {
-        let s = max(0, elapsed)
-        return String(format: "%d:%02d:%02d", s / 3600, (s % 3600) / 60, s % 60)
+        if elapsed < 3600 {
+            return String(format: "%d:%02d", elapsed / 60, elapsed % 60)
+        }
+        return String(format: "%d:%02dh", elapsed / 3600, (elapsed % 3600) / 60)
     }
     
     var body: some View {
