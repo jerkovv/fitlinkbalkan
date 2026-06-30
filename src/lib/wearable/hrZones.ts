@@ -100,10 +100,3 @@ export function formatDuration(seconds: number): string {
   if (m > 0) return `${m}min`;
   return `${seconds}s`;
 }
-
-export function formatMmSs(seconds: number): string {
-  const s = Math.max(0, Math.round(seconds));
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return `${m}:${r.toString().padStart(2, "0")}`;
-}

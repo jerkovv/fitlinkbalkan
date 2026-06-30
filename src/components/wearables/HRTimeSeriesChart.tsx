@@ -10,8 +10,9 @@ import {
   Cell,
 } from "recharts";
 import {
-  ZONE_DEFS, zoneForBpm, formatMmSs, type HRSample, type HRPair,
+  ZONE_DEFS, zoneForBpm, type HRSample, type HRPair,
 } from "@/lib/wearable/hrZones";
+import { formatHMS } from "@/lib/time";
 
 interface Props {
   // Dva formata:
@@ -60,7 +61,7 @@ export const HRTimeSeriesChart = ({ hrSeries, maxHR, hrAvg, hrMax }: Props) => {
     }
 
     // X osa: elapsed -> mm:ss (8 -> "0:08", 90 -> "1:30"); clock -> HH:MM.
-    const fmtX = isPairs ? (v: any) => formatMmSs(Number(v)) : (v: any) => fmtClock(Number(v));
+    const fmtX = isPairs ? (v: any) => formatHMS(Number(v)) : (v: any) => fmtClock(Number(v));
 
     return { data: out, fmtX };
   }, [hrSeries, maxHR]);

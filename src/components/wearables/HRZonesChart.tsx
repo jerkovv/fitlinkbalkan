@@ -1,4 +1,5 @@
-import { ZONE_DEFS, formatMmSs } from "@/lib/wearable/hrZones";
+import { ZONE_DEFS } from "@/lib/wearable/hrZones";
+import { formatHMS } from "@/lib/time";
 
 interface ZoneRow {
   zone: number;
@@ -51,7 +52,7 @@ export const HRZonesChart = ({ zones }: Props) => {
               </div>
               <div className="flex items-center gap-2 text-muted-foreground tnum shrink-0">
                 <span className="font-semibold text-foreground">
-                  {formatMmSs(sec)}
+                  {formatHMS(sec)}
                 </span>
                 <span>{pct}%</span>
               </div>
