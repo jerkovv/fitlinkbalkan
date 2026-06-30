@@ -563,8 +563,17 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
         </button>
       )}
 
-      {/* Prostor da poslednji dan ne stoji ispod sticky "Obavesti vezbaca" CTA */}
-      {mode === "assigned" && days.length > 0 && <div className="h-24" />}
+      {/* Pomocni tekst u NORMALNOM toku (ne apsolutno preko sadrzaja), izmedju liste i
+          razmaka za sticky "Posalji vezbacu" dugme - bez preklapanja sa "Dodaj vezbu". */}
+      {mode === "assigned" && days.length > 0 && (
+        <>
+          <p className="text-[12px] text-muted-foreground text-center px-4 mt-3">
+            Vežbač vidi plan tek kada ga pošaljete. Kada završite, pošaljite ga.
+          </p>
+          {/* Prostor da poslednji sadrzaj ne stoji ispod sticky "Posalji vezbacu" CTA */}
+          <div className="h-24" />
+        </>
+      )}
 
       {/* Add Day - full-screen (Wolt-style) */}
       <FullScreenSheet open={addDayOpen} onClose={() => setAddDayOpen(false)} title="Novi dan">
@@ -652,9 +661,6 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
       {mode === "assigned" && days.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 px-6 pb-6 pt-3 bg-gradient-to-t from-background via-background to-transparent pointer-events-none">
           <div className="max-w-[440px] mx-auto pointer-events-auto">
-            <p className="text-[11px] text-muted-foreground text-center mb-2">
-              Vežbač vidi plan tek kada ga pošaljete. Kada završite, pošaljite ga.
-            </p>
             <Button
               onClick={notifyAthlete}
               disabled={notifying}

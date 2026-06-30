@@ -62,7 +62,7 @@ const statusFromEnds = (endsOn: string | null): "active" | "expiring" | "expired
 
 const statusChip = {
   active: <Chip tone="success">Aktivan</Chip>,
-  expiring: <Chip tone="warning">Uskoro</Chip>,
+  expiring: <Chip tone="warning">Ističe uskoro</Chip>,
   expired: <Chip tone="danger">Istekao</Chip>,
 };
 
