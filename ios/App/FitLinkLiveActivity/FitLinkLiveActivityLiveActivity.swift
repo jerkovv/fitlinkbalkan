@@ -80,13 +80,13 @@ private func setLineText(_ s: FitLinkLiveActivityAttributes.ContentState) -> Str
     return base
 }
 
-// Stoperica treninga: broji UNAPRED od pocetka. timerInterval (showsHours:false) ->
-// uvek mm:ss, uza rezervacija ("119:59"); kapirano na 2h (realan max). Pozivaoci je
-// stavljaju u .frame(maxWidth:.infinity, alignment:.trailing) (lock/expanded) ili uzak
-// trailing frame (compact) da broj bude SKROZ desno.
+// Stoperica treninga: broji UNAPRED od pocetka. showsHours: true -> ispod 1h "M:SS"
+// (25:22), preko 1h "H:MM:SS" (1:25:00), kao u aplikaciji. Kraj daleko u buducnosti
+// (24h) da tajmer NE zamrzne (pre je +2h zamrzavalo na "120:00"); realan trening je
+// daleko ispod toga. Pozivaoci je stavljaju u trailing frame da broj bude SKROZ desno.
 private func workoutTimerText(_ start: Date) -> Text {
-    Text(timerInterval: start ... start.addingTimeInterval(60 * 60 * 2),
-         pauseTime: nil, countsDown: false, showsHours: false)
+    Text(timerInterval: start ... start.addingTimeInterval(60 * 60 * 24),
+         pauseTime: nil, countsDown: false, showsHours: true)
 }
 
 // MARK: - Deljeni View-ovi
