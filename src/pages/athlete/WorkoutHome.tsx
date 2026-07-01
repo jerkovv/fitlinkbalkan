@@ -104,9 +104,9 @@ const WorkoutHome = () => {
     [nav],
   );
 
-  // Mount + povratak u prvi plan: uhvati sesiju koja je vec aktivna (sat je pokrenuo dok je
-  // app bio zatvoren / u pozadini - realtime tada ne isporucuje propusteni dogadjaj).
-  const checkActiveSession = useCallback(async () => {
+  // A1: jedna funkcija - nadji aktivnu sesiju ovog sportiste i udji (idempotentno preko
+  // deljenog "entered" seta). Zove se sa: mount, visibilitychange, i realtime live_state.
+  const enterActiveSessionIfAny = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
       .from("workout_session_logs")
@@ -121,40 +121,44 @@ const WorkoutHome = () => {
     if (row?.id && row?.day_id) enterActive(row.id, row.day_id);
   }, [user, enterActive]);
 
+  // Mount + povratak u prvi plan (sat je pokrenuo dok je app bio zatvoren / u pozadini -
+  // realtime tada ne isporucuje propusteni dogadjaj).
   useEffect(() => {
-    checkActiveSession();
+    enterActiveSessionIfAny();
     const onVis = () => {
-      if (document.visibilityState === "visible") checkActiveSession();
+      if (document.visibilityState === "visible") enterActiveSessionIfAny();
     };
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
-  }, [checkActiveSession]);
+  }, [enterActiveSessionIfAny]);
 
-  // Realtime: trening pokrenut sa sata dok smo na home -> udji odmah (bez cekanja polla).
+  // A2: realtime na workout_live_state - dobija event i na SVEZ start (INSERT) i na RESUME
+  // (UPDATE). Resume (_start_workout_session za vec aktivan dan) ne dira workout_session_logs,
+  // pa bi njena pretplata propustila resume. Heartbeat/pozicija update-i za sesiju u koju smo
+  // VEC usli preskacu se bez upita (guard kroz "entered" set).
   useEffect(() => {
     if (!user) return;
     const channel = supabase
-      .channel(`home-active-workout:${user.id}`)
+      .channel(`home-live-state:${user.id}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
-          table: "workout_session_logs",
+          table: "workout_live_state",
           filter: `athlete_id=eq.${user.id}`,
         },
         (payload) => {
-          const row = payload.new as any;
-          if (row && row.is_active === true && !row.completed_at && row.day_id) {
-            enterActive(row.id, row.day_id);
-          }
+          const sid = (payload.new as any)?.session_log_id as string | undefined;
+          if (!sid || hasEnteredWorkout(sid)) return;
+          enterActiveSessionIfAny();
         },
       )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, enterActive]);
+  }, [user, enterActiveSessionIfAny]);
 
   return (
     <>
