@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { toEmbedUrl } from "@/lib/videoEmbed";
 
@@ -57,37 +57,75 @@ export const ExerciseHeader = ({
   const primary = nameEn?.trim() || name;
   const showSecondary = !!(nameEn && nameEn.trim() && name && nameEn.trim() !== name);
 
+  const [videoFailed, setVideoFailed] = useState(false);
+  const [imgFailed, setImgFailed] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
   const media = videoUrl || thumbnailUrl || null;
   const embed = videoUrl ? toEmbedUrl(videoUrl) : null;
   const isDirectImage = media ? isImage(media) : false;
 
+  const useVideo = !!embed && embed.type === "video" && !videoFailed;
+  const useEmbed = !!embed && (embed.type === "youtube" || embed.type === "vimeo");
+  // Slika: direktan image link (gif/webp/png/jpg - sam se vrti) ili thumbnail. Sluzi i kao
+  // fallback ako video ne ucita (onError) -> nikad mrtvo play dugme.
+  const imageSrc = isDirectImage ? media : thumbnailUrl || null;
+  const useImage = !useVideo && !useEmbed && !!imageSrc && !imgFailed;
+
+  // Nova vezba (izvor se promeni) -> resetuj failure flag-ove.
+  useEffect(() => {
+    setVideoFailed(false);
+    setImgFailed(false);
+  }, [videoUrl, thumbnailUrl]);
+
+  // React `muted` prop nije pouzdan (autoplay se blokira -> iOS prikaze play dugme). Postavi
+  // muted imperativno i probaj play na mount / promeni izvora, da media UVEK krene sama.
+  useEffect(() => {
+    if (!useVideo) return;
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = true;
+    v.defaultMuted = true;
+    const tryPlay = () => { v.play().catch(() => {}); };
+    tryPlay();
+    v.addEventListener("canplay", tryPlay);
+    v.addEventListener("loadeddata", tryPlay);
+    return () => {
+      v.removeEventListener("canplay", tryPlay);
+      v.removeEventListener("loadeddata", tryPlay);
+    };
+  }, [useVideo, embed?.src]);
+
   return (
     <div className="space-y-3">
       <div className="relative w-full aspect-[16/10] rounded-3xl overflow-hidden bg-surface-2 border border-hairline">
-        {embed && embed.type === "video" ? (
+        {useVideo ? (
           <video
-            src={embed.src}
+            ref={videoRef}
+            src={embed!.src}
             autoPlay
             loop
             muted
             playsInline
             preload="auto"
             controls={false}
+            onError={() => setVideoFailed(true)}
             className="absolute inset-0 w-full h-full object-cover pointer-events-none"
           />
-        ) : embed && (embed.type === "youtube" || embed.type === "vimeo") ? (
+        ) : useEmbed ? (
           <iframe
-            src={buildLoopEmbed(embed)}
+            src={buildLoopEmbed(embed!)}
             title={name}
             allow="autoplay; encrypted-media; picture-in-picture"
             className="absolute inset-0 w-full h-full pointer-events-none"
             frameBorder={0}
           />
-        ) : media && (isDirectImage || media === thumbnailUrl) ? (
+        ) : useImage ? (
           <img
-            src={media}
+            src={imageSrc!}
             alt={name}
-            className="absolute inset-0 w-full h-full object-cover"
+            onError={() => setImgFailed(true)}
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none"
           />
         ) : (
           <div className="absolute inset-0 bg-gradient-brand-soft flex items-center justify-center">
