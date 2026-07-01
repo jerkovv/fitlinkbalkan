@@ -11,6 +11,8 @@ import {
   FullScreenSheetFooter,
 } from "@/components/ui/full-screen-sheet";
 import { Textarea } from "@/components/ui/textarea";
+import { HRZonesChart } from "@/components/wearables/HRZonesChart";
+import type { ZoneBucket } from "@/lib/wearable/hrZones";
 
 type SessionRow = {
   id: string;
@@ -90,6 +92,9 @@ const WorkoutSummary = () => {
   const [sets, setSets] = useState<SetRow[]>([]);
   const [exercises, setExercises] = useState<ExRow[]>([]);
   const [showCheck, setShowCheck] = useState(false);
+  // HR zone iz get_inapp_workout_detail (isti izvor kao InApp dialog). Racunaju se iz
+  // hr_series koji sat upise par sekundi POSLE finish-a, pa se refetch-uju uz metrike.
+  const [zones, setZones] = useState<ZoneBucket[]>([]);
 
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
@@ -218,6 +223,17 @@ const WorkoutSummary = () => {
       );
     };
 
+    // Zone iz istog RPC-a kao InApp dialog (server ih racuna iz hr_series). Prazno dok sat
+    // ne upise hr_series -> refetch uz metrike hvata ih kad stignu.
+    const fetchZones = async () => {
+      const { data, error } = await supabase.rpc("get_inapp_workout_detail" as any, {
+        p_session_id: sessionId,
+      });
+      if (error || cancelled) return;
+      const detail = (Array.isArray(data) ? data[0] : data) as any;
+      if (detail?.zones) setZones(detail.zones as ZoneBucket[]);
+    };
+
     const refetch = async () => {
       const { data } = await supabase
         .from("workout_session_logs")
@@ -225,6 +241,7 @@ const WorkoutSummary = () => {
         .eq("id", sessionId)
         .maybeSingle();
       applyMetrics(data);
+      fetchZones();
     };
 
     const channel = supabase
@@ -232,10 +249,11 @@ const WorkoutSummary = () => {
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "workout_session_logs", filter: `id=eq.${sessionId}` },
-        (payload) => applyMetrics(payload.new)
+        (payload) => { applyMetrics(payload.new); fetchZones(); }
       )
       .subscribe();
 
+    fetchZones();
     const t2 = setTimeout(refetch, 2000);
     const t5 = setTimeout(refetch, 5000);
 
@@ -412,6 +430,20 @@ const WorkoutSummary = () => {
             value={stats.kcal ? `${Math.round(stats.kcal)} kcal` : "—"}
           />
         </div>
+
+        {/* Zone pulsa - IZNAD "Po vezbi", samo kad ima HR podatka (zone se racunaju iz
+            hr_series; bez sata sve su 0 -> sekcija se ne prikazuje). Isti izvor/komponenta
+            kao InApp dialog. */}
+        {zones.some((z) => z.seconds_in_zone > 0) && (
+          <section className="mt-7">
+            <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground mb-3">
+              Zone pulsa
+            </h2>
+            <div className="rounded-3xl bg-surface border border-hairline p-4">
+              <HRZonesChart zones={zones} />
+            </div>
+          </section>
+        )}
 
         {/* Exercises summary */}
         <section className="mt-7">
