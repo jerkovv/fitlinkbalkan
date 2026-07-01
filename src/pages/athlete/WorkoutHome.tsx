@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { AthleteOnboardingTour } from "@/components/AthleteOnboardingTour";
@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useClanarinaLock } from "@/components/clanarina/useClanarinaLock";
 import { getNextWorkoutDay, type NextWorkoutDay } from "@/lib/workouts";
+import { markWorkoutEntered, hasEnteredWorkout } from "@/lib/workoutSession";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { InAppWorkoutsList } from "@/components/InAppWorkoutsList";
@@ -83,6 +84,77 @@ const WorkoutHome = () => {
     };
     load();
   }, [user]);
+
+  // Automatski udji u aktivan trening (npr pokrenut sa sata) - isti ekran/tok kao kad se
+  // pokrene sa telefona. Preskace sesije u koje je vezbac vec usao (bez trap-a i duple
+  // navigacije). Kraj sesije (is_active=false) -> nema auto-enter, home ostaje normalan.
+  // false posle unmount-a: async mount-check ne sme da navigira ako je korisnik vec
+  // otisao (npr tapnuo drugi dan pre nego sto upit zavrsi).
+  const aliveRef = useRef(true);
+  useEffect(() => () => { aliveRef.current = false; }, []);
+
+  const enterActive = useCallback(
+    (sessionId: string | null | undefined, dayId: string | null | undefined) => {
+      if (!aliveRef.current) return;
+      if (!sessionId || !dayId) return;
+      if (hasEnteredWorkout(sessionId)) return;
+      markWorkoutEntered(sessionId);
+      nav(`/vezbac/trening/${dayId}`);
+    },
+    [nav],
+  );
+
+  // Mount + povratak u prvi plan: uhvati sesiju koja je vec aktivna (sat je pokrenuo dok je
+  // app bio zatvoren / u pozadini - realtime tada ne isporucuje propusteni dogadjaj).
+  const checkActiveSession = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("workout_session_logs")
+      .select("id, day_id")
+      .eq("athlete_id", user.id)
+      .eq("is_active", true)
+      .is("completed_at", null)
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const row = data as any;
+    if (row?.id && row?.day_id) enterActive(row.id, row.day_id);
+  }, [user, enterActive]);
+
+  useEffect(() => {
+    checkActiveSession();
+    const onVis = () => {
+      if (document.visibilityState === "visible") checkActiveSession();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [checkActiveSession]);
+
+  // Realtime: trening pokrenut sa sata dok smo na home -> udji odmah (bez cekanja polla).
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`home-active-workout:${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "workout_session_logs",
+          filter: `athlete_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const row = payload.new as any;
+          if (row && row.is_active === true && !row.completed_at && row.day_id) {
+            enterActive(row.id, row.day_id);
+          }
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, enterActive]);
 
   return (
     <>

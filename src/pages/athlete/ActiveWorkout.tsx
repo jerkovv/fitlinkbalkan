@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff, Plus, Minus } from "lucide-react";
 import { getHrColor, getHrZone } from "@/lib/workout/hrZone";
+import { markWorkoutEntered } from "@/lib/workoutSession";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -361,7 +362,12 @@ const ActiveWorkout = () => {
 
   // Ref na sessionId za async provere (resume/poll) bez zavisnosti u callback-ovima.
   const sessionIdRef = useRef<string | null>(null);
-  useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+    // Zapamti da je vezbac usao u ovu sesiju -> home je nece auto-otvoriti ponovo
+    // (bez vracanja u trening pri povratku na home / posle greske).
+    if (sessionId) markWorkoutEntered(sessionId);
+  }, [sessionId]);
   useEffect(() => { isOnlineRef.current = isOnline; }, [isOnline]);
 
   // Ako je sesija vec zatvorena na serveru (npr. zavrsena na satu dok je telefon
