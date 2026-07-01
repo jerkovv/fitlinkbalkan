@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,13 +18,6 @@ export const AthleteLayout = () => {
   const aliveRef = useRef(true);
   useEffect(() => () => { aliveRef.current = false; }, []);
 
-  // PRIVREMENI vidljivi debug (ukloniti kad se potvrdi da radi): auto-enter status uzivo.
-  const [aeDebug, setAeDebug] = useState<string>("init");
-  const tickRef = useRef(0);
-  const dbg = useCallback((msg: string) => {
-    setAeDebug(`tick#${tickRef.current} | ${msg}`);
-  }, []);
-
   const enterActive = useCallback(
     (sessionId: string | null | undefined, dayId: string | null | undefined) => {
       if (!aliveRef.current) return;
@@ -41,13 +34,10 @@ export const AthleteLayout = () => {
   // otvara pre nego auth vrati sesiju; ne zavisi od `user` konteksta -> stabilan callback.
   const enterActiveSessionIfAny = useCallback(async () => {
     if (!aliveRef.current) return;
-    dbg("checking... " + new Date().toLocaleTimeString());
     try {
       const { data: authData } = await supabase.auth.getUser();
       const uid = authData?.user?.id ?? null;
       if (!aliveRef.current) return;
-      const uid8 = uid ? uid.slice(0, 8) : "NULL";
-      dbg("user=" + uid8);
       if (!uid) {
         console.log("[autoenter] check user=null found=none");
         return;
@@ -63,19 +53,12 @@ export const AthleteLayout = () => {
         .maybeSingle();
       if (!aliveRef.current) return;
       const row = data as any;
-      dbg(
-        "user=" + uid8 + " found=" +
-          (row ? row.id.slice(0, 8) + " day=" + row.day_id.slice(0, 8) : "NONE"),
-      );
       console.log(`[autoenter] check user=${uid} found=${row?.id ?? "none"}`);
-      if (row?.id && row?.day_id) {
-        dbg("NAV -> " + row.day_id.slice(0, 8));
-        enterActive(row.id, row.day_id);
-      }
+      if (row?.id && row?.day_id) enterActive(row.id, row.day_id);
     } catch (e) {
-      dbg("ERR: " + String(e).slice(0, 80));
+      console.log("[autoenter] error", e);
     }
-  }, [enterActive, dbg]);
+  }, [enterActive]);
 
   // Mount marker + prva provera.
   useEffect(() => {
@@ -97,10 +80,7 @@ export const AthleteLayout = () => {
       if (document.visibilityState === "visible") {
         enterActiveSessionIfAny();
         if (interval == null) {
-          interval = setInterval(() => {
-            tickRef.current += 1;   // brojac da se vidi da interval stvarno tikuje
-            enterActiveSessionIfAny();
-          }, 3000);
+          interval = setInterval(() => { enterActiveSessionIfAny(); }, 3000);
         }
       } else {
         stop();
@@ -143,23 +123,6 @@ export const AthleteLayout = () => {
   return (
     <ClanarinaLockProvider>
       <Outlet />
-
-      {/* PRIVREMENI debug panel (ukloniti kad se potvrdi) - vidljiv na SVAKOM vezbac tabu. */}
-      <div
-        style={{
-          position: "fixed",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 9999,
-          background: "rgba(0,0,0,0.85)",
-          color: "#0f0",
-          font: "11px monospace",
-          padding: "6px 8px calc(6px + env(safe-area-inset-bottom))",
-        }}
-      >
-        AE: {aeDebug}
-      </div>
     </ClanarinaLockProvider>
   );
 };
