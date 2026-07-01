@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Apple, ClipboardList, Wallet, MessageSquare, Phone, Loader2, Plus, X, Check,
-  Dumbbell, Scale, UserMinus, Flame, Sparkles,
+  Dumbbell, Scale, UserMinus, Flame, Sparkles, Mail, Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { InAppWorkoutsList } from "@/components/InAppWorkoutsList";
@@ -175,6 +175,8 @@ const AthleteProfile = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any | null>(null);
   const [athlete, setAthlete] = useState<AthleteData | null>(null);
+  // Email klijenta: RPC vraca email SAMO njegovom treneru (trainer_id = auth.uid()), inace null.
+  const [athleteEmail, setAthleteEmail] = useState<string | null>(null);
   const [activePlan, setActivePlan] = useState<AssignedPlan | null>(null);
   const [activeProgram, setActiveProgram] = useState<AssignedProgram | null>(null);
   const [latestMetric, setLatestMetric] = useState<BodyMetric | null>(null);
@@ -220,6 +222,14 @@ const AthleteProfile = () => {
   const load = async () => {
     if (!id) return;
     setLoading(true);
+
+    // Email (RPC, paralelno; vraca null ako nije ovog trenera klijent) - ne blokira ostatak.
+    supabase
+      .rpc("get_athlete_email" as any, { p_athlete_id: id })
+      .then(
+        ({ data }: any) => setAthleteEmail((data as string | null) ?? null),
+        () => setAthleteEmail(null),
+      );
 
     const [aRes, pRes, planRes, progRes, metricsRes] = await Promise.all([
       supabase.from("athletes").select("*").eq("id", id).maybeSingle(),
@@ -595,6 +605,16 @@ const AthleteProfile = () => {
     else toast.error("Vežbač nema sačuvan broj");
   };
 
+  const copyEmail = async () => {
+    if (!athleteEmail) return;
+    try {
+      await navigator.clipboard.writeText(athleteEmail);
+      toast.success("Email kopiran");
+    } catch {
+      toast.error("Ne mogu da kopiram");
+    }
+  };
+
   if (loading) {
     return (
       <PhoneShell back="/trener/vezbaci" title="Profil">
@@ -641,6 +661,20 @@ const AthleteProfile = () => {
             <div className="text-[13px] text-muted-foreground">
               Pridružen {new Date(athlete.joined_at).toLocaleDateString("sr-Latn-RS")}
             </div>
+            {athleteEmail && (
+              <div className="flex items-center gap-1.5 mt-1 text-[13px] text-muted-foreground min-w-0">
+                <Mail className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
+                <span className="truncate">{athleteEmail}</span>
+                <button
+                  type="button"
+                  onClick={copyEmail}
+                  className="shrink-0 p-1 -m-1 rounded-md hover:text-foreground transition active:scale-90"
+                  aria-label="Kopiraj email"
+                >
+                  <Copy className="h-3.5 w-3.5" strokeWidth={2} />
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
