@@ -4,7 +4,8 @@ import { PhoneShell } from "@/components/PhoneShell";
 import { AthleteOnboardingTour } from "@/components/AthleteOnboardingTour";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui-bits";
-import { Loader2, Play, Dumbbell, History, CalendarDays, Flame, AlertTriangle, RefreshCw, Lock } from "lucide-react";
+import { Loader2, Play, Dumbbell, History, CalendarDays, Flame, AlertTriangle, RefreshCw, Lock, Zap } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useClanarinaLock } from "@/components/clanarina/useClanarinaLock";
@@ -32,6 +33,27 @@ const WorkoutHome = () => {
   const [streak, setStreak] = useState(0);
   const [daysInactive, setDaysInactive] = useState<number>(0);
   const [hasEverTrained, setHasEverTrained] = useState(true);
+  const [startingFree, setStartingFree] = useState(false);
+
+  // Slobodan trening: RPC pravi sesiju bez plana (day_id null) -> odlazak na free ekran.
+  const startFreeWorkout = async () => {
+    if (startingFree) return;
+    setStartingFree(true);
+    try {
+      const { data, error } = await supabase.rpc("start_free_workout");
+      const res = data as any;
+      if (error || !res?.success || !res?.session_id) {
+        toast.error("Ne mogu da pokrenem slobodan trening. Pokušaj ponovo.");
+        setStartingFree(false);
+        return;
+      }
+      nav(`/vezbac/slobodan-trening/${res.session_id}`);
+      // ostajemo u loading stanju do unmount-a (bez flash-a nazad na dugme)
+    } catch {
+      toast.error("Ne mogu da pokrenem slobodan trening. Pokušaj ponovo.");
+      setStartingFree(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -166,6 +188,31 @@ const WorkoutHome = () => {
               Kontaktiraj trenera da ti dodeli plan treninga.
             </p>
           </Card>
+        )}
+
+        {/* Sekundarno: slobodan trening bez plana (samo puls, kalorije, vreme, zone) */}
+        {!loading && (
+          <button
+            onClick={guard(startFreeWorkout)}
+            disabled={startingFree}
+            className="w-full flex items-center gap-3 rounded-2xl border border-hairline bg-surface px-4 py-3.5 text-left transition active:scale-[0.99] disabled:opacity-60"
+          >
+            <div className="h-10 w-10 rounded-2xl bg-gradient-brand-soft text-primary flex items-center justify-center shrink-0">
+              {startingFree ? (
+                <Loader2 className="h-[18px] w-[18px] animate-spin" />
+              ) : hasAccess ? (
+                <Zap className="h-[18px] w-[18px]" strokeWidth={2.25} />
+              ) : (
+                <Lock className="h-[18px] w-[18px]" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[14px] font-semibold tracking-tight">Slobodan trening</div>
+              <div className="text-[12px] text-muted-foreground">
+                Bez plana - samo puls, kalorije i vreme
+              </div>
+            </div>
+          </button>
         )}
 
         {allDays.length > 0 && (

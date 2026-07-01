@@ -21,10 +21,13 @@ export const AthleteLayout = () => {
   const enterActive = useCallback(
     (sessionId: string | null | undefined, dayId: string | null | undefined) => {
       if (!aliveRef.current) return;
-      if (!sessionId || !dayId) return;
+      if (!sessionId) return;
       if (hasEnteredWorkout(sessionId)) return;   // vec usao/napustio -> ne vuci nazad
       markWorkoutEntered(sessionId);
-      nav(`/vezbac/trening/${dayId}`);
+      // day_id == null -> slobodan trening (bez plana, npr. pokrenut sa sata); inace
+      // normalan trening po danu plana. markWorkoutEntered iznad spreca povratnu navigaciju.
+      if (dayId) nav(`/vezbac/trening/${dayId}`);
+      else nav(`/vezbac/slobodan-trening/${sessionId}`);
     },
     [nav],
   );
@@ -49,7 +52,8 @@ export const AthleteLayout = () => {
         .maybeSingle();
       if (!aliveRef.current) return;
       const row = data as any;
-      if (row?.id && row?.day_id) enterActive(row.id, row.day_id);
+      // Udji na osnovu SESIJE (ne day_id-a) - slobodan trening ima day_id = null.
+      if (row?.id) enterActive(row.id, row.day_id ?? null);
     } catch {
       // tiho: sledeci poll/realtime ponovo proba
     }

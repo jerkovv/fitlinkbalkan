@@ -368,6 +368,10 @@ const WorkoutSummary = () => {
     );
   }
 
+  // Slobodan trening (bez plana): day_id je null -> nema vezbi/serija/volumena, samo
+  // trajanje/puls/kcal/zone. Sakrij "Po vezbi", Volumen i Serije; naslov je drugaciji.
+  const isFree = session.day_id == null;
+
   return (
     <div className="h-[100dvh] overflow-y-auto bg-background">
       <div
@@ -386,7 +390,7 @@ const WorkoutSummary = () => {
             <Check className="h-10 w-10" strokeWidth={3.2} />
           </div>
           <h1 className="font-display text-[30px] font-bold tracking-tightest leading-tight mt-5">
-            Trening završen
+            {isFree ? "Slobodan trening" : "Trening završen"}
           </h1>
           <p className="text-[13px] text-muted-foreground mt-1.5">
             Sjajan posao 💪 Tvoj napredak je sačuvan.
@@ -400,16 +404,20 @@ const WorkoutSummary = () => {
             label="Trajanje"
             value={fmtDuration(stats.durationMs)}
           />
-          <StatTile
-            icon={<Dumbbell className="h-4 w-4" />}
-            label="Ukupan volumen"
-            value={`${Math.round(stats.totalVolume)} kg`}
-          />
-          <StatTile
-            icon={<Check className="h-4 w-4" />}
-            label="Završenih serija"
-            value={String(stats.completedSets)}
-          />
+          {!isFree && (
+            <StatTile
+              icon={<Dumbbell className="h-4 w-4" />}
+              label="Ukupan volumen"
+              value={`${Math.round(stats.totalVolume)} kg`}
+            />
+          )}
+          {!isFree && (
+            <StatTile
+              icon={<Check className="h-4 w-4" />}
+              label="Završenih serija"
+              value={String(stats.completedSets)}
+            />
+          )}
           <StatTile
             icon={<Heart className="h-4 w-4" />}
             label="Prosečan puls"
@@ -445,7 +453,8 @@ const WorkoutSummary = () => {
           </section>
         )}
 
-        {/* Exercises summary */}
+        {/* Exercises summary (sakriveno za slobodan trening - nema vezbi) */}
+        {!isFree && (
         <section className="mt-7">
           <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground mb-3">
             Po vežbi
@@ -483,6 +492,7 @@ const WorkoutSummary = () => {
             ))}
           </div>
         </section>
+        )}
 
         {/* Note button */}
         <button

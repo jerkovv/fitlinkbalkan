@@ -42,6 +42,7 @@ import TrainerLiveAthletes from "./pages/trainer/LiveAthletesView.tsx";
 
 import AthleteHome from "./pages/athlete/Home.tsx";
 import AthleteWorkout from "./pages/athlete/ActiveWorkout.tsx";
+import AthleteFreeWorkout from "./pages/athlete/AthleteFreeWorkout.tsx";
 import AthleteWorkoutSummary from "./pages/athlete/WorkoutSummary.tsx";
 import AthleteWorkoutHome from "./pages/athlete/WorkoutHome.tsx";
 import AthleteBooking from "./pages/athlete/Booking.tsx";
@@ -110,6 +111,7 @@ const App = () => (
               <Route path="/vezbac/trening" element={athlete(<AthleteWorkoutHome />)} />
               <Route path="/vezbac/trening/aktivan/:dayId" element={athlete(<AthleteWorkout />)} />
               <Route path="/vezbac/trening/zavrsen/:sessionId" element={athlete(<AthleteWorkoutSummary />)} />
+              <Route path="/vezbac/slobodan-trening/:sessionId" element={athlete(<AthleteFreeWorkout />)} />
               <Route path="/vezbac/trening/:dayId" element={athlete(<AthleteWorkout />)} />
               <Route path="/vezbac/rezervacija" element={athlete(<AthleteBooking />)} />
               <Route path="/vezbac/napredak" element={athlete(<AthleteProgress />)} />
