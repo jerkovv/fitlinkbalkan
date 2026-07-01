@@ -1,12 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Outlet, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ConfirmProvider } from "@/hooks/useConfirm";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { ClanarinaLockProvider } from "@/components/clanarina/ClanarinaLockProvider";
+import { AthleteLayout } from "@/components/AthleteLayout";
 
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -102,9 +102,10 @@ const App = () => (
             <Route path="/trener/chat/:athleteId" element={trainer(<TrainerChatThread />)} />
             <Route path="/trener/vezbac/:athleteId/live" element={trainer(<TrainerLiveWorkout />)} />
 
-            {/* Vežbač — protected, umotano u ClanarinaLockProvider (deljen lock sheet).
+            {/* Vežbač — protected, umotano u AthleteLayout (deljen lock sheet preko
+                ClanarinaLockProvider + auto-enter u aktivan trening, montiran na svim tabovima).
                 Sve stranice se vide normalno; pojedine AKCIJE su zakljucane bez clanarine. */}
-            <Route element={<ClanarinaLockProvider><Outlet /></ClanarinaLockProvider>}>
+            <Route element={<AthleteLayout />}>
               <Route path="/vezbac" element={athlete(<AthleteHome />)} />
               <Route path="/vezbac/trening" element={athlete(<AthleteWorkoutHome />)} />
               <Route path="/vezbac/trening/aktivan/:dayId" element={athlete(<AthleteWorkout />)} />

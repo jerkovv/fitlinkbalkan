@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { AthleteOnboardingTour } from "@/components/AthleteOnboardingTour";
@@ -9,7 +9,6 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useClanarinaLock } from "@/components/clanarina/useClanarinaLock";
 import { getNextWorkoutDay, type NextWorkoutDay } from "@/lib/workouts";
-import { markWorkoutEntered, hasEnteredWorkout } from "@/lib/workoutSession";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { InAppWorkoutsList } from "@/components/InAppWorkoutsList";
@@ -84,139 +83,6 @@ const WorkoutHome = () => {
     };
     load();
   }, [user]);
-
-  // Automatski udji u aktivan trening (npr pokrenut sa sata) - isti ekran/tok kao kad se
-  // pokrene sa telefona. Preskace sesije u koje je vezbac vec usao (bez trap-a i duple
-  // navigacije). Kraj sesije (is_active=false) -> nema auto-enter, home ostaje normalan.
-  // false posle unmount-a: async mount-check ne sme da navigira ako je korisnik vec
-  // otisao (npr tapnuo drugi dan pre nego sto upit zavrsi).
-  const aliveRef = useRef(true);
-  useEffect(() => () => { aliveRef.current = false; }, []);
-
-  // PRIVREMENI vidljivi debug (ukloniti kad se resi): auto-enter status uzivo na home ekranu.
-  const [aeDebug, setAeDebug] = useState<string>("init");
-  const tickRef = useRef(0);
-  const dbg = useCallback((msg: string) => {
-    setAeDebug(`tick#${tickRef.current} | ${msg}`);
-  }, []);
-
-  const enterActive = useCallback(
-    (sessionId: string | null | undefined, dayId: string | null | undefined) => {
-      if (!aliveRef.current) return;
-      if (!sessionId || !dayId) return;
-      if (hasEnteredWorkout(sessionId)) return;
-      markWorkoutEntered(sessionId);
-      console.log(`[autoenter] navigating day=${dayId}`);
-      nav(`/vezbac/trening/${dayId}`);
-    },
-    [nav],
-  );
-
-  // KORAK 2: nadji aktivnu sesiju ovog sportiste i udji (idempotentno preko deljenog "entered"
-  // seta). Auth user se uzima SVEZE (supabase.auth.getUser) - mount moze da se izvrsi PRE nego
-  // auth vrati sesiju, pa bi upit sa praznim user-om vratio nista i vise se ne bi ponovio.
-  // Zato NE zavisi od `user` iz konteksta -> stabilan callback (poll/pretplate se ne recreate).
-  const enterActiveSessionIfAny = useCallback(async () => {
-    if (!aliveRef.current) return;
-    dbg("checking... " + new Date().toLocaleTimeString());
-    try {
-      const { data: authData } = await supabase.auth.getUser();
-      const uid = authData?.user?.id ?? null;
-      if (!aliveRef.current) return;
-      const uid8 = uid ? uid.slice(0, 8) : "NULL";
-      dbg("user=" + uid8);
-      if (!uid) {
-        console.log("[autoenter] check user=null found=none");
-        return;
-      }
-      const { data } = await supabase
-        .from("workout_session_logs")
-        .select("id, day_id")
-        .eq("athlete_id", uid)
-        .eq("is_active", true)
-        .is("completed_at", null)
-        .order("started_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (!aliveRef.current) return;
-      const row = data as any;
-      dbg(
-        "user=" + uid8 + " found=" +
-          (row ? row.id.slice(0, 8) + " day=" + row.day_id.slice(0, 8) : "NONE"),
-      );
-      console.log(`[autoenter] check user=${uid} found=${row?.id ?? "none"}`);
-      if (row?.id && row?.day_id) {
-        dbg("NAV -> " + row.day_id.slice(0, 8));
-        enterActive(row.id, row.day_id);
-      }
-    } catch (e) {
-      dbg("ERR: " + String(e).slice(0, 80));
-    }
-  }, [enterActive, dbg]);
-
-  // Mount marker + prva provera.
-  useEffect(() => {
-    console.log("[autoenter] home mounted");
-    enterActiveSessionIfAny();
-  }, [enterActiveSessionIfAny]);
-
-  // KORAK 3: poll na 3s dok je home mount-ovan I vidljiv - hvata aktivnu sesiju nezavisno od
-  // realtime-a i auth tajminga. Interval se gasi na unmount i kad se home sakrije; na povratak
-  // u vidljivo -> odmah jedna provera + (re)start intervala.
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
-    const stop = () => {
-      if (interval != null) {
-        clearInterval(interval);
-        interval = null;
-      }
-    };
-    const sync = () => {
-      if (document.visibilityState === "visible") {
-        enterActiveSessionIfAny();
-        if (interval == null) {
-          interval = setInterval(() => {
-            tickRef.current += 1;   // brojac da se vidi da interval stvarno tikuje
-            enterActiveSessionIfAny();
-          }, 3000);
-        }
-      } else {
-        stop();
-      }
-    };
-    sync();
-    document.addEventListener("visibilitychange", sync);
-    return () => {
-      document.removeEventListener("visibilitychange", sync);
-      stop();
-    };
-  }, [enterActiveSessionIfAny]);
-
-  // KORAK 4: realtime na workout_live_state - svez start (INSERT) i resume (UPDATE) okinu istu
-  // proveru. Heartbeat/pozicija update-i za sesiju u koju smo VEC usli preskacu se bez upita.
-  useEffect(() => {
-    if (!user) return;
-    const channel = supabase
-      .channel(`home-live-state:${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "workout_live_state",
-          filter: `athlete_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const sid = (payload.new as any)?.session_log_id as string | undefined;
-          if (sid && hasEnteredWorkout(sid)) return;
-          enterActiveSessionIfAny();
-        },
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, enterActiveSessionIfAny]);
 
   return (
     <>
@@ -401,23 +267,6 @@ const WorkoutHome = () => {
       </PhoneShell>
       <BottomNav role="athlete" />
       <AthleteOnboardingTour />
-
-      {/* PRIVREMENI debug panel (ukloniti kad se resi auto-enter) - cita se direktno sa telefona. */}
-      <div
-        style={{
-          position: "fixed",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 9999,
-          background: "rgba(0,0,0,0.85)",
-          color: "#0f0",
-          font: "11px monospace",
-          padding: "6px 8px calc(6px + env(safe-area-inset-bottom))",
-        }}
-      >
-        AE: {aeDebug}
-      </div>
     </>
   );
 };
