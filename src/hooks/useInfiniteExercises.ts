@@ -31,10 +31,15 @@ export const useInfiniteExercises = (filters: ExerciseFilters) => {
         return rows.map((r) => r.exercise).filter(Boolean) as PickerExercise[];
       }
 
+      // Redosled: popularity PRIMARNI (staple vezbe na vrh), ime SEKUNDARNI. Sort je
+      // server-side (pre .range) pa je tacan kroz sve stranice; filter po grupi (.eq nize)
+      // i .range su takodje na serveru -> nema 1000-red cap-a (paginirano po grupi).
+      // nullsFirst:false da vezbe bez popularnosti (NULL/nekoriscene) idu na DNO, abecedno.
       let q = supabase
         .from("exercises")
         .select(SELECT)
         .or(`is_global.eq.true,created_by.eq.${userId}`)
+        .order("popularity", { ascending: false, nullsFirst: false })
         .order("name", { ascending: true })
         .range(pageParam, pageParam + PAGE_SIZE - 1);
 
