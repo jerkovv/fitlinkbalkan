@@ -1,5 +1,6 @@
 import { MUSCLE_GROUPS, type MuscleGroupId } from "@/lib/muscleGroups";
 import { MuscleGroupIcon } from "./MuscleGroupIcon";
+import { muscleIcon } from "@/lib/muscleIcons";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -11,6 +12,8 @@ export const MuscleGroupStrip = ({ active, onChange }: Props) => (
   <div className="overflow-x-auto no-scrollbar flex gap-1 px-3 py-3 border-b border-hairline">
     {MUSCLE_GROUPS.map((g) => {
       const isActive = active === g.id;
+      // Nas chip za misicne/kardio tabove; null (npr "favorites") -> stara figura (bookmark).
+      const icon = muscleIcon(g.id);
       return (
         <button
           key={g.id}
@@ -21,7 +24,11 @@ export const MuscleGroupStrip = ({ active, onChange }: Props) => (
           )}
         >
           <div className="h-14 w-14 flex items-center justify-center">
-            <MuscleGroupIcon muscle={g.id} active={isActive} />
+            {icon ? (
+              <img src={icon} alt="" className="h-12 w-12 rounded-full" />
+            ) : (
+              <MuscleGroupIcon muscle={g.id} active={isActive} />
+            )}
           </div>
           <span
             className={cn(
