@@ -24,7 +24,6 @@ export const AthleteLayout = () => {
       if (!sessionId || !dayId) return;
       if (hasEnteredWorkout(sessionId)) return;   // vec usao/napustio -> ne vuci nazad
       markWorkoutEntered(sessionId);
-      console.log(`[autoenter] navigating day=${dayId}`);
       nav(`/vezbac/trening/${dayId}`);
     },
     [nav],
@@ -38,10 +37,7 @@ export const AthleteLayout = () => {
       const { data: authData } = await supabase.auth.getUser();
       const uid = authData?.user?.id ?? null;
       if (!aliveRef.current) return;
-      if (!uid) {
-        console.log("[autoenter] check user=null found=none");
-        return;
-      }
+      if (!uid) return;
       const { data } = await supabase
         .from("workout_session_logs")
         .select("id, day_id")
@@ -53,16 +49,14 @@ export const AthleteLayout = () => {
         .maybeSingle();
       if (!aliveRef.current) return;
       const row = data as any;
-      console.log(`[autoenter] check user=${uid} found=${row?.id ?? "none"}`);
       if (row?.id && row?.day_id) enterActive(row.id, row.day_id);
-    } catch (e) {
-      console.log("[autoenter] error", e);
+    } catch {
+      // tiho: sledeci poll/realtime ponovo proba
     }
   }, [enterActive]);
 
-  // Mount marker + prva provera.
+  // Prva provera na mount.
   useEffect(() => {
-    console.log("[autoenter] layout mounted");
     enterActiveSessionIfAny();
   }, [enterActiveSessionIfAny]);
 
