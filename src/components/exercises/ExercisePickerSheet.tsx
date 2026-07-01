@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { AlertCircle, Dumbbell, Loader2, Search, SlidersHorizontal, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -55,21 +55,18 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAd
   const { data: totalCount } = useExercisesCount(queryFilters);
   const exercises = useMemo(() => data?.pages.flat() ?? [], [data]);
 
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el || !hasNextPage) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting && !isFetchingNextPage) {
-          fetchNextPage();
-        }
-      },
-      { rootMargin: "300px" }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, exercises.length]);
+  // Load-more preko onScroll na STVARNOM scroll kontejneru. Pouzdanije u WKWebView od
+  // IntersectionObserver-a sa root:null: lista skroluje UNUTAR div-a (ne viewport), pa je
+  // observer okidao pogresno / prestajao unutar grupe. Guard: samo kad ima jos i nije u toku
+  // (React Query dedupe-uje fetchNextPage, a isFetchingNextPage se sam vrati na false).
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el || !hasNextPage || isFetchingNextPage) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 300) {
+      fetchNextPage();
+    }
+  };
 
   const { isBookmarked, toggle: toggleBookmark } = useExerciseBookmarks();
 
@@ -162,8 +159,8 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAd
         {/* Muscle strip */}
         <MuscleGroupStrip active={muscle} onChange={setMuscle} />
 
-        {/* Scroll area */}
-        <div className="flex-1 min-h-0 overflow-y-auto">
+        {/* Scroll area (stvarni scroll container - load-more se racuna odavde) */}
+        <div ref={scrollRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto">
           {/* Section title */}
           <div className="px-5 py-3 flex items-center justify-between">
             <h3 className="font-display text-base font-bold tracking-tighter truncate">
@@ -244,7 +241,7 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAd
           </div>
 
           {hasNextPage && !isError && (
-            <div ref={sentinelRef} className="h-10 flex items-center justify-center">
+            <div className="h-10 flex items-center justify-center">
               {isFetchingNextPage && (
                 <Loader2 size={18} className="animate-spin text-muted-foreground" />
               )}
