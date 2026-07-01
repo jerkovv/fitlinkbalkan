@@ -86,6 +86,9 @@ struct ContentView: View {
     @State private var isLoading: Bool = false
     // Pokretanje treninga sa sata: sheet sa listom programa/dana (samo iz idle stanja).
     @State private var showWorkoutPicker: Bool = false
+    // Watch-start prelaz: true od watch_start_workout success do prvog aktivnog poll-a, da se
+    // ne vidi blik na idle "Pokreni trening" dok poll ne vrati aktivan trening.
+    @State private var isStarting: Bool = false
     @State private var connectionError: String?
     // Indikator veze vodjen ISHODOM RPC-a (ne poseban network monitor): stvaran
     // uspeh/neuspeh poziva je pravi signal "mogu li da posaljem akciju".
@@ -142,8 +145,14 @@ struct ContentView: View {
         Group {
             switch currentState {
             case .idle:
-                idleView
-                
+                // Aktivan trening ima prioritet (activeWorkout/rest granice ispod). Dok traje
+                // watch-start (isStarting) prikazi "Pokrecem..." umesto idle-a da nema blika.
+                if isStarting {
+                    startingView
+                } else {
+                    idleView
+                }
+
             case .activeWorkout:
                 // Swipe: glavni (dense) ekran + bogat zonski ekran levo/desno.
                 TabView {
@@ -239,8 +248,39 @@ struct ContentView: View {
             realtimeClient.disconnect()
             stopHealthKitWorkout()
         }
+        // Sheet je na STABILNOM body Group-u (ne na idleView), da zamena idle -> "Pokrecem..."
+        // ekrana ne "otkaci" sheet usred zatvaranja.
+        .sheet(isPresented: $showWorkoutPicker) {
+            WorkoutPickerView(
+                token: effectiveToken ?? "",
+                onStarted: {
+                    // B1: odmah "pokrecem" da se izbegne blik na idle "Pokreni trening" izmedju
+                    // zatvaranja sheet-a i prvog aktivnog poll-a. Gasi se u applyServerState (B3).
+                    isStarting = true
+
+                    // Watch-start: pokreni HealthKit workout ODMAH, PRE zatvaranja sheet-a i
+                    // poll-a. Oslanjanje samo na poll->applyServerState (kao na phone-start putu)
+                    // ovde NE uhvati puls (u praksi 0 tacaka): poll okine startWorkoutSession
+                    // usred tranzicije zatvaranja sheet-a pa HR kolekcija ne krene, a isWorkoutActive
+                    // se ipak postavi -> naredni pozivi rano izlaze. Startovanjem PRVO, u stabilnom
+                    // frontmost stanju, HKWorkoutSession sigurno krene i HR se skuplja.
+                    // startHealthKitWorkout je idempotentan (isWorkoutActive guard), pa kasniji
+                    // poll->applyServerState samo preuzme UI, bez duplog starta. Stanje i dalje
+                    // gradi poll (ne rucno).
+                    startHealthKitWorkout()
+                    showWorkoutPicker = false
+                    realtimeClient.forceRefresh()
+
+                    // B3: safety - ako start ne uspe (npr nema veze), ne ostavi korisnika
+                    // zaglavljenog na spinneru; posle ~8s vrati na idle.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 8) {
+                        isStarting = false
+                    }
+                }
+            )
+        }
     }
-    
+
     // MARK: - Idle screen
     private var idleView: some View {
         ZStack {
@@ -327,27 +367,32 @@ struct ContentView: View {
             .padding(.horizontal, 8)
             .padding(.bottom, 6)
         }
-        .sheet(isPresented: $showWorkoutPicker) {
-            WorkoutPickerView(
-                token: effectiveToken ?? "",
-                onStarted: {
-                    // Watch-start: pokreni HealthKit workout ODMAH, PRE zatvaranja sheet-a i
-                    // poll-a. Oslanjanje samo na poll->applyServerState (kao na phone-start putu)
-                    // ovde NE uhvati puls (u praksi 0 tacaka): poll okine startWorkoutSession
-                    // usred tranzicije zatvaranja sheet-a pa HR kolekcija ne krene, a isWorkoutActive
-                    // se ipak postavi -> naredni pozivi rano izlaze. Startovanjem PRVO, u stabilnom
-                    // frontmost stanju, HKWorkoutSession sigurno krene i HR se skuplja.
-                    // startHealthKitWorkout je idempotentan (isWorkoutActive guard), pa kasniji
-                    // poll->applyServerState samo preuzme UI, bez duplog starta. Stanje i dalje
-                    // gradi poll (ne rucno).
-                    startHealthKitWorkout()
-                    showWorkoutPicker = false
-                    realtimeClient.forceRefresh()
-                }
+    }
+
+    // MARK: - Watch-start prelazni ekran ("Pokrecem...")
+    private var startingView: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            RadialGradient(
+                colors: [Color.brandViolet.opacity(0.18), Color.clear],
+                center: .center,
+                startRadius: 0,
+                endRadius: 120
             )
+            .ignoresSafeArea()
+
+            VStack(spacing: 12) {
+                ProgressView()
+                    .scaleEffect(1.1)
+                    .tint(.white)
+                Text("Pokrećem...")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
+            }
         }
     }
-    
+
     // MARK: - Completed screen
     private var completedView: some View {
         ZStack {
@@ -1451,6 +1496,7 @@ struct ContentView: View {
         case "active":
             restEndsAt = nil
             currentState = .activeWorkout
+            isStarting = false   // B3: aktivan trening stigao -> gasi watch-start prelaz
             startHealthKitWorkout()
 
         case "rest":
@@ -1458,6 +1504,7 @@ struct ContentView: View {
             // da +30 sa telefona odmah produzi tajmer na satu. null = nema tajmera.
             restEndsAt = restEndsAtMs.map { Date(timeIntervalSince1970: $0 / 1000.0) }
             currentState = .rest
+            isStarting = false   // B3: aktivan trening stigao -> gasi watch-start prelaz
             startHealthKitWorkout()
 
         case "completed":
