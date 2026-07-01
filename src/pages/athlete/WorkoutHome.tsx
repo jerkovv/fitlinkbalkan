@@ -99,43 +99,77 @@ const WorkoutHome = () => {
       if (!sessionId || !dayId) return;
       if (hasEnteredWorkout(sessionId)) return;
       markWorkoutEntered(sessionId);
+      console.log(`[autoenter] navigating day=${dayId}`);
       nav(`/vezbac/trening/${dayId}`);
     },
     [nav],
   );
 
-  // A1: jedna funkcija - nadji aktivnu sesiju ovog sportiste i udji (idempotentno preko
-  // deljenog "entered" seta). Zove se sa: mount, visibilitychange, i realtime live_state.
+  // KORAK 2: nadji aktivnu sesiju ovog sportiste i udji (idempotentno preko deljenog "entered"
+  // seta). Auth user se uzima SVEZE (supabase.auth.getUser) - mount moze da se izvrsi PRE nego
+  // auth vrati sesiju, pa bi upit sa praznim user-om vratio nista i vise se ne bi ponovio.
+  // Zato NE zavisi od `user` iz konteksta -> stabilan callback (poll/pretplate se ne recreate).
   const enterActiveSessionIfAny = useCallback(async () => {
-    if (!user) return;
+    if (!aliveRef.current) return;
+    const { data: authData } = await supabase.auth.getUser();
+    const uid = authData?.user?.id ?? null;
+    if (!aliveRef.current) return;
+    if (!uid) {
+      console.log("[autoenter] check user=null found=none");
+      return;
+    }
     const { data } = await supabase
       .from("workout_session_logs")
       .select("id, day_id")
-      .eq("athlete_id", user.id)
+      .eq("athlete_id", uid)
       .eq("is_active", true)
       .is("completed_at", null)
       .order("started_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+    if (!aliveRef.current) return;
     const row = data as any;
+    console.log(`[autoenter] check user=${uid} found=${row?.id ?? "none"}`);
     if (row?.id && row?.day_id) enterActive(row.id, row.day_id);
-  }, [user, enterActive]);
+  }, [enterActive]);
 
-  // Mount + povratak u prvi plan (sat je pokrenuo dok je app bio zatvoren / u pozadini -
-  // realtime tada ne isporucuje propusteni dogadjaj).
+  // Mount marker + prva provera.
   useEffect(() => {
+    console.log("[autoenter] home mounted");
     enterActiveSessionIfAny();
-    const onVis = () => {
-      if (document.visibilityState === "visible") enterActiveSessionIfAny();
-    };
-    document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
   }, [enterActiveSessionIfAny]);
 
-  // A2: realtime na workout_live_state - dobija event i na SVEZ start (INSERT) i na RESUME
-  // (UPDATE). Resume (_start_workout_session za vec aktivan dan) ne dira workout_session_logs,
-  // pa bi njena pretplata propustila resume. Heartbeat/pozicija update-i za sesiju u koju smo
-  // VEC usli preskacu se bez upita (guard kroz "entered" set).
+  // KORAK 3: poll na 3s dok je home mount-ovan I vidljiv - hvata aktivnu sesiju nezavisno od
+  // realtime-a i auth tajminga. Interval se gasi na unmount i kad se home sakrije; na povratak
+  // u vidljivo -> odmah jedna provera + (re)start intervala.
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const stop = () => {
+      if (interval != null) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+    const sync = () => {
+      if (document.visibilityState === "visible") {
+        enterActiveSessionIfAny();
+        if (interval == null) {
+          interval = setInterval(() => { enterActiveSessionIfAny(); }, 3000);
+        }
+      } else {
+        stop();
+      }
+    };
+    sync();
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      document.removeEventListener("visibilitychange", sync);
+      stop();
+    };
+  }, [enterActiveSessionIfAny]);
+
+  // KORAK 4: realtime na workout_live_state - svez start (INSERT) i resume (UPDATE) okinu istu
+  // proveru. Heartbeat/pozicija update-i za sesiju u koju smo VEC usli preskacu se bez upita.
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -150,7 +184,7 @@ const WorkoutHome = () => {
         },
         (payload) => {
           const sid = (payload.new as any)?.session_log_id as string | undefined;
-          if (!sid || hasEnteredWorkout(sid)) return;
+          if (sid && hasEnteredWorkout(sid)) return;
           enterActiveSessionIfAny();
         },
       )
