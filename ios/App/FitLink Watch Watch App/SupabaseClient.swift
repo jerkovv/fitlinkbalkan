@@ -182,9 +182,12 @@ struct WatchProgram: Codable {
     let id: String
     let name: String
     let currentDay: Int?
+    // Pravi sledeci trening (isto kao telefon) - koristi se za "nastavi" isticanje.
+    let nextDayNumber: Int?
     enum CodingKeys: String, CodingKey {
         case id, name
         case currentDay = "current_day"
+        case nextDayNumber = "next_day_number"
     }
 }
 

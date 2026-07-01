@@ -97,7 +97,7 @@ struct WorkoutPickerView: View {
     }
 
     private func dayRow(program: WatchProgram, day: WatchWorkoutDay) -> some View {
-        let isCurrent = program.currentDay == day.dayNumber
+        let isNext = program.nextDayNumber == day.dayNumber
         let isStarting = startingDayId == day.dayId
         return Button(action: { Task { await start(program: program, day: day) } }) {
             HStack(spacing: 8) {
@@ -114,7 +114,7 @@ struct WorkoutPickerView: View {
                 Spacer(minLength: 4)
                 if isStarting {
                     ProgressView().scaleEffect(0.6).tint(.white)
-                } else if isCurrent {
+                } else if isNext {
                     Text("nastavi")
                         .font(.system(size: 9, weight: .heavy))
                         .tracking(0.4)
@@ -128,11 +128,11 @@ struct WorkoutPickerView: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 10)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(isCurrent ? Color.brandViolet.opacity(0.18) : Color.white.opacity(0.06))
+            .background(isNext ? Color.brandViolet.opacity(0.18) : Color.white.opacity(0.06))
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(isCurrent ? Color.brandViolet.opacity(0.5) : Color.clear, lineWidth: 1)
+                    .stroke(isNext ? Color.brandViolet.opacity(0.5) : Color.clear, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
