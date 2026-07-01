@@ -331,8 +331,16 @@ struct ContentView: View {
             WorkoutPickerView(
                 token: effectiveToken ?? "",
                 onStarted: {
-                    // NE gradi stanje rucno: zatvori sheet pa forsiraj poll - novu sesiju
-                    // preuzima postojeci tok aktivnog treninga (applyServerState + plan).
+                    // Watch-start: pokreni HealthKit workout ODMAH, PRE zatvaranja sheet-a i
+                    // poll-a. Oslanjanje samo na poll->applyServerState (kao na phone-start putu)
+                    // ovde NE uhvati puls (u praksi 0 tacaka): poll okine startWorkoutSession
+                    // usred tranzicije zatvaranja sheet-a pa HR kolekcija ne krene, a isWorkoutActive
+                    // se ipak postavi -> naredni pozivi rano izlaze. Startovanjem PRVO, u stabilnom
+                    // frontmost stanju, HKWorkoutSession sigurno krene i HR se skuplja.
+                    // startHealthKitWorkout je idempotentan (isWorkoutActive guard), pa kasniji
+                    // poll->applyServerState samo preuzme UI, bez duplog starta. Stanje i dalje
+                    // gradi poll (ne rucno).
+                    startHealthKitWorkout()
                     showWorkoutPicker = false
                     realtimeClient.forceRefresh()
                 }
