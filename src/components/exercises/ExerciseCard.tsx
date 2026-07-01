@@ -3,6 +3,7 @@ import { Bookmark, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MUSCLE_LABELS, type MuscleGroupId } from "@/lib/muscleGroups";
 import { MuscleGroupIcon } from "./MuscleGroupIcon";
+import { muscleIcon } from "@/lib/muscleIcons";
 
 export type PickerExercise = {
   id: string;
@@ -54,6 +55,7 @@ export const ExerciseCard = ({
     MUSCLE_LABELS[exercise.primary_muscle] ||
     exercise.primary_muscle;
   const showImage = !!exercise.thumbnail_url && !imgFailed;
+  const mIcon = muscleIcon(exercise.primary_muscle);
 
   if (variant === "row") {
     return (
@@ -79,6 +81,9 @@ export const ExerciseCard = ({
             <Placeholder muscle={exercise.primary_muscle} />
           )}
         </div>
+        {mIcon && (
+          <img src={mIcon} alt="" className="h-8 w-8 rounded-full shrink-0" />
+        )}
         <div className="flex-1 min-w-0 text-left">
           <div className="text-sm font-semibold tracking-tight line-clamp-1">
             {primaryName}
@@ -144,8 +149,13 @@ export const ExerciseCard = ({
         )}
       </div>
       <div className="p-3 space-y-1">
-        <div className="text-sm font-semibold tracking-tight line-clamp-2 leading-snug">
-          {exercise.name}
+        <div className="flex items-start gap-2">
+          {mIcon && (
+            <img src={mIcon} alt="" className="h-8 w-8 rounded-full shrink-0" />
+          )}
+          <div className="flex-1 min-w-0 text-sm font-semibold tracking-tight line-clamp-2 leading-snug">
+            {exercise.name}
+          </div>
         </div>
         {exercise.name_en && (
           <div className="text-xs text-muted-foreground line-clamp-1">

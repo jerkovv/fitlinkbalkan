@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { ExercisePickerSheet } from "@/components/exercises/ExercisePickerSheet";
+import { muscleIcon } from "@/lib/muscleIcons";
 
 type Day = { id: string; day_number: number; name: string; notes: string | null };
 type Exercise = {
@@ -387,6 +388,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                       const advanced = !!advancedByEx[ex.id];
                       const name = ex.exercises?.name_en?.trim() || ex.exercises?.name || "—";
                       const thumb = ex.exercises?.thumbnail_url;
+                      const mIcon = muscleIcon(ex.exercises?.primary_muscle);
                       const setCount = rows.length || ex.sets;
                       const summary = isDuration
                         ? (ex.duration_minutes != null ? `${ex.duration_minutes} min` : "Trajanje")
@@ -406,6 +408,9 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                                 <div className="h-12 w-12 rounded-lg bg-surface-2 flex items-center justify-center shrink-0">
                                   <Dumbbell className="h-5 w-5 text-muted-foreground/60" />
                                 </div>
+                              )}
+                              {mIcon && (
+                                <img src={mIcon} alt="" className="h-8 w-8 rounded-full shrink-0" />
                               )}
                               <div className="flex-1 min-w-0">
                                 <div className="font-display font-semibold text-sm truncate">{name}</div>
