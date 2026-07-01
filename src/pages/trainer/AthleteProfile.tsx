@@ -661,22 +661,27 @@ const AthleteProfile = () => {
             <div className="text-[13px] text-muted-foreground">
               Pridružen {new Date(athlete.joined_at).toLocaleDateString("sr-Latn-RS")}
             </div>
-            {athleteEmail && (
-              <div className="flex items-center gap-1.5 mt-1 text-[13px] text-muted-foreground min-w-0">
-                <Mail className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
-                <span className="truncate">{athleteEmail}</span>
-                <button
-                  type="button"
-                  onClick={copyEmail}
-                  className="shrink-0 p-1 -m-1 rounded-md hover:text-foreground transition active:scale-90"
-                  aria-label="Kopiraj email"
-                >
-                  <Copy className="h-3.5 w-3.5" strokeWidth={2} />
-                </button>
-              </div>
-            )}
           </div>
         </div>
+
+        {/* Email - zaseban red pune sirine (ne u uskoj koloni pored avatara). Tekst uzima svu
+            sirinu i PRELAMA se ako je dug (nikad iza "..."); copy uvek kopira ceo email. */}
+        {athleteEmail && (
+          <div className="mt-4 flex items-center gap-2 rounded-2xl bg-surface/70 backdrop-blur border border-hairline px-3 py-2.5">
+            <Mail className="h-4 w-4 text-primary shrink-0" strokeWidth={2} />
+            <span className="flex-1 min-w-0 text-[13px] leading-snug text-foreground break-all">
+              {athleteEmail}
+            </span>
+            <button
+              type="button"
+              onClick={copyEmail}
+              className="shrink-0 h-8 w-8 -mr-1 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-primary hover:bg-primary-soft transition active:scale-90"
+              aria-label="Kopiraj email"
+            >
+              <Copy className="h-4 w-4" strokeWidth={2} />
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-3 gap-2 mt-5">
           <button className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-surface/80 backdrop-blur hover:bg-surface transition">
