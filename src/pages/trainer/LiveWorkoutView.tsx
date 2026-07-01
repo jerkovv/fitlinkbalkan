@@ -9,6 +9,11 @@ import { WatchSlash } from "@/components/trainer/WatchSlash";
 import { getHrColor, getZoneVar } from "@/lib/workout/hrZone";
 import { isHrLive } from "@/lib/liveWorkout";
 
+// Grace period za "sat povezan" status u detaljnom prikazu (protiv treperenja "Sat nije
+// povezan"). Duze od HR_FRESH_SECONDS (15s) - jedan propusten update ili prazan trenutak pri
+// realtime re-subscribe ne sme da flipuje status.
+const WATCH_GRACE_MS = 40000;
+
 type LiveState = {
   session_log_id: string;
   athlete_id: string;
@@ -94,6 +99,8 @@ const LiveWorkoutView = () => {
   const [ended, setEnded] = useState(false);
 
   const lastHrFetchRef = useRef(0);
+  // Klijentsko vreme poslednjeg SERVER-SVEZEG watch_last_hr_at (za grace period statusa sata).
+  const lastWatchFreshRef = useRef(0);
 
   // Fetch athlete name
   useEffect(() => {
@@ -212,6 +219,15 @@ const LiveWorkoutView = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [athleteId]);
 
+  // Zabelezi klijentsko vreme svakog SERVER-SVEZEG watch_last_hr_at. Oslanjamo se na taj
+  // timestamp (ne na trenutni event) - kad realtime re-subscribe napravi prazan trenutak
+  // (state null / bez svezeg watch_last_hr_at) status ostaje "povezan" dok grace ne istekne.
+  useEffect(() => {
+    if (isHrLive(state?.watch_last_hr_at ?? null)) {
+      lastWatchFreshRef.current = Date.now();
+    }
+  }, [state?.watch_last_hr_at]);
+
   const elapsedMs = useMemo(() => {
     if (!session?.started_at) return 0;
     return now - new Date(session.started_at).getTime();
@@ -264,9 +280,12 @@ const LiveWorkoutView = () => {
   }
 
   const hr = state?.current_hr ?? null;
-  // Prag svezine (deljen sa listom): puls se prikazuje samo ako ga je sat osvezio u
-  // poslednjih HR_FRESH_SECONDS. `now` tika 1s pa se gejt re-evaluira i bez novog fetch-a.
-  const hrLive = isHrLive(state?.watch_last_hr_at ?? null);
+  // "Sat povezan" sa grace periodom (protiv treperenja "Sat nije povezan"): svez SADA
+  // (server prag) ILI svez u poslednjih WATCH_GRACE_MS (klijentsko vreme). `now` tika 1s pa
+  // se re-evaluira bez novog fetch-a; status pada tek kad grace istekne.
+  const watchConnected =
+    isHrLive(state?.watch_last_hr_at ?? null) ||
+    (lastWatchFreshRef.current > 0 && now - lastWatchFreshRef.current <= WATCH_GRACE_MS);
   // Boja iz FitLink rampe (brand tokeni) kad imamo serversku zonu; inace
   // fallback na puls-baziranu boju. Bez hardkodiranog hex-a.
   const zoneVar = getZoneVar(hrZone);
@@ -414,7 +433,7 @@ const LiveWorkoutView = () => {
             className="card-premium p-5 transition-colors"
             style={{ background: hrColorSoft }}
           >
-            {hrLive ? (
+            {watchConnected ? (
             <div className="grid grid-cols-2 gap-4">
               {/* PULS */}
               <div className="flex flex-col gap-1.5">
@@ -423,16 +442,16 @@ const LiveWorkoutView = () => {
                     className="h-4 w-4"
                     strokeWidth={2.4}
                     fill="currentColor"
-                    style={{ color: hr != null && hr > 0 && hrLive ? hrColor : "hsl(var(--muted-foreground))" }}
+                    style={{ color: hr != null && hr > 0 && watchConnected ? hrColor : "hsl(var(--muted-foreground))" }}
                   />
                   Puls
                 </div>
                 <div className="flex items-baseline gap-1">
                   <span
                     className="font-display text-4xl font-bold tracking-tightest leading-none tnum"
-                    style={{ color: hr != null && hr > 0 && hrLive ? hrColor : "hsl(var(--muted-foreground))" }}
+                    style={{ color: hr != null && hr > 0 && watchConnected ? hrColor : "hsl(var(--muted-foreground))" }}
                   >
-                    {hr != null && hr > 0 && hrLive ? hr : "-"}
+                    {hr != null && hr > 0 && watchConnected ? hr : "-"}
                   </span>
                   <span className="text-sm font-semibold text-muted-foreground">bpm</span>
                 </div>
@@ -470,7 +489,7 @@ const LiveWorkoutView = () => {
           </div>
 
           {/* HR mini chart - sakriven kad nema sata (stanje iznad ga pokriva) */}
-          {hrLive && <HrMiniChart points={(session.hr_series as any) ?? []} />}
+          {watchConnected && <HrMiniChart points={(session.hr_series as any) ?? []} />}
 
           {/* Quick messages */}
           <Card className="p-4">
