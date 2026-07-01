@@ -4,7 +4,7 @@ import { PhoneShell } from "@/components/PhoneShell";
 import { AthleteOnboardingTour } from "@/components/AthleteOnboardingTour";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui-bits";
-import { Loader2, Play, Dumbbell, History, CalendarDays, Flame, AlertTriangle, RefreshCw, Lock, Zap } from "lucide-react";
+import { Loader2, Play, Dumbbell, History, CalendarDays, Flame, AlertTriangle, RefreshCw, Lock, Zap, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
@@ -190,12 +190,13 @@ const WorkoutHome = () => {
           </Card>
         )}
 
-        {/* Sekundarno: slobodan trening bez plana (samo puls, kalorije, vreme, zone) */}
+        {/* Sekundarno: slobodan trening bez plana. Jasno tappable (violet akcenat + chevron
+            desno + pressed feedback), ali lakse od glavnog gradient CTA "Pocni trening". */}
         {!loading && (
           <button
             onClick={guard(startFreeWorkout)}
             disabled={startingFree}
-            className="w-full flex items-center gap-3 rounded-2xl border border-hairline bg-surface px-4 py-3.5 text-left transition active:scale-[0.99] disabled:opacity-60"
+            className="w-full flex items-center gap-3 rounded-2xl border border-primary/30 bg-surface px-4 py-3.5 text-left transition active:scale-[0.98] active:bg-surface-2 disabled:opacity-60"
           >
             <div className="h-10 w-10 rounded-2xl bg-gradient-brand-soft text-primary flex items-center justify-center shrink-0">
               {startingFree ? (
@@ -212,6 +213,7 @@ const WorkoutHome = () => {
                 Bez plana - samo puls, kalorije i vreme
               </div>
             </div>
+            <ChevronRight className="h-5 w-5 text-primary shrink-0" strokeWidth={2.25} />
           </button>
         )}
 

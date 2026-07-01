@@ -1,25 +1,48 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Heart, Loader2, Check, Dumbbell } from "lucide-react";
+import { Heart, Loader2, Check, Dumbbell, Flame } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 import { formatHMS } from "@/lib/time";
-import { getHrColor } from "@/lib/workout/hrZone";
 import { isHrLive } from "@/lib/liveWorkout";
+import { ZONE_DEFS } from "@/lib/wearable/hrZones";
 import { cn } from "@/lib/utils";
 
-// Slobodan trening (bez plana): samo timer + zivi puls + Zavrsi. Sesija ima day_id = null.
-// Live HR = ISTI izvor kao ActiveWorkout (workout_live_state.current_hr preko realtime-a);
-// finalize = ISTI complete_workout_session RPC. Bez vezbi/serija (volumen 0 na rezimeu).
+// Slobodan trening (bez plana): zivi dashboard u Apple stilu - trajanje, puls (+ zona),
+// kalorije, prosecan/max puls. Sesija ima day_id = null. Live HR/kalorije = ISTI realtime
+// red workout_live_state (current_hr / current_active_calories); finalize = ISTI
+// complete_workout_session RPC. Bez vezbi/serija (volumen 0 na rezimeu).
 type HRPoint = { ts: string; bpm: number };
+
+// Nazivi zona za zivi ekran (task-spec). Boje se uzimaju iz ZONE_DEFS po BROJU zone da se
+// poklope sa finish ekranom (HRZonesChart koristi iste ZONE_DEFS boje po broju zone).
+const ZONE_NAMES: Record<number, string> = {
+  1: "Zagrevanje",
+  2: "Lagano",
+  3: "Umereno",
+  4: "Naporno",
+  5: "Maksimalno",
+};
+const zoneColorFor = (zone: number): string | undefined =>
+  ZONE_DEFS.find((z) => z.zone === zone)?.color;
+
+// Zona 1-5 iz procenta max pulsa (identicno bazi): <60/70/80/90/100+.
+const computeZone = (hr: number, maxHr: number): number => {
+  const pct = hr / maxHr;
+  return pct < 0.6 ? 1 : pct < 0.7 ? 2 : pct < 0.8 ? 3 : pct < 0.9 ? 4 : 5;
+};
 
 const AthleteFreeWorkout = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
+  const { user } = useAuth();
   const nav = useNavigate();
 
   const [startedAtMs, setStartedAtMs] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
   const [watchHr, setWatchHr] = useState<number | null>(null);
   const [watchLastHrAt, setWatchLastHrAt] = useState<string | null>(null);
+  const [activeCalories, setActiveCalories] = useState<number | null>(null);
+  const [maxHr, setMaxHr] = useState<number | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
@@ -55,13 +78,33 @@ const AthleteFreeWorkout = () => {
     return () => { cancelled = true; };
   }, [sessionId, goToSummary]);
 
-  // 2) Timer tik 1s.
+  // 2) Timer tik 1s (ujedno okida re-render za osvezavanje zive zone / avg-max iz serije).
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
 
-  // 3) Live HR (workout_live_state.current_hr) + detekcija kraja - realtime + poll fallback
+  // 3) Efektivni max puls vezbaca (za zonu) - JEDNOM na mount. Ako null -> ne prikazuj zonu.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let uid = user?.id ?? null;
+      if (!uid) {
+        const { data: authData } = await supabase.auth.getUser();
+        uid = authData?.user?.id ?? null;
+      }
+      if (!uid || cancelled) return;
+      const { data, error } = await supabase.rpc("athlete_effective_max_hr", {
+        p_athlete_id: uid,
+      } as any);
+      if (cancelled || error) return;
+      const v = typeof data === "number" ? data : Number(data);
+      if (Number.isFinite(v) && v > 0) setMaxHr(v);
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
+
+  // 4) Live HR + kalorije (workout_live_state) + detekcija kraja - realtime + poll fallback
   //    (WKWebView realtime zna da prekine, pa poll na 2.5s garantuje osvezavanje).
   useEffect(() => {
     if (!sessionId) return;
@@ -75,7 +118,19 @@ const AthleteFreeWorkout = () => {
         setWatchHr(chr);
         hrSeriesRef.current.push({ ts: new Date().toISOString(), bpm: chr });
       }
+      const cal = row.current_active_calories;
+      if (typeof cal === "number") setActiveCalories(cal);
       if (row.current_state === "completed") goToSummary();
+    };
+
+    const fetchLive = async () => {
+      if (cancelled || finishedRef.current) return;
+      const { data } = await supabase
+        .from("workout_live_state")
+        .select("current_hr, current_active_calories, watch_last_hr_at, current_state")
+        .eq("session_log_id", sessionId)
+        .maybeSingle();
+      if (data) applyLive(data);
     };
 
     const liveChan = supabase
@@ -99,15 +154,8 @@ const AthleteFreeWorkout = () => {
       )
       .subscribe();
 
-    const poll = setInterval(async () => {
-      if (cancelled || finishedRef.current) return;
-      const { data } = await supabase
-        .from("workout_live_state")
-        .select("current_hr, watch_last_hr_at, current_state")
-        .eq("session_log_id", sessionId)
-        .maybeSingle();
-      if (data) applyLive(data);
-    }, 2500);
+    fetchLive(); // inicijalni fetch (puls/kalorije odmah, bez cekanja prvog polla)
+    const poll = setInterval(fetchLive, 2500);
 
     return () => {
       cancelled = true;
@@ -117,7 +165,7 @@ const AthleteFreeWorkout = () => {
     };
   }, [sessionId, goToSummary]);
 
-  // 4) Zavrsi: ISTA finalize logika kao ActiveWorkout (complete_workout_session sa HR
+  // 5) Zavrsi: ISTA finalize logika kao ActiveWorkout (complete_workout_session sa HR
   //    statistikom + serijom), pa navigacija na rezime. Idempotentno + timeout.
   const finish = useCallback(async () => {
     if (!sessionId || finishing || finishedRef.current) return;
@@ -173,14 +221,24 @@ const AthleteFreeWorkout = () => {
   }
 
   const elapsedS = Math.max(0, Math.floor((now - startedAtMs) / 1000));
+
+  // Puls: samo kad je svez (isHrLive). Zona: samo kad ima pulsa i max pulsa.
   const live = isHrLive(watchLastHrAt);
-  const hr = live ? watchHr : null;
+  const hr = live && watchHr && watchHr > 0 ? watchHr : null;
+  const zoneNum = hr && maxHr && maxHr > 0 ? computeZone(hr, maxHr) : null;
+  const zoneName = zoneNum ? ZONE_NAMES[zoneNum] : null;
+  const zoneCol = zoneNum ? zoneColorFor(zoneNum) : undefined;
+
+  // Prosecan/Max puls iz akumulirane serije (ista koja ide u complete_workout_session).
+  const bpms = hrSeriesRef.current.map((p) => p.bpm).filter((n) => Number.isFinite(n) && n > 0);
+  const hrAvg = bpms.length ? Math.round(bpms.reduce((a, b) => a + b, 0) / bpms.length) : null;
+  const hrPeak = bpms.length ? Math.max(...bpms) : null;
 
   return (
     <div className="h-[100dvh] overflow-y-auto bg-background">
       <div
         className="mx-auto w-full max-w-[440px] min-h-screen flex flex-col px-6"
-        style={{ paddingTop: "calc(max(env(safe-area-inset-top), 20px) + 24px)" }}
+        style={{ paddingTop: "calc(max(env(safe-area-inset-top), 20px) + 20px)" }}
       >
         <div className="text-center">
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
@@ -188,33 +246,74 @@ const AthleteFreeWorkout = () => {
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center gap-10">
-          {/* Timer */}
+        {/* Zivi dashboard (Apple stil): trajanje -> puls+zona -> kalorije -> avg/max */}
+        <div className="flex-1 flex flex-col items-center justify-center gap-7 py-6">
+          {/* Trajanje (hero) */}
           <div className="text-center">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground mb-2">
+              Trajanje
+            </div>
             <div className="font-display text-[64px] font-bold tracking-tightest tnum leading-none">
               {formatHMS(elapsedS)}
             </div>
-            <div className="text-[11px] text-muted-foreground uppercase tracking-[0.16em] mt-2.5">
-              Trajanje
-            </div>
           </div>
 
-          {/* Zivi puls (isti izvor kao ActiveWorkout header) */}
-          <div
-            className="inline-flex items-center gap-2.5 h-14 px-6 rounded-full bg-surface border border-hairline"
-            style={{ color: hr && hr > 0 ? getHrColor(hr) : undefined }}
-            aria-label="Trenutni puls"
-          >
-            <Heart
-              className={cn("h-6 w-6", hr && hr > 0 && "animate-pulse")}
-              strokeWidth={2.4}
-              fill={hr && hr > 0 ? "currentColor" : "none"}
-            />
-            <span className="font-display text-[32px] font-bold tnum leading-none">
-              {hr && hr > 0 ? hr : "-"}
-            </span>
-            <span className="text-[14px] font-semibold text-muted-foreground">bpm</span>
+          {/* Puls (trenutni) + zona */}
+          <div className="flex flex-col items-center gap-2">
+            <div
+              className="inline-flex items-end gap-2.5"
+              style={{ color: zoneCol }}
+              aria-label="Trenutni puls"
+            >
+              <Heart
+                className={cn("h-8 w-8 mb-1.5", hr && "animate-pulse")}
+                strokeWidth={2.4}
+                fill={hr ? "currentColor" : "none"}
+              />
+              <span className="font-display text-[54px] font-bold tnum leading-none">
+                {hr ?? "-"}
+              </span>
+              <span className="text-[15px] font-semibold text-muted-foreground mb-2">bpm</span>
+            </div>
+            {zoneName && (
+              <div className="text-[15px] font-bold leading-none" style={{ color: zoneCol }}>
+                {zoneName}
+              </div>
+            )}
+            {/* 5-segmentni zona bar: pun rasterni ramp (svaki slot u svojoj zona-boji),
+                neaktivni priguseni, trenutna zona puna - citljivo i na svetloj pozadini. */}
+            {zoneNum && (
+              <div className="flex items-center gap-1 mt-0.5">
+                {[1, 2, 3, 4, 5].map((z) => (
+                  <span
+                    key={z}
+                    className={cn(
+                      "h-1.5 w-7 rounded-full transition-all",
+                      z !== zoneNum && "opacity-40",
+                    )}
+                    style={{ background: zoneColorFor(z) }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
+
+          {/* Kalorije (0 ako jos nema) */}
+          <div className="inline-flex items-center gap-2 h-12 px-5 rounded-full bg-surface border border-hairline">
+            <Flame className="h-5 w-5" style={{ color: "hsl(24 90% 55%)" }} fill="currentColor" strokeWidth={2} />
+            <span className="font-display text-[22px] font-bold tnum leading-none">
+              {Math.round(activeCalories ?? 0)}
+            </span>
+            <span className="text-[13px] font-semibold text-muted-foreground">kcal</span>
+          </div>
+
+          {/* Prosecan / Max puls (iz serije; sakriveno dok nema podataka) */}
+          {hrAvg != null && (
+            <div className="grid grid-cols-2 gap-3 w-full max-w-[300px]">
+              <MiniTile label="Prosečan puls" value={`${hrAvg} bpm`} />
+              <MiniTile label="Max puls" value={`${hrPeak} bpm`} />
+            </div>
+          )}
         </div>
 
         {/* Zavrsi */}
@@ -235,5 +334,14 @@ const AthleteFreeWorkout = () => {
     </div>
   );
 };
+
+const MiniTile = ({ label, value }: { label: string; value: string }) => (
+  <div className="rounded-2xl bg-surface border border-hairline px-3 py-2.5 text-center">
+    <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+      {label}
+    </div>
+    <div className="font-display text-[20px] font-bold tnum text-foreground mt-0.5">{value}</div>
+  </div>
+);
 
 export default AthleteFreeWorkout;
