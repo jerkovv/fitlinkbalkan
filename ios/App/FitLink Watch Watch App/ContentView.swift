@@ -101,6 +101,12 @@ struct ContentView: View {
     @State private var currentWorkout: ActiveWorkout = .mock
     @State private var heartRate: Int = 0
 
+    // Slobodan trening (bez plana): lokalni flag + lokalni pocetak za elapsed timer. Aktivan
+    // trening bez vezbe/serija; HR/kalorije i finish idu istim putem kao normalan (currentSessionId).
+    @State private var isFreeWorkout: Bool = false
+    @State private var freeWorkoutStartedAt: Date? = nil
+    @State private var showFreeFinishConfirm: Bool = false
+
     // KORAK B - lokalni model treninga (plan + doneCount po vezbi). Prazno = nema plana
     // -> fallback na server-driven prikaz (kao do sad). Server ostaje autoritet (sync).
     @State private var planExercises: [PlanExercise] = []
@@ -154,20 +160,25 @@ struct ContentView: View {
                 }
 
             case .activeWorkout:
-                // Swipe: glavni (dense) ekran + bogat zonski ekran levo/desno.
-                TabView {
-                    ActiveWorkoutView(
-                        workout: displayedWorkout,
-                        heartRate: $heartRate,
-                        startedAtMs: workoutStartedAtMs,
-                        serverClockOffset: serverClockOffset,
-                        onCompleteSet: handleCompleteSet,
-                        onCompleteCardio: handleCardioComplete,
-                        onFinishWorkout: handleFinishWorkout
-                    )
-                    heartRateZoneView
+                if isFreeWorkout {
+                    // Slobodan trening: samo timer + puls + kalorije + Zavrsi (bez vezbi/serija).
+                    freeWorkoutView
+                } else {
+                    // Swipe: glavni (dense) ekran + bogat zonski ekran levo/desno.
+                    TabView {
+                        ActiveWorkoutView(
+                            workout: displayedWorkout,
+                            heartRate: $heartRate,
+                            startedAtMs: workoutStartedAtMs,
+                            serverClockOffset: serverClockOffset,
+                            onCompleteSet: handleCompleteSet,
+                            onCompleteCardio: handleCardioComplete,
+                            onFinishWorkout: handleFinishWorkout
+                        )
+                        heartRateZoneView
+                    }
+                    .tabViewStyle(.page)
                 }
-                .tabViewStyle(.page)
 
             case .rest:
                 TabView {
@@ -276,8 +287,180 @@ struct ContentView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 8) {
                         isStarting = false
                     }
+                },
+                onStartedFree: { sessionId in
+                    // Slobodan trening: server je napravio sesiju (day_id null). Udji direktno u
+                    // slobodan view (poll ne vodi free jer nema vezbe); currentSessionId je sad
+                    // free sid pa HR petlja i finish rade isto kao za normalan trening.
+                    showWorkoutPicker = false
+                    enterFreeWorkout(sessionId: sessionId, fresh: true)
+                    realtimeClient.forceRefresh()
                 }
             )
+        }
+    }
+
+    // MARK: - Slobodan trening (bez plana)
+
+    // Udji u slobodan trening: postavi tekucu sesiju + lokalni flag + pokreni HealthKit.
+    // Idempotentno (poll/reconnect ga zovu vise puta). fresh == true samo pri startu sa sata.
+    private func enterFreeWorkout(sessionId: String, fresh: Bool) {
+        if isFreeWorkout && currentSessionId == sessionId && currentState == .activeWorkout {
+            return   // vec u ovoj slobodnoj sesiji -> ne diraj (bez suvisnih re-render-a iz poll-a)
+        }
+        // Druga sesija -> ocisti stari lokalni pocetak (spreci stale reuse iz prethodne).
+        if currentSessionId != sessionId { freeWorkoutStartedAt = nil }
+        // Svez start sa sata: tacan lokalni pocetak ODMAH (pre prvog poll-a). Reload/reconnect
+        // (fresh == false) NE stamp-uje - freeTimer tada uzima serverski workoutStartedAtMs (stize
+        // kroz poll onHeartRateZone), pa proteklo vreme prezivi reload umesto reseta na 0:00.
+        if fresh { freeWorkoutStartedAt = Date() }
+        isFreeWorkout = true
+        currentSessionId = sessionId
+        // Nema plana - ocisti lokalni model i spreci povlacenje plana za ovu sesiju.
+        planExercises = []
+        doneCounts = [:]
+        planSessionId = sessionId
+        isStarting = false
+        setConnectionOK(true)
+        currentState = .activeWorkout
+        startHealthKitWorkout()   // HR + kalorije -> currentSessionId (isti put kao normalan)
+    }
+
+    // Elapsed timer format: do 1h -> M:SS; od 1h -> H:MMh (isto kao ActiveWorkoutView).
+    private func freeDurationString(_ elapsed: Int) -> String {
+        if elapsed < 3600 {
+            return String(format: "%d:%02d", elapsed / 60, elapsed % 60)
+        }
+        return String(format: "%d:%02dh", elapsed / 3600, (elapsed % 3600) / 60)
+    }
+
+    private var freeWorkoutView: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            RadialGradient(
+                colors: [Color.brandViolet.opacity(0.18), Color.clear],
+                center: .top, startRadius: 0, endRadius: 120
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: 8) {
+                Text("SLOBODAN TRENING")
+                    .font(.zoneNum(9, .bold))
+                    .tracking(1.4)
+                    .foregroundColor(.textMuted)
+                    .padding(.top, 2)
+
+                Spacer(minLength: 0)
+
+                freeTimer
+                freeHeartRate
+                freeCalories
+
+                Spacer(minLength: 0)
+
+                freeFinishButton
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .padding(.horizontal, 12)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
+        }
+    }
+
+    // Veliki elapsed timer (hero). Tika svake sekunde (Apple-style M:SS). Svez start sa sata ->
+    // lokalni freeWorkoutStartedAt (bez skew-a, odmah). Reload/reconnect -> serverski
+    // workoutStartedAtMs (+ clock offset), koji stize kroz poll, pa proteklo vreme prezivi reload.
+    private var freeTimer: some View {
+        let anchor: Date? = freeWorkoutStartedAt
+            ?? workoutStartedAtMs.map { Date(timeIntervalSince1970: $0 / 1000.0 - serverClockOffset) }
+        return Group {
+            if let start = anchor {
+                TimelineView(.periodic(from: .now, by: 1.0)) { _ in
+                    let elapsed = Int(max(0, Date().timeIntervalSince(start)))
+                    VStack(spacing: 1) {
+                        Text(freeDurationString(elapsed))
+                            .font(.zoneNum(42, .heavy))
+                            .monospacedDigit()
+                            .foregroundColor(.white)
+                            .contentTransition(.numericText())
+                        Text("TRAJANJE")
+                            .font(.zoneNum(9, .bold))
+                            .tracking(1.4)
+                            .foregroundColor(.textMuted)
+                    }
+                }
+            }
+        }
+    }
+
+    // Zivi puls, obojen zonom (isti izvor/boje kao normalan aktivni ekran). Koristi stvarni
+    // max puls vezbaca (hrMax sa servera preko poll onHeartRateZone); 190 fallback dok ne stigne.
+    private var freeHeartRate: some View {
+        let zone = HRZone.zone(for: heartRate, maxHR: hrMax ?? 190)
+        return HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Image(systemName: "heart.fill")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundColor(heartRate > 0 ? zone.color : .textMuted)
+            Text(heartRate > 0 ? "\(heartRate)" : "--")
+                .font(.zoneNum(34, .heavy))
+                .monospacedDigit()
+                .foregroundColor(heartRate > 0 ? zone.color : .textMuted)
+                .contentTransition(.numericText())
+            Text("BPM")
+                .font(.zoneNum(9, .bold))
+                .tracking(1.0)
+                .foregroundColor(.textMuted)
+                .offset(y: -6)
+        }
+    }
+
+    // Aktivne kalorije sa HealthKit-a (0 dok ne stigne). Iste koje se salju serveru.
+    private var freeCalories: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "flame.fill")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(.brandWarning)
+            Text("\(healthKit.activeCalories)")
+                .font(.zoneNum(15, .bold))
+                .monospacedDigit()
+                .foregroundColor(.white)
+            Text("KCAL")
+                .font(.zoneNum(8, .bold))
+                .tracking(0.8)
+                .foregroundColor(.textMuted)
+        }
+    }
+
+    // Zavrsi: potvrda pa ISTI finish kao normalan trening (watch_finish_workout + metrike).
+    private var freeFinishButton: some View {
+        Button(action: {
+            WKInterfaceDevice.current().play(.click)
+            showFreeFinishConfirm = true
+        }) {
+            HStack(spacing: 5) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 13, weight: .bold))
+                Text("Završi")
+                    .font(.zoneNum(14, .semibold))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 9)
+        }
+        .background(LinearGradient.brandGradient)
+        .clipShape(Capsule())
+        .foregroundColor(.white)
+        .buttonStyle(.plain)
+        .shadow(color: Color.brandViolet.opacity(0.4), radius: 6, y: 3)
+        .confirmationDialog(
+            "Završi trening?",
+            isPresented: $showFreeFinishConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Završi trening", role: .destructive) {
+                WKInterfaceDevice.current().play(.success)
+                handleFinishWorkout()
+            }
+            Button("Otkaži", role: .cancel) {}
         }
     }
 
@@ -1104,17 +1287,24 @@ struct ContentView: View {
             print("Watch paired - user: \(context.userId)")
 
             if let serverWorkout = context.activeWorkout {
-                print("Active workout: \(serverWorkout.currentExerciseName) [\(serverWorkout.currentState)]")
-                applyServerState(
-                    sessionId: serverWorkout.sessionId,
-                    exerciseName: serverWorkout.currentExerciseName,
-                    setNumber: serverWorkout.currentSetNumber,
-                    exerciseIdx: serverWorkout.currentExerciseIdx,
-                    totalSets: serverWorkout.totalSets,
-                    state: serverWorkout.currentState,
-                    restEndsAtMs: serverWorkout.restEndsAtMs,
-                    serverNowMs: context.serverNowMs
-                )
+                if let exName = serverWorkout.currentExerciseName,
+                   let setNum = serverWorkout.currentSetNumber {
+                    print("Active workout: \(exName) [\(serverWorkout.currentState)]")
+                    applyServerState(
+                        sessionId: serverWorkout.sessionId,
+                        exerciseName: exName,
+                        setNumber: setNum,
+                        exerciseIdx: serverWorkout.currentExerciseIdx,
+                        totalSets: serverWorkout.totalSets,
+                        state: serverWorkout.currentState,
+                        restEndsAtMs: serverWorkout.restEndsAtMs,
+                        serverNowMs: context.serverNowMs
+                    )
+                } else if serverWorkout.currentState == "active" || serverWorkout.currentState == "rest" {
+                    // Slobodan trening (bez plana): null vezba/serija. Otporno na reload/reconnect.
+                    print("Active FREE workout [\(serverWorkout.currentState)]")
+                    enterFreeWorkout(sessionId: serverWorkout.sessionId, fresh: false)
+                }
             }
 
             realtimeClient.onWorkoutStateChange = { row in
@@ -1201,11 +1391,30 @@ struct ContentView: View {
                 currentState = .idle
                 currentWorkout = .mock
                 lastServerSignature = ""
+                isFreeWorkout = false
+                freeWorkoutStartedAt = nil
             }
         }
     }
     
     private func handleRealtimeUpdate(_ row: WorkoutLiveStateRow) {
+        // Slobodan trening (bez plana): red ima state ali NEMA vezbu/seriju. Postojeci guard
+        // ispod bi ga odbacio, pa ga hvatamo ovde. Udji samo iz idle-a ili ako smo vec u
+        // slobodnom treningu (ne prekidaj normalan trening). Zavrsetak ide kroz HR
+        // session_ended / poll-null putanju (kao i inace).
+        if row.currentExerciseName == nil {
+            if (currentState == .idle || isFreeWorkout),
+               let sid = row.sessionLogId,
+               let state = row.currentState, state == "active" || state == "rest" {
+                // Serverski clock offset -> tacan elapsed timer (prezivi reload; koristi ga freeTimer).
+                if let serverNowMs = row.serverNowMs {
+                    serverClockOffset = Date(timeIntervalSince1970: serverNowMs / 1000.0).timeIntervalSince(Date())
+                }
+                enterFreeWorkout(sessionId: sid, fresh: false)
+            }
+            return
+        }
+
         guard let exerciseName = row.currentExerciseName,
               let setNumber = row.currentSetNumber,
               let totalSets = row.totalSets,
@@ -1442,6 +1651,10 @@ struct ContentView: View {
         isDurationBased: Bool = false,
         durationMinutes: Int? = nil
     ) {
+        // Exercise-driven sesija -> normalan trening (ne slobodan). Ako smo bili u slobodnom,
+        // ovo vraca na normalan exercise/set prikaz.
+        isFreeWorkout = false
+
         // Sloj 0: zapamti zivi session_id da HR keep-alive uvek gadja tacnu sesiju.
         if let sessionId = sessionId {
             if currentSessionId != sessionId {

@@ -283,6 +283,35 @@ final class SupabaseRealtimeClient: ObservableObject {
     }
     
     private func handleWorkoutPolled(_ workout: PolledWorkout, serverNowMs: Double?) {
+        // Slobodan trening (bez plana): red ima state ali NEMA vezbu/seriju. Ne odbacuj ga -
+        // prosledi sa nil vezbom da ContentView udje u slobodan view (npr. pokrenut sa telefona
+        // dok je sat na idle-u). Dedup po sesiji+state da poll ne baljaka svaki tik.
+        if workout.currentExerciseName == nil {
+            guard let sid = workout.sessionId,
+                  let state = workout.currentState,
+                  state == "active" || state == "rest" else { return }
+            let sig = "free|\(sid)|\(state)"
+            if sig == lastWorkoutSignature { return }
+            lastWorkoutSignature = sig
+            print("Poll update: FREE workout [\(state)]")
+            onWorkoutStateChange?(WorkoutLiveStateRow(
+                sessionLogId: sid,
+                athleteId: nil,
+                currentExerciseName: nil,
+                currentSetNumber: nil,
+                currentExerciseIdx: nil,
+                totalSets: nil,
+                currentState: state,
+                currentHr: workout.currentHr,
+                totalCompletedSets: nil,
+                restEndsAtMs: nil,
+                serverNowMs: serverNowMs,
+                isDurationBased: nil,
+                currentDurationMinutes: nil
+            ))
+            return
+        }
+
         guard let exerciseName = workout.currentExerciseName,
               let setNumber = workout.currentSetNumber,
               let totalSets = workout.totalSets,

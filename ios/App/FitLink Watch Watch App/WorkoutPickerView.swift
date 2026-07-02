@@ -14,6 +14,8 @@ struct WorkoutPickerView: View {
     let token: String
     /// Poziva se na uspesan start: parent zatvori sheet + forceRefresh (poll preuzme sesiju).
     let onStarted: () -> Void
+    /// Slobodan trening (bez plana): na uspeh vraca session_id da parent udje u slobodan view.
+    let onStartedFree: (String) -> Void
 
     @Environment(\.dismiss) private var dismiss
 
@@ -21,6 +23,7 @@ struct WorkoutPickerView: View {
     @State private var response: WatchWorkoutsResponse?
     @State private var loadFailed = false
     @State private var startingDayId: String?
+    @State private var startingFree = false
     @State private var startError: String?
 
     var body: some View {
@@ -44,32 +47,18 @@ struct WorkoutPickerView: View {
                 action: { Task { await load() } },
                 actionLabel: "Pokušaj ponovo"
             )
-        } else if let program = response?.program {
-            list(program: program, days: response?.days ?? [])
         } else {
-            // program == null -> nema aktivan program
-            retryState(
-                icon: "calendar.badge.exclamationmark",
-                text: "Nemate aktivan program",
-                action: { dismiss() },
-                actionLabel: "Zatvori"
-            )
+            // "Slobodan trening" je UVEK na vrhu (radi i bez plana), pa lista dana ako ima
+            // aktivan program, inace kratak hint.
+            list(program: response?.program, days: response?.days ?? [])
         }
     }
 
     // MARK: - Lista
 
-    private func list(program: WatchProgram, days: [WatchWorkoutDay]) -> some View {
+    private func list(program: WatchProgram?, days: [WatchWorkoutDay]) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
-                Text(program.name.uppercased())
-                    .font(.system(size: 12, weight: .heavy))
-                    .tracking(0.5)
-                    .foregroundColor(.textMuted)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.8)
-                    .padding(.top, 2)
-
                 if let err = startError {
                     Text(err)
                         .font(.system(size: 11, weight: .medium))
@@ -77,8 +66,28 @@ struct WorkoutPickerView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                ForEach(days) { day in
-                    dayRow(program: program, day: day)
+                // Slobodan trening - PRVA stavka, vizuelno odvojena (gradient okvir).
+                freeWorkoutRow
+                    .padding(.top, 2)
+
+                if let program = program {
+                    Text(program.name.uppercased())
+                        .font(.system(size: 12, weight: .heavy))
+                        .tracking(0.5)
+                        .foregroundColor(.textMuted)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                        .padding(.top, 4)
+
+                    ForEach(days) { day in
+                        dayRow(program: program, day: day)
+                    }
+                } else {
+                    Text("Nemate aktivan program")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.textMuted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 4)
                 }
 
                 Button(action: { dismiss() }) {
@@ -94,6 +103,50 @@ struct WorkoutPickerView: View {
             .padding(.horizontal, 4)
             .padding(.bottom, 8)
         }
+    }
+
+    // MARK: - Slobodan trening red
+
+    private var freeWorkoutRow: some View {
+        Button(action: { Task { await startFree() } }) {
+            HStack(spacing: 8) {
+                Image(systemName: "bolt.fill")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 30, height: 30)
+                    .background(LinearGradient.brandGradient)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Slobodan trening")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
+                    Text("Bez plana - puls i kalorije")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.textMuted)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                Spacer(minLength: 4)
+                if startingFree {
+                    ProgressView().scaleEffect(0.6).tint(.white)
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.textMuted)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.brandViolet.opacity(0.14))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(LinearGradient.brandGradient, lineWidth: 1.2)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(startingFree || startingDayId != nil)
     }
 
     private func dayRow(program: WatchProgram, day: WatchWorkoutDay) -> some View {
@@ -136,7 +189,7 @@ struct WorkoutPickerView: View {
             )
         }
         .buttonStyle(.plain)
-        .disabled(startingDayId != nil)
+        .disabled(startingDayId != nil || startingFree)
     }
 
     // MARK: - Prazno / greska stanje
@@ -177,6 +230,28 @@ struct WorkoutPickerView: View {
             loadFailed = true
         }
         loading = false
+    }
+
+    @MainActor
+    private func startFree() async {
+        guard !startingFree, startingDayId == nil else { return }
+        startError = nil
+        startingFree = true
+        WKInterfaceDevice.current().play(.click)
+        do {
+            let resp = try await SupabaseClient.shared.startFreeWorkout(token: token)
+            if resp.success, let sid = resp.sessionId {
+                WKInterfaceDevice.current().play(.success)
+                onStartedFree(sid)   // parent: udji u slobodan view (session postavljen kao tekuci)
+            } else {
+                startingFree = false
+                startError = resp.error ?? "Greška pri pokretanju treninga"
+            }
+        } catch {
+            // Mrezni neuspeh - bez offline sesije; ponudi ponovni pokusaj (tap ponovo).
+            startingFree = false
+            startError = "Nema veze. Probaj ponovo."
+        }
     }
 
     @MainActor

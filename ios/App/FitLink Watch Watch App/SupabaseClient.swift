@@ -15,8 +15,10 @@ struct UserContextResponse: Codable {
 
 struct ActiveWorkoutFromServer: Codable {
     let sessionId: String
-    let currentExerciseName: String
-    let currentSetNumber: Int
+    // Slobodan trening (bez plana): current_exercise_name / current_set_number su NULL na
+    // serveru -> opciono, da decode ne pukne. nil = slobodan trening (grananje u ContentView).
+    let currentExerciseName: String?
+    let currentSetNumber: Int?
     let currentExerciseIdx: Int?
     let totalSets: Int
     let currentState: String
@@ -291,6 +293,18 @@ final class SupabaseClient {
             "p_day_id": dayId,
         ]
         let data = try await callRPC(functionName: "watch_start_workout", body: body)
+        do {
+            return try decoder.decode(WatchStartWorkoutResponse.self, from: data)
+        } catch {
+            throw SupabaseError.decodingFailed(error.localizedDescription)
+        }
+    }
+
+    // Slobodan trening (bez plana): server pravi sesiju sa day_id null. Isti oblik odgovora
+    // kao watch_start_workout (success + session_id). Na success sat udje u slobodan view.
+    func startFreeWorkout(token: String) async throws -> WatchStartWorkoutResponse {
+        let body: [String: Any] = ["p_token": token]
+        let data = try await callRPC(functionName: "watch_start_free_workout", body: body)
         do {
             return try decoder.decode(WatchStartWorkoutResponse.self, from: data)
         } catch {
