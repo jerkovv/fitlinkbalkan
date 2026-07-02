@@ -144,7 +144,7 @@ const WorkoutHome = () => {
                   </div>
                   <div className="text-[12.5px] text-[hsl(var(--session-amber-fg))]/85 mt-0.5">
                     {hasEverTrained
-                      ? "Ne lomi naviku — kreni odmah, biće lakše nego što misliš."
+                      ? "Ne lomi naviku - kreni odmah, biće lakše nego što misliš."
                       : "Tvoj program te čeka. Krenimo polako."}
                   </div>
                 </div>
