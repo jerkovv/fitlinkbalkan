@@ -304,15 +304,19 @@ struct ContentView: View {
 
     // Udji u slobodan trening: postavi tekucu sesiju + lokalni flag + pokreni HealthKit.
     // Idempotentno (poll/reconnect ga zovu vise puta). fresh == true samo pri startu sa sata.
-    private func enterFreeWorkout(sessionId: String, fresh: Bool) {
+    // Timer anchor (freeWorkoutStartedAt) se ZAMRZNE JEDNOM (fresh -> Date() sad; reload ->
+    // serverski started_at jednom kroz freezeFreeAnchorIfNeeded) i posle se NE dira -> bez trzanja.
+    private func enterFreeWorkout(sessionId: String, fresh: Bool,
+                                  serverStartedAtMs: Double? = nil, serverNowMs: Double? = nil) {
         if isFreeWorkout && currentSessionId == sessionId && currentState == .activeWorkout {
-            return   // vec u ovoj slobodnoj sesiji -> ne diraj (bez suvisnih re-render-a iz poll-a)
+            // Vec u ovoj sesiji: ne diraj UI; samo zamrzni anchor ako jos fali (reload pre prvog poll-a).
+            freezeFreeAnchorIfNeeded(serverStartedAtMs: serverStartedAtMs, serverNowMs: serverNowMs)
+            return
         }
         // Druga sesija -> ocisti stari lokalni pocetak (spreci stale reuse iz prethodne).
         if currentSessionId != sessionId { freeWorkoutStartedAt = nil }
-        // Svez start sa sata: tacan lokalni pocetak ODMAH (pre prvog poll-a). Reload/reconnect
-        // (fresh == false) NE stamp-uje - freeTimer tada uzima serverski workoutStartedAtMs (stize
-        // kroz poll onHeartRateZone), pa proteklo vreme prezivi reload umesto reseta na 0:00.
+        // Svez start sa sata: tacan lokalni pocetak ODMAH (pre prvog poll-a). Reload (fresh == false)
+        // ne stamp-uje - anchor se zamrzava iz serverskog started_at u freezeFreeAnchorIfNeeded.
         if fresh { freeWorkoutStartedAt = Date() }
         isFreeWorkout = true
         currentSessionId = sessionId
@@ -324,6 +328,15 @@ struct ContentView: View {
         setConnectionOK(true)
         currentState = .activeWorkout
         startHealthKitWorkout()   // HR + kalorije -> currentSessionId (isti put kao normalan)
+        freezeFreeAnchorIfNeeded(serverStartedAtMs: serverStartedAtMs, serverNowMs: serverNowMs)
+    }
+
+    // Zamrzni timer anchor JEDNOM (reload, kad nema lokalnog): serverski started_at - clock offset.
+    // Racuna se samo dok je freeWorkoutStartedAt == nil, pa se posle NE menja -> timer ne trza.
+    private func freezeFreeAnchorIfNeeded(serverStartedAtMs: Double?, serverNowMs: Double?) {
+        guard freeWorkoutStartedAt == nil, let startMs = serverStartedAtMs else { return }
+        let offset = serverNowMs.map { Date(timeIntervalSince1970: $0 / 1000.0).timeIntervalSince(Date()) } ?? 0
+        freeWorkoutStartedAt = Date(timeIntervalSince1970: startMs / 1000.0 - offset)
     }
 
     // Elapsed timer format: do 1h -> M:SS; od 1h -> H:MMh (isto kao ActiveWorkoutView).
@@ -334,101 +347,169 @@ struct ContentView: View {
         return String(format: "%d:%02dh", elapsed / 3600, (elapsed % 3600) / 60)
     }
 
+    // Trenutna zona pulsa (iste boje/logika kao normalan trening); hrMax sa servera (fallback 190).
+    private var freeZone: HRZone {
+        HRZone.zone(for: heartRate, maxHR: hrMax ?? 190)
+    }
+
+    // Slobodan trening: paginirani ekrani kao normalan trening (TabView .page), bez vezbe/serija.
+    // 1 glavni (trajanje + puls + zavrsi), 2 puls detaljno (+ zona bar), 3 kalorije/prosecan/max.
     private var freeWorkoutView: some View {
+        TabView {
+            freeMainScreen
+            freePulseScreen
+            freeStatsScreen
+        }
+        .tabViewStyle(.page)
+    }
+
+    // Ekran 1 - glavni: veliki timer + trenutni puls (+ zona) + "Zavrsi".
+    private var freeMainScreen: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            RadialGradient(
-                colors: [Color.brandViolet.opacity(0.18), Color.clear],
-                center: .top, startRadius: 0, endRadius: 120
-            )
-            .ignoresSafeArea()
-
-            VStack(spacing: 8) {
+            RadialGradient(colors: [Color.brandViolet.opacity(0.18), Color.clear],
+                           center: .top, startRadius: 0, endRadius: 120)
+                .ignoresSafeArea()
+            VStack(spacing: 6) {
                 Text("SLOBODAN TRENING")
-                    .font(.zoneNum(9, .bold))
-                    .tracking(1.4)
-                    .foregroundColor(.textMuted)
-                    .padding(.top, 2)
-
+                    .font(.zoneNum(9, .bold)).tracking(1.4).foregroundColor(.textMuted)
                 Spacer(minLength: 0)
-
-                freeTimer
-                freeHeartRate
-                freeCalories
-
+                freeTimerView(size: 40)
+                freeHeartRateView(numberSize: 30, iconSize: 12)
                 Spacer(minLength: 0)
-
                 freeFinishButton
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(.horizontal, 12)
-            .padding(.top, 16)
-            .padding(.bottom, 12)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
         }
     }
 
-    // Veliki elapsed timer (hero). Tika svake sekunde (Apple-style M:SS). Svez start sa sata ->
-    // lokalni freeWorkoutStartedAt (bez skew-a, odmah). Reload/reconnect -> serverski
-    // workoutStartedAtMs (+ clock offset), koji stize kroz poll, pa proteklo vreme prezivi reload.
-    private var freeTimer: some View {
-        let anchor: Date? = freeWorkoutStartedAt
-            ?? workoutStartedAtMs.map { Date(timeIntervalSince1970: $0 / 1000.0 - serverClockOffset) }
-        return Group {
-            if let start = anchor {
-                TimelineView(.periodic(from: .now, by: 1.0)) { _ in
-                    let elapsed = Int(max(0, Date().timeIntervalSince(start)))
-                    VStack(spacing: 1) {
-                        Text(freeDurationString(elapsed))
-                            .font(.zoneNum(42, .heavy))
-                            .monospacedDigit()
-                            .foregroundColor(.white)
-                            .contentTransition(.numericText())
-                        Text("TRAJANJE")
-                            .font(.zoneNum(9, .bold))
-                            .tracking(1.4)
-                            .foregroundColor(.textMuted)
-                    }
+    // Ekran 2 - puls detaljno: veliki puls obojen zonom + ime zone + 5-segmentni zona bar.
+    private var freePulseScreen: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            VStack(spacing: 12) {
+                Spacer(minLength: 0)
+                freeHeartRateView(numberSize: 52, iconSize: 16)
+                freeZoneBar
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+        }
+    }
+
+    // Ekran 3 - kalorije + prosecan/max puls (LOKALNO sa HealthKit-a, ista serija kao za finish).
+    private var freeStatsScreen: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            ScrollView {
+                VStack(spacing: 8) {
+                    freeStatRow(icon: "flame.fill", tint: .brandWarning,
+                                value: "\(healthKit.activeCalories)", unit: "KCAL", label: "Aktivne")
+                    freeStatRow(icon: "heart.fill", tint: .brandViolet,
+                                value: healthKit.averageHeartRate > 0 ? "\(healthKit.averageHeartRate)" : "--",
+                                unit: "BPM", label: "Prosecan")
+                    freeStatRow(icon: "bolt.heart.fill", tint: .brandDestructive,
+                                value: healthKit.maxHeartRate > 0 ? "\(healthKit.maxHeartRate)" : "--",
+                                unit: "BPM", label: "Maksimalan")
                 }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 10)
             }
         }
     }
 
-    // Zivi puls, obojen zonom (isti izvor/boje kao normalan aktivni ekran). Koristi stvarni
-    // max puls vezbaca (hrMax sa servera preko poll onHeartRateZone); 190 fallback dok ne stigne.
-    private var freeHeartRate: some View {
-        let zone = HRZone.zone(for: heartRate, maxHR: hrMax ?? 190)
-        return HStack(alignment: .firstTextBaseline, spacing: 4) {
-            Image(systemName: "heart.fill")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundColor(heartRate > 0 ? zone.color : .textMuted)
-            Text(heartRate > 0 ? "\(heartRate)" : "--")
-                .font(.zoneNum(34, .heavy))
-                .monospacedDigit()
-                .foregroundColor(heartRate > 0 ? zone.color : .textMuted)
-                .contentTransition(.numericText())
-            Text("BPM")
-                .font(.zoneNum(9, .bold))
-                .tracking(1.0)
-                .foregroundColor(.textMuted)
-                .offset(y: -6)
+    // Timer (frozen anchor -> bez trzanja). Velicina broja parametrizovana po ekranu.
+    private func freeTimerView(size: CGFloat) -> some View {
+        Group {
+            if let start = freeWorkoutStartedAt {
+                TimelineView(.periodic(from: .now, by: 1.0)) { _ in
+                    let elapsed = Int(max(0, Date().timeIntervalSince(start)))
+                    freeTimerLabel(text: freeDurationString(elapsed), size: size)
+                }
+            } else {
+                // Reload pre prvog poll-a (anchor jos nije zamrznut) -> kratak placeholder.
+                freeTimerLabel(text: "--:--", size: size)
+            }
         }
     }
 
-    // Aktivne kalorije sa HealthKit-a (0 dok ne stigne). Iste koje se salju serveru.
-    private var freeCalories: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "flame.fill")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundColor(.brandWarning)
-            Text("\(healthKit.activeCalories)")
-                .font(.zoneNum(15, .bold))
-                .monospacedDigit()
-                .foregroundColor(.white)
-            Text("KCAL")
-                .font(.zoneNum(8, .bold))
-                .tracking(0.8)
-                .foregroundColor(.textMuted)
+    private func freeTimerLabel(text: String, size: CGFloat) -> some View {
+        VStack(spacing: 1) {
+            Text(text)
+                .font(.zoneNum(size, .heavy)).monospacedDigit()
+                .foregroundColor(.white).contentTransition(.numericText())
+            Text("TRAJANJE")
+                .font(.zoneNum(9, .bold)).tracking(1.4).foregroundColor(.textMuted)
         }
+    }
+
+    // Puls: heart + broj obojen zonom + BPM + ime zone (isto kao ActiveWorkoutView.heartRateDisplay).
+    private func freeHeartRateView(numberSize: CGFloat, iconSize: CGFloat) -> some View {
+        let zone = freeZone
+        let has = heartRate > 0
+        return VStack(spacing: 0) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Image(systemName: "heart.fill")
+                    .font(.system(size: iconSize, weight: .bold))
+                    .foregroundColor(has ? zone.color : .textMuted)
+                    .scaleEffect(has ? 1.0 : 0.85)
+                    .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: heartRate)
+                Text(has ? "\(heartRate)" : "--")
+                    .font(.zoneNum(numberSize, .heavy)).monospacedDigit()
+                    .foregroundColor(has ? zone.color : .textMuted)
+                    .contentTransition(.numericText())
+                Text("BPM")
+                    .font(.zoneNum(9, .bold)).tracking(1.0).foregroundColor(.textMuted)
+                    .offset(y: -(numberSize * 0.18))
+            }
+            if has {
+                Text(zone.label.uppercased())
+                    .font(.zoneNum(9, .bold)).tracking(1.2).foregroundColor(zone.color.opacity(0.9))
+            }
+        }
+    }
+
+    // 5-segmentni zona bar (Z1..Z5), istaknuta trenutna zona (boje kao HRZone.color).
+    private var freeZoneBar: some View {
+        let activeZones: [HRZone] = [.warmup, .fatBurn, .cardio, .anaerobic, .maximum]
+        let current = freeZone
+        return HStack(spacing: 4) {
+            ForEach(activeZones, id: \.rawValue) { z in
+                Capsule()
+                    .fill(z.color)
+                    .frame(height: 6)
+                    .opacity(heartRate > 0 && z == current ? 1.0 : 0.28)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 2)
+    }
+
+    // Red statistike (ikonica + velika vrednost + jedinica + labela) - stil watch metrika.
+    private func freeStatRow(icon: String, tint: Color, value: String, unit: String, label: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(tint)
+                .frame(width: 22)
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                    Text(value).font(.zoneNum(24, .heavy)).monospacedDigit().foregroundColor(.white)
+                    Text(unit).font(.zoneNum(9, .bold)).tracking(0.8).foregroundColor(.textMuted)
+                }
+                Text(label).font(.zoneNum(9, .semibold)).foregroundColor(.textMuted)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceCard))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.hairline, lineWidth: 1))
     }
 
     // Zavrsi: potvrda pa ISTI finish kao normalan trening (watch_finish_workout + metrike).
@@ -1230,19 +1311,25 @@ struct ContentView: View {
     // MARK: - Computed
 
     private var statusColor: Color {
-        if phoneSession.tokenIsUncertain { return .brandWarning }
-        if !isPaired { return .brandWarning }
-        if !realtimeClient.isConnected { return .brandWarning }
-        return .brandSuccess
+        // Kesiran token je validan dok ga server ne odbije (getUserContext) -> ne blokiraj na
+        // "provera naloga" samo zato sto je handshake sa telefonom u toku (tokenIsUncertain).
+        if phoneSession.pairingToken != nil {
+            if !isPaired { return .brandWarning }
+            if !realtimeClient.isConnected { return .brandWarning }
+            return .brandSuccess
+        }
+        return .brandWarning
     }
 
     private var statusText: String {
         if isLoading { return "Povezivanje..." }
         if let error = connectionError { return error }
-        if phoneSession.pairingToken == nil { return "Uloguj se na iPhone-u" }
-        // Identitet jos nije potvrdjen handshake-om (telefon bio nedostupan) -
-        // ne tvrdi "Povezano" na osnovu starog, nepotvrdjenog keša.
-        if phoneSession.tokenIsUncertain { return "Provera naloga…" }
+        // Nema nikakvog kesiranog tokena -> tek onda "uloguj se" / "provera naloga".
+        if phoneSession.pairingToken == nil {
+            return phoneSession.tokenIsUncertain ? "Provera naloga…" : "Uloguj se na iPhone-u"
+        }
+        // Postoji kesiran token -> ODMAH nastavi s njim; status prati stvarnu vezu, ne handshake.
+        // (Handshake ostaje best-effort u pozadini: onPollTick retry dok je tokenIsUncertain.)
         if !isPaired { return "Nije povezano" }
         if !realtimeClient.isConnected { return "Veza prekinuta" }
         return "Povezano"
@@ -1406,11 +1493,10 @@ struct ContentView: View {
             if (currentState == .idle || isFreeWorkout),
                let sid = row.sessionLogId,
                let state = row.currentState, state == "active" || state == "rest" {
-                // Serverski clock offset -> tacan elapsed timer (prezivi reload; koristi ga freeTimer).
-                if let serverNowMs = row.serverNowMs {
-                    serverClockOffset = Date(timeIntervalSince1970: serverNowMs / 1000.0).timeIntervalSince(Date())
-                }
-                enterFreeWorkout(sessionId: sid, fresh: false)
+                // Timer anchor se zamrzava JEDNOM iz serverskog started_at (workoutStartedAtMs stize
+                // kroz poll onHeartRateZone) + serverNowMs offset. Posle se ne dira -> bez trzanja.
+                enterFreeWorkout(sessionId: sid, fresh: false,
+                                 serverStartedAtMs: workoutStartedAtMs, serverNowMs: row.serverNowMs)
             }
             return
         }
