@@ -22,7 +22,8 @@ const tabs = ["Treninzi", "Telo"] as const;
 
 type SessionLog = {
   id: string;
-  day_number: number;
+  // Slobodan trening (bez plana): day_number je null.
+  day_number: number | null;
   completed_at: string | null;
   duration_seconds: number | null;
   assigned_programs: { name: string } | null;
@@ -446,11 +447,16 @@ const Progress = () => {
                         <Dumbbell className="h-4 w-4" />
                       </div>
                       <div className="flex-1 min-w-0">
+                        {/* Slobodan trening (bez plana): "Slobodan trening" + samo datum (nikad "Dan null"). */}
                         <div className="font-semibold text-[14px] truncate">
-                          {s.assigned_program_days?.name ?? `Dan ${s.day_number}`}
+                          {!s.assigned_program_days?.name && s.day_number == null
+                            ? "Slobodan trening"
+                            : s.assigned_program_days?.name ?? `Dan ${s.day_number}`}
                         </div>
                         <div className="text-[12px] text-muted-foreground truncate">
-                          {s.assigned_programs?.name ?? "Program"} · {s.completed_at ? formatDate(s.completed_at) : "—"}
+                          {!s.assigned_program_days?.name && s.day_number == null
+                            ? (s.completed_at ? formatDate(s.completed_at) : "—")
+                            : `${s.assigned_programs?.name ?? "Program"} · ${s.completed_at ? formatDate(s.completed_at) : "—"}`}
                         </div>
                       </div>
                     </div>

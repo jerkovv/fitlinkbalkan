@@ -17,7 +17,8 @@ interface Props {
 
 interface Row {
   id: string;
-  day_number: number;
+  // Slobodan trening (bez plana): day_number/day_name su null.
+  day_number: number | null;
   started_at: string;
   completed_at: string | null;
   duration_seconds: number | null;
@@ -42,6 +43,8 @@ const formatRelativeDay = (iso: string): string => {
 };
 
 const titleFor = (w: Row): string => {
+  // Slobodan trening (bez plana): nema dana ni broja -> "Slobodan trening" (nikad "Dan null").
+  if (!w.day_name && w.day_number == null) return "Slobodan trening";
   const day = w.day_name ?? `Dan ${w.day_number}`;
   return w.program_name ? `${w.program_name} - ${day}` : day;
 };

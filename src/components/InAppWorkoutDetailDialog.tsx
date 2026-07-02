@@ -46,7 +46,8 @@ interface InAppExercise {
 interface InAppDetail {
   success: boolean;
   id: string;
-  day_number: number;
+  // Slobodan trening (bez plana): day_number/day_name su null (day_id null).
+  day_number: number | null;
   started_at: string;
   completed_at: string | null;
   duration_seconds: number | null;
@@ -109,11 +110,16 @@ export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange }: Prop
   );
 
   const whenISO = detail?.completed_at ?? detail?.started_at ?? null;
-  const title = detail
-    ? detail.program_name && detail.day_name
-      ? `${detail.program_name} - ${detail.day_name}`
-      : `Dan ${detail.day_number}`
-    : "Trening";
+  // Slobodan trening (bez plana): nema day_name ni day_number -> naslov "Slobodan trening"
+  // (nikad "Dan null"). Inace postojeci naslov (Program - Dan X / Dan X).
+  const isFree = !!detail && !detail.day_name && detail.day_number == null;
+  const title = !detail
+    ? "Trening"
+    : isFree
+      ? "Slobodan trening"
+      : detail.program_name && detail.day_name
+        ? `${detail.program_name} - ${detail.day_name}`
+        : detail.day_name ?? `Dan ${detail.day_number}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
