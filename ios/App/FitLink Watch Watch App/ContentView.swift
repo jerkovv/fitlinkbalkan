@@ -161,7 +161,8 @@ struct ContentView: View {
 
             case .activeWorkout:
                 if isFreeWorkout {
-                    // Slobodan trening: samo timer + puls + kalorije + Zavrsi (bez vezbi/serija).
+                    // Slobodan trening: ISTI sistem ekrana kao normalan (glavni + isti zonski ekran),
+                    // samo bez exercise/set ekrana.
                     freeWorkoutView
                 } else {
                     // Swipe: glavni (dense) ekran + bogat zonski ekran levo/desno.
@@ -339,43 +340,41 @@ struct ContentView: View {
         freeWorkoutStartedAt = Date(timeIntervalSince1970: startMs / 1000.0 - offset)
     }
 
-    // Elapsed timer format: do 1h -> M:SS; od 1h -> H:MMh (isto kao ActiveWorkoutView).
-    private func freeDurationString(_ elapsed: Int) -> String {
-        if elapsed < 3600 {
-            return String(format: "%d:%02d", elapsed / 60, elapsed % 60)
-        }
-        return String(format: "%d:%02dh", elapsed / 3600, (elapsed % 3600) / 60)
-    }
-
-    // Trenutna zona pulsa (iste boje/logika kao normalan trening); hrMax sa servera (fallback 190).
-    private var freeZone: HRZone {
-        HRZone.zone(for: heartRate, maxHR: hrMax ?? 190)
-    }
-
-    // Slobodan trening: paginirani ekrani kao normalan trening (TabView .page), bez vezbe/serija.
-    // 1 glavni (trajanje + puls + zavrsi), 2 puls detaljno (+ zona bar), 3 kalorije/prosecan/max.
+    // Slobodan trening = ISTI sistem ekrana kao normalan trening (TabView .page), samo bez
+    // exercise/set ekrana: glavni ekran (timer + puls + Zavrsi) + REUSE isti zonski ekran
+    // (heartRateZoneView) kao normalan. Getteri workoutTickAnchor/workoutElapsed/zoneDisplayHr/
+    // displayZone/displayHrMax su free-aware (lokalni HealthKit podaci + fiksna lokalna kotva za
+    // tajmer bez trzanja); normalan trening je netaknut.
     private var freeWorkoutView: some View {
         TabView {
             freeMainScreen
-            freePulseScreen
-            freeStatsScreen
+            heartRateZoneView
         }
         .tabViewStyle(.page)
     }
 
-    // Ekran 1 - glavni: veliki timer + trenutni puls (+ zona) + "Zavrsi".
+    // Glavni ekran: veliki timer (ISTI mehanizam kao normalan - fiksna kotva workoutTickAnchor +
+    // workoutElapsed + elapsedString) + trenutni puls (obojen zonom) + "Zavrsi".
     private var freeMainScreen: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             RadialGradient(colors: [Color.brandViolet.opacity(0.18), Color.clear],
                            center: .top, startRadius: 0, endRadius: 120)
                 .ignoresSafeArea()
-            VStack(spacing: 6) {
+            VStack(spacing: 8) {
                 Text("SLOBODAN TRENING")
                     .font(.zoneNum(9, .bold)).tracking(1.4).foregroundColor(.textMuted)
                 Spacer(minLength: 0)
-                freeTimerView(size: 40)
-                freeHeartRateView(numberSize: 30, iconSize: 12)
+                TimelineView(.periodic(from: workoutTickAnchor, by: 1.0)) { ctx in
+                    VStack(spacing: 1) {
+                        Text(elapsedString(workoutElapsed(ctx.date)))
+                            .font(.zoneNum(42, .heavy)).monospacedDigit()
+                            .foregroundColor(.white).contentTransition(.numericText())
+                        Text("TRAJANJE")
+                            .font(.zoneNum(9, .bold)).tracking(1.4).foregroundColor(.textMuted)
+                    }
+                }
+                freeMainHeartRate
                 Spacer(minLength: 0)
                 freeFinishButton
             }
@@ -386,130 +385,24 @@ struct ContentView: View {
         }
     }
 
-    // Ekran 2 - puls detaljno: veliki puls obojen zonom + ime zone + 5-segmentni zona bar.
-    private var freePulseScreen: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-            VStack(spacing: 12) {
-                Spacer(minLength: 0)
-                freeHeartRateView(numberSize: 52, iconSize: 16)
-                freeZoneBar
-                Spacer(minLength: 0)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-        }
-    }
-
-    // Ekran 3 - kalorije + prosecan/max puls (LOKALNO sa HealthKit-a, ista serija kao za finish).
-    private var freeStatsScreen: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-            ScrollView {
-                VStack(spacing: 8) {
-                    freeStatRow(icon: "flame.fill", tint: .brandWarning,
-                                value: "\(healthKit.activeCalories)", unit: "KCAL", label: "Aktivne")
-                    freeStatRow(icon: "heart.fill", tint: .brandViolet,
-                                value: healthKit.averageHeartRate > 0 ? "\(healthKit.averageHeartRate)" : "--",
-                                unit: "BPM", label: "Prosecan")
-                    freeStatRow(icon: "bolt.heart.fill", tint: .brandDestructive,
-                                value: healthKit.maxHeartRate > 0 ? "\(healthKit.maxHeartRate)" : "--",
-                                unit: "BPM", label: "Maksimalan")
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 10)
-            }
-        }
-    }
-
-    // Timer (frozen anchor -> bez trzanja). Velicina broja parametrizovana po ekranu.
-    private func freeTimerView(size: CGFloat) -> some View {
-        Group {
-            if let start = freeWorkoutStartedAt {
-                TimelineView(.periodic(from: .now, by: 1.0)) { _ in
-                    let elapsed = Int(max(0, Date().timeIntervalSince(start)))
-                    freeTimerLabel(text: freeDurationString(elapsed), size: size)
-                }
-            } else {
-                // Reload pre prvog poll-a (anchor jos nije zamrznut) -> kratak placeholder.
-                freeTimerLabel(text: "--:--", size: size)
-            }
-        }
-    }
-
-    private func freeTimerLabel(text: String, size: CGFloat) -> some View {
-        VStack(spacing: 1) {
-            Text(text)
-                .font(.zoneNum(size, .heavy)).monospacedDigit()
-                .foregroundColor(.white).contentTransition(.numericText())
-            Text("TRAJANJE")
-                .font(.zoneNum(9, .bold)).tracking(1.4).foregroundColor(.textMuted)
-        }
-    }
-
-    // Puls: heart + broj obojen zonom + BPM + ime zone (isto kao ActiveWorkoutView.heartRateDisplay).
-    private func freeHeartRateView(numberSize: CGFloat, iconSize: CGFloat) -> some View {
-        let zone = freeZone
+    // Trenutni puls na glavnom ekranu (obojen zonom, isti stil kao normalan trening).
+    private var freeMainHeartRate: some View {
+        let zone = HRZone.zone(for: heartRate, maxHR: hrMax ?? 190)
         let has = heartRate > 0
-        return VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Image(systemName: "heart.fill")
-                    .font(.system(size: iconSize, weight: .bold))
-                    .foregroundColor(has ? zone.color : .textMuted)
-                    .scaleEffect(has ? 1.0 : 0.85)
-                    .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: heartRate)
-                Text(has ? "\(heartRate)" : "--")
-                    .font(.zoneNum(numberSize, .heavy)).monospacedDigit()
-                    .foregroundColor(has ? zone.color : .textMuted)
-                    .contentTransition(.numericText())
-                Text("BPM")
-                    .font(.zoneNum(9, .bold)).tracking(1.0).foregroundColor(.textMuted)
-                    .offset(y: -(numberSize * 0.18))
-            }
-            if has {
-                Text(zone.label.uppercased())
-                    .font(.zoneNum(9, .bold)).tracking(1.2).foregroundColor(zone.color.opacity(0.9))
-            }
+        return HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Image(systemName: "heart.fill")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundColor(has ? zone.color : .textMuted)
+                .scaleEffect(has ? 1.0 : 0.85)
+                .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: heartRate)
+            Text(has ? "\(heartRate)" : "--")
+                .font(.zoneNum(32, .heavy)).monospacedDigit()
+                .foregroundColor(has ? zone.color : .textMuted)
+                .contentTransition(.numericText())
+            Text("BPM")
+                .font(.zoneNum(9, .bold)).tracking(1.0).foregroundColor(.textMuted)
+                .offset(y: -5)
         }
-    }
-
-    // 5-segmentni zona bar (Z1..Z5), istaknuta trenutna zona (boje kao HRZone.color).
-    private var freeZoneBar: some View {
-        let activeZones: [HRZone] = [.warmup, .fatBurn, .cardio, .anaerobic, .maximum]
-        let current = freeZone
-        return HStack(spacing: 4) {
-            ForEach(activeZones, id: \.rawValue) { z in
-                Capsule()
-                    .fill(z.color)
-                    .frame(height: 6)
-                    .opacity(heartRate > 0 && z == current ? 1.0 : 0.28)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 2)
-    }
-
-    // Red statistike (ikonica + velika vrednost + jedinica + labela) - stil watch metrika.
-    private func freeStatRow(icon: String, tint: Color, value: String, unit: String, label: String) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(tint)
-                .frame(width: 22)
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .firstTextBaseline, spacing: 3) {
-                    Text(value).font(.zoneNum(24, .heavy)).monospacedDigit().foregroundColor(.white)
-                    Text(unit).font(.zoneNum(9, .bold)).tracking(0.8).foregroundColor(.textMuted)
-                }
-                Text(label).font(.zoneNum(9, .semibold)).foregroundColor(.textMuted)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceCard))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.hairline, lineWidth: 1))
     }
 
     // Zavrsi: potvrda pa ISTI finish kao normalan trening (watch_finish_workout + metrike).
@@ -708,10 +601,26 @@ struct ContentView: View {
     }
 
     // HR za prikaz: serverski current_hr (iz kog je zona izvedena), pa lokalni puls.
+    // Slobodan trening: svez LOKALNI HealthKit puls (bez servera).
     private var zoneDisplayHr: Int? {
+        if isFreeWorkout { return heartRate > 0 ? heartRate : nil }
         if let s = serverHr, s > 0 { return s }
         if heartRate > 0 { return heartRate }
         return nil
+    }
+
+    // Zona/hrMax za zonski ekran. Normalan: serverski hrZone/hrMax (kao pre). Slobodan: zona se
+    // racuna LOKALNO iz pulsa + hrMax (fallback 190) pa ekran radi odmah bez cekanja servera.
+    private var displayHrMax: Int? {
+        if isFreeWorkout { return hrMax ?? 190 }
+        return hrMax
+    }
+    private var displayZone: Int? {
+        if isFreeWorkout {
+            guard heartRate > 0 else { return nil }
+            return max(1, HRZone.zone(for: heartRate, maxHR: hrMax ?? 190).rawValue)
+        }
+        return hrZone
     }
 
     // Raspon otkucaja po zoni iz hr_max. Pragovi 0.60/0.70/0.80/0.90.
@@ -738,7 +647,7 @@ struct ContentView: View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            if let zone = hrZone, let maxHr = hrMax, let hr = zoneDisplayHr {
+            if let zone = displayZone, let maxHr = displayHrMax, let hr = zoneDisplayHr {
                 TabView(selection: $zoneStyle) {
                     zoneStyleLestvica(zone: zone, hr: hr, maxHr: maxHr).tag(0)
                     zoneStyleTraka(zone: zone, hr: hr, maxHr: maxHr).tag(1)
@@ -767,8 +676,12 @@ struct ContentView: View {
 
     // MARK: - Zonski stilovi (zajednicki pomocnici)
 
-    // Proteklo vreme treninga iz servernog pocetka + clock offset.
+    // Proteklo vreme treninga iz servernog pocetka + clock offset. Slobodan trening: cista lokalna
+    // stoperica od zamrznute kotve (bez servera) - nema jitter-a od poll-a.
     private func workoutElapsed(_ now: Date) -> Int {
+        if isFreeWorkout, let s = freeWorkoutStartedAt {
+            return Int(max(0, now.timeIntervalSince(s)))
+        }
         guard let startMs = workoutStartedAtMs else { return 0 }
         let serverNowSec = now.timeIntervalSince1970 + serverClockOffset
         return Int(max(0, serverNowSec - startMs / 1000.0))
@@ -779,7 +692,10 @@ struct ContentView: View {
     // ne na .now - inace bi se schedule re-fazirao na svaki re-render (HR/poll) pa bi
     // tikovi padali na nepravilne ofsete (sekunda ubrza/uspori). Sa fiksnom kotvom
     // tikovi padaju tacno na granicu elapsed-sekunde i cadence je ravnomeran.
+    // Slobodan trening: kotva je ZAMRZNUTI lokalni Date (freeWorkoutStartedAt) - nikad se ne
+    // pomera pa nema ni sub-sekundnog jitter-a.
     private var workoutTickAnchor: Date {
+        if isFreeWorkout, let s = freeWorkoutStartedAt { return s }
         guard let startMs = workoutStartedAtMs else { return .now }
         return Date(timeIntervalSince1970: startMs / 1000.0 - serverClockOffset)
     }
