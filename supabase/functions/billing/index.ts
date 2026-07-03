@@ -152,6 +152,41 @@ Deno.serve(async (req) => {
         });
       }
 
+      case "switch-to-yearly": {
+        // Prelazak mesecna -> godisnja (opcija A). Mesecni se NE otkazuje ovde: otkazivanje ide
+        // TEK posle uspesne godisnje naplate (webhook, preko metadata.cancel_sub_id), da korisnik
+        // ne ostane bez oba ako odustane od checkout-a.
+        if (!subId) return json({ error: "Nemaš aktivnu mesečnu pretplatu za prelazak." }, 400);
+        const { data: planRow } = await admin
+          .from("billing_plans")
+          .select("*")
+          .eq("plan", "yearly")
+          .eq("active", true)
+          .maybeSingle();
+        if (!planRow) return json({ error: "Godišnji plan trenutno nije dostupan" }, 400);
+        const session = await stripe.checkout.sessions.create({
+          mode: "payment",
+          customer,
+          locale: "hr",
+          line_items: [
+            {
+              price_data: {
+                currency: planRow.currency,
+                unit_amount: planRow.amount_cents,
+                product: planRow.stripe_product_id,
+              },
+              quantity: 1,
+            },
+          ],
+          // cancel_sub_id: webhook posle uspesne naplate otkazuje bas ovaj mesecni subscription.
+          metadata: { trainer_id: user.id, plan: "yearly", cancel_sub_id: subId },
+          invoice_creation: { enabled: true },
+          ui_mode: "embedded",
+          redirect_on_completion: "never",
+        });
+        return json({ clientSecret: session.client_secret });
+      }
+
       default:
         return json({ error: "Nepoznata akcija" }, 400);
     }

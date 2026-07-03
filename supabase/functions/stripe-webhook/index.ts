@@ -111,6 +111,18 @@ async function grantYearly(session: Stripe.Checkout.Session) {
     { onConflict: "trainer_id" },
   );
   if (error) console.log("stripe-webhook: grantYearly upsert error:", error.message);
+
+  // Prelazak sa mesecne (switch-to-yearly): otkazi stari mesecni subscription TEK sad - posle
+  // uspesne godisnje naplate. cancel je idempotentan (vec otkazan -> samo loguj). Red je vec
+  // godisnji (stripe_subscription_id null), a deleted-handler ima guard da ne pregazi novi red.
+  const cancelSubId = session.metadata?.cancel_sub_id;
+  if (cancelSubId) {
+    try {
+      await stripe.subscriptions.cancel(cancelSubId);
+    } catch (e) {
+      console.log("stripe-webhook: cancel_sub_id otkazivanje nije uspelo:", (e as Error).message);
+    }
+  }
 }
 
 Deno.serve(async (req) => {
@@ -201,6 +213,21 @@ Deno.serve(async (req) => {
           console.log("stripe-webhook: subscription.upsert bez trainer_id");
           break;
         }
+        // Guard (simetricno deleted-u): zakasneli/stari mesecni event NE sme da pregazi AKTIVAN
+        // godisnji red (posle prelaska na godisnju grantYearly ga otkaze -> emituje updated/deleted
+        // za taj mesecni). Ako je red vec aktivan godisnji (plan yearly, sub_id null, pristup traje),
+        // preskoci. Istekao godisnji + nov mesecni i dalje prolazi.
+        const { data: curSub } = await admin
+          .from("trainer_subscriptions")
+          .select("plan, stripe_subscription_id, access_until")
+          .eq("trainer_id", trainerId)
+          .maybeSingle();
+        const cs = curSub as { plan?: string; stripe_subscription_id?: string | null; access_until?: string | null } | null;
+        if (cs && cs.plan === "yearly" && !cs.stripe_subscription_id
+            && cs.access_until && new Date(cs.access_until) > new Date()) {
+          console.log("stripe-webhook: subscription.upsert za stari mesecni posle prelaska na godisnju, preskacem");
+          break;
+        }
         await upsertFromSubscription(sub, trainerId, customer);
         break;
       }
@@ -211,6 +238,18 @@ Deno.serve(async (req) => {
         const trainerId = sub.metadata?.trainer_id ?? (await trainerIdByCustomer(customer));
         if (!trainerId) {
           console.log("stripe-webhook: subscription.deleted bez trainer_id");
+          break;
+        }
+        // Guard: primeni SAMO ako je obrisani subscription bas onaj koji je trenutno na redu.
+        // Kod prelaska na godisnju stari mesecni se otkazuje POSLE upisa godisnjeg (sub_id null),
+        // pa taj deleted NE sme da pregazi novi godisnji red na 'canceled'.
+        const { data: curRow } = await admin
+          .from("trainer_subscriptions")
+          .select("stripe_subscription_id")
+          .eq("trainer_id", trainerId)
+          .maybeSingle();
+        if ((curRow as { stripe_subscription_id?: string | null } | null)?.stripe_subscription_id !== sub.id) {
+          console.log("stripe-webhook: subscription.deleted za nepovezani/stari sub, preskacem");
           break;
         }
         const periodEnd = sub.items?.data?.[0]?.current_period_end ?? sub.current_period_end ?? null;
