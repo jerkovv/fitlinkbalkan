@@ -27,9 +27,11 @@ const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-// Unix sekunde -> ISO; null/undefined -> null.
+// Unix sekunde -> ISO; ako ulaz nije konacan broj -> null (nikad Invalid Date).
 const ts = (unixSeconds: number | null | undefined): string | null =>
-  unixSeconds ? new Date(unixSeconds * 1000).toISOString() : null;
+  (typeof unixSeconds === "number" && isFinite(unixSeconds))
+    ? new Date(unixSeconds * 1000).toISOString()
+    : null;
 
 // Stripe sub.status -> nasa trainer_sub_status enum vrednost.
 function mapStatus(s: string): string {
@@ -59,6 +61,9 @@ async function upsertFromSubscription(
   trainerId: string,
   customer: string,
 ) {
+  // API basil (2025-03-31)+ premestio current_period_end na nivo STAVKE
+  // (subscription.items.data[0].current_period_end); fallback na stari nivo za starije verzije.
+  const periodEnd = sub.items?.data?.[0]?.current_period_end ?? sub.current_period_end ?? null;
   const { error } = await admin.from("trainer_subscriptions").upsert(
     {
       trainer_id: trainerId,
@@ -66,8 +71,8 @@ async function upsertFromSubscription(
       stripe_subscription_id: sub.id,
       plan: "monthly",
       status: mapStatus(sub.status),
-      access_until: ts(sub.current_period_end),
-      current_period_end: ts(sub.current_period_end),
+      access_until: ts(periodEnd),
+      current_period_end: ts(periodEnd),
       trial_ends_at: sub.trial_end ? ts(sub.trial_end) : null,
       cancel_at_period_end: sub.cancel_at_period_end,
     },
@@ -204,13 +209,14 @@ Deno.serve(async (req) => {
           console.log("stripe-webhook: subscription.deleted bez trainer_id");
           break;
         }
+        const periodEnd = sub.items?.data?.[0]?.current_period_end ?? sub.current_period_end ?? null;
         await admin.from("trainer_subscriptions").upsert(
           {
             trainer_id: trainerId,
             stripe_customer_id: customer,
             stripe_subscription_id: sub.id,
             status: "canceled",
-            access_until: ts(sub.current_period_end),
+            access_until: ts(periodEnd),
             cancel_at_period_end: true,
           },
           { onConflict: "trainer_id" },
