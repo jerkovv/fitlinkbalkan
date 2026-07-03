@@ -180,7 +180,13 @@ Deno.serve(async (req) => {
           ],
           // cancel_sub_id: webhook posle uspesne naplate otkazuje bas ovaj mesecni subscription.
           metadata: { trainer_id: user.id, plan: "yearly", cancel_sub_id: subId },
-          invoice_creation: { enabled: true },
+          invoice_creation: {
+            enabled: true,
+            invoice_data: {
+              description: "FitLink Trener - godisnja pretplata (12 meseci)",
+              footer: "Hvala sto koristis FitLink. fitlink.rs",
+            },
+          },
           ui_mode: "embedded",
           redirect_on_completion: "never",
         });

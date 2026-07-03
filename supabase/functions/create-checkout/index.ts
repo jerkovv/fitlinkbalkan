@@ -77,6 +77,8 @@ Deno.serve(async (req) => {
         email: user.email ?? undefined,
         // Fakture na srpskom; Stripe uzima prvi podrzan (fallback 'hr').
         preferred_locales: ["sr", "hr"],
+        // Customer-level footer -> pojavljuje se na SVIM njegovim fakturama (mesecne i godisnje).
+        invoice_settings: { footer: "Hvala sto koristis FitLink. fitlink.rs" },
         metadata: { trainer_id: user.id },
       });
       customerId = customer.id;
@@ -114,7 +116,15 @@ Deno.serve(async (req) => {
           }
         // Godisnji jednokratni (payment): napravi fakturu. Subscription je vec pravi -
         // invoice_creation na subscription modu baca gresku, pa ide samo u payment granu.
-        : { invoice_creation: { enabled: true } }),
+        : {
+            invoice_creation: {
+              enabled: true,
+              invoice_data: {
+                description: "FitLink Trener - godisnja pretplata (12 meseci)",
+                footer: "Hvala sto koristis FitLink. fitlink.rs",
+              },
+            },
+          }),
       // Embedded Checkout on-site (bez redirecta); success_url/cancel_url se ne koriste.
       ui_mode: "embedded",
       redirect_on_completion: "never",
