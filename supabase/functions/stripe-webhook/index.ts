@@ -61,7 +61,6 @@ async function upsertFromSubscription(
   trainerId: string,
   customer: string,
 ) {
-  console.log('SUB_DEBUG', JSON.stringify({ status: sub.status, cpe_sub: sub.current_period_end, cpe_item: sub.items?.data?.[0]?.current_period_end, trial_end: sub.trial_end }));
   // API basil (2025-03-31)+ premestio current_period_end na nivo STAVKE
   // (subscription.items.data[0].current_period_end); fallback na stari nivo za starije verzije.
   const periodEnd = sub.items?.data?.[0]?.current_period_end ?? sub.current_period_end ?? null;
@@ -103,6 +102,7 @@ async function grantYearly(session: Stripe.Checkout.Session) {
       status: "active",
       access_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
       current_period_end: null,
+      trial_ends_at: null,
       cancel_at_period_end: false,
       last_payment_at: new Date().toISOString(),
       amount_cents: session.amount_total,
