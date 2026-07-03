@@ -61,9 +61,13 @@ async function upsertFromSubscription(
   trainerId: string,
   customer: string,
 ) {
+  console.log('SUB_DEBUG', JSON.stringify({ status: sub.status, cpe_sub: sub.current_period_end, cpe_item: sub.items?.data?.[0]?.current_period_end, trial_end: sub.trial_end }));
   // API basil (2025-03-31)+ premestio current_period_end na nivo STAVKE
   // (subscription.items.data[0].current_period_end); fallback na stari nivo za starije verzije.
   const periodEnd = sub.items?.data?.[0]?.current_period_end ?? sub.current_period_end ?? null;
+  // Trialing payload zna da nema period polje -> trial_end je pouzdan fallback (nije premesten).
+  const trialEnd = sub.trial_end ?? null;
+  const accessUntil = ts(periodEnd) ?? ts(trialEnd);
   const { error } = await admin.from("trainer_subscriptions").upsert(
     {
       trainer_id: trainerId,
@@ -71,9 +75,9 @@ async function upsertFromSubscription(
       stripe_subscription_id: sub.id,
       plan: "monthly",
       status: mapStatus(sub.status),
-      access_until: ts(periodEnd),
-      current_period_end: ts(periodEnd),
-      trial_ends_at: sub.trial_end ? ts(sub.trial_end) : null,
+      access_until: accessUntil,
+      current_period_end: ts(periodEnd) ?? ts(trialEnd),
+      trial_ends_at: ts(trialEnd),
       cancel_at_period_end: sub.cancel_at_period_end,
     },
     { onConflict: "trainer_id" },
