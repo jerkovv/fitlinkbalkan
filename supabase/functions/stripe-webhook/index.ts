@@ -12,12 +12,12 @@
 import Stripe from "npm:stripe@^17";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
-const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY")!;
-const STRIPE_WEBHOOK_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET")!;
+const webhookSecret = (Deno.env.get('STRIPE_WEBHOOK_SECRET') ?? '').trim();
+const stripeKey = (Deno.env.get('STRIPE_SECRET_KEY') ?? '').trim();
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const stripe = new Stripe(STRIPE_SECRET_KEY, {
+const stripe = new Stripe(stripeKey, {
   httpClient: Stripe.createFetchHttpClient(),
 });
 // Deno: async verifikacija koristi WebCrypto (SubtleCrypto) preko ovog providera.
@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
     event = await stripe.webhooks.constructEventAsync(
       rawBody,
       sig,
-      STRIPE_WEBHOOK_SECRET,
+      webhookSecret,
       undefined,
       cryptoProvider,
     );
