@@ -15,7 +15,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
+const stripeKey = (Deno.env.get("STRIPE_SECRET_KEY") ?? "").trim();
+const stripe = new Stripe(stripeKey, {
   httpClient: Stripe.createFetchHttpClient(),
 });
 
