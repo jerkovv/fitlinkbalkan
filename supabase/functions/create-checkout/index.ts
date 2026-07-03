@@ -115,8 +115,8 @@ Deno.serve(async (req) => {
 
     return json({ url: session.url });
   } catch (e) {
-    // Detalj samo u logu; klijentu generican tekst (bez Stripe/DB internih poruka).
+    // TEMP debug: vrati pravu gresku klijentu da vidimo tacan uzrok 500 (vraticu na generican tekst).
     console.log("create-checkout error:", (e as Error).message);
-    return json({ error: "Došlo je do greške. Pokušaj ponovo." }, 500);
+    return json({ error: (e as Error).message }, 500);
   }
 });
