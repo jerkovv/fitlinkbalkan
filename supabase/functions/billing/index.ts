@@ -141,7 +141,8 @@ Deno.serve(async (req) => {
           invoices: inv.data.map((i) => ({
             id: i.id,
             number: i.number,
-            amount: i.amount_paid,
+            // Puni iznos fakture (i.total) - amount_paid je 0 za open/draft (pokazivalo 0.00).
+            amount: i.total,
             currency: i.currency,
             status: i.status,
             created: i.created,
