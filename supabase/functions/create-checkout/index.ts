@@ -75,6 +75,8 @@ Deno.serve(async (req) => {
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: user.email ?? undefined,
+        // Fakture na srpskom; Stripe uzima prvi podrzan (fallback 'hr').
+        preferred_locales: ["sr", "hr"],
         metadata: { trainer_id: user.id },
       });
       customerId = customer.id;
@@ -110,7 +112,9 @@ Deno.serve(async (req) => {
             },
             payment_method_collection: "always",
           }
-        : {}),
+        // Godisnji jednokratni (payment): napravi fakturu. Subscription je vec pravi -
+        // invoice_creation na subscription modu baca gresku, pa ide samo u payment granu.
+        : { invoice_creation: { enabled: true } }),
       // Embedded Checkout on-site (bez redirecta); success_url/cancel_url se ne koriste.
       ui_mode: "embedded",
       redirect_on_completion: "never",
