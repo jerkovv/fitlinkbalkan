@@ -109,11 +109,12 @@ Deno.serve(async (req) => {
             payment_method_collection: "always",
           }
         : {}),
-      success_url: "https://fitlink.rs/pretplata?status=uspeh",
-      cancel_url: "https://fitlink.rs/pretplata?status=otkazano",
+      // Embedded Checkout on-site (bez redirecta); success_url/cancel_url se ne koriste.
+      ui_mode: "embedded",
+      redirect_on_completion: "never",
     });
 
-    return json({ url: session.url });
+    return json({ clientSecret: session.client_secret });
   } catch (e) {
     // Detalj samo u logu; klijentu generican tekst (bez Stripe/DB internih poruka).
     console.log("create-checkout error:", (e as Error).message);
