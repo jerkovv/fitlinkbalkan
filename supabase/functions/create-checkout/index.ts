@@ -88,6 +88,8 @@ Deno.serve(async (req) => {
     const session = await stripe.checkout.sessions.create({
       mode: isSub ? "subscription" : "payment",
       customer: customerId,
+      // 'sr' nije u Stripe Locale tipu (proveren stripe@17 .d.ts) -> 'hr' (latinica, cita se isto).
+      locale: "hr",
       line_items: [
         {
           price_data: {
