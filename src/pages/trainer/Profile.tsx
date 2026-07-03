@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Loader2, Save, Users, Dumbbell, Apple, X, Plus, Landmark, Eye, Ban, Globe, Copy, ExternalLink,
+  ShieldCheck,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -22,6 +23,44 @@ const SPEC_SUGGESTIONS = [
   "Kondicija", "Mobilnost", "Rehabilitacija", "Sportska priprema",
   "Trudnice", "Senior", "Personalni trening", "Grupni trening",
 ];
+
+type TrainerSub = {
+  status: string | null;
+  plan: string | null;
+  access_until: string | null;
+  trial_ends_at: string | null;
+};
+
+// Datum u obliku DD.MM.YYYY (bez zavisnosti od locale-a).
+function formatDMY(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  return `${dd}.${mm}.${d.getFullYear()}`;
+}
+
+// Ljudski citljiv status pretplate za trenera koji IMA pristup (iza gate-a).
+// Bez dugmeta/linka za upravljanje - to zivi na webu (fitlink.rs).
+function subLabel(sub: TrainerSub | null): string | null {
+  if (!sub || !sub.status) return null;
+  if (sub.status === "trialing") {
+    const until = sub.access_until ? new Date(sub.access_until).getTime() : NaN;
+    if (!isNaN(until)) {
+      const days = Math.max(0, Math.ceil((until - Date.now()) / 86400000));
+      return `Probni period, još ${days} ${days === 1 ? "dan" : "dana"}`;
+    }
+    return "Probni period";
+  }
+  if (sub.status === "active" || sub.status === "past_due") {
+    const datum = formatDMY(sub.access_until);
+    if (sub.plan === "yearly") return `Godišnja pretplata aktivna do ${datum}`;
+    if (sub.plan === "monthly") return `Mesečna pretplata aktivna do ${datum}`;
+    return datum ? `Pretplata aktivna do ${datum}` : "Pretplata aktivna";
+  }
+  return null;
+}
 
 const Profile = () => {
   const { user } = useAuth();
@@ -65,12 +104,15 @@ const Profile = () => {
     nutrition: 0,
   });
 
+  // FitLink pretplata (samo prikaz statusa; upravljanje je na webu).
+  const [sub, setSub] = useState<TrainerSub | null>(null);
+
   useEffect(() => {
     if (!user) return;
     const load = async () => {
       setLoading(true);
 
-      const [pRes, tRes, aCount, prCount, nuCount] = await Promise.all([
+      const [pRes, tRes, aCount, prCount, nuCount, sRes] = await Promise.all([
         supabase.from("profiles").select("full_name, phone").eq("id", user.id).maybeSingle(),
         supabase.from("trainers").select("*").eq("id", user.id).maybeSingle(),
         supabase
@@ -85,6 +127,11 @@ const Profile = () => {
           .from("nutrition_templates")
           .select("id", { count: "exact", head: true })
           .eq("trainer_id", user.id),
+        supabase
+          .from("trainer_subscriptions")
+          .select("status, plan, access_until, trial_ends_at")
+          .eq("trainer_id", user.id)
+          .maybeSingle(),
       ]);
 
       const p: any = pRes.data ?? {};
@@ -116,6 +163,8 @@ const Profile = () => {
         programs: prCount.count ?? 0,
         nutrition: nuCount.count ?? 0,
       });
+
+      setSub((sRes.data as TrainerSub | null) ?? null);
 
       setLoading(false);
     };
@@ -246,6 +295,25 @@ const Profile = () => {
                 <div className="text-[11px] text-muted-foreground">Ishrana</div>
               </Card>
             </div>
+
+            {/* FitLink pretplata - samo status (upravljanje je na webu, bez dugmeta/linka) */}
+            {subLabel(sub) && (
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-soft">
+                    <ShieldCheck className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      FitLink pretplata
+                    </div>
+                    <div className="text-[14px] font-semibold tracking-tight text-foreground mt-0.5">
+                      {subLabel(sub)}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
 
             {/* Osnovno */}
             <Card className="p-5 space-y-4">

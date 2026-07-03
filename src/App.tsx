@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ConfirmProvider } from "@/hooks/useConfirm";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AthleteLayout } from "@/components/AthleteLayout";
+import { TrainerLayout } from "@/components/TrainerLayout";
 
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -76,7 +77,10 @@ const App = () => (
             <Route path="/spremno" element={<Spremno />} />
             <Route path="/t/:slug" element={<TrainerPublic />} />
 
-            {/* Trener — protected */}
+            {/* Trener - protected, umotano u TrainerLayout (tvrdi gating: bez aktivne
+                FitLink pretplate ceo trenerski deo je zakljucan lock ekranom, sa
+                auto-otkljucavanjem cim pretplata postane aktivna). */}
+            <Route element={<TrainerLayout />}>
             <Route path="/trener/onboarding" element={trainer(<TrainerOnboarding />)} />
             <Route path="/trener" element={trainer(<TrainerDashboard />)} />
             <Route path="/trener/uzivo" element={trainer(<TrainerLiveAthletes />)} />
@@ -102,6 +106,7 @@ const App = () => (
             <Route path="/trener/chat" element={trainer(<TrainerChatList />)} />
             <Route path="/trener/chat/:athleteId" element={trainer(<TrainerChatThread />)} />
             <Route path="/trener/vezbac/:athleteId/live" element={trainer(<TrainerLiveWorkout />)} />
+            </Route>
 
             {/* Vežbač — protected, umotano u AthleteLayout (deljen lock sheet preko
                 ClanarinaLockProvider + auto-enter u aktivan trening, montiran na svim tabovima).
