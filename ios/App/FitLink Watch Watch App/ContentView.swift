@@ -170,8 +170,9 @@ struct ContentView: View {
                         ActiveWorkoutView(
                             workout: displayedWorkout,
                             heartRate: $heartRate,
-                            startedAtMs: workoutStartedAtMs,
-                            serverClockOffset: serverClockOffset,
+                            // nil dok server pocetak nije poznat (izbegava tranzijentnu .now kotvu
+                            // pri restore-u); workoutTickAnchor je fiksan cim startedAtMs stigne.
+                            tickAnchor: workoutStartedAtMs != nil ? workoutTickAnchor : nil,
                             onCompleteSet: handleCompleteSet,
                             onCompleteCardio: handleCardioComplete,
                             onFinishWorkout: handleFinishWorkout

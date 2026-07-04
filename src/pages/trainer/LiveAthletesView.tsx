@@ -3,7 +3,7 @@ import { ChevronLeft, Heart, Activity, Loader2, Pause } from "lucide-react";
 import { Avatar } from "@/components/ui-bits";
 import { cn } from "@/lib/utils";
 import { getHrColor, formatDuration } from "@/lib/workout/hrZone";
-import { isHrLive } from "@/lib/liveWorkout";
+import { isWatchConnected } from "@/lib/liveWorkout";
 import { useActiveAthletes } from "@/hooks/useActiveAthletes";
 import { WatchSlash } from "@/components/trainer/WatchSlash";
 
@@ -66,7 +66,7 @@ const LiveAthletesView = () => {
           <ul className="px-4 pt-4 space-y-2.5">
             {athletes.map((a) => {
               const initials = (a.athlete_name ?? "??").slice(0, 2).toUpperCase();
-              const live = isHrLive(a.watch_last_hr_at);
+              const live = isWatchConnected(a.watch_last_hr_at, now);
               const hrColor = getHrColor(a.current_hr);
               const timeLabel = formatDuration(a.started_at ? now - new Date(a.started_at).getTime() : 0);
               const kcal = Math.round(a.current_active_calories ?? 0);

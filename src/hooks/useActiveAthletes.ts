@@ -41,12 +41,43 @@ export const useActiveAthletes = () => {
   // Jedinstven sufiks kanala po instanci, da dve mountovane instance (npr. brzi prelaz
   // pocetna -> /trener/uzivo) ne dele isti realtime kanal po imenu.
   const channelIdRef = useRef(Math.random().toString(36).slice(2));
+  // Throttle za RPC refetch okinut realtime-om: ziva polja (HR/kalorije/pozicija/rest) se patchuju
+  // INSTANT iz realtime payload-a (bez mreze), pa RPC treba samo za strukturu (novi/otisli vezbac,
+  // join polja tipa imena). Bez ovoga bi svaki globalni HR event zvao pun RPC.
+  const lastFetchRef = useRef(0);
+  // Trailing tajmer: kad je realtime event u throttle prozoru, poslednji PRE zatisja se ipak
+  // osvezi na kraju prozora (bez njega bi otisli/novi vezbac cekao 10s safety poll).
+  const fetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchAthletes = async () => {
+    if (fetchTimerRef.current != null) {
+      clearTimeout(fetchTimerRef.current);
+      fetchTimerRef.current = null;
+    }
+    lastFetchRef.current = Date.now();
     const { data } = await supabase.rpc("get_active_athletes_for_trainer" as any);
     setAthletes(((data as any[]) ?? []) as ActiveAthlete[]);
     setLoading(false);
   };
+
+  // Leading throttle (~jednom u 2s); ako je event unutar prozora -> zakazi JEDAN coalesced trailing
+  // refetch na kraju prozora, da poslednji event ne zavisi od 10s poll-a. Ziva polja su vec instant.
+  const scheduleFetch = () => {
+    const since = Date.now() - lastFetchRef.current;
+    if (since >= 2000) {
+      fetchAthletes();
+    } else if (fetchTimerRef.current == null) {
+      fetchTimerRef.current = setTimeout(() => {
+        fetchTimerRef.current = null;
+        fetchAthletes();
+      }, 2000 - since);
+    }
+  };
+
+  // Ocisti trailing tajmer na unmount.
+  useEffect(() => () => {
+    if (fetchTimerRef.current != null) clearTimeout(fetchTimerRef.current);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -64,7 +95,38 @@ export const useActiveAthletes = () => {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "workout_live_state" },
-        () => fetchAthletes(),
+        (payload) => {
+          // INSTANT patch zivih polja postojeceg reda iz payload-a (full replica identity) - HR i
+          // last_heartbeat odmah svezi, bez cekanja RPC-a. Redovi van ove liste (drugi treneri) se
+          // preskacu. Struktura/novi/otisli i join polja idu kroz throttled refetch ispod.
+          const row = (payload as { new?: Record<string, unknown> }).new;
+          const sessionLogId = row?.session_log_id as string | undefined;
+          if (sessionLogId) {
+            setAthletes((prev) => {
+              if (!prev.some((a) => a.session_id === sessionLogId)) return prev;
+              return prev.map((a) =>
+                a.session_id !== sessionLogId
+                  ? a
+                  : {
+                      ...a,
+                      current_exercise_idx: (row!.current_exercise_idx as number | null) ?? null,
+                      current_exercise_name: (row!.current_exercise_name as string | null) ?? null,
+                      current_set_number: (row!.current_set_number as number | null) ?? null,
+                      total_sets: (row!.total_sets as number | null) ?? null,
+                      total_completed_sets: (row!.total_completed_sets as number | null) ?? null,
+                      current_hr: (row!.current_hr as number | null) ?? null,
+                      last_heartbeat: (row!.last_heartbeat as string | null) ?? null,
+                      current_state: (row!.current_state as string | null) ?? null,
+                      rest_ends_at: (row!.rest_ends_at as string | null) ?? null,
+                      watch_last_hr_at: (row!.watch_last_hr_at as string | null) ?? null,
+                      current_active_calories:
+                        (row!.current_active_calories as number | null) ?? a.current_active_calories,
+                    },
+              );
+            });
+          }
+          scheduleFetch();
+        },
       )
       .subscribe();
     return () => {

@@ -18,10 +18,11 @@ extension HRZone {
 struct ActiveWorkoutView: View {
     let workout: ActiveWorkout
     @Binding var heartRate: Int
-    // Trajanje treninga: apsolutni pocetak sesije (epoch ms) + serverski clock
-    // offset. Isti izvor kao zonski ekran, tacno i prezivi otkljucavanje.
-    let startedAtMs: Double?
-    let serverClockOffset: TimeInterval
+    // Zamrznuta kotva tajmera (workoutTickAnchor iz ContentView): fiksni Date koji odgovara
+    // pocetku sesije (server start - clock offset). Tajmer se kaci na NJU, nikad na .now.
+    // Optional: nil dok server pocetak nije poznat (npr. kratak prozor pri restore-u na reload) ->
+    // timer se sakrije umesto da se kaci na tranzijentnu .now kotvu koja bi se re-fazirala.
+    let tickAnchor: Date?
     let onCompleteSet: () -> Void
     // Kardio (is_duration_based): zavrsetak vezbe nosi unete minute.
     let onCompleteCardio: (Int) -> Void
@@ -58,15 +59,6 @@ struct ActiveWorkoutView: View {
         HRZone.zone(for: heartRate)
     }
 
-    // Do 1h -> M:SS (0:45, 12:30, 59:59). Od 1h -> sati i minuti sa "h"
-    // (1:05h, 2:15h), bez sekundi.
-    private func durationString(_ elapsed: Int) -> String {
-        if elapsed < 3600 {
-            return String(format: "%d:%02d", elapsed / 60, elapsed % 60)
-        }
-        return String(format: "%d:%02dh", elapsed / 3600, (elapsed % 3600) / 60)
-    }
-    
     var body: some View {
         // Kardio: ScrollView sa svim u vertikalnom toku (dugme ispod steppera). Snaga:
         // postojeci jednoekranski raspored. Zajednicki: long-press za kraj treninga + init.
@@ -177,23 +169,12 @@ struct ActiveWorkoutView: View {
         .padding(.top, 2)
     }
 
-    // Diskretno trajanje treninga ispod naziva vezbe. Tika svake sekunde,
-    // racuna se iz servernog pocetka + clock offset (prezivi otkljucavanje).
+    // Diskretno trajanje treninga ispod naziva vezbe. Izolovan subview vezan SAMO za zamrznutu
+    // kotvu (WorkoutTimerLabel) - HR/poll re-renderi ga NE diraju, pa tiktace glatko bez re-faziranja.
     private var workoutTimer: some View {
         Group {
-            if let startMs = startedAtMs {
-                TimelineView(.periodic(from: .now, by: 1.0)) { _ in
-                    let serverNowSec = Date().timeIntervalSince1970 + serverClockOffset
-                    let elapsed = Int(max(0, serverNowSec - startMs / 1000.0))
-                    HStack(spacing: 3) {
-                        Image(systemName: "stopwatch")
-                            .font(.system(size: 8, weight: .bold))
-                        Text(durationString(elapsed))
-                            .font(.zoneNum(11, .bold))
-                            .monospacedDigit()
-                    }
-                    .foregroundColor(.textMuted)
-                }
+            if let anchor = tickAnchor {
+                WorkoutTimerLabel(anchor: anchor)
             }
         }
     }
@@ -402,12 +383,42 @@ struct ActiveWorkoutView: View {
 
 }
 
+// Izolovan tajmer treninga. Zavisi ISKLJUCIVO od zamrznute kotve (anchor) - NE prima heartRate
+// niti bilo koji cesto-promenljiv state. Zato re-render roditelja na HR/poll ne re-pokrece ovaj
+// body (SwiftUI vidi isti anchor) pa se TimelineView schedule ne re-fazira -> tikovi ravnomerni.
+// .periodic se kaci na fiksnu kotvu (nikad .now); ctx.date je poravnat na granice sekundi, pa je
+// elapsed tacan ceo broj. Isti mehanizam kao zonski ekrani (workoutTickAnchor).
+private struct WorkoutTimerLabel: View {
+    let anchor: Date
+
+    // Do 1h -> M:SS (0:45, 12:30, 59:59). Od 1h -> sati i minuti sa "h" (1:05h, 2:15h), bez sekundi.
+    private func durationString(_ elapsed: Int) -> String {
+        if elapsed < 3600 {
+            return String(format: "%d:%02d", elapsed / 60, elapsed % 60)
+        }
+        return String(format: "%d:%02dh", elapsed / 3600, (elapsed % 3600) / 60)
+    }
+
+    var body: some View {
+        TimelineView(.periodic(from: anchor, by: 1.0)) { ctx in
+            let elapsed = Int(max(0, ctx.date.timeIntervalSince(anchor)))
+            HStack(spacing: 3) {
+                Image(systemName: "stopwatch")
+                    .font(.system(size: 8, weight: .bold))
+                Text(durationString(elapsed))
+                    .font(.zoneNum(11, .bold))
+                    .monospacedDigit()
+            }
+            .foregroundColor(.textMuted)
+        }
+    }
+}
+
 #Preview {
     ActiveWorkoutView(
         workout: .mock,
         heartRate: .constant(142),
-        startedAtMs: Date().addingTimeInterval(-750).timeIntervalSince1970 * 1000,
-        serverClockOffset: 0,
+        tickAnchor: Date().addingTimeInterval(-750),
         onCompleteSet: { print("Set completed") },
         onCompleteCardio: { print("Cardio completed: \($0) min") },
         onFinishWorkout: { print("Finish workout") }

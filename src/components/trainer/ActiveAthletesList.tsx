@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Avatar, Card, SectionTitle } from "@/components/ui-bits";
 import { Heart, ChevronRight, Activity, Flame, ArrowRight } from "lucide-react";
 import { getHrColor, formatDuration } from "@/lib/workout/hrZone";
-import { isHrLive } from "@/lib/liveWorkout";
+import { isWatchConnected } from "@/lib/liveWorkout";
 import { useActiveAthletes } from "@/hooks/useActiveAthletes";
 import { WatchSlash } from "@/components/trainer/WatchSlash";
 
@@ -80,7 +80,7 @@ export const ActiveAthletesList = () => {
                   {/* Metrike: pilule-blizanci (ista visina/padding/radius/font). Jedina razlika
                       je boja: puls nosi boju zone (brzo citanje), kcal neutralna. */}
                   <div className="flex items-center gap-2 mt-2">
-                    {isHrLive(a.watch_last_hr_at) ? (
+                    {isWatchConnected(a.watch_last_hr_at, now) ? (
                       <div
                         className="inline-flex w-fit shrink-0 items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-semibold tnum whitespace-nowrap bg-muted"
                         style={{ color: hrColor }}
@@ -93,7 +93,7 @@ export const ActiveAthletesList = () => {
                       <WatchSlash size={16} />
                     )}
                     {/* Kcal samo kad ima sat (isti uslov kao puls/precrtan sat). */}
-                    {isHrLive(a.watch_last_hr_at) && (
+                    {isWatchConnected(a.watch_last_hr_at, now) && (
                       <div className="inline-flex w-fit shrink-0 items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-semibold tnum whitespace-nowrap bg-muted text-foreground">
                         <Flame className="h-3.5 w-3.5" strokeWidth={2.4} />
                         {Math.round(a.current_active_calories ?? 0)} kcal

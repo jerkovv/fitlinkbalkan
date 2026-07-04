@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff, Plus, Minus } from "lucide-react";
 import { getHrColor, getHrZone } from "@/lib/workout/hrZone";
+import { isFreshWithinGrace } from "@/lib/liveWorkout";
 import { markWorkoutEntered } from "@/lib/workoutSession";
 import {
   AlertDialog,
@@ -196,10 +197,10 @@ function pgTsToMs(raw: string | null | undefined): number | null {
   return Number.isFinite(ms) ? ms : null;
 }
 
-// Watch presence pragovi (FAZA 1): sat upisuje watch_last_hr_at svakih ~5s dok radi.
-// FRESH = jos povezan; preko FRESH (a watch_last_hr_at != null) = izgubljen -> zakljucaj.
-// ESCAPE = posle ovoliko nudimo "Nastavi na telefonu" (da ne ostane zaglavljeno ako sat crkne).
-const WATCH_FRESH_MS = 15000;
+// Watch presence (FAZA 1): sat upisuje watch_last_hr_at svakih ~5s dok radi. "Izgubljen" =
+// odrzana tisina lokalnog signala preko DELJENE grace (isFreshWithinGrace / WATCH_GRACE_MS 40s)
+// -> zakljucaj. Isti prag i isti debounce kao trenerski prikazi (jedan mozak). ESCAPE = posle
+// ovoliko nudimo "Nastavi na telefonu" (da ne ostane zaglavljeno ako sat crkne).
 const WATCH_ESCAPE_MS = 60000;
 
 // Realtime pozicija: koliko dugo POSLE korisnicke akcije optimisticki prikaz ima
@@ -716,7 +717,7 @@ const ActiveWorkout = () => {
       // VAZNO: poll vraca TEKUCU vrednost svaki put (za razliku od realtime-a koji fire-uje
       // samo na PROMENE). Zato prva opservacija = SAMO baseline (kao initial-read live-state
       // efekta) - ne postavlja signal, da sat koji je otisao PRE otvaranja ne deluje svez i ne
-      // okine lazni lock posle 15s. Signal/presence se postavlja tek na NAREDNU promenu stringa.
+      // okine lazni lock posle grace (WATCH_GRACE_MS 40s). Signal/presence se postavlja tek na NAREDNU promenu stringa.
       // Recovery posle pada neta nije pogodjen: tada je lastSeenWatchTsRef vec popunjen, pa nov
       // string odmah osvezi svezinu.
       const pollWatchRaw = workout?.watch_last_hr_at ?? null;
@@ -786,9 +787,9 @@ const ActiveWorkout = () => {
       // zavrsena na satu dok je telefon spavao) -> rezime; pa onda poll.
       if (document.visibilityState === "visible") {
         // GRACE: dok je app bio u pozadini, realtime/poll su pauzirani -> watch signal
-        // zastari -> posle 15s lazni watch-lost lock. Osvezi svezinu SAMO ako je sat vec
+        // zastari -> posle grace (40s) lazni watch-lost lock. Osvezi svezinu SAMO ako je sat vec
         // bio prisutan (NE postavljaj na SOLO - to bi lazno reklo "sat prisutan"). Sledeci
-        // pravi watch_last_hr_at potvrdjuje; ako sata stvarno nema, posle 15s opet lock.
+        // pravi watch_last_hr_at potvrdjuje; ako sata stvarno nema, posle grace (40s) opet lock.
         if (watchSignalLocalRef.current != null) {
           watchSignalLocalRef.current = Date.now();
         }
@@ -834,7 +835,7 @@ const ActiveWorkout = () => {
   // Signal "sat se javio" = PROMENA stringa watch_last_hr_at (samo satov HR keep-alive ga
   // menja). Svezinu merimo telefonskim Date.now() od te promene - bez parsiranja serverskog
   // vremena (WKWebView/clock skew bi davao lazni lock). Kad sat ode offline, string vise ne
-  // menja -> watchSignalLocalRef stari -> posle FRESH praga lock.
+  // menja -> watchSignalLocalRef stari -> posle grace (WATCH_GRACE_MS 40s) lock.
   useEffect(() => {
     if (!sessionId || finished) return;
     let cancelled = false;
@@ -898,11 +899,11 @@ const ActiveWorkout = () => {
   }, [sessionId, finished, realtimeEpoch, applyPosition]);
 
   // Sinhroni lockedRef (za handler guard) - racuna se na `now` tik (1s) I na promenu mreze.
-  // Lock kad: (a) sat nestao (tisina > FRESH) ILI (b) telefon offline a sat prisutan (sat vozi
+  // Lock kad: (a) sat nestao (tisina > WATCH_GRACE_MS 40s) ILI (b) telefon offline a sat prisutan (sat vozi
   // trening sa buffer-om). SOLO (watchEverPresent == false) -> mreza NIKAD ne zakljucava.
   useEffect(() => {
     const sig = watchSignalLocalRef.current;
-    const stale = sig != null && Date.now() - sig > WATCH_FRESH_MS;
+    const stale = sig != null && !isFreshWithinGrace(sig, Date.now());
     const offlineWithWatch = !isOnline && watchEverPresent;
     controlsLockedRef.current = (stale || offlineWithWatch) && !phoneTakeover;
   }, [now, phoneTakeover, isOnline, watchEverPresent]);
@@ -1399,12 +1400,15 @@ const ActiveWorkout = () => {
   // preko `now` 1s tika). Bez parsiranja serverskog vremena.
   const watchWasPresent = watchEverPresent;
   const watchSilenceMs = watchWasPresent ? Date.now() - (watchSignalLocalRef.current as number) : 0;
-  const watchStale = watchWasPresent && watchSilenceMs > WATCH_FRESH_MS;
+  // Ista deljena grace/debounce (isFreshWithinGrace / WATCH_GRACE_MS 40s) kao trenerski prikazi,
+  // ali na LOKALNOM signalu (watchSignalLocalRef), NE na parsiranom serverskom vremenu - WKWebView
+  // clock skew bi na parsiranju dao lazni "izgubljen". watchWasPresent gejtuje SOLO (nikad lock).
+  const watchStale = watchWasPresent && !isFreshWithinGrace(watchSignalLocalRef.current, Date.now());
   const phoneOffline = !isOnline;
   // INSTANT lock: telefon padne sa mreze A sat je prisutan -> sat vozi trening (ima offline
-  // buffer), telefon ne sme da menja sesiju. Ne ceka 15s watch-stale rupu.
+  // buffer), telefon ne sme da menja sesiju. Ne ceka watch-stale grace (40s) rupu.
   const offlineWithWatch = phoneOffline && watchWasPresent;
-  // Pravi gubitak sata: tisina > 15s DOK je telefon ONLINE. (Offline tisinu pokriva
+  // Pravi gubitak sata: tisina > grace (40s) DOK je telefon ONLINE. (Offline tisinu pokriva
   // offlineWithWatch i prikazuje tacnu poruku - telefon je taj bez veze, ne sat.)
   const isWatchLost = watchStale && !phoneOffline && !phoneTakeover;
   // Escape "Nastavi na telefonu" SAMO za pravi gubitak sata (NE za cist offline - bez mreze

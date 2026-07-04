@@ -146,6 +146,12 @@ final class SupabaseRealtimeClient: ObservableObject {
     private var lastHadWorkout: Bool = false
     private var pollInterval: TimeInterval = 2.0  // 2 sekunde
     private var consecutiveErrors: Int = 0
+    // Grace/debounce za "Veza prekinuta": banner se pali TEK posle ODRZANOG prekida
+    // (>= offlineGraceSeconds), da tranzijentni mrezni blip (par neuspelih poll-ova) ne
+    // flipuje status. Oporavak je instant (isConnected=true na prvi uspeh). firstErrorAt =
+    // trenutak pocetka tekuceg niza gresaka (nil kad je poslednji poll bio uspesan).
+    private var firstErrorAt: Date? = nil
+    private let offlineGraceSeconds: TimeInterval = 15
     
     private let session: URLSession = {
         let config = URLSessionConfiguration.default
@@ -178,6 +184,7 @@ final class SupabaseRealtimeClient: ObservableObject {
     
     private func startPolling() {
         consecutiveErrors = 0
+        firstErrorAt = nil
         // Prvi poll odmah
         Task { @MainActor in
             await pollOnce()
@@ -222,6 +229,8 @@ final class SupabaseRealtimeClient: ObservableObject {
                 print("Polling: recovered after \(consecutiveErrors) errors")
                 consecutiveErrors = 0
             }
+            // Oporavak je instant: prvi uspesan poll ponistava tekuci niz gresaka i grace prozor.
+            firstErrorAt = nil
             // BACKOFF RESET: prvi uspesan poll posle backoff-a vrati interval na 2s ODMAH.
             if pollInterval != 2.0 {
                 restartPolling(interval: 2.0)
@@ -267,13 +276,17 @@ final class SupabaseRealtimeClient: ObservableObject {
             
         } catch {
             consecutiveErrors += 1
-            print("Polling: error #\(consecutiveErrors): \(error.localizedDescription)")
-            
-            // Posle 3 greske, smatra se da nismo povezani
-            if consecutiveErrors >= 3 {
+            if firstErrorAt == nil { firstErrorAt = Date() }
+            let sustained = Date().timeIntervalSince(firstErrorAt ?? Date())
+            print("Polling: error #\(consecutiveErrors) (odrzano \(Int(sustained))s): \(error.localizedDescription)")
+
+            // GRACE: "Veza prekinuta" tek posle ODRZANOG prekida (>= offlineGraceSeconds).
+            // Vremenski (ne po broju gresaka) - robustno bez obzira koliko brzo poll pada.
+            // Tranzijentni blip (kratak niz gresaka) NE flipuje status; oporavak je instant gore.
+            if sustained >= offlineGraceSeconds {
                 isConnected = false
             }
-            
+
             // Posle 5 gresaka, povecaj interval (rate limit / spore mreze)
             if consecutiveErrors >= 5 && pollInterval < 10 {
                 restartPolling(interval: min(pollInterval * 1.5, 10.0))
