@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { toEmbedUrl } from "@/lib/videoEmbed";
+import { MediaReportButton } from "@/components/workout/MediaReportButton";
 
 interface ExerciseHeaderProps {
   name: string;
@@ -9,6 +10,8 @@ interface ExerciseHeaderProps {
   thumbnailUrl?: string | null;
   videoUrl?: string | null;
   instructions?: string | null;
+  // Za "Prijavi" dugme (prijava lošeg/slomljenog medija). Bez njega dugme se ne prikazuje.
+  exerciseId?: string | null;
 }
 
 const isImage = (url: string) => /\.(png|jpe?g|gif|webp|avif)(\?|$)/i.test(url);
@@ -52,6 +55,7 @@ export const ExerciseHeader = ({
   thumbnailUrl,
   videoUrl,
   instructions,
+  exerciseId,
 }: ExerciseHeaderProps) => {
   const [instructionsOpen, setInstructionsOpen] = useState(false);
   const primary = nameEn?.trim() || name;
@@ -134,6 +138,10 @@ export const ExerciseHeader = ({
             </span>
           </div>
         )}
+
+        {/* key po vezbi: promena vezbe (server-driven) potpuno remontira -> zatvara sheet i
+            resetuje stanje, da se prijava nikad ne upise na pogresnu (novu) vezbu. */}
+        {exerciseId && <MediaReportButton key={exerciseId} exerciseId={exerciseId} />}
       </div>
 
       <div className="space-y-1">

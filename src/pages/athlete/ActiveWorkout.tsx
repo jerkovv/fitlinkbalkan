@@ -1522,6 +1522,7 @@ const ActiveWorkout = () => {
 
         <div className="px-4 pt-4 space-y-5">
           <ExerciseHeader
+            exerciseId={current.exercise_id}
             name={current.exercise.name}
             nameEn={current.exercise.name_en}
             primaryMuscle={current.exercise.primary_muscle}
