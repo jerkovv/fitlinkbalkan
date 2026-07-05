@@ -1,5 +1,5 @@
 -- =====================================================================
--- BACKFILL / DRIFT-CAPTURE MIGRATION  (version control only — NE DEPLOYUJE SE)
+-- BACKFILL / DRIFT-CAPTURE MIGRATION  (version control only - NE DEPLOYUJE SE)
 -- Apple Watch live-state RPC povrsina (token-based).
 --
 -- Iste price kao 20260705120000_backfill_inapp_workout_engine_rpcs.sql:

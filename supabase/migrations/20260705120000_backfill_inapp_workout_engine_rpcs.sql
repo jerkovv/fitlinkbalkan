@@ -1,5 +1,5 @@
 -- =====================================================================
--- BACKFILL / DRIFT-CAPTURE MIGRATION  (version control only — NE DEPLOYUJE SE)
+-- BACKFILL / DRIFT-CAPTURE MIGRATION  (version control only - NE DEPLOYUJE SE)
 -- In-app "atleta" live-workout engine + drift-capture.
 --
 -- Ove funkcije vec postoje u produkciji (project iyvvskywmqtudafapxdk),
