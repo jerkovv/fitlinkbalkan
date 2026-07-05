@@ -16,6 +16,11 @@ interface WatchSyncPlugin {
   isWatchPaired(): Promise<{ paired: boolean }>;
 
   isWatchAppInstalled(): Promise<{ installed: boolean }>;
+
+  // WCSession nudge satu ("sync_now", bez podataka): sat na prijem ODMAH forsira poll
+  // umesto da ceka 2s tick - pauza/pozicija krece na satu za <1s. Best-effort: ako sat
+  // nije reachable, delivered=false i nista se ne kvari (2s poll ostaje fallback).
+  nudgeSyncNow(): Promise<{ success: boolean; delivered?: boolean }>;
 }
 
 export const WatchSync = registerPlugin<WatchSyncPlugin>("WatchSync");

@@ -162,6 +162,23 @@ public class WatchSyncPlugin: CAPPlugin, WCSessionDelegate {
         }
     }
 
+    // WCSession nudge ka satu: "sync_now" BEZ podataka - sat na prijem odmah forsira poll
+    // (forceRefresh) umesto da ceka 2s tick, pa promena rest stanja sa telefona stigne <1s.
+    // Best-effort: ako sat nije reachable, tiho preskoci (delivered=false); podaci NIKAD ne
+    // idu kroz WCSession - samo signal, izvor istine ostaje serverski poll.
+    @objc func nudgeSyncNow(_ call: CAPPluginCall) {
+        guard let session = self.session,
+              session.activationState == .activated,
+              session.isReachable else {
+            call.resolve(["success": true, "delivered": false])
+            return
+        }
+        session.sendMessage(["type": "sync_now"], replyHandler: nil, errorHandler: { error in
+            print("[WatchSync] nudgeSyncNow failed: \(error.localizedDescription)")
+        })
+        call.resolve(["success": true, "delivered": true])
+    }
+
     @objc func isWatchPaired(_ call: CAPPluginCall) {
         guard let session = self.session,
               session.activationState == .activated else {

@@ -52,13 +52,13 @@ const playDing = () => {
   }
 };
 
-// round (ne ceil): mala latencija/clock-offset rezidua cini da prvi (endsAt-now)
-// bude npr 30.00x s -> ceil bi pokazao 31 za pauzu od 30. round pogadja postavljenu
-// vrednost (30); tick je 1s pa se interval smanjuje tacno za 1 -> odbrojavanje
-// 30,29,...,1,0 bez preskoka i bez dupliranja (dva uzastopna tika se razlikuju za 1).
-// Fire na remaining<=0 ostaje, pa stigne do 0. Isto pravilo kao na satu, da se slazu.
+// ceil - ISTO zaokruzivanje kao sat (RestTimerView .rounded(.up)): remaining je "preostalo,
+// zaokruzeno navise", pa oba uredjaja prikazuju ISTU sekundu za isti apsolutni kraj (jedan
+// mozak). Lokalni anchor (Date.now()+rest) daje tacno rest na prvom renderu (ceil(30.000)=30),
+// a server-aritmeticki krajevi (poll: rest_ends - server_now) su uvek <= nominale, pa ceil ne
+// prikazuje rest+1. Fire na remaining<=0 sada znaci TACNO na kraju (ne 0.5s ranije kao round).
 const remainingFrom = (endsAt: number) =>
-  Math.max(0, Math.round((endsAt - Date.now()) / 1000));
+  Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
 
 export const RestTimer = ({ endsAt, onDone, subtitle, onAddSeconds, disabled = false }: RestTimerProps) => {
   // Tick samo da forsira re-render; remaining se UVEK racuna iz endsAt - now,

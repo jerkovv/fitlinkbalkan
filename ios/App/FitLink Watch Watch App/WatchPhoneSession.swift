@@ -22,6 +22,11 @@ final class WatchPhoneSession: NSObject, ObservableObject {
     // "Povezano" sa sigurnošću; ContentView retry-uje na svaki poll tick.
     @Published private(set) var tokenIsUncertain: Bool = false
 
+    // "sync_now" nudge sa telefona (fire-and-forget sendMessage, bez podataka): telefon je
+    // upravo promenio rest stanje (complete set / skip / +30) -> ContentView ovde kaci
+    // realtimeClient.forceRefresh() da poll krene ODMAH umesto da ceka 2s tick.
+    var onSyncNudge: (() -> Void)?
+
     // Da li je telefon u dometu (WCSession.isReachable). Default true da pre aktivacije
     // ne palimo "telefon nije u blizini". Postaje stvaran isReachable po aktivaciji i na
     // svaku promenu reachability-ja. "Problem" = activated && !isReachable -> ovde false.
@@ -197,6 +202,20 @@ extension WatchPhoneSession: WCSessionDelegate {
     func session(_ session: WCSession, didReceiveUserInfo userInfo: [String : Any] = [:]) {
         DispatchQueue.main.async { [weak self] in
             self?.handlePayload(userInfo)
+        }
+    }
+
+    // Fire-and-forget poruke sa telefona (sendMessage BEZ replyHandler-a): "sync_now" nudge
+    // okida onSyncNudge (forceRefresh na poll); svaki drugi tip ide kroz isti handlePayload
+    // kao applicationContext/userInfo. Ne sudara se sa handshake-om (on ide sa reply variantom
+    // u SUPROTNOM smeru - sat -> telefon).
+    func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
+        DispatchQueue.main.async { [weak self] in
+            if (message["type"] as? String) == "sync_now" {
+                self?.onSyncNudge?()
+            } else {
+                self?.handlePayload(message)
+            }
         }
     }
 

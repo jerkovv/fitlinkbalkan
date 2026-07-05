@@ -9,4 +9,5 @@ CAP_PLUGIN(WatchSyncPlugin, "WatchSync",
     CAP_PLUGIN_METHOD(clearWatchToken, CAPPluginReturnPromise);
     CAP_PLUGIN_METHOD(isWatchPaired, CAPPluginReturnPromise);
     CAP_PLUGIN_METHOD(isWatchAppInstalled, CAPPluginReturnPromise);
+    CAP_PLUGIN_METHOD(nudgeSyncNow, CAPPluginReturnPromise);
 )

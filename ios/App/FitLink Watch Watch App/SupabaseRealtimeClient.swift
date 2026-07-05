@@ -204,8 +204,12 @@ final class SupabaseRealtimeClient: ObservableObject {
         }
     }
 
-    // Reconnect/foreground: ODMAH jedan poll + reset na 2s (ne cekaj sledeci tik/backoff).
+    // Reconnect/foreground/nudge: ODMAH jedan poll + reset na 2s (ne cekaj sledeci tik/backoff).
+    // Guard: posle disconnect()-a (pollTimer == nil) NE ozivljavaj polling - inace bi zakasneli
+    // sync_now nudge / network event uskrsnuo 2s poll sa ustajalim tokenom posle odjave.
+    // connect()/startPolling je jedini legitimni ulaz u polling.
     func forceRefresh() {
+        guard pollTimer != nil else { return }
         restartPolling(interval: 2.0)
         Task { @MainActor in
             await pollOnce()

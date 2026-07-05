@@ -1343,6 +1343,11 @@ struct ContentView: View {
                     zoneEnteredAt = info.zone != nil ? Date() : nil
                 }
             }
+            // "sync_now" nudge sa telefona (promena rest stanja) -> ODMAH forsiraj poll,
+            // ne cekaj 2s tick. Pauza pokrenuta na telefonu krene na satu za <1s.
+            phoneSession.onSyncNudge = {
+                realtimeClient.forceRefresh()
+            }
 
             realtimeClient.setToken(token)
             realtimeClient.connect(userId: context.userId)
@@ -1768,7 +1773,11 @@ struct ContentView: View {
         // finalizuje na stvarnoj poslednjoj seriji, a poll to otkrije (onWorkoutDeleted ->
         // handleWorkoutDeleted). Ako je lokalni plan bio krnj, poll vrati pravu sledecu poziciju.
         if let next = computeLocalPosition(), !next.complete {
-            restEndsAt = Date().addingTimeInterval(Double(max(pos.restSeconds, 1)))
+            // Optimisticki anchor u SERVER okviru (+serverClockOffset): RestTimerView poredi
+            // protiv serverNow(), pa lokalni okvir bez offseta prikazuje pogresnu sekundu
+            // dok poll ne stigne. Ovako prikaz odmah pokazuje istu sekundu kao telefon i
+            // serverska vrednost iz polla legne bez skoka.
+            restEndsAt = Date().addingTimeInterval(Double(max(pos.restSeconds, 1)) + serverClockOffset)
             currentState = .rest
         }
         flushQueue()
@@ -1808,7 +1817,11 @@ struct ContentView: View {
         // 3) Optimisticki UI: rest samo ako lokalni model vidi jos. Finalizaciju prepusti
         // engine-u/poll-u (lokalni plan moze biti krnj) - bez lokalnog gasenja treninga.
         if let next = computeLocalPosition(), !next.complete {
-            restEndsAt = Date().addingTimeInterval(Double(max(pos.restSeconds, 1)))
+            // Optimisticki anchor u SERVER okviru (+serverClockOffset): RestTimerView poredi
+            // protiv serverNow(), pa lokalni okvir bez offseta prikazuje pogresnu sekundu
+            // dok poll ne stigne. Ovako prikaz odmah pokazuje istu sekundu kao telefon i
+            // serverska vrednost iz polla legne bez skoka.
+            restEndsAt = Date().addingTimeInterval(Double(max(pos.restSeconds, 1)) + serverClockOffset)
             currentState = .rest
         }
         flushQueue()

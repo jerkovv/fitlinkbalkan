@@ -4,6 +4,7 @@ import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOf
 import { getHrColor, getHrZone } from "@/lib/workout/hrZone";
 import { isFreshWithinGrace } from "@/lib/liveWorkout";
 import { markWorkoutEntered } from "@/lib/workoutSession";
+import { WatchSync, isNativeIOS } from "@/lib/watchSync";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -177,6 +178,14 @@ const fmtElapsed = (ms: number) => {
 
 // Mrezni poziv na tek-probudenoj vezi zna da visi 15-30s (OS TCP timeout). withTimeout
 // odbaci posle ms, pa pozivalac moze brzo da retrira umesto da blokira UI.
+// WCSession nudge satu posle promene rest stanja sa telefona (complete set / skip / +30):
+// sat na prijem ODMAH forsira poll umesto da ceka 2s tick -> pauza krece na satu za <1s.
+// Best-effort fire-and-forget: bez native/sata tiho preskace, 2s poll ostaje fallback.
+const nudgeWatchSync = () => {
+  if (!isNativeIOS()) return;
+  WatchSync.nudgeSyncNow().catch(() => {});
+};
+
 function withTimeout<T>(p: PromiseLike<T>, ms: number): Promise<T> {
   return Promise.race([
     Promise.resolve(p),
@@ -695,10 +704,18 @@ const ActiveWorkout = () => {
 
   /* ------------------------- Poll: athlete_poll_state (render iz servera) ------------------------- */
   const applyPoll = useCallback(
-    (workout: any, serverNowMs: number | null | undefined) => {
+    (workout: any, serverNowMs: number | null | undefined, requestStartedTs?: number) => {
       if (finishedRef.current) return;
       if (typeof serverNowMs === "number") {
-        clockOffsetRef.current = serverNowMs - Date.now();
+        // NTP midpoint: server_now je uzet negde IZMEDJU slanja zahteva i prijema odgovora,
+        // pa je poredjenje sa sredinom intervala (a ne sa vremenom prijema) tacnije - inace
+        // offset sistemski kasni za ceo downlink (50-600ms) i realtime-derived rest na
+        // telefonu ispadne rest+1 uz ceil. Fallback na vreme prijema bez requestStartedTs.
+        const clientMid =
+          typeof requestStartedTs === "number"
+            ? (requestStartedTs + Date.now()) / 2
+            : Date.now();
+        clockOffsetRef.current = serverNowMs - clientMid;
       }
 
       if (!workout) {
@@ -790,7 +807,7 @@ const ActiveWorkout = () => {
         if (setBusyRef.current) return;
         const res = data as any;
         if (!res || res.success === false) return;
-        applyPoll(res.workout, res.server_now_ms);
+        applyPoll(res.workout, res.server_now_ms, startedTs);
       } catch {
         // timeout / mreza -> preskoci, sledeci tik retrira
       } finally {
@@ -812,9 +829,12 @@ const ActiveWorkout = () => {
         if (watchSignalLocalRef.current != null) {
           watchSignalLocalRef.current = Date.now();
         }
-        void navIfSessionDone(sessionIdRef.current).then((done) => {
-          if (!done) poll();
-        });
+        // PARALELNO, ne lancano: applyPoll sam hendluje zatvorenu sesiju (null workout ->
+        // rezime), a cekanje navIfSessionDone (do 3.5s) bi odlozilo prvi post-wake poll i
+        // osvezavanje clock offseta (realtime rest u tom prozoru bi koristio ustajali offset).
+        // navIfSessionDone ostaje kao brzi direktan check kraja.
+        poll();
+        void navIfSessionDone(sessionIdRef.current);
       }
     };
     document.addEventListener("visibilitychange", onVis);
@@ -904,10 +924,13 @@ const ActiveWorkout = () => {
       // COUNTDOWN NIKAD iz realtime stringa nadole: pgTsToMs (Date.parse u WKWebView) je
       // dokumentovano nepouzdan, a pogresan/stari parse u proslosti bi RestTimer-u dao
       // remaining<=0 -> auto-skipRest -> izbacivanje iz svezeg resta. Zato: postojeci
-      // endsAt (lokalno ankerovan / poll) je pod, parsed sme samo da PRODUZI (max) -
-      // legitimno +30 sa sata prolazi, los parse nikad ne skracuje. Bez postojeceg
-      // (watch-driven rest) parsed uz clamp na min now+3s; poll (<=2s) donese tacan broj
-      // pre nego sto clamp istekne, pa ni tada nema laznog auto-skipa.
+      // endsAt (lokalno ankerovan / poll) je pod, parsed sme samo da PRODUZI (max).
+      // ULAZAK u rest (npr. pauza pokrenuta sa sata): konvertuj ODMAH preko ODRZAVANOG
+      // offseta (poll <=2s, svez) da telefon prikaze TACNU sekundu bez cekanja polla -
+      // ali samo ako je vrednost PLAUZIBILNA (u buducnosti, <30min). Neplauzibilna
+      // (los parse / stari istekli rest) -> clamp now+6s; poll (tipicno <=2s, posle wake-a
+      // do ~6s uz hung-poll ciklus) donese tacan broj pre isteka fitilja, pa nema laznog
+      // auto-skipa (clock-skew bug ostaje mrtav).
       let restEndsAtMs: number | null = null;
       if (rowState === "rest") {
         const parsed = pgTsToMs(row?.rest_ends_at);
@@ -915,8 +938,9 @@ const ActiveWorkout = () => {
         if (prevPos.state === "rest" && prevPos.restEndsAtMs != null) {
           restEndsAtMs =
             derived != null ? Math.max(prevPos.restEndsAtMs, derived) : prevPos.restEndsAtMs;
-        } else {
-          restEndsAtMs = derived != null ? Math.max(derived, Date.now() + 3000) : null;
+        } else if (derived != null) {
+          const plausible = derived > Date.now() && derived < Date.now() + 30 * 60_000;
+          restEndsAtMs = plausible ? derived : Date.now() + 6000;
         }
       }
 
@@ -1147,6 +1171,7 @@ const ActiveWorkout = () => {
       } as any);
       lastActionAtRef.current = Date.now();
       if (error) notifyRpcError(error);
+      else nudgeWatchSync();
     },
     [sessionId, notifyRpcError]
   );
@@ -1239,6 +1264,11 @@ const ActiveWorkout = () => {
       // poziciju ako je RPC ipak stigao do servera.
       let csData: unknown = null;
       let csError: { message?: string } | null = null;
+      // Anchor na vreme SLANJA: server postavlja rest_ends_at = now()+rest pri OBRADI (blizu
+      // slanja), a odgovor moze da kasni - anchor na prijem bi precenio kraj za ceo response
+      // leg (vidljiv skok navise dok sat vec pokazuje istinu). Mali podbacaj je bezopasan
+      // (poll <=2s uskladi navise), prebacaj bi bio vidljiv.
+      const rpcSentAtMs = Date.now();
       try {
         const r = await withTimeout(
           supabase.rpc("athlete_complete_set", {
@@ -1261,6 +1291,7 @@ const ActiveWorkout = () => {
         notifyRpcError(csError);
         return;
       }
+      nudgeWatchSync();
 
       // SERVER TRUTH: odgovor complete_set-a nosi state/position/rest_seconds - primeni ODMAH
       // (ne cekaj poll). Countdown je LOKALNO ankerovan: Date.now() + rest_seconds - nikakvo
@@ -1286,7 +1317,7 @@ const ActiveWorkout = () => {
                   totalSets:
                     typeof posSrv.total_sets === "number" ? posSrv.total_sets : prev.totalSets,
                   state: "rest",
-                  restEndsAtMs: Date.now() + srvRest * 1000,
+                  restEndsAtMs: rpcSentAtMs + srvRest * 1000,
                   startedAtMs: prev.startedAtMs,
                   currentHr: prev.currentHr,
                 }
@@ -1363,6 +1394,8 @@ const ActiveWorkout = () => {
       setBusyRef.current = true;
       let ccData: unknown = null;
       let ccError: { message?: string } | null = null;
+      // Anchor na vreme slanja (isto kao snaga) - bez skoka navise na spor odgovor.
+      const rpcSentAtMs = Date.now();
       try {
         const r = await withTimeout(
           supabase.rpc("athlete_complete_set", {
@@ -1383,6 +1416,7 @@ const ActiveWorkout = () => {
         notifyRpcError(ccError);
         return;
       }
+      nudgeWatchSync();
       // SERVER TRUTH (isto kao snaga): pozicija iz odgovora + LOKALNO ankerovan countdown.
       const cres = ccData as any;
       if (cres && cres.success !== false) {
@@ -1403,7 +1437,7 @@ const ActiveWorkout = () => {
                   totalSets:
                     typeof posSrv.total_sets === "number" ? posSrv.total_sets : prev.totalSets,
                   state: "rest",
-                  restEndsAtMs: Date.now() + srvRest * 1000,
+                  restEndsAtMs: rpcSentAtMs + srvRest * 1000,
                   startedAtMs: prev.startedAtMs,
                   currentHr: prev.currentHr,
                 }
@@ -1431,6 +1465,7 @@ const ActiveWorkout = () => {
     } as any);
     lastActionAtRef.current = Date.now();
     if (error) notifyRpcError(error);
+    else nudgeWatchSync();
   }, [sessionId, notifyRpcError]);
 
   const finishWorkout = useCallback(async () => {
