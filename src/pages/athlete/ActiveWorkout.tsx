@@ -249,6 +249,13 @@ const ActiveWorkout = () => {
   const [cardioMinutes, setCardioMinutes] = useState(20);
   const [cardioBusy, setCardioBusy] = useState(false);
 
+  // Anti-trosenje serija: "Zavrsi set" zakljucan dok athlete_complete_set ne vrati.
+  // MORA da zivi OVDE (ne u SetLogger.submitting) - SetLogger je keyovan po poziciji pa ga
+  // optimisticki advance remountuje i unutrasnji guard ispari. Ref za sinhroni re-entry
+  // check u handleru, state za disable dugmeta preko remount-a.
+  const setBusyRef = useRef(false);
+  const [setBusy, setSetBusy] = useState(false);
+
   // FAZA 1 - watch presence: NE parsiramo serverski timestamp (new Date(string) u WKWebView
   // daje pogresno/starije vreme + clock skew -> lazni lock). Umesto toga: PROMENA stringa
   // watch_last_hr_at = signal "sat se javio", a svezinu merimo telefonskim Date.now().
@@ -735,8 +742,16 @@ const ActiveWorkout = () => {
 
       const serverRestMs =
         typeof workout.rest_ends_at_ms === "number" ? workout.rest_ends_at_ms : null;
+      // Preostalo vreme = CISTA serverska razlika (rest_ends_at_ms - server_now_ms, oba broja
+      // iz ISTOG odgovora) prevedena na lokalni sat. Nikakvo poredjenje serverskog wall-clock-a
+      // sa lokalnim Date.now() -> clock skew (WKWebView) matematicki ne postoji u racunu.
+      // Fallback na offset samo ako odgovor nema server_now_ms.
       const restEndsAtMs =
-        serverRestMs != null ? serverRestMs - clockOffsetRef.current : null;
+        serverRestMs != null
+          ? typeof serverNowMs === "number"
+            ? Date.now() + (serverRestMs - serverNowMs)
+            : serverRestMs - clockOffsetRef.current
+          : null;
 
       applyPosition({
         exerciseIdx: workout.current_exercise_idx,
@@ -769,6 +784,10 @@ const ActiveWorkout = () => {
         if (error) return; // zadrži poslednje stanje
         // Staleness: novija optimistička akcija je krenula POSLE starta ovog poll-a.
         if (lastActionAtRef.current > startedTs) return;
+        // Dok complete_set RPC traje, server jos moze biti na STAROJ poziciji (active) -
+        // primena takvog odgovora bi tranzijentno izbacila iz optimistickog resta (flicker).
+        // Autoritativni odgovor RPC-a stize odmah posle; naredni poll uskladjuje.
+        if (setBusyRef.current) return;
         const res = data as any;
         if (!res || res.success === false) return;
         applyPoll(res.workout, res.server_now_ms);
@@ -865,13 +884,47 @@ const ActiveWorkout = () => {
       const prevPos = posRef.current;
       if (!prevPos) return;
       if (Date.now() - lastActionAtRef.current < RT_POS_GUARD_MS) return;
-      const restServerMs = pgTsToMs(row?.rest_ends_at);
-      const restEndsAtMs = restServerMs != null ? restServerMs - clockOffsetRef.current : null;
+
+      const rowState = row?.current_state;
+      // ZASTITA OD ZAOSTALOG EVENTA: dok je lokalni rest SVEZ (endsAt u buducnosti), realtime
+      // event koji NIJE rest (npr. backlogovan pred-akcijski 'active') se ODBACUJE - za CELO
+      // trajanje pauze, ne samo prvih par sekundi (pauze traju 60-180s, backlog moze da kasni
+      // proizvoljno). Bez ovoga zaostali event izbaci iz pauze "kao da nije kliknuto", pa
+      // ponovni klik potrosi SLEDECU seriju. Legitimni izlasci NISU blokirani: watch skip /
+      // cron autoadvance stizu kroz poll (<=2s, sa staleness guardom), a kad rest istekne
+      // lokalno (endsAt <= now) freshLocalRest pada pa eventi opet prolaze.
+      const freshLocalRest =
+        prevPos.state === "rest" &&
+        prevPos.restEndsAtMs != null &&
+        prevPos.restEndsAtMs > Date.now();
+      if (freshLocalRest && rowState !== "rest") {
+        return;
+      }
+
+      // COUNTDOWN NIKAD iz realtime stringa nadole: pgTsToMs (Date.parse u WKWebView) je
+      // dokumentovano nepouzdan, a pogresan/stari parse u proslosti bi RestTimer-u dao
+      // remaining<=0 -> auto-skipRest -> izbacivanje iz svezeg resta. Zato: postojeci
+      // endsAt (lokalno ankerovan / poll) je pod, parsed sme samo da PRODUZI (max) -
+      // legitimno +30 sa sata prolazi, los parse nikad ne skracuje. Bez postojeceg
+      // (watch-driven rest) parsed uz clamp na min now+3s; poll (<=2s) donese tacan broj
+      // pre nego sto clamp istekne, pa ni tada nema laznog auto-skipa.
+      let restEndsAtMs: number | null = null;
+      if (rowState === "rest") {
+        const parsed = pgTsToMs(row?.rest_ends_at);
+        const derived = parsed != null ? parsed - clockOffsetRef.current : null;
+        if (prevPos.state === "rest" && prevPos.restEndsAtMs != null) {
+          restEndsAtMs =
+            derived != null ? Math.max(prevPos.restEndsAtMs, derived) : prevPos.restEndsAtMs;
+        } else {
+          restEndsAtMs = derived != null ? Math.max(derived, Date.now() + 3000) : null;
+        }
+      }
+
       applyPosition({
         exerciseIdx: row?.current_exercise_idx,
         setNumber: row?.current_set_number,
         totalSets: row?.total_sets,
-        state: row?.current_state,
+        state: rowState,
         restEndsAtMs,
         startedAtMs: prevPos.startedAtMs,
         currentHr: typeof row?.current_hr === "number" ? row.current_hr : null,
@@ -1104,6 +1157,11 @@ const ActiveWorkout = () => {
       const p = posRef.current;
       if (!sessionId || !p || !day) return;
       if (controlsLockedRef.current) return; // sat izgubljen -> bez mutacije sesije
+      // Anti-trosenje: dok jedan complete_set traje, drugi klik je no-op (ref = sinhroni
+      // guard koji prezivi remount SetLogger-a; state disable-uje dugme vizuelno).
+      if (setBusyRef.current) return;
+      setBusyRef.current = true;
+      setSetBusy(true);
       triggerHaptic();
 
       const ex = day.exercises[p.exerciseIdx];
@@ -1142,10 +1200,14 @@ const ActiveWorkout = () => {
           finishedRef.current = false;
           setFinished(false);
           setFinishing(false);
+          setBusyRef.current = false;
+          setSetBusy(false);
           return;
         }
         await finalizeAndNav();
         setFinishing(false);
+        setBusyRef.current = false;
+        setSetBusy(false);
         return;
       }
 
@@ -1172,14 +1234,73 @@ const ActiveWorkout = () => {
         currentHr: p.currentHr,
       });
 
-      const { error } = await supabase.rpc("athlete_complete_set", {
-        p_session_id: sessionId,
-        p_reps: data.reps,
-        p_weight: data.weight_kg,
-        p_rpe: data.rpe,
-      } as any);
+      // withTimeout: viseci zahtev (mrtva mreza, WKWebView suspend) NE sme trajno da
+      // zakljuca dugme - busy se oslobodi, optimisticki rest ostaje, poll (2s) uskladi
+      // poziciju ako je RPC ipak stigao do servera.
+      let csData: unknown = null;
+      let csError: { message?: string } | null = null;
+      try {
+        const r = await withTimeout(
+          supabase.rpc("athlete_complete_set", {
+            p_session_id: sessionId,
+            p_reps: data.reps,
+            p_weight: data.weight_kg,
+            p_rpe: data.rpe,
+          } as any),
+          10000
+        );
+        csData = (r as any).data;
+        csError = (r as any).error ?? null;
+      } catch {
+        csError = { message: "Veza je spora. Pokušaj ponovo." };
+      }
       lastActionAtRef.current = Date.now();
-      if (error) notifyRpcError(error);
+      setBusyRef.current = false;
+      setSetBusy(false);
+      if (csError) {
+        notifyRpcError(csError);
+        return;
+      }
+
+      // SERVER TRUTH: odgovor complete_set-a nosi state/position/rest_seconds - primeni ODMAH
+      // (ne cekaj poll). Countdown je LOKALNO ankerovan: Date.now() + rest_seconds - nikakvo
+      // poredjenje serverskog wall-clock-a sa lokalnim satom (WKWebView skew van igre).
+      // Pozicija iz odgovora = serverska istina, pa ponovni klik nikad ne moze tiho da
+      // loguje pogresnu seriju.
+      const res = csData as any;
+      if (res && res.success !== false) {
+        if (res.state === "rest") {
+          const srvRest =
+            typeof res.rest_seconds === "number" && res.rest_seconds > 0
+              ? res.rest_seconds
+              : restSec;
+          const posSrv = res.position ?? {};
+          lastActionAtRef.current = Date.now();
+          setPos((prev) =>
+            prev
+              ? {
+                  exerciseIdx:
+                    typeof posSrv.exercise_idx === "number" ? posSrv.exercise_idx : prev.exerciseIdx,
+                  setNumber:
+                    typeof posSrv.set_number === "number" ? posSrv.set_number : prev.setNumber,
+                  totalSets:
+                    typeof posSrv.total_sets === "number" ? posSrv.total_sets : prev.totalSets,
+                  state: "rest",
+                  restEndsAtMs: Date.now() + srvRest * 1000,
+                  startedAtMs: prev.startedAtMs,
+                  currentHr: prev.currentHr,
+                }
+              : prev
+          );
+        } else if (res.state === "completed") {
+          // Edge: server kaze da je OVO bio kraj (klijentska mapa dana odstupa od serverske)
+          // -> isti zavrsni put kao poslednja serija.
+          setFinishing(true);
+          markFinished();
+          await finalizeAndNav();
+          setFinishing(false);
+        }
+      }
     },
     [sessionId, day, finalizeAndNav, markFinished, notifyRpcError]
   );
@@ -1238,13 +1359,63 @@ const ActiveWorkout = () => {
         currentHr: p.currentHr,
       });
 
-      const { error } = await supabase.rpc("athlete_complete_set", {
-        p_session_id: sessionId,
-        p_duration_minutes: minutes,
-      } as any);
+      // Isti timeout escape kao snaga; setBusyRef i ovde, da poll guard pokrije i kardio flight.
+      setBusyRef.current = true;
+      let ccData: unknown = null;
+      let ccError: { message?: string } | null = null;
+      try {
+        const r = await withTimeout(
+          supabase.rpc("athlete_complete_set", {
+            p_session_id: sessionId,
+            p_duration_minutes: minutes,
+          } as any),
+          10000
+        );
+        ccData = (r as any).data;
+        ccError = (r as any).error ?? null;
+      } catch {
+        ccError = { message: "Veza je spora. Pokušaj ponovo." };
+      }
       lastActionAtRef.current = Date.now();
-      if (error) notifyRpcError(error);
+      setBusyRef.current = false;
       setCardioBusy(false);
+      if (ccError) {
+        notifyRpcError(ccError);
+        return;
+      }
+      // SERVER TRUTH (isto kao snaga): pozicija iz odgovora + LOKALNO ankerovan countdown.
+      const cres = ccData as any;
+      if (cres && cres.success !== false) {
+        if (cres.state === "rest") {
+          const srvRest =
+            typeof cres.rest_seconds === "number" && cres.rest_seconds > 0
+              ? cres.rest_seconds
+              : restSec;
+          const posSrv = cres.position ?? {};
+          lastActionAtRef.current = Date.now();
+          setPos((prev) =>
+            prev
+              ? {
+                  exerciseIdx:
+                    typeof posSrv.exercise_idx === "number" ? posSrv.exercise_idx : prev.exerciseIdx,
+                  setNumber:
+                    typeof posSrv.set_number === "number" ? posSrv.set_number : prev.setNumber,
+                  totalSets:
+                    typeof posSrv.total_sets === "number" ? posSrv.total_sets : prev.totalSets,
+                  state: "rest",
+                  restEndsAtMs: Date.now() + srvRest * 1000,
+                  startedAtMs: prev.startedAtMs,
+                  currentHr: prev.currentHr,
+                }
+              : prev
+          );
+        } else if (cres.state === "completed") {
+          setFinishing(true);
+          markFinished();
+          await finalizeAndNav();
+          setFinishing(false);
+        }
+      }
     },
     [sessionId, day, cardioBusy, finalizeAndNav, markFinished, notifyRpcError]
   );
@@ -1681,7 +1852,7 @@ const ActiveWorkout = () => {
                 initialReps={initialFor(exerciseIdx, setNumber)?.reps ?? null}
                 initialWeightKg={initialFor(exerciseIdx, setNumber)?.weight_kg ?? null}
                 onComplete={handleSetComplete}
-                disabled={controlsLocked}
+                disabled={controlsLocked || setBusy}
               />
             </>
           )}
