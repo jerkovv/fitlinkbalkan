@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
+import { roleHome } from "@/lib/roles";
+import { UnsupportedAccount } from "@/components/UnsupportedAccount";
 import type { AppRole } from "@/lib/database.types";
 
 interface Props {
@@ -40,8 +42,14 @@ export const ProtectedRoute = ({ children, requireRole }: Props) => {
   }
 
   if (requireRole && role && role !== requireRole) {
-    // Pogrešna uloga — preusmeri na ispravnu sekciju
-    const target = role === "trainer" ? "/trener" : "/vezbac";
+    // Pogresna uloga -> preusmeri na NJEN dom. Uloga bez doma u aplikaciji (admin/nepoznato,
+    // roleHome=null) ili dom koji je bas ova ruta (navigacija ne bi promenila nista) ->
+    // neutralan ekran sa odjavom umesto redirecta. Loop guard: bez ovoga admin veslja
+    // /vezbac -> mismatch -> /vezbac -> ... u beskonacnoj petlji.
+    const target = roleHome(role);
+    if (!target || location.pathname === target || location.pathname.startsWith(target + "/")) {
+      return <UnsupportedAccount />;
+    }
     return <Navigate to={target} replace />;
   }
 

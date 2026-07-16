@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { roleHome } from "@/lib/roles";
+import { UnsupportedAccount } from "@/components/UnsupportedAccount";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,9 +26,12 @@ const Auth = () => {
 
   // Ako je već ulogovan, redirect - ALI ne tokom reset toka (verifyOtp pravi
   // privremenu sesiju, ne smemo da uletimo u app pre nego što se lozinka postavi).
+  // Samo uloge sa domom u aplikaciji (roleHome != null); admin/nepoznato ostaje ovde
+  // i ispod vidi UnsupportedAccount umesto login forme (bez redirect petlje).
   useEffect(() => {
     if (!authLoading && user && role && mode !== "forgot") {
-      navigate(role === "trainer" ? "/trener" : "/vezbac", { replace: true });
+      const home = roleHome(role);
+      if (home) navigate(home, { replace: true });
     }
   }, [user, role, authLoading, navigate, mode]);
 
@@ -102,6 +107,12 @@ const Auth = () => {
       setSubmitting(false);
     }
   };
+
+  // Ulogovan nalog bez doma u aplikaciji (admin/nepoznata uloga): neutralan ekran sa
+  // odjavom umesto login forme. Ne dira forgot tok (mode==='forgot' i dalje renderuje formu).
+  if (!authLoading && user && role && mode !== "forgot" && !roleHome(role)) {
+    return <UnsupportedAccount />;
+  }
 
   return (
     <div className="phone-shell flex flex-col px-6 py-10">
