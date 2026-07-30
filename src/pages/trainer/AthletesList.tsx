@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Avatar, Chip } from "@/components/ui-bits";
-import { Search, ChevronRight, Loader2, UserPlus, Mail, Loader, Clock, RefreshCw, Trash2 } from "lucide-react";
+import { Search, ChevronRight, Loader2, Mail, Loader, Clock, RefreshCw, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
@@ -95,7 +95,6 @@ const AthletesList = () => {
   const [rows, setRows] = useState<AthleteRow[]>([]);
   const [pending, setPending] = useState<PendingInvite[]>([]);
   const [resendingId, setResendingId] = useState<string | null>(null);
-  const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [inviteToDelete, setInviteToDelete] = useState<PendingInvite | null>(null);
   const [deletingInvite, setDeletingInvite] = useState(false);
   const [overview, setOverview] = useState<Map<string, { risk: string; days_since_last: number | null }>>(new Map());
@@ -143,14 +142,6 @@ const AthletesList = () => {
     }));
 
     setRows(merged);
-
-    // Trainer invite code (za "dodaj vežbača")
-    const { data: tr } = await supabase
-      .from("trainers")
-      .select("invite_code")
-      .eq("id", user.id)
-      .maybeSingle();
-    setInviteCode((tr as any)?.invite_code ?? null);
 
     // Pending email pozivnice (poslate, čekamo prihvatanje)
     const { data: inv } = await supabase
@@ -242,20 +233,6 @@ const AthletesList = () => {
       toast.error(porukaGreske(e));
     } finally {
       setSending(false);
-    }
-  };
-
-  const copyInviteLink = async () => {
-    if (!inviteCode) {
-      toast.error("Nemaš lični invite link.");
-      return;
-    }
-    const url = `${window.location.origin}/invite/${inviteCode}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      toast.success("Link kopiran");
-    } catch {
-      toast.error("Ne mogu da kopiram");
     }
   };
 
@@ -461,12 +438,6 @@ const AthletesList = () => {
               className="w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-brand text-white py-4 text-[14px] font-semibold shadow-brand active:scale-[0.99] transition"
             >
               <Mail className="h-4 w-4" /> Pozovi vežbača emailom
-            </button>
-            <button
-              onClick={copyInviteLink}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-hairline hover:border-primary/40 hover:bg-primary-soft/40 py-3 text-[13px] font-semibold text-muted-foreground hover:text-primary-soft-foreground transition mt-2"
-            >
-              <UserPlus className="h-4 w-4" /> ili kopiraj lični link
             </button>
           </>
         )}

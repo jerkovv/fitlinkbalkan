@@ -19,6 +19,9 @@ import {
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { DeleteAccountSheet } from "@/components/DeleteAccountSheet";
+import { SITE_BASE, publicTrainerUrl } from "@/lib/publicUrl";
+
+const SITE_HOST = new URL(SITE_BASE).host;
 
 const SPEC_SUGGESTIONS = [
   "Mršavljenje", "Hipertrofija", "Snaga", "Funkcionalni trening",
@@ -527,9 +530,9 @@ const Profile = () => {
                 <div className="flex items-stretch rounded-md border border-input bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-0">
                   <span
                     className="flex items-center px-3 text-[12.5px] text-muted-foreground bg-muted/50 border-r border-input max-w-[55%] truncate tnum"
-                    title={`${window.location.host}/t/`}
+                    title={`${SITE_HOST}/t/`}
                   >
-                    <span className="truncate">{window.location.host}</span>
+                    <span className="truncate">{SITE_HOST}</span>
                     <span className="shrink-0">/t/</span>
                   </span>
                   <Input
@@ -547,7 +550,7 @@ const Profile = () => {
                     type="button"
                     disabled={!publicSlug || !!slugError}
                     onClick={async () => {
-                      const url = `${window.location.origin}/t/${publicSlug.trim().toLowerCase()}`;
+                      const url = publicTrainerUrl(publicSlug.trim().toLowerCase());
                       try {
                         await navigator.clipboard.writeText(url);
                         toast.success("Link kopiran");
@@ -588,7 +591,7 @@ const Profile = () => {
                     variant="outline"
                     className="flex-1"
                     onClick={async () => {
-                      const url = `${window.location.origin}/t/${publicSlug.trim().toLowerCase()}`;
+                      const url = publicTrainerUrl(publicSlug.trim().toLowerCase());
                       try {
                         await navigator.clipboard.writeText(url);
                         toast.success("Link kopiran");
@@ -602,7 +605,7 @@ const Profile = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => window.open(`/t/${publicSlug.trim().toLowerCase()}`, "_blank")}
+                    onClick={() => window.open(publicTrainerUrl(publicSlug.trim().toLowerCase()), "_blank")}
                   >
                     <ExternalLink className="h-4 w-4" />
                   </Button>
