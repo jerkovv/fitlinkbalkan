@@ -10,6 +10,7 @@ import {
   FullScreenSheetFooter,
 } from "@/components/ui/full-screen-sheet";
 import { supabase } from "@/lib/supabase";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +39,7 @@ export const BroadcastButton = ({ fab = false }: Props) => {
     });
     setSending(false);
     if (error) {
-      toast.error(error.message ?? "Greška pri slanju");
+      toast.error(porukaGreske(error));
       return;
     }
     const count = typeof data === "number" ? data : 0;

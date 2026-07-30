@@ -29,9 +29,18 @@ export default function Spremno() {
   const copy = COPY[tip] ?? DEFAULT_COPY;
 
   useEffect(() => {
-    // odjavi eventualnu web sesiju da korisnik ne ostane ulogovan u pregledacu
+    // Odjavi eventualnu web sesiju SAMO ako je ova ruta stvarno otvorena iz
+    // mejl linka (tip parametar ili Supabase auth token u URL-u) - ne na
+    // svako otvaranje /spremno bez ikakvog konteksta.
+    const hasTip = params.get("tip") !== null;
+    const hasTokenParam = ["access_token", "refresh_token", "token_hash", "code"].some(
+      (key) => params.get(key) !== null,
+    );
+    const hasTokenInHash = /access_token=|token_hash=/.test(window.location.hash);
+    if (!hasTip && !hasTokenParam && !hasTokenInHash) return;
+
     supabase.auth.signOut().catch(() => {});
-  }, []);
+  }, [params]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f7f7fb] px-5">

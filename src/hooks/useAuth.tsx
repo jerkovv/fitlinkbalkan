@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
+import { App } from "@capacitor/app";
 import { supabase } from "@/lib/supabase";
 import type { AppRole } from "@/lib/database.types";
 import { WatchSync, isNativeIOS } from "@/lib/watchSync";
@@ -91,7 +92,14 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   role: AppRole | null;
+  // Kombinovano initializing || roleLoading, zadrzano za postojece pozivaoce
+  // koji samo trebaju "jos nije spremno, ne renderuj konacno stanje".
   loading: boolean;
+  // true dok prvi supabase.auth.getSession() ne zavrsi (cold start).
+  initializing: boolean;
+  // true dok god je fetchRole u toku - i na cold start i posle svakog auth
+  // eventa. Odvojeno od initializing jer se ponavlja tokom celog zivota app-a.
+  roleLoading: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -100,6 +108,8 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   role: null,
   loading: true,
+  initializing: true,
+  roleLoading: false,
   signOut: async () => {},
 });
 
@@ -107,7 +117,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [initializing, setInitializing] = useState(true);
+  const [roleLoading, setRoleLoading] = useState(false);
 
   useEffect(() => {
     // 1. Listener PRVO
@@ -127,6 +138,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // RPC-a/mreže. Token ide zasebno, best-effort, ispod.
         void confirmLoggedInSafe();
 
+        // roleLoading MORA da se upali ovde, sinhrono, pre setTimeout-a.
+        // Ako bi se palio unutar setTimeout-a, postoji prozor u kom je role
+        // vec null (stari se nije jos obrisao ili je ovo prvi fetch) a
+        // roleLoading jos false - ProtectedRoute bi to pogresno procitao kao
+        // "nalog nema ulogu" i odjavio korisnika usred normalnog refresh-a.
+        setRoleLoading(true);
         // Defer role fetch da izbegnemo deadlock u callbacku
         setTimeout(() => {
           fetchRole(newSession.user.id);
@@ -148,6 +165,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       } else {
         setRole(null);
+        setRoleLoading(false);
       }
     });
 
@@ -160,7 +178,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // nezavisno od RPC-a (pokriva slučaj zaglavljenog loggedOut=true).
         void confirmLoggedInSafe();
 
-        fetchRole(existing.user.id).finally(() => setLoading(false));
+        setRoleLoading(true);
+        void fetchRole(existing.user.id);
         // Cold start - sync Watch token ako je sesija vec postojala
         // (npr. korisnik vec ulogovan, app reload). Defer 500ms da se
         // WCSession aktivira pre poziva.
@@ -173,11 +192,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           void registerPushNotifications(existing.user.id);
         }, 600);
       } else {
-        setLoading(false);
+        setRole(null);
       }
+      // initializing prati SAMO getSession, ne ceka na fetchRole - to je
+      // posao roleLoading, koji je vec upaljen iznad pre ovog reda.
+      setInitializing(false);
     });
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  // Auto refresh tokena mora da prati zivotni ciklus app-a na native platformama:
+  // JS tajmeri se gase dok je WKWebView u pozadini, pa interni supabase-js tajmer
+  // za refresh nikad ne stigne da se izvrsi. Bez ovoga, korisnik koji vrati app
+  // posle duze pauze zatekne istekao access token i mora ponovo da se loguje.
+  useEffect(() => {
+    supabase.auth.startAutoRefresh();
+    const listenerPromise = App.addListener("appStateChange", ({ isActive }) => {
+      if (isActive) {
+        supabase.auth.startAutoRefresh();
+      } else {
+        supabase.auth.stopAutoRefresh();
+      }
+    });
+    return () => {
+      void listenerPromise.then((handle) => handle.remove());
+    };
   }, []);
 
   // Re-sync na visibility change: kad app postane vidljiv (user otvori
@@ -197,12 +237,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user]);
 
   const fetchRole = async (userId: string) => {
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .maybeSingle();
-    setRole((data?.role as AppRole) ?? null);
+    try {
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .maybeSingle();
+      setRole((data?.role as AppRole) ?? null);
+    } finally {
+      setRoleLoading(false);
+    }
   };
 
   const signOut = async () => {
@@ -217,7 +261,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, loading, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        role,
+        loading: initializing || roleLoading,
+        initializing,
+        roleLoading,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

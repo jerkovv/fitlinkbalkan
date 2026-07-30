@@ -13,10 +13,11 @@ import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Auth from "./pages/Auth.tsx";
 import Invite from "./pages/Invite.tsx";
+import InviteCode from "./pages/InviteCode.tsx";
+import ProveriMejl from "./pages/ProveriMejl.tsx";
 import Spremno from "./pages/Spremno.tsx";
 import TrainerPublic from "./pages/TrainerPublic.tsx";
 
-import TrainerOnboarding from "./pages/trainer/Onboarding.tsx";
 import TrainerDashboard from "./pages/trainer/Dashboard.tsx";
 import TrainerAthletes from "./pages/trainer/AthletesList.tsx";
 import TrainerAthleteProfile from "./pages/trainer/AthleteProfile.tsx";
@@ -74,6 +75,8 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/invite/:code" element={<Invite />} />
+            <Route path="/poziv" element={<InviteCode />} />
+            <Route path="/proveri-mejl" element={<ProveriMejl />} />
             <Route path="/spremno" element={<Spremno />} />
             <Route path="/t/:slug" element={<TrainerPublic />} />
 
@@ -81,7 +84,6 @@ const App = () => (
                 FitLink pretplate ceo trenerski deo je zakljucan lock ekranom, sa
                 auto-otkljucavanjem cim pretplata postane aktivna). */}
             <Route element={<TrainerLayout />}>
-            <Route path="/trener/onboarding" element={trainer(<TrainerOnboarding />)} />
             <Route path="/trener" element={trainer(<TrainerDashboard />)} />
             <Route path="/trener/uzivo" element={trainer(<TrainerLiveAthletes />)} />
             <Route path="/trener/vezbaci" element={trainer(<TrainerAthletes />)} />

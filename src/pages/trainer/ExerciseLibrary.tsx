@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
-import { friendlyDbError } from "@/lib/dbError";
+import { porukaGreske } from "@/lib/errorMessage";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,7 +97,7 @@ const ExerciseLibrary = () => {
       .order("is_global", { ascending: false })
       .order("name", { ascending: true });
     if (error) {
-      toast.error("Greška: " + error.message);
+      toast.error(porukaGreske(error));
     } else {
       setItems((data as any) ?? []);
     }
@@ -142,7 +142,7 @@ const ExerciseLibrary = () => {
     setSubmitting(false);
 
     if (error) {
-      toast.error(friendlyDbError(error));
+      toast.error(porukaGreske(error));
       return;
     }
     toast.success("Vežba dodata");

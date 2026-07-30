@@ -18,6 +18,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { porukaGreske } from "@/lib/errorMessage";
 import { cn } from "@/lib/utils";
 import { ExerciseHeader } from "@/components/workout/ExerciseHeader";
 import { SetLogger } from "@/components/workout/SetLogger";
@@ -1174,7 +1175,7 @@ const ActiveWorkout = () => {
     if (looksOffline) {
       return;
     }
-    toast.error(msg || "Greška. Pokušaj ponovo.");
+    toast.error(porukaGreske(error));
   }, []);
 
   /* ------------------------- Helper: produži odmor (+30 kroz motor) ------------------------- */

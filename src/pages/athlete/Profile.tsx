@@ -19,6 +19,7 @@ import { WearableTrendChart } from "@/components/wearables/WearableTrendChart";
 import { WorkoutsList } from "@/components/wearables/WorkoutsList";
 import { useWearableConnections } from "@/hooks/useWearableConnections";
 import { Link } from "react-router-dom";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { DeleteAccountSheet } from "@/components/DeleteAccountSheet";
 
@@ -40,6 +41,9 @@ const Profile = () => {
   const [birthYear, setBirthYear] = useState<string>("");
   const [gender, setGender] = useState<Gender | "">("");
   const [notes, setNotes] = useState("");
+  const [heightError, setHeightError] = useState<string | null>(null);
+  const [weightError, setWeightError] = useState<string | null>(null);
+  const [birthYearError, setBirthYearError] = useState<string | null>(null);
   const [trainer, setTrainer] = useState<{ name: string; phone: string | null; email: string | null } | null>(null);
   const [trainerInviteCode, setTrainerInviteCode] = useState<string | null>(null);
   const [tourOpen, setTourOpen] = useState(false);
@@ -89,8 +93,42 @@ const Profile = () => {
     load();
   }, [user]);
 
+  // Validacija pre slanja - prazno polje je dozvoljeno (NULL kolone), samo
+  // popunjeno polje van opsega se odbija OVDE, bez ijednog poziva ka bazi.
+  const validate = (): boolean => {
+    let ok = true;
+    setHeightError(null);
+    setWeightError(null);
+    setBirthYearError(null);
+
+    if (heightCm.trim()) {
+      const h = Number(heightCm);
+      if (!Number.isFinite(h) || h < 100 || h > 250) {
+        setHeightError("Visina mora biti između 100 i 250 cm.");
+        ok = false;
+      }
+    }
+    if (weightKg.trim()) {
+      const w = Number(weightKg);
+      if (!Number.isFinite(w) || w < 30 || w > 300) {
+        setWeightError("Težina mora biti između 30 i 300 kg.");
+        ok = false;
+      }
+    }
+    if (birthYear.trim()) {
+      const y = Number(birthYear);
+      const currentYear = new Date().getFullYear();
+      if (!Number.isInteger(y) || y < 1900 || y > currentYear) {
+        setBirthYearError(`Godina rođenja mora biti između 1900 i ${currentYear}.`);
+        ok = false;
+      }
+    }
+    return ok;
+  };
+
   const handleSave = async () => {
     if (!user) return;
+    if (!validate()) return;
     setSaving(true);
     try {
       const { error: pErr } = await supabase
@@ -121,7 +159,7 @@ const Profile = () => {
 
       toast.success("Profil sačuvan");
     } catch (e: any) {
-      toast.error(e.message ?? "Greška pri čuvanju");
+      toast.error(porukaGreske(e));
     } finally {
       setSaving(false);
     }
@@ -380,9 +418,10 @@ const Profile = () => {
                     min={100}
                     max={250}
                     value={heightCm}
-                    onChange={(e) => setHeightCm(e.target.value)}
+                    onChange={(e) => { setHeightCm(e.target.value); setHeightError(null); }}
                     placeholder="180"
                   />
+                  {heightError && <p className="text-[11.5px] text-destructive">{heightError}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="weight">Težina (kg)</Label>
@@ -394,9 +433,10 @@ const Profile = () => {
                     min={30}
                     max={300}
                     value={weightKg}
-                    onChange={(e) => setWeightKg(e.target.value)}
+                    onChange={(e) => { setWeightKg(e.target.value); setWeightError(null); }}
                     placeholder="80"
                   />
+                  {weightError && <p className="text-[11.5px] text-destructive">{weightError}</p>}
                 </div>
               </div>
 
@@ -410,9 +450,10 @@ const Profile = () => {
                     min={1900}
                     max={new Date().getFullYear()}
                     value={birthYear}
-                    onChange={(e) => setBirthYear(e.target.value)}
+                    onChange={(e) => { setBirthYear(e.target.value); setBirthYearError(null); }}
                     placeholder="1995"
                   />
+                  {birthYearError && <p className="text-[11.5px] text-destructive">{birthYearError}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label>Pol</Label>

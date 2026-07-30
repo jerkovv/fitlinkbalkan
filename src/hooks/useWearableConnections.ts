@@ -7,6 +7,7 @@ import {
   requestHealthKitPermissions,
   syncHealthKitData,
 } from "@/lib/wearable/healthkit";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 
 export interface WearableConnection {
@@ -91,7 +92,7 @@ export const useWearableConnections = (userId?: string) => {
       // TODO (OAuth faza): pozvati edge function `${provider}-authorize`
       throw new Error("Uskoro dostupno");
     },
-    onError: (e: any) => toast.error(e?.message ?? "Greška pri povezivanju"),
+    onError: (e: any) => toast.error(porukaGreske(e)),
     onSuccess: () => refresh(),
   });
 
@@ -109,7 +110,7 @@ export const useWearableConnections = (userId?: string) => {
       toast.success("Pristup otkazan");
       refresh();
     },
-    onError: (e: any) => toast.error(e?.message ?? "Greška"),
+    onError: (e: any) => toast.error(porukaGreske(e)),
   });
 
   const syncNow = useMutation({
@@ -150,7 +151,7 @@ export const useWearableConnections = (userId?: string) => {
       }
       throw new Error("Sinhronizacija stiže uskoro");
     },
-    onError: (e: any) => toast.error(e?.message ?? "Greška pri sinhronizaciji"),
+    onError: (e: any) => toast.error(porukaGreske(e)),
     onSuccess: () => refresh(),
   });
 

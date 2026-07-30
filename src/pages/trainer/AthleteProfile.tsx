@@ -26,6 +26,7 @@ import {
   Apple, ClipboardList, Wallet, MessageSquare, Phone, Loader2, Plus, X, Check,
   Dumbbell, Scale, UserMinus, Flame, Sparkles, Mail, Copy, Pencil,
 } from "lucide-react";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { InAppWorkoutsList } from "@/components/InAppWorkoutsList";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -187,7 +188,7 @@ const AthleteProfile = () => {
       setRemoveOpen(false);
       navigate("/trener/vezbaci");
     } catch (e: any) {
-      toast.error(e.message ?? "Greška pri uklanjanju");
+      toast.error(porukaGreske(e));
     } finally {
       setRemoving(false);
     }
@@ -348,7 +349,7 @@ const AthleteProfile = () => {
       p_count: n,
     });
     setBonusSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(porukaGreske(error));
     toast.success(`Dodato ${n} treninga`);
     setBonusOpen(false);
     setBonusCount("1");
@@ -383,7 +384,7 @@ const AthleteProfile = () => {
       .from("assigned_program_days")
       .select("id", { count: "exact", head: true })
       .eq("assigned_program_id", assignedProgramId);
-    if (existingErr) { toast.error(existingErr.message); return false; }
+    if (existingErr) { toast.error(porukaGreske(existingErr)); return false; }
     if ((count ?? 0) > 0) return true;
 
     const { data: tDays } = await supabase
@@ -404,7 +405,7 @@ const AthleteProfile = () => {
       .from("assigned_program_days")
       .insert(days.map((d) => ({ assigned_program_id: assignedProgramId, day_number: d.day_number, name: d.name })) as any)
       .select("id, day_number");
-    if (dErr) { toast.error(dErr.message); return false; }
+    if (dErr) { toast.error(porukaGreske(dErr)); return false; }
 
     const dayMap = new Map<string, string>();
     days.forEach((oldDay) => {
@@ -417,7 +418,7 @@ const AthleteProfile = () => {
       .filter((e) => e.day_id);
     if (exInserts.length) {
       const { error: eErr } = await supabase.from("assigned_program_exercises").insert(exInserts as any);
-      if (eErr) { toast.error(eErr.message); return false; }
+      if (eErr) { toast.error(porukaGreske(eErr)); return false; }
     }
     return true;
   };
@@ -447,7 +448,7 @@ const AthleteProfile = () => {
       .insert({ athlete_id: id, trainer_id: user.id, name: tpl.name } as any)
       .select("id")
       .single();
-    if (apErr || !ap) { toast.error(apErr?.message ?? "Greška pri kreiranju programa"); return null; }
+    if (apErr || !ap) { toast.error(porukaGreske(apErr)); return null; }
     const assignedId = (ap as any).id;
 
     // 3) Insert dani
@@ -458,7 +459,7 @@ const AthleteProfile = () => {
       .from("assigned_program_days")
       .insert(dayInserts as any)
       .select("id, day_number");
-    if (dErr) { toast.error(dErr.message); return null; }
+    if (dErr) { toast.error(porukaGreske(dErr)); return null; }
 
     const dayMap = new Map<string, string>();
     tDays.forEach((od) => {
@@ -480,7 +481,7 @@ const AthleteProfile = () => {
       .filter((e) => e.day_id);
     if (exInserts.length) {
       const { error: eErr } = await supabase.from("assigned_program_exercises").insert(exInserts as any);
-      if (eErr) { toast.error(eErr.message); return null; }
+      if (eErr) { toast.error(porukaGreske(eErr)); return null; }
     }
     return assignedId;
   };
@@ -494,7 +495,7 @@ const AthleteProfile = () => {
       setProgOpen(false);
       await load();
     } catch (error: any) {
-      toast.error(error.message ?? "Greška pri dodeli programa");
+      toast.error(porukaGreske(error));
     } finally {
       setProgAssigning(null);
     }
@@ -511,7 +512,7 @@ const AthleteProfile = () => {
       p_name: customName.trim() || "Plan treninga",
     } as any);
     setCustomCreating(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     const assignedId = data as string;
     setCustomOpen(false);
     setCustomName("");
@@ -529,7 +530,7 @@ const AthleteProfile = () => {
       p_name: customNutName.trim() || "Plan ishrane",
     } as any);
     setCustomNutCreating(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     const assignedId = data as string;
     setCustomNutOpen(false);
     setCustomNutName("");
@@ -550,7 +551,7 @@ const AthleteProfile = () => {
       .is("published_at", null)
       .order("assigned_at", { ascending: false })
       .limit(1);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     const draft = (data as any[] | null)?.[0];
     if (draft) setDraftResume({ kind: "program", draftId: draft.id, draftName: draft.name });
     else setCustomOpen(true);
@@ -566,7 +567,7 @@ const AthleteProfile = () => {
       .is("published_at", null)
       .order("assigned_at", { ascending: false })
       .limit(1);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     const draft = (data as any[] | null)?.[0];
     if (draft) setDraftResume({ kind: "nutrition", draftId: draft.id, draftName: draft.name });
     else setCustomNutOpen(true);
@@ -586,7 +587,7 @@ const AthleteProfile = () => {
     // Draft nije poslat -> nema istorije, pravi DELETE je bezbedan (CASCADE brise dane/obroke).
     const table = kind === "program" ? "assigned_programs" : "assigned_nutrition_plans";
     const { error } = await supabase.from(table).delete().eq("id", draftId);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     setDraftResume(null);
     if (kind === "program") setCustomOpen(true);
     else setCustomNutOpen(true);
@@ -620,7 +621,7 @@ const AthleteProfile = () => {
       setAssignOpen(false);
       load();
     } catch (e: any) {
-      toast.error(e.message ?? "Greška pri dodeli plana");
+      toast.error(porukaGreske(e));
     } finally {
       setAssigning(null);
     }
@@ -635,7 +636,7 @@ const AthleteProfile = () => {
       .from("assigned_nutrition_plans")
       .delete()
       .eq("athlete_id", id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Plan otkazan");
     load();
   };

@@ -1,7 +1,5 @@
-import { useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/lib/supabase";
 import { roleHome } from "@/lib/roles";
 import { UnsupportedAccount } from "@/components/UnsupportedAccount";
 import type { AppRole } from "@/lib/database.types";
@@ -12,19 +10,16 @@ interface Props {
 }
 
 export const ProtectedRoute = ({ children, requireRole }: Props) => {
-  const { user, role, loading } = useAuth();
+  const { user, role, initializing, roleLoading } = useAuth();
   const location = useLocation();
 
-  // Nalog bez uloge (user postoji ali role je null POSLE zavrsenog ucitavanja):
-  // odjavi i vrati na /auth. Gate na !loading je bitan - bez njega bi izbacio
-  // korisnika dok se role jos cita.
-  useEffect(() => {
-    if (!loading && user && !role) {
-      supabase.auth.signOut();
-    }
-  }, [loading, user, role]);
-
-  if (loading) {
+  // Dok se sesija ili uloga jos ucitavaju, ne znamo dovoljno da odlucimo -
+  // ne redirect, ne UnsupportedAccount, samo cekaj. Ovo je razlika izmedju
+  // "role se jos ucitava" i "role ne postoji" koja je ranije nedostajala:
+  // fetchRole je asinhron pa je role kratko null i posle validnog auth
+  // eventa (refresh tokena i sl), a stari kod je to citao kao "nema ulogu"
+  // i odjavljivao korisnika usred normalnog rada.
+  if (initializing || roleLoading) {
     return (
       <div className="h-[100dvh] flex items-center justify-center">
         <div className="text-sm text-muted-foreground">Učitavanje…</div>
@@ -36,9 +31,11 @@ export const ProtectedRoute = ({ children, requireRole }: Props) => {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // Ucitavanje zavrseno, ali nalog nema ulogu -> odjava (useEffect) + na /auth.
+  // Ucitavanje je zavrseno (initializing i roleLoading oboje false) i role
+  // je i dalje null -> nalog stvarno nema ulogu. Ne odjavljuj automatski,
+  // UnsupportedAccount vec ima dugme za rucnu odjavu.
   if (!role) {
-    return <Navigate to="/auth" replace />;
+    return <UnsupportedAccount />;
   }
 
   if (requireRole && role && role !== requireRole) {

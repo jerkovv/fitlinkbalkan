@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useConfirm } from "@/hooks/useConfirm";
 import { cn } from "@/lib/utils";
 import { Loader2, Banknote, Receipt, Check, X, Inbox, ChevronRight, IdCard } from "lucide-react";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { MembershipEditSheet } from "@/components/trainer/MembershipEditSheet";
 
@@ -163,7 +164,7 @@ const Payments = () => {
       p_starts_on: new Date().toISOString().split("T")[0],
     });
     setBusyId(null);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(porukaGreske(error));
     toast.success("Uplata potvrđena, članarina aktivirana");
     load();
     loadOverview();
@@ -177,7 +178,7 @@ const Payments = () => {
       p_notes: null,
     });
     setBusyId(null);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(porukaGreske(error));
     toast.success("Zahtev odbijen");
     load();
   };
@@ -194,7 +195,7 @@ const Payments = () => {
     setOverviewLoading(true);
     const { data, error } = await supabase.rpc("trainer_memberships_overview");
     setOverviewLoading(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     const res = data as any;
     if (!res?.success || !Array.isArray(res.memberships)) { setOverview([]); return; }
     setOverview(res.memberships as MembershipOverviewRow[]);

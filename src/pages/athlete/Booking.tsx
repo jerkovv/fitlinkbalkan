@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { Clock, Users, User, Check, Loader2, X, Lock } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useClanarinaLock } from "@/components/clanarina/useClanarinaLock";
-import { friendlyDbError } from "@/lib/dbError";
+import { porukaGreske } from "@/lib/errorMessage";
 import { useConfirm } from "@/hooks/useConfirm";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -150,7 +150,7 @@ const Booking = () => {
       p_session_type_id: s.session_type_id,
     });
     setActingKey(null);
-    if (error) { toast.error(friendlyDbError(error)); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Termin rezervisan");
     loadDay();
   };
@@ -163,7 +163,7 @@ const Booking = () => {
     setActingKey(key);
     const { error } = await supabase.rpc("cancel_session_booking", { p_booking_id: s.my_booking_id });
     setActingKey(null);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Rezervacija otkazana");
     loadDay();
   };
@@ -188,7 +188,7 @@ const Booking = () => {
       p_session_type_id: s.session_type_id,
     });
     setActingKey(null);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Dodat si na listu čekanja");
     loadDay();
   };
@@ -201,7 +201,7 @@ const Booking = () => {
       p_waitlist_id: s.my_waitlist_id,
     });
     setActingKey(null);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Skinut si sa liste čekanja");
     loadDay();
   };
@@ -244,7 +244,7 @@ const Booking = () => {
       p_session_type_id: s.session_type_id,
     });
     setAttendeesLoading(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     setAttendees((data as any[]) ?? []);
   };
 

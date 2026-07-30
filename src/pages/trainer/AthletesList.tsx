@@ -7,6 +7,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { Avatar, Chip } from "@/components/ui-bits";
 import { Search, ChevronRight, Loader2, UserPlus, Mail, Loader, Clock, RefreshCw, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import {
   FullScreenSheet,
@@ -110,7 +111,7 @@ const AthletesList = () => {
       .order("joined_at", { ascending: false });
 
     if (error) {
-      toast.error(error.message);
+      toast.error(porukaGreske(error));
       setLoading(false);
       return;
     }
@@ -238,7 +239,7 @@ const AthletesList = () => {
       setInviteName("");
       setInviteEmail("");
     } catch (e: any) {
-      toast.error(e.message ?? "Greška pri slanju pozivnice");
+      toast.error(porukaGreske(e));
     } finally {
       setSending(false);
     }
@@ -286,7 +287,7 @@ const AthletesList = () => {
       toast.success(`Pozivnica ponovo poslata na ${inv.email}`);
       await load();
     } catch (e: any) {
-      toast.error(e.message ?? "Greška pri ponovnom slanju");
+      toast.error(porukaGreske(e));
       // Vrati stari invite na pending da se ne izgubi
       await supabase.from("invites").update({ status: "pending" }).eq("id", inv.id);
       await load();
@@ -305,7 +306,7 @@ const AthletesList = () => {
       setInviteToDelete(null);
       await load();
     } catch (e: any) {
-      toast.error(e.message ?? "Greška pri brisanju pozivnice");
+      toast.error(porukaGreske(e));
     } finally {
       setDeletingInvite(false);
     }

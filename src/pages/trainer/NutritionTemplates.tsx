@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
-import { friendlyDbError } from "@/lib/dbError";
+import { porukaGreske } from "@/lib/errorMessage";
 import { useAuth } from "@/hooks/useAuth";
 import { PhoneShell } from "@/components/PhoneShell";
 import { Button } from "@/components/ui/button";
@@ -48,7 +48,7 @@ const NutritionTemplates = () => {
       .select("*")
       .order("created_at", { ascending: false });
     if (error) {
-      toast.error(error.message);
+      toast.error(porukaGreske(error));
     } else {
       setItems((data as any) ?? []);
       const ids = (data ?? []).map((t: any) => t.id);
@@ -82,7 +82,7 @@ const NutritionTemplates = () => {
       notes: notes || null,
     } as any);
     setSubmitting(false);
-    if (error) { toast.error(friendlyDbError(error)); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Plan kreiran");
     setOpen(false);
     setName(""); setGoal(""); setTargetKcal(""); setTargetProtein(""); setTargetCarbs(""); setTargetFat(""); setNotes("");

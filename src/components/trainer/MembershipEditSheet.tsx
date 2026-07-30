@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { friendlyDbError } from "@/lib/dbError";
+import { porukaGreske } from "@/lib/errorMessage";
 import { cn } from "@/lib/utils";
 import {
   FullScreenSheet,
@@ -98,7 +98,7 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, onSaved }: Me
         .maybeSingle();
       setLoading(false);
       if (error || !data) {
-        toast.error(error?.message ?? "Članarina nije pronađena");
+        toast.error(porukaGreske(error));
         onClose();
         return;
       }
@@ -163,7 +163,7 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, onSaved }: Me
       })
       .eq("id", membershipId);
     setSaving(false);
-    if (error) return toast.error(friendlyDbError(error));
+    if (error) return toast.error(porukaGreske(error));
     toast.success("Članarina sačuvana");
     onSaved();
     onClose();

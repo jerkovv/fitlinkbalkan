@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
-import { friendlyDbError } from "@/lib/dbError";
+import { porukaGreske } from "@/lib/errorMessage";
 import { useAuth } from "@/hooks/useAuth";
 import { PhoneShell } from "@/components/PhoneShell";
 import { Button } from "@/components/ui/button";
@@ -48,7 +48,7 @@ const ProgramTemplates = () => {
       .select("*")
       .order("created_at", { ascending: false });
     if (error) {
-      toast.error(error.message);
+      toast.error(porukaGreske(error));
     } else {
       setItems((data as any) ?? []);
       // count days per template
@@ -76,7 +76,7 @@ const ProgramTemplates = () => {
     }))) return;
     // CASCADE brise dane/vezbe; assigned_programs.source_template_id -> SET NULL.
     const { error } = await supabase.from("program_templates").delete().eq("id", t.id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Program obrisan");
     load();
   };
@@ -93,7 +93,7 @@ const ProgramTemplates = () => {
       level: level || null,
     } as any);
     setSubmitting(false);
-    if (error) { toast.error(friendlyDbError(error)); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Program kreiran");
     setOpen(false);
     setName(""); setDescription(""); setGoal(""); setLevel("");

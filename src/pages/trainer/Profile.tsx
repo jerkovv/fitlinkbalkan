@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { DeleteAccountSheet } from "@/components/DeleteAccountSheet";
 
@@ -97,6 +98,7 @@ const Profile = () => {
   const [publicEnabled, setPublicEnabled] = useState(true);
   const [headline, setHeadline] = useState("");
   const [slugError, setSlugError] = useState<string | null>(null);
+  const [yearsError, setYearsError] = useState<string | null>(null);
 
   // read-only stats
   const [stats, setStats] = useState({
@@ -213,6 +215,17 @@ const Profile = () => {
       return;
     }
 
+    // Validacija pre slanja - prazno polje je dozvoljeno (NULL kolona), samo
+    // popunjeno polje van opsega se odbija OVDE, bez ijednog poziva ka bazi.
+    setYearsError(null);
+    if (years.trim()) {
+      const y = Number(years);
+      if (!Number.isFinite(y) || y < 0 || y > 80) {
+        setYearsError("Godine iskustva moraju biti između 0 i 80.");
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const { error: pErr } = await supabase
@@ -258,7 +271,7 @@ const Profile = () => {
 
       toast.success("Profil sačuvan");
     } catch (e: any) {
-      toast.error(e.message ?? "Greška pri čuvanju");
+      toast.error(porukaGreske(e));
     } finally {
       setSaving(false);
     }
@@ -394,9 +407,10 @@ const Profile = () => {
                     min={0}
                     max={80}
                     value={years}
-                    onChange={(e) => setYears(e.target.value)}
+                    onChange={(e) => { setYears(e.target.value); setYearsError(null); }}
                     placeholder="5"
                   />
+                  {yearsError && <p className="text-[11.5px] text-destructive">{yearsError}</p>}
                 </div>
               </div>
 

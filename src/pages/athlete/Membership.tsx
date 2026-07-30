@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import {
   Loader2, ShieldCheck, Package, Banknote, Receipt, Clock, X, Plus, Copy, Check, Landmark, QrCode,
 } from "lucide-react";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { generateIpsQrDataUrl } from "@/lib/ipsQr";
 
@@ -262,7 +263,7 @@ const Membership = () => {
       p_payment_method: method,
     });
     setBuying(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(porukaGreske(error));
     toast.success("Zahtev poslat treneru");
     setStoreOpen(false);
     load();
@@ -271,7 +272,7 @@ const Membership = () => {
   const cancelRequest = async (id: string) => {
     if (!(await confirm({ title: "Otkazati zahtev?", destructive: true }))) return;
     const { error } = await supabase.rpc("cancel_membership_purchase", { p_purchase_id: id });
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(porukaGreske(error));
     toast.success("Zahtev otkazan");
     load();
   };

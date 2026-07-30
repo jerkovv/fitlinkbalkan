@@ -12,7 +12,7 @@ import {
   FullScreenSheetFooter,
 } from "@/components/ui/full-screen-sheet";
 import { supabase } from "@/lib/supabase";
-import { friendlyDbError } from "@/lib/dbError";
+import { porukaGreske } from "@/lib/errorMessage";
 import { useConfirm } from "@/hooks/useConfirm";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, Plus, Pencil, Trash2, Package } from "lucide-react";
@@ -48,7 +48,7 @@ const Packages = () => {
       .select("*")
       .eq("trainer_id", user.id)
       .order("created_at", { ascending: false });
-    if (error) toast.error(error.message);
+    if (error) toast.error(porukaGreske(error));
     setPackages((data as any[]) ?? []);
     setLoading(false);
   };
@@ -95,7 +95,7 @@ const Packages = () => {
       ? await supabase.from("membership_packages").update(payload).eq("id", editing.id)
       : await supabase.from("membership_packages").insert(payload);
     setSaving(false);
-    if (error) return toast.error(friendlyDbError(error));
+    if (error) return toast.error(porukaGreske(error));
     toast.success(editing ? "Sačuvano" : "Paket dodat");
     setOpen(false);
     load();
@@ -106,14 +106,14 @@ const Packages = () => {
       .from("membership_packages")
       .update({ is_active: !p.is_active })
       .eq("id", p.id);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(porukaGreske(error));
     load();
   };
 
   const remove = async (p: Pkg) => {
     if (!(await confirm({ title: `Obriši paket "${p.name}"?`, destructive: true }))) return;
     const { error } = await supabase.from("membership_packages").delete().eq("id", p.id);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(porukaGreske(error));
     toast.success("Paket obrisan");
     load();
   };

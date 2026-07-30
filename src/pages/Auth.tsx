@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { roleHome } from "@/lib/roles";
@@ -7,33 +7,41 @@ import { UnsupportedAccount } from "@/components/UnsupportedAccount";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { Briefcase, Loader2 } from "lucide-react";
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { user, role, loading: authLoading } = useAuth();
-  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
+  const [searchParams] = useSearchParams();
+  const { user, role, initializing, roleLoading } = useAuth();
+  const [mode, setMode] = useState<"login" | "signup" | "forgot">(
+    searchParams.get("mode") === "signup" ? "signup" : "login",
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   // Reset lozinke u tri koraka (OTP kod, sve u app-u, bez linka)
   const [forgotStep, setForgotStep] = useState<"email" | "code" | "newpass">("email");
   const [resetCode, setResetCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Ako je već ulogovan, redirect - ALI ne tokom reset toka (verifyOtp pravi
   // privremenu sesiju, ne smemo da uletimo u app pre nego što se lozinka postavi).
   // Samo uloge sa domom u aplikaciji (roleHome != null); admin/nepoznato ostaje ovde
   // i ispod vidi UnsupportedAccount umesto login forme (bez redirect petlje).
   useEffect(() => {
-    if (!authLoading && user && role && mode !== "forgot") {
+    if (initializing || roleLoading) return;
+    if (user && role && mode !== "forgot") {
       const home = roleHome(role);
       if (home) navigate(home, { replace: true });
     }
-  }, [user, role, authLoading, navigate, mode]);
+  }, [user, role, initializing, roleLoading, navigate, mode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +61,7 @@ const Auth = () => {
         });
         if (error) throw error;
         toast.success("Nalog kreiran! Proveri email za potvrdu.");
+        navigate("/proveri-mejl", { state: { email } });
       } else if (mode === "forgot") {
         if (forgotStep === "email") {
           // korak 1: posalji kod (OTP) na mejl - bez redirectTo (ne idemo na link)
@@ -102,7 +111,7 @@ const Auth = () => {
         toast.success("Dobrodošao nazad!");
       }
     } catch (err: any) {
-      toast.error(err.message ?? "Greška pri autentifikaciji");
+      toast.error(porukaGreske(err));
     } finally {
       setSubmitting(false);
     }
@@ -110,13 +119,28 @@ const Auth = () => {
 
   // Ulogovan nalog bez doma u aplikaciji (admin/nepoznata uloga): neutralan ekran sa
   // odjavom umesto login forme. Ne dira forgot tok (mode==='forgot' i dalje renderuje formu).
-  if (!authLoading && user && role && mode !== "forgot" && !roleHome(role)) {
+  if (!initializing && !roleLoading && user && role && mode !== "forgot" && !roleHome(role)) {
     return <UnsupportedAccount />;
   }
 
   return (
-    <div className="phone-shell flex flex-col px-6 py-10">
-      <Link to="/" className="text-xs text-muted-foreground mb-8">← Nazad</Link>
+    <div
+      className="phone-shell flex flex-col px-6 pb-10"
+      style={{ paddingTop: "calc(max(env(safe-area-inset-top), 20px) + 8px)" }}
+    >
+      <Link
+        to="/"
+        className="text-xs text-muted-foreground mb-8"
+        style={{
+          minHeight: 44,
+          display: "inline-flex",
+          alignItems: "center",
+          padding: "0 10px",
+          marginLeft: -10,
+        }}
+      >
+        ← Nazad
+      </Link>
 
       <div className="mb-8">
         <div className="h-12 w-12 rounded-2xl bg-trainer-soft text-trainer-soft-foreground flex items-center justify-center mb-4">
@@ -179,16 +203,25 @@ const Auth = () => {
                 </button>
               )}
             </div>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="mt-1.5"
-              autoComplete={mode === "login" ? "current-password" : "new-password"}
-            />
+            <div className="relative mt-1.5">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                className="pr-16"
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 right-3 text-[11px] text-muted-foreground hover:text-foreground transition flex items-center"
+              >
+                {showPassword ? "Sakrij" : "Prikaži"}
+              </button>
+            </div>
           </div>
         )}
 
@@ -220,31 +253,49 @@ const Auth = () => {
           <>
             <div>
               <Label htmlFor="newpass">Nova lozinka</Label>
-              <Input
-                id="newpass"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-                minLength={6}
-                className="mt-1.5"
-                autoComplete="new-password"
-                placeholder="Bar 6 karaktera"
-              />
+              <div className="relative mt-1.5">
+                <Input
+                  id="newpass"
+                  type={showNewPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="pr-16"
+                  autoComplete="new-password"
+                  placeholder="Bar 6 karaktera"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword((v) => !v)}
+                  className="absolute inset-y-0 right-3 text-[11px] text-muted-foreground hover:text-foreground transition flex items-center"
+                >
+                  {showNewPassword ? "Sakrij" : "Prikaži"}
+                </button>
+              </div>
             </div>
             <div>
               <Label htmlFor="confirmpass">Ponovi lozinku</Label>
-              <Input
-                id="confirmpass"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                minLength={6}
-                className="mt-1.5"
-                autoComplete="new-password"
-                placeholder="Ista lozinka još jednom"
-              />
+              <div className="relative mt-1.5">
+                <Input
+                  id="confirmpass"
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="pr-16"
+                  autoComplete="new-password"
+                  placeholder="Ista lozinka još jednom"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  className="absolute inset-y-0 right-3 text-[11px] text-muted-foreground hover:text-foreground transition flex items-center"
+                >
+                  {showConfirmPassword ? "Sakrij" : "Prikaži"}
+                </button>
+              </div>
             </div>
           </>
         )}
@@ -257,6 +308,12 @@ const Auth = () => {
           {mode === "forgot" && forgotStep === "code" && "Potvrdi kod"}
           {mode === "forgot" && forgotStep === "newpass" && "Sačuvaj lozinku"}
         </Button>
+
+        {mode === "signup" && (
+          <p className="text-[11px] text-center text-muted-foreground/70">
+            Nastavkom prihvataš uslove korišćenja i politiku privatnosti.
+          </p>
+        )}
       </form>
 
       <button
@@ -268,9 +325,12 @@ const Auth = () => {
         {mode === "forgot" && "← Nazad na login"}
       </button>
 
-      <p className="mt-4 text-[11px] text-center text-muted-foreground/70">
-        Vežbač? Potreban ti je <strong>poziv od trenera</strong>.
-      </p>
+      <Link
+        to="/poziv"
+        className="mt-4 text-xs text-center text-muted-foreground hover:text-foreground transition"
+      >
+        Vežbač? Unesi kod poziva
+      </Link>
     </div>
   );
 };

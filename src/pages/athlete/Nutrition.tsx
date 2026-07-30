@@ -10,6 +10,7 @@ import {
   FullScreenSheet, FullScreenSheetHeader, FullScreenSheetScroll,
 } from "@/components/ui/full-screen-sheet";
 import { Apple, Plus, Loader2, Search, Trash2, Flame } from "lucide-react";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { useClanarinaLock } from "@/components/clanarina/useClanarinaLock";
 import { PremiumBlur } from "@/components/clanarina/PremiumBlur";
@@ -190,7 +191,7 @@ const Nutrition = () => {
       carbs: Math.round(pickedFood.carbs_per_100g * r * 10) / 10,
       fat: Math.round(pickedFood.fat_per_100g * r * 10) / 10,
     } as any);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Logovano");
     setLogOpen(false);
     load();

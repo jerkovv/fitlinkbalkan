@@ -15,6 +15,7 @@ import {
 import {
   Plus, Loader2, Apple, Search, Trash2, ChevronDown, ChevronUp, UserPlus, Check, CalendarDays, Send,
 } from "lucide-react";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 
 type Day = { id: string; day_number: number; name: string };
@@ -199,7 +200,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
       day_number: nextNum,
       name: newDayName || `Dan ${nextNum}`,
     } as any);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     setAddDayOpen(false); setNewDayName("");
     toast.success("Dan dodat");
     load();
@@ -208,7 +209,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   const handleDeleteDay = async (dayId: string) => {
     if (!(await confirm({ title: "Obrisati dan?", description: "Dan i svi obroci biće obrisani.", destructive: true }))) return;
     const { error } = await supabase.from(cfg.daysTable).delete().eq("id", dayId);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     load();
   };
 
@@ -222,7 +223,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
       name: newMealName || "Obrok",
       time_hint: newMealTime || null,
     } as any);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     setAddMealForDayId(null); setNewMealName(""); setNewMealTime("");
     load();
   };
@@ -261,7 +262,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
       grams,
       item_order: curr.length + 1,
     } as any);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     setPickerMealId(null);
     load();
   };
@@ -360,7 +361,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
       p_athlete_id: targetAthleteId,
     });
     setAssigning(null);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Plan ishrane dodeljen");
     setAssignOpen(false);
   };
@@ -374,7 +375,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
       p_assigned_plan_id: parentId,
     } as any);
     setNotifying(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     if (data === true) toast.success("Plan poslat vežbaču");
     else toast("Plan je već poslat");
   };

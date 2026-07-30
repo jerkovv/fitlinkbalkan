@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 
 type Args = {
@@ -81,7 +82,7 @@ export const useAddExercisesToDay = ({ dayId, table = "program_template_exercise
       onSuccess?.();
     },
     onError: (e: any) => {
-      toast.error(e?.message ?? "Greška pri dodavanju");
+      toast.error(porukaGreske(e));
     },
   });
 };

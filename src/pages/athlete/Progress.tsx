@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Plus, Loader2, Dumbbell, Scale, Flame, CalendarCheck, Target, Sparkles, Lock } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { ProgressPhotos } from "@/components/ProgressPhotos";
 import { useClanarinaLock } from "@/components/clanarina/useClanarinaLock";
@@ -220,7 +221,7 @@ const Progress = () => {
       .single();
     setSaving(false);
     if (error) {
-      toast.error(error.message);
+      toast.error(porukaGreske(error));
       return;
     }
     setMetrics((prev) => [data as any, ...prev]);

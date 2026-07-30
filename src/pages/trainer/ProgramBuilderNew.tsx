@@ -18,6 +18,7 @@ import {
 import {
   Plus, Loader2, Dumbbell, Trash2, GripVertical, ChevronDown, ChevronUp, UserPlus, Check, Send, X, Settings2,
 } from "lucide-react";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { ExercisePickerSheet } from "@/components/exercises/ExercisePickerSheet";
 
@@ -175,7 +176,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
       day_number: nextNum,
       name: newDayName || `Dan ${nextNum}`,
     } as any);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     setAddDayOpen(false);
     setNewDayName("");
     toast.success("Dan dodat");
@@ -188,7 +189,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
     const { error } = cfg.softDelete
       ? await supabase.from(cfg.daysTable).update({ deleted_at: new Date().toISOString() } as any).eq("id", dayId)
       : await supabase.from(cfg.daysTable).delete().eq("id", dayId);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Dan obrisan");
     load();
   };
@@ -207,14 +208,14 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
       destructive: true,
     }))) return;
     const { error } = await supabase.from("program_templates").delete().eq("id", parentId);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Program obrisan");
     navigate("/trener/programi");
   };
 
   const updateExercise = async (exId: string, patch: Partial<Exercise>) => {
     const { error } = await supabase.from(cfg.exTable).update(patch as any).eq("id", exId);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     load();
   };
 
@@ -236,7 +237,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
       p_sets: p_sets,
     } as any);
     if (error || (data && (data as any).success === false)) {
-      toast.error(error?.message ?? (data as any)?.error ?? "Greška pri snimanju setova");
+      toast.error(error ? porukaGreske(error) : (data as any)?.error ?? "Greška pri snimanju setova");
       load();   // revert: RPC je atomican -> neuspeh = nepromenjeno; ponovo ucitaj iz baze
     }
   };
@@ -252,7 +253,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
     const { error } = cfg.softDelete
       ? await supabase.from(cfg.exTable).update({ deleted_at: new Date().toISOString() } as any).eq("id", exId)
       : await supabase.from(cfg.exTable).delete().eq("id", exId);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     load();
   };
 
@@ -301,7 +302,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
       toast.success("Program dodeljen vežbaču");
       setAssignOpen(false);
     } catch (error: any) {
-      toast.error(error.message ?? "Greška pri dodeli programa");
+      toast.error(porukaGreske(error));
     } finally {
       setAssigning(null);
     }
@@ -316,7 +317,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
       p_assigned_program_id: parentId,
     } as any);
     setNotifying(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     if (data === true) toast.success("Plan poslat vežbaču");
     else toast("Plan je već poslat");
   };

@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { ThumbsUp, AlertTriangle, TrendingDown, Wind, Send, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -104,7 +105,7 @@ export const QuickMessagePanel = ({ sessionId }: QuickMessagePanelProps) => {
     } as any);
     setSending(false);
     if (error) {
-      toast.error(error.message);
+      toast.error(porukaGreske(error));
       return;
     }
     setText("");

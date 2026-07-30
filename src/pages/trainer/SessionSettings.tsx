@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { PhoneShell } from "@/components/PhoneShell";
 import { Card, Chip } from "@/components/ui-bits";
 import { supabase } from "@/lib/supabase";
-import { friendlyDbError } from "@/lib/dbError";
+import { porukaGreske } from "@/lib/errorMessage";
 import { useConfirm } from "@/hooks/useConfirm";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -140,7 +140,7 @@ const SessionSettings = () => {
         } as any)
         .eq("id", editingType.id);
       setSavingType(false);
-      if (error) { toast.error(friendlyDbError(error)); return; }
+      if (error) { toast.error(porukaGreske(error)); return; }
       toast.success("Tip ažuriran");
     } else {
       const { error } = await supabase.from("session_types").insert({
@@ -151,7 +151,7 @@ const SessionSettings = () => {
         duration_min: durationMin,
       } as any);
       setSavingType(false);
-      if (error) { toast.error(friendlyDbError(error)); return; }
+      if (error) { toast.error(porukaGreske(error)); return; }
       toast.success("Tip kreiran");
     }
     setTypeOpen(false);
@@ -164,7 +164,7 @@ const SessionSettings = () => {
       .from("session_types")
       .update({ is_archived: true } as any)
       .eq("id", t.id);
-    if (error) { toast.error(friendlyDbError(error)); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Tip arhiviran");
     load();
   };
@@ -190,7 +190,7 @@ const SessionSettings = () => {
       start_time: slotForm.start_time,
     } as any);
     setSavingSlot(false);
-    if (error) { toast.error(friendlyDbError(error)); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Termin dodat u raspored");
     setSlotOpen(false);
     load();
@@ -199,7 +199,7 @@ const SessionSettings = () => {
   const deleteSlot = async (id: string) => {
     if (!(await confirm({ title: "Ukloniti ovaj termin iz nedeljnog rasporeda?", destructive: true }))) return;
     const { error } = await supabase.from("session_slot_templates").delete().eq("id", id);
-    if (error) { toast.error(friendlyDbError(error)); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Termin uklonjen");
     load();
   };

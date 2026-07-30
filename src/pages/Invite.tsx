@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { Dumbbell, Loader2, CheckCircle2 } from "lucide-react";
 
@@ -24,6 +25,7 @@ const Invite = () => {
 
   const [checking, setChecking] = useState(true);
   const [valid, setValid] = useState(false);
+  const [invalidReason, setInvalidReason] = useState<"expired" | "used" | "invalid">("invalid");
   const [trainerName, setTrainerName] = useState<string>("");
   const [trainerId, setTrainerId] = useState<string>("");
   const [inviteEmail, setInviteEmail] = useState<string | null>(null);
@@ -41,6 +43,7 @@ const Invite = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -55,16 +58,24 @@ const Invite = () => {
         .eq("code", code)
         .maybeSingle();
 
-      if (inviteRow && inviteRow.status === "pending") {
-        const expired =
-          inviteRow.expires_at && new Date(inviteRow.expires_at) < new Date();
-        if (!expired) {
-          resolvedTrainerId = (inviteRow as any).trainer_id;
-          setHasInviteRow(true);
-          setInviteEmail((inviteRow as any).email ?? null);
-          setInviteFullName((inviteRow as any).full_name ?? null);
-          if ((inviteRow as any).email) setEmail((inviteRow as any).email);
-          if ((inviteRow as any).full_name) setFullName((inviteRow as any).full_name);
+      if (inviteRow) {
+        if (inviteRow.status === "pending") {
+          const expired =
+            inviteRow.expires_at && new Date(inviteRow.expires_at) < new Date();
+          if (expired) {
+            setInvalidReason("expired");
+          } else {
+            resolvedTrainerId = (inviteRow as any).trainer_id;
+            setHasInviteRow(true);
+            setInviteEmail((inviteRow as any).email ?? null);
+            setInviteFullName((inviteRow as any).full_name ?? null);
+            if ((inviteRow as any).email) setEmail((inviteRow as any).email);
+            if ((inviteRow as any).full_name) setFullName((inviteRow as any).full_name);
+          }
+        } else if (inviteRow.status === "accepted") {
+          setInvalidReason("used");
+        } else {
+          setInvalidReason("invalid");
         }
       }
 
@@ -159,7 +170,7 @@ const Invite = () => {
       await supabase.auth.signOut();
       navigate("/spremno?tip=registracija");
     } catch (err: any) {
-      toast.error(err.message ?? "Greška pri završetku registracije");
+      toast.error(porukaGreske(err));
     } finally {
       setSubmitting(false);
     }
@@ -206,9 +217,9 @@ const Invite = () => {
       }
 
       toast.success("Nalog kreiran! Proveri email za potvrdu.");
-      navigate("/vezbac");
+      navigate("/proveri-mejl", { state: { email } });
     } catch (err: any) {
-      toast.error(err.message ?? "Greška pri registraciji");
+      toast.error(porukaGreske(err));
     } finally {
       setSubmitting(false);
     }
@@ -223,22 +234,36 @@ const Invite = () => {
   }
 
   if (!valid) {
+    const invalidMessages: Record<"expired" | "used" | "invalid", string> = {
+      expired: "Poziv je istekao. Traži od trenera da ti pošalje novi.",
+      used: "Ovaj poziv je već iskorišćen. Ako si već napravio nalog, uloguj se.",
+      invalid: "Kod nije ispravan. Proveri da li si ga tačno uneo.",
+    };
     return (
-      <div className="phone-shell flex flex-col items-center justify-center px-6 py-10 text-center">
+      <div
+        className="phone-shell flex flex-col items-center justify-center px-6 pb-10 text-center"
+        style={{ paddingTop: "calc(max(env(safe-area-inset-top), 20px) + 12px)" }}
+      >
         <div className="h-12 w-12 rounded-2xl bg-muted flex items-center justify-center mb-4">
           <Dumbbell className="h-5 w-5" />
         </div>
         <h1 className="font-display text-2xl font-bold mb-2">Pozivnica nevažeća</h1>
         <p className="text-sm text-muted-foreground mb-6">
-          Ovaj poziv je istekao ili je već iskorišćen.
+          {invalidMessages[invalidReason]}
         </p>
-        <Link to="/" className="text-xs text-primary underline">Nazad na početnu</Link>
+        <div className="flex items-center gap-4">
+          <Link to="/poziv" className="text-xs text-primary underline">Unesi drugi kod</Link>
+          <Link to="/" className="text-xs text-primary underline">Nazad na početnu</Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="phone-shell flex flex-col px-6 py-10">
+    <div
+      className="phone-shell flex flex-col px-6 pb-10"
+      style={{ paddingTop: "calc(max(env(safe-area-inset-top), 20px) + 12px)" }}
+    >
       <div className="mb-8">
         <div className="h-12 w-12 rounded-2xl bg-athlete-soft text-athlete-soft-foreground flex items-center justify-center mb-4">
           <Dumbbell className="h-5 w-5" strokeWidth={2.25} />
@@ -286,16 +311,25 @@ const Invite = () => {
           </div>
           <div>
             <Label htmlFor="password">Postavi lozinku</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="mt-1.5"
-              placeholder="Bar 6 karaktera"
-            />
+            <div className="relative mt-1.5">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                className="pr-16"
+                placeholder="Bar 6 karaktera"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 right-3 text-[11px] text-muted-foreground hover:text-foreground transition flex items-center"
+              >
+                {showPassword ? "Sakrij" : "Prikaži"}
+              </button>
+            </div>
           </div>
 
           <Button type="submit" className="w-full mt-6" disabled={submitting}>
@@ -335,15 +369,24 @@ const Invite = () => {
           </div>
           <div>
             <Label htmlFor="password">Lozinka</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="mt-1.5"
-            />
+            <div className="relative mt-1.5">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                className="pr-16"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 right-3 text-[11px] text-muted-foreground hover:text-foreground transition flex items-center"
+              >
+                {showPassword ? "Sakrij" : "Prikaži"}
+              </button>
+            </div>
           </div>
           <Button type="submit" className="w-full mt-6" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}

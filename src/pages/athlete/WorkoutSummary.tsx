@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Loader2, Check, MessageSquare, Clock, Dumbbell, Flame, Heart } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -319,7 +320,7 @@ const WorkoutSummary = () => {
       .eq("id", sessionId);
     setSavingNote(false);
     if (error) {
-      toast.error(error.message);
+      toast.error(porukaGreske(error));
       return;
     }
     if (session) setSession({ ...session, notes: noteText.trim() || null });

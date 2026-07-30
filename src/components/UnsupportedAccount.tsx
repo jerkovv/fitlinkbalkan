@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, LogOut, UserX } from "lucide-react";
 import { toast } from "sonner";
+import { porukaGreske } from "@/lib/errorMessage";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 
@@ -20,7 +21,7 @@ export const UnsupportedAccount = () => {
       toast.success("Odjavljen si");
       nav("/auth", { replace: true });
     } catch (e) {
-      toast.error((e as Error)?.message ?? "Greška pri odjavi");
+      toast.error(porukaGreske(e));
       setSigningOut(false);
     }
   };

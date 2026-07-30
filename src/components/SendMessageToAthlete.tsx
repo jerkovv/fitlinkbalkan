@@ -8,6 +8,7 @@ import {
   FullScreenSheetFooter,
 } from "@/components/ui/full-screen-sheet";
 import { supabase } from "@/lib/supabase";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 
 const MAX = 1000;
@@ -33,7 +34,7 @@ export const SendMessageToAthlete = ({ athleteId, athleteName, variant = "defaul
     });
     setSending(false);
     if (error) {
-      toast.error(error.message ?? "Greška pri slanju");
+      toast.error(porukaGreske(error));
       return;
     }
     toast.success("Poruka poslata vežbaču");

@@ -5,6 +5,7 @@ import { Card } from "@/components/ui-bits";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { Calendar, CreditCard, Dumbbell, MessageCircle, Loader2 } from "lucide-react";
 
@@ -59,7 +60,7 @@ const NotificationSettings = () => {
     if (error) {
       console.error("[notif prefs upsert]", error);
       setPrefs(prefs); // rollback
-      toast.error(error.message || "Greška pri snimanju");
+      toast.error(porukaGreske(error));
     } else {
       toast.success(next[key] ? "Uključeno" : "Isključeno");
     }

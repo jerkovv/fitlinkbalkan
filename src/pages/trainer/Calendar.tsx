@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import {
   ChevronLeft, ChevronRight, Loader2, Users, Clock, Settings, X, Ban, Plus, Calendar as CalIcon,
 } from "lucide-react";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import {
   sessionColorClasses, dateToWeekday, toIsoDate, formatTime, addMinutesToTime, weekdayLabelsShort,
@@ -162,7 +163,7 @@ const Calendar = () => {
       });
       if (cancelled) return;
       setWaitlistLoading(false);
-      if (error) { toast.error(error.message); return; }
+      if (error) { toast.error(porukaGreske(error)); return; }
       setWaitlist((data as WaitlistRow[]) ?? []);
     })();
     return () => { cancelled = true; };
@@ -189,7 +190,7 @@ const Calendar = () => {
       template_id: s.template_id,
       is_canceled: true,
     } as any);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Termin otkazan za ovaj dan");
     setOpenSlot(null);
     load();
@@ -198,7 +199,7 @@ const Calendar = () => {
   const removeBooking = async (id: string) => {
     if (!(await confirm({ title: "Ukloniti ovog vežbača iz termina?", destructive: true }))) return;
     const { error } = await supabase.from("session_bookings").delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Rezervacija uklonjena");
     load();
     if (openSlot) {

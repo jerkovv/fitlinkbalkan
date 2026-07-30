@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   Camera, Loader2, Plus, Trash2, Eye, EyeOff, X, GitCompare, Lock,
 } from "lucide-react";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -60,7 +61,7 @@ export const ProgressPhotos = ({ athleteId, canManage, sharedOnly = false, addLo
     if (sharedOnly) q = q.eq("shared_with_trainer", true);
     const { data, error } = await q;
     if (error) {
-      toast.error(error.message);
+      toast.error(porukaGreske(error));
       setLoading(false);
       return;
     }
@@ -124,7 +125,7 @@ export const ProgressPhotos = ({ athleteId, canManage, sharedOnly = false, addLo
       toast.success("Fotka dodata");
       await load();
     } catch (err: any) {
-      toast.error(err.message ?? "Greška pri uploadu");
+      toast.error(porukaGreske(err));
     } finally {
       setUploading(false);
     }
@@ -138,7 +139,7 @@ export const ProgressPhotos = ({ athleteId, canManage, sharedOnly = false, addLo
       .update({ shared_with_trainer: next })
       .eq("id", p.id);
     if (error) {
-      toast.error(error.message);
+      toast.error(porukaGreske(error));
       setPhotos((prev) => prev.map((x) => (x.id === p.id ? { ...x, shared_with_trainer: !next } : x)));
     } else {
       toast.success(next ? "Podeljeno sa trenerom" : "Skriveno od trenera");
@@ -149,7 +150,7 @@ export const ProgressPhotos = ({ athleteId, canManage, sharedOnly = false, addLo
     if (!(await confirm({ title: "Obrisati fotku?", destructive: true }))) return;
     const { error: delErr } = await supabase.from("progress_photos").delete().eq("id", p.id);
     if (delErr) {
-      toast.error(delErr.message);
+      toast.error(porukaGreske(delErr));
       return;
     }
     await supabase.storage.from("progress-photos").remove([p.storage_path]);

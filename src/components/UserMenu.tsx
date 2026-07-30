@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LogOut, User as UserIcon, Loader2, Bell } from "lucide-react";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -44,7 +45,7 @@ export const UserMenu = () => {
       toast.success("Odjavljen si");
       navigate("/auth", { replace: true });
     } catch (e: any) {
-      toast.error(e.message ?? "Greška pri odjavi");
+      toast.error(porukaGreske(e));
     } finally {
       setSigningOut(false);
     }

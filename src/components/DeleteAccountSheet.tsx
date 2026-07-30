@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertTriangle, Loader2 } from "lucide-react";
+import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 
 interface DeleteAccountSheetProps {
@@ -40,7 +41,7 @@ export const DeleteAccountSheet = ({ open, onClose, userEmail, role }: DeleteAcc
         p_confirm: confirmText.trim(),
       });
       if (error) {
-        toast.error(error.message ?? "Greška pri brisanju naloga");
+        toast.error(porukaGreske(error));
         return;
       }
       const res = data as any;
@@ -64,7 +65,7 @@ export const DeleteAccountSheet = ({ open, onClose, userEmail, role }: DeleteAcc
       }
       toast.error("Greška pri brisanju naloga");
     } catch (e: any) {
-      toast.error(e.message ?? "Greška pri brisanju naloga");
+      toast.error(porukaGreske(e));
     } finally {
       setDeleting(false);
     }
