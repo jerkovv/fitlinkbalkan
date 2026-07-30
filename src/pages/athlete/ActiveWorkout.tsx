@@ -311,7 +311,33 @@ const ActiveWorkout = () => {
   const unmountedRef = useRef(false);
   // Ref na poziciju za stabilne handlere (watch eventi).
   const posRef = useRef<WorkoutPos | null>(null);
+  // Fallback sinhronizacija (defense-in-depth): ako neki buduci setPos poziv zaobidje
+  // setPosSynced ispod, ovaj efekt ipak na kraju uskladi posRef - samo sa jednim render
+  // zakasnjenjem umesto nikad.
   useEffect(() => { posRef.current = pos; }, [pos]);
+
+  // SVAKA promena pozicije MORA da ide kroz ovo, ne kroz goli setPos: realtime handler
+  // (dole) cita posRef.current da bi zastitio svez rest od zastarelih evenata (npr. HR tik
+  // koji stigne bas dok se ulazi u pauzu). useEffect sinhronizacija gore kasni JEDAN render
+  // za pos state-om (React commit -> effect flush), pa bi realtime event koji stigne u tom
+  // uskom prozoru procitao PRETHODNU (pre-rest) poziciju, promasio "svez rest" zastitu i
+  // vratio pos nazad na 'active' pre nego sto je RestTimer uopste prikazan - otud "tajmer
+  // se sam prekine pre nego sto krene", ne uvek (zavisi da li event upadne bas u taj prozor).
+  // KLJUCNO: posRef.current se pise OVDE, kao obican sinhroni JS (pre poziva setPos), ne
+  // unutar setState updater callback-a - React 18 automatsko batch-ovanje ne garantuje DA LI
+  // ni KADA se taj updater izvrsava u odnosu na ostali kod u istom tick-u (poziv setPos-a
+  // moze biti odlozen), pa bi pisanje refa iznutra ostavilo istu vrstu neizvesnog prozora.
+  // Citanjem/pisanjem posRef.current direktno (ne React-ovog "prev" iz updater-a) eliminise
+  // se svaka zavisnost od React-ovog internog rasporedjivanja.
+  const setPosSynced = useCallback(
+    (updater: WorkoutPos | null | ((prev: WorkoutPos | null) => WorkoutPos | null)) => {
+      const prev = posRef.current;
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      posRef.current = next;
+      setPos(next);
+    },
+    [],
+  );
 
   // Live Activity (iOS): start se okida JEDNOM po sesiji; throttle za update
   // (strukturni kljuc + delta pulsa + max 1x/5s) da ne spamuje na svaki tik.
@@ -689,7 +715,7 @@ const ActiveWorkout = () => {
       startedAtMs: number | null;
       currentHr: number | null;
     }) => {
-      setPos({
+      setPosSynced({
         exerciseIdx: n.exerciseIdx ?? 0,
         setNumber: n.setNumber ?? 1,
         totalSets: n.totalSets ?? 1,
@@ -1161,7 +1187,7 @@ const ActiveWorkout = () => {
       // Optimistički bump prikaza; poll uskladi sa serverskim rest_ends_at.
       const newClientEnd = p.restEndsAtMs + extraSeconds * 1000;
       lastActionAtRef.current = Date.now();
-      setPos((prev) => (prev ? { ...prev, restEndsAtMs: newClientEnd } : prev));
+      setPosSynced((prev) => (prev ? { ...prev, restEndsAtMs: newClientEnd } : prev));
 
       // +30 ide u motor (athlete_extend_rest doda sekunde samo ako je state rest),
       // isti izvor istine kao sat. Nema više direktnog upisa rest_ends_at.
@@ -1249,7 +1275,7 @@ const ActiveWorkout = () => {
       // optimistički kraj poklopi sa serverskim i nema skoka kad poll stigne.
       const serverNowMs = Date.now() + clockOffsetRef.current;
       const serverRestEndMs = serverNowMs + restSec * 1000;
-      setPos({
+      setPosSynced({
         exerciseIdx: nextIdx,
         setNumber: nextSet,
         totalSets: nextEx?.sets ?? p.totalSets,
@@ -1307,7 +1333,7 @@ const ActiveWorkout = () => {
               : restSec;
           const posSrv = res.position ?? {};
           lastActionAtRef.current = Date.now();
-          setPos((prev) =>
+          setPosSynced((prev) =>
             prev
               ? {
                   exerciseIdx:
@@ -1380,7 +1406,7 @@ const ActiveWorkout = () => {
       const nextEx = day.exercises[nextIdx];
       const serverNowMs = Date.now() + clockOffsetRef.current;
       const serverRestEndMs = serverNowMs + restSec * 1000;
-      setPos({
+      setPosSynced({
         exerciseIdx: nextIdx,
         setNumber: 1,
         totalSets: nextEx?.sets ?? p.totalSets,
@@ -1427,7 +1453,7 @@ const ActiveWorkout = () => {
               : restSec;
           const posSrv = cres.position ?? {};
           lastActionAtRef.current = Date.now();
-          setPos((prev) =>
+          setPosSynced((prev) =>
             prev
               ? {
                   exerciseIdx:
@@ -1459,7 +1485,7 @@ const ActiveWorkout = () => {
     if (!sessionId || !p) return;
     if (controlsLockedRef.current) return; // sat izgubljen -> ne preskaci/ne advance-uj
     lastActionAtRef.current = Date.now();
-    setPos((prev) => (prev ? { ...prev, state: "active", restEndsAtMs: null } : prev));
+    setPosSynced((prev) => (prev ? { ...prev, state: "active", restEndsAtMs: null } : prev));
     const { error } = await supabase.rpc("athlete_skip_rest", {
       p_session_id: sessionId,
     } as any);

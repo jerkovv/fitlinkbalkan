@@ -19,6 +19,10 @@ interface SetLoggerProps {
   disabled?: boolean;
 }
 
+// Broj -> tekst za prikaz (bez suvisnih decimala). Isto pravilo kao ranije (samo prikaz).
+const formatStepperValue = (value: number) =>
+  Number.isFinite(value) ? (value % 1 === 0 ? value.toString() : value.toFixed(1)) : "0";
+
 const Stepper = ({
   value,
   onChange,
@@ -36,11 +40,29 @@ const Stepper = ({
 }) => {
   const dec = () => onChange(Math.max(min, +(value - step).toFixed(2)));
   const inc = () => onChange(Math.min(max, +(value + step).toFixed(2)));
-  const display = Number.isFinite(value)
-    ? value % 1 === 0
-      ? value.toString()
-      : value.toFixed(1)
-    : "0";
+
+  // Slobodan unos: lokalni tekst dozvoljava kucanje proizvoljnog broja (npr. "47.5"),
+  // ne samo +/- korake. Sinhronise se sa spoljnom vrednoscu SAMO dok input nije fokusiran
+  // (da +/- dugmad i promena seta i dalje azuriraju prikaz), a dok korisnik kuca ne
+  // pregazi ono sto je uneo.
+  const [text, setText] = useState(() => formatStepperValue(value));
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    if (!focused) setText(formatStepperValue(value));
+  }, [value, focused]);
+
+  const commit = (raw: string) => {
+    const n = parseFloat(raw.replace(",", "."));
+    if (Number.isFinite(n)) {
+      const clamped = Math.min(max, Math.max(min, n));
+      onChange(clamped);
+      setText(formatStepperValue(clamped));
+    } else {
+      setText(formatStepperValue(value));
+    }
+  };
+
   return (
     <div className="flex items-center justify-between gap-2">
       <button
@@ -51,13 +73,25 @@ const Stepper = ({
       >
         <Minus className="h-4 w-4" strokeWidth={2.5} />
       </button>
-      <div className="flex-1 text-center px-1 min-w-0">
-        <div className="font-display text-[18px] font-semibold leading-none tracking-tight tnum text-foreground whitespace-nowrap">
-          {display}
-          {suffix && (
-            <span className="text-[11px] text-muted-foreground font-semibold ml-1">{suffix}</span>
-          )}
-        </div>
+      <div className="flex-1 flex items-baseline justify-center gap-1 px-1 min-w-0">
+        <input
+          type="text"
+          inputMode="decimal"
+          value={text}
+          onFocus={() => setFocused(true)}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={(e) => {
+            setFocused(false);
+            commit(e.target.value);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          }}
+          className="w-full max-w-[72px] bg-transparent text-center font-display text-[18px] font-semibold leading-none tracking-tight tnum text-foreground whitespace-nowrap focus:outline-none"
+        />
+        {suffix && (
+          <span className="text-[11px] text-muted-foreground font-semibold shrink-0">{suffix}</span>
+        )}
       </div>
       <button
         type="button"

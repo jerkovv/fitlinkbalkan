@@ -50,8 +50,14 @@ const SessionSettings = () => {
   // Type dialog
   const [typeOpen, setTypeOpen] = useState(false);
   const [editingType, setEditingType] = useState<SessionType | null>(null);
+  // capacity/duration_min kao TEKST dok se tip edituje (isti obrazac kao Packages.tsx) - broj
+  // se parsira tek na submit. Ranije je onChange radio parseInt(e.target.value) || default, sto
+  // znaci da svaki put kad polje na trenutak postane prazno (npr. brisanje "60" cifru-po-cifru
+  // pre kucanja novog broja - uobicajeno na iOS numerickoj tastaturi bez "clear" dugmeta),
+  // parseInt("") daje NaN, NaN || default se ODMAH vraca na default PRE nego sto korisnik stigne
+  // da otkuca novu vrednost - polje deluje "zamrznuto"/"samo korak po korak".
   const [typeForm, setTypeForm] = useState({
-    name: "", color: "violet", capacity: 1, duration_min: 60,
+    name: "", color: "violet", capacity: "1", duration_min: "60",
   });
   const [savingType, setSavingType] = useState(false);
 
@@ -92,19 +98,36 @@ const SessionSettings = () => {
   // ===== Type CRUD =====
   const openNewType = () => {
     setEditingType(null);
-    setTypeForm({ name: "", color: "violet", capacity: 1, duration_min: 60 });
+    setTypeForm({ name: "", color: "violet", capacity: "1", duration_min: "60" });
     setTypeOpen(true);
   };
 
   const openEditType = (t: SessionType) => {
     setEditingType(t);
-    setTypeForm({ name: t.name, color: t.color, capacity: t.capacity, duration_min: t.duration_min });
+    setTypeForm({
+      name: t.name,
+      color: t.color,
+      capacity: String(t.capacity),
+      duration_min: String(t.duration_min),
+    });
     setTypeOpen(true);
   };
 
   const submitType = async () => {
     if (!user) return;
     if (!typeForm.name.trim()) { toast.error("Naziv obavezan"); return; }
+    // Parsiraj i validiraj TEK ovde (na submit), ne na svaki keystroke - polje ostaje slobodno
+    // za kucanje dok se edituje.
+    const durationMin = parseInt(typeForm.duration_min, 10);
+    const capacity = parseInt(typeForm.capacity, 10);
+    if (!Number.isFinite(durationMin) || durationMin < 15) {
+      toast.error("Trajanje mora biti bar 15 minuta");
+      return;
+    }
+    if (!Number.isFinite(capacity) || capacity < 1) {
+      toast.error("Max broj ljudi mora biti bar 1");
+      return;
+    }
     setSavingType(true);
     if (editingType) {
       const { error } = await supabase
@@ -112,8 +135,8 @@ const SessionSettings = () => {
         .update({
           name: typeForm.name,
           color: typeForm.color,
-          capacity: typeForm.capacity,
-          duration_min: typeForm.duration_min,
+          capacity,
+          duration_min: durationMin,
         } as any)
         .eq("id", editingType.id);
       setSavingType(false);
@@ -124,8 +147,8 @@ const SessionSettings = () => {
         trainer_id: user.id,
         name: typeForm.name,
         color: typeForm.color,
-        capacity: typeForm.capacity,
-        duration_min: typeForm.duration_min,
+        capacity,
+        duration_min: durationMin,
       } as any);
       setSavingType(false);
       if (error) { toast.error(friendlyDbError(error)); return; }
@@ -377,8 +400,9 @@ const SessionSettings = () => {
                 type="number"
                 min={15}
                 step={15}
+                inputMode="numeric"
                 value={typeForm.duration_min}
-                onChange={(e) => setTypeForm({ ...typeForm, duration_min: parseInt(e.target.value) || 60 })}
+                onChange={(e) => setTypeForm({ ...typeForm, duration_min: e.target.value })}
                 className="h-14 text-base rounded-2xl"
               />
             </div>
@@ -387,8 +411,9 @@ const SessionSettings = () => {
               <Input
                 type="number"
                 min={1}
+                inputMode="numeric"
                 value={typeForm.capacity}
-                onChange={(e) => setTypeForm({ ...typeForm, capacity: parseInt(e.target.value) || 1 })}
+                onChange={(e) => setTypeForm({ ...typeForm, capacity: e.target.value })}
                 className="h-14 text-base rounded-2xl"
               />
             </div>
