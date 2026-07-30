@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Minus, Plus, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +23,53 @@ interface SetLoggerProps {
 const formatStepperValue = (value: number) =>
   Number.isFinite(value) ? (value % 1 === 0 ? value.toString() : value.toFixed(1)) : "0";
 
+// Drzi-da-ubrzava: kratak tap = jedan korak (odmah, na pointerDown); drzanje due od
+// HOLD_DELAY_MS pocinje da ponavlja korak na REPEAT_MS - da korisnik ne mora da klikce
+// dugme 20-30 puta da stigne npr. do 50kg (fin korak od 1 bez ovoga bi bio jos gori od
+// starog koraka od 2.5). Racuna se iz LOKALNE promenljive unutar gesta (ne cita nazad
+// `value` prop izmedju tikova) - nezavisno od brzine roditeljskog re-rendera, svaki korak
+// je tacan i ravnomeran.
+const HOLD_DELAY_MS = 350;
+const REPEAT_MS = 90;
+
+function useHoldStep(
+  direction: 1 | -1,
+  value: number,
+  step: number,
+  min: number,
+  max: number,
+  onChange: (v: number) => void,
+) {
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stop = () => {
+    if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
+    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+  };
+
+  // Cleanup na unmount (npr. promena seta usred drzanja dugmeta).
+  useEffect(() => stop, []);
+
+  const start = () => {
+    stop();
+    let current = value;
+    const tick = () => {
+      current =
+        direction > 0
+          ? Math.min(max, +(current + step).toFixed(2))
+          : Math.max(min, +(current - step).toFixed(2));
+      onChange(current);
+    };
+    tick();
+    timeoutRef.current = setTimeout(() => {
+      intervalRef.current = setInterval(tick, REPEAT_MS);
+    }, HOLD_DELAY_MS);
+  };
+
+  return { onPointerDown: start, onPointerUp: stop, onPointerLeave: stop, onPointerCancel: stop };
+}
+
 const Stepper = ({
   value,
   onChange,
@@ -38,8 +85,8 @@ const Stepper = ({
   max?: number;
   suffix?: string;
 }) => {
-  const dec = () => onChange(Math.max(min, +(value - step).toFixed(2)));
-  const inc = () => onChange(Math.min(max, +(value + step).toFixed(2)));
+  const decHold = useHoldStep(-1, value, step, min, max, onChange);
+  const incHold = useHoldStep(1, value, step, min, max, onChange);
 
   // Slobodan unos: lokalni tekst dozvoljava kucanje proizvoljnog broja (npr. "47.5"),
   // ne samo +/- korake. Sinhronise se sa spoljnom vrednoscu SAMO dok input nije fokusiran
@@ -67,9 +114,9 @@ const Stepper = ({
     <div className="flex items-center justify-between gap-2">
       <button
         type="button"
-        onClick={dec}
-        aria-label="Smanji"
-        className="h-12 w-12 rounded-2xl bg-surface border border-hairline active:scale-95 transition flex items-center justify-center shrink-0"
+        {...decHold}
+        aria-label="Smanji (drzi za brze menjanje)"
+        className="h-12 w-12 rounded-2xl bg-surface border border-hairline active:scale-95 transition flex items-center justify-center shrink-0 touch-none select-none"
       >
         <Minus className="h-4 w-4" strokeWidth={2.5} />
       </button>
@@ -95,9 +142,9 @@ const Stepper = ({
       </div>
       <button
         type="button"
-        onClick={inc}
-        aria-label="Povecaj"
-        className="h-12 w-12 rounded-2xl bg-surface border border-hairline active:scale-95 transition flex items-center justify-center shrink-0"
+        {...incHold}
+        aria-label="Povecaj (drzi za brze menjanje)"
+        className="h-12 w-12 rounded-2xl bg-surface border border-hairline active:scale-95 transition flex items-center justify-center shrink-0 touch-none select-none"
       >
         <Plus className="h-4 w-4" strokeWidth={2.5} />
       </button>
@@ -171,7 +218,7 @@ export const SetLogger = ({
           <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-2">
             Težina (kg)
           </div>
-          <Stepper value={weight} onChange={setWeight} step={2.5} max={999} />
+          <Stepper value={weight} onChange={setWeight} step={1} max={999} />
         </div>
       </div>
 
