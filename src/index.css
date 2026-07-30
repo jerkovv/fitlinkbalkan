@@ -136,7 +136,7 @@
   /* WKWebView: scroll must live on a container with a fixed height, not on the
      document, otherwise position:sticky inside it fails to pin. So we lock the
      document and let .phone-shell be the scroller. (On Safari this differs from
-     the website on purpose — there the document scrolls; here the container
+     the website on purpose - there the document scrolls; here the container
      must, or the sticky header drifts in the iOS WebView.) */
   html, body, #root {
     @apply bg-background text-foreground;
@@ -232,7 +232,7 @@
     @apply inline-flex items-center rounded-full font-semibold transition;
   }
 
-  /* Mobile shell — the real scroll container. Fixed height (100dvh) + own
+  /* Mobile shell - the real scroll container. Fixed height (100dvh) + own
      overflow-y so the sticky header inside it pins correctly in WKWebView.
      Visually identical to the website; only the scroll owner moved from the
      document to this element. */

@@ -1,4 +1,4 @@
-// send-push — APNs push notifikacije za FitLink.
+// send-push - APNs push notifikacije za FitLink.
 //
 // Prima { user_id, title, body, meta? }. Procita sve tokene tog korisnika iz
 // device_push_tokens, napravi APNs JWT (ES256), i posalje notifikaciju na svaki

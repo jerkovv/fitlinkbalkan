@@ -381,7 +381,7 @@ const Nutrition = () => {
       </PhoneShell>
       <BottomNav role="athlete" />
 
-      {/* Loguj namirnicu — full-screen (Wolt-style) */}
+      {/* Loguj namirnicu - full-screen (Wolt-style) */}
       <FullScreenSheet
         open={logOpen}
         onClose={() => setLogOpen(false)}

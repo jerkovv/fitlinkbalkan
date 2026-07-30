@@ -331,7 +331,7 @@ const Booking = () => {
                         <span className="flex items-center gap-1.5">
                           <Clock className="h-3.5 w-3.5" />
                           <span className="tnum font-semibold text-foreground">
-                            {formatTime(s.start_time)} – {endTime}
+                            {formatTime(s.start_time)} - {endTime}
                           </span>
                         </span>
                         {showAttendees && s.booked_count > 0 ? (

@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verifikuj korisnika (caller) — koristi getUser() (NE getClaims)
+    // Verifikuj korisnika (caller) - koristi getUser() (NE getClaims)
     const userClient = createClient(SUPABASE_URL, ANON, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
         msg.includes("exists");
 
       if (alreadyExists) {
-        // User postoji — pošalji magic link na isti /invite/:code URL
+        // User postoji - pošalji magic link na isti /invite/:code URL
         const { error: linkErr } = await admin.auth.admin.generateLink({
           type: "magiclink",
           email,

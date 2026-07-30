@@ -123,7 +123,7 @@ export const ChatThread = ({
           </div>
         ) : messages.length === 0 ? (
           <div className="text-center text-[13px] text-muted-foreground py-10 px-6">
-            Još nema poruka. Pošalji prvu — pozdrav, pitanje, šta god.
+            Još nema poruka. Pošalji prvu, pozdrav, pitanje, šta god.
           </div>
         ) : (
           messages.map((m, i) => {

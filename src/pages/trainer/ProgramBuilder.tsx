@@ -7,7 +7,7 @@ const ProgramBuilder = () => {
   return (
     <PhoneShell back="/trener" title="Novi program" eyebrow="Kreator">
       <input
-        defaultValue="PPL — Snaga & Hipertrofija"
+        defaultValue="PPL - Snaga & Hipertrofija"
         className="w-full card-premium px-4 py-3.5 text-[15px] font-semibold focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
       />
 

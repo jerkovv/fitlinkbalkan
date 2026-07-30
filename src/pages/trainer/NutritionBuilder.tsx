@@ -483,7 +483,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
                             return (
                               <div key={it.id} className="flex items-center gap-2 py-1.5 border-t border-hairline first:border-t-0">
                                 <div className="flex-1 min-w-0">
-                                  <div className="text-xs font-semibold truncate">{it.food_items?.name ?? "—"}</div>
+                                  <div className="text-xs font-semibold truncate">{it.food_items?.name ?? "-"}</div>
                                   <div className="text-[10px] text-muted-foreground">
                                     {x.kcal} kcal · P{x.p} U{x.c} M{x.fat}
                                   </div>
@@ -584,7 +584,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
         </form>
       </FullScreenSheet>
 
-      {/* Food Picker — full-screen (Wolt-style) */}
+      {/* Food Picker - full-screen (Wolt-style) */}
       <FullScreenSheet
         open={!!pickerMealId}
         onClose={() => setPickerMealId(null)}
@@ -624,7 +624,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
                 ))}
               </div>
 
-              {/* Kategorije — horizontal scroll */}
+              {/* Kategorije - horizontal scroll */}
               {availableCategories.length > 0 && (
                 <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-4 px-4">
                   <button
@@ -773,7 +773,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
                   onChange={(e) => setScheduleDay(s.weekday, e.target.value || null)}
                   className="flex-1 h-9 rounded-md border border-input bg-background px-3 text-sm"
                 >
-                  <option value="">— bez plana —</option>
+                  <option value="">- bez plana -</option>
                   {days.map((d) => (
                     <option key={d.id} value={d.id}>Dan {d.day_number} · {d.name}</option>
                   ))}

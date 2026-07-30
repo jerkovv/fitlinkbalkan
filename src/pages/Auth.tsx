@@ -154,7 +154,7 @@ const Auth = () => {
         <p className="mt-2 text-sm text-muted-foreground">
           {mode === "login" && "Uloguj se na svoj FitLink nalog."}
           {mode === "signup" && "Kreiraj nalog i pozovi svoje vežbače."}
-          {mode === "forgot" && forgotStep === "email" && "Unesi email — poslaćemo ti kod za resetovanje."}
+          {mode === "forgot" && forgotStep === "email" && "Unesi email, poslaćemo ti kod za resetovanje."}
           {mode === "forgot" && forgotStep === "code" && "Unesi kod koji smo poslali na tvoj email."}
           {mode === "forgot" && forgotStep === "newpass" && "Postavi novu lozinku za svoj nalog."}
         </p>

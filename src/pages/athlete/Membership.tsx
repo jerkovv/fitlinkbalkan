@@ -47,7 +47,7 @@ type Purchase = {
 };
 
 const fmtDate = (iso: string | null) => {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return new Date(iso).toLocaleDateString("sr-Latn-RS", {
     day: "numeric", month: "short", year: "numeric",
   });

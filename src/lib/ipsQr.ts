@@ -2,16 +2,16 @@
 // Specifikacija: https://nbs.rs/ips/qr/
 //
 // Format polja (separator = "|"):
-//   K:PR        – fiksno (Korisnik: Plaćanje računa)
-//   V:01        – verzija
-//   C:1         – znakovi (1 = UTF-8 latinica)
-//   R:<račun>   – broj računa primaoca (bez crtica, 18 cifara)
-//   N:<naziv>   – ime/naziv primaoca (max 70)
-//   I:RSD<iznos>– iznos sa valutom; decimalna zapeta (npr. RSD1500,00)
-//   P:<ime>     – platilac (opciono)
-//   SF:<šifra>  – šifra plaćanja (3 cifre, default 189 = ostalo)
-//   S:<svrha>   – svrha uplate (max 35)
-//   RO:<m><pp>  – model + poziv na broj (npr. 9712345)
+//   K:PR        - fiksno (Korisnik: Plaćanje računa)
+//   V:01        - verzija
+//   C:1         - znakovi (1 = UTF-8 latinica)
+//   R:<račun>   - broj računa primaoca (bez crtica, 18 cifara)
+//   N:<naziv>   - ime/naziv primaoca (max 70)
+//   I:RSD<iznos>- iznos sa valutom; decimalna zapeta (npr. RSD1500,00)
+//   P:<ime>     - platilac (opciono)
+//   SF:<šifra>  - šifra plaćanja (3 cifre, default 189 = ostalo)
+//   S:<svrha>   - svrha uplate (max 35)
+//   RO:<m><pp>  - model + poziv na broj (npr. 9712345)
 
 import QRCode from "qrcode";
 

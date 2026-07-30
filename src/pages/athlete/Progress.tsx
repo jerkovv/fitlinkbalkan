@@ -126,7 +126,7 @@ const Progress = () => {
         setTrainerName((tp as any)?.full_name ?? "");
       }
 
-      // Aktivna članarina — koliko termina ostalo
+      // Aktivna članarina - koliko termina ostalo
       const { data: mems } = await supabase
         .from("memberships")
         .select("status, sessions_total, sessions_used, ends_on")
@@ -141,7 +141,7 @@ const Progress = () => {
         setSessionsLeft(null);
       }
 
-      // Weekly history — poslednjih 8 nedelja (kombinuje bookings + workout logs)
+      // Weekly history - poslednjih 8 nedelja (kombinuje bookings + workout logs)
       const allDates: string[] = [
         ...bookings.map((b) => b.date),
         ...((ses as any[]) ?? []).filter((s) => s.completed_at).map((s) => s.completed_at.slice(0, 10)),
@@ -164,7 +164,7 @@ const Progress = () => {
       }
       setWeeklyHistory(weeks);
 
-      // Streak — uzastopne nedelje (počev od trenutne unazad) sa bar 1 treningom
+      // Streak - uzastopne nedelje (počev od trenutne unazad) sa bar 1 treningom
       let s = 0;
       for (let i = weeks.length - 1; i >= 0; i--) {
         if (weeks[i].count > 0) s++;
@@ -172,7 +172,7 @@ const Progress = () => {
       }
       setStreak(s);
 
-      // Server-side streak (precizniji — uzastopni DANI)
+      // Server-side streak (precizniji - uzastopni DANI)
       const { data: streakData } = await supabase.rpc("get_athlete_streak", { p_athlete_id: user.id } as any);
       const sd = (streakData as any[])?.[0];
       if (sd) {
@@ -292,7 +292,7 @@ const Progress = () => {
           </div>
         ) : tab === "Treninzi" ? (
           <>
-            {/* HERO — Trener analitika */}
+            {/* HERO - Trener analitika */}
             <Card className="p-5 bg-gradient-to-br from-primary/8 via-surface to-surface relative overflow-hidden">
               <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-gradient-brand opacity-10 blur-2xl" />
               <div className="relative">
@@ -352,7 +352,7 @@ const Progress = () => {
               </Card>
             </div>
 
-            {/* Bar chart — poslednjih 8 nedelja */}
+            {/* Bar chart - poslednjih 8 nedelja */}
             <Card className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -418,7 +418,7 @@ const Progress = () => {
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-[14px] truncate">{p.exercise_name}</div>
                         <div className="text-[12px] text-muted-foreground">
-                          {p.best_weight_kg ? `${p.best_weight_kg} kg × ${p.best_weight_reps}` : "—"}
+                          {p.best_weight_kg ? `${p.best_weight_kg} kg × ${p.best_weight_reps}` : "-"}
                           {p.best_e1rm_kg ? ` · 1RM ~${p.best_e1rm_kg} kg` : ""}
                         </div>
                       </div>
@@ -456,8 +456,8 @@ const Progress = () => {
                         </div>
                         <div className="text-[12px] text-muted-foreground truncate">
                           {!s.assigned_program_days?.name && s.day_number == null
-                            ? (s.completed_at ? formatDate(s.completed_at) : "—")
-                            : `${s.assigned_programs?.name ?? "Program"} · ${s.completed_at ? formatDate(s.completed_at) : "—"}`}
+                            ? (s.completed_at ? formatDate(s.completed_at) : "-")
+                            : `${s.assigned_programs?.name ?? "Program"} · ${s.completed_at ? formatDate(s.completed_at) : "-"}`}
                         </div>
                       </div>
                     </div>
@@ -475,7 +475,7 @@ const Progress = () => {
                     Težina
                   </div>
                   <div className="font-display text-[28px] font-bold tracking-tightest mt-1 tnum">
-                    {weightSeries.length > 0 ? weightSeries[weightSeries.length - 1].weight_kg : "—"}{" "}
+                    {weightSeries.length > 0 ? weightSeries[weightSeries.length - 1].weight_kg : "-"}{" "}
                     <span className="text-[14px] text-muted-foreground font-semibold">kg</span>
                   </div>
                 </div>
@@ -551,7 +551,7 @@ const Progress = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-[14px] tnum">
-                          {m.weight_kg ? `${m.weight_kg} kg` : "—"}
+                          {m.weight_kg ? `${m.weight_kg} kg` : "-"}
                           {m.body_fat_pct ? ` · ${m.body_fat_pct}% masti` : ""}
                         </div>
                         <div className="text-[12px] text-muted-foreground">

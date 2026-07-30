@@ -11,7 +11,7 @@ const STEPS = [
     icon: Dumbbell,
     eyebrow: "Korak 1",
     title: "Tvoj plan treninga",
-    body: "Trener ti je dodelio program. Svaki dan rotira automatski — samo tapni „Počni trening“ kada si spreman.",
+    body: "Trener ti je dodelio program. Svaki dan rotira automatski, samo tapni „Počni trening“ kada si spreman.",
   },
   {
     icon: CalendarDays,

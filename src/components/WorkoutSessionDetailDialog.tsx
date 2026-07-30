@@ -44,7 +44,7 @@ type ExerciseRow = {
 };
 
 const formatDate = (iso: string | null) => {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return new Date(iso).toLocaleDateString("sr-Latn-RS", {
     day: "numeric",
     month: "long",
@@ -53,7 +53,7 @@ const formatDate = (iso: string | null) => {
 };
 
 const formatDuration = (sec: number | null) => {
-  if (!sec) return "—";
+  if (!sec) return "-";
   const m = Math.round(sec / 60);
   return `${m} min`;
 };
@@ -103,7 +103,7 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
       setMeta({
         ...s,
         day_name: (dayData as any)?.name ?? `Dan ${s.day_number}`,
-        program_name: (progData as any)?.name ?? "—",
+        program_name: (progData as any)?.name ?? "-",
       });
 
       // 2. Vežbe iz dana (planirano)
@@ -115,7 +115,7 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
         .eq("day_id", s.day_id)
         .order("position", { ascending: true });
 
-      // 3. Set logs za sesiju — uključi i exercise meta preko relacije
+      // 3. Set logs za sesiju - uključi i exercise meta preko relacije
       const { data: logs, error: logsErr } = await supabase
         .from("set_logs")
         .select(
@@ -233,7 +233,7 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
                         day: "numeric",
                         month: "short",
                       })
-                    : "—"}
+                    : "-"}
                 </div>
               </div>
               <div className="rounded-2xl bg-surface-2 p-3 text-center">
@@ -268,7 +268,7 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
             {/* Vežbe */}
             <div className="space-y-3">
               <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                Vežbe — planirano vs urađeno
+                Vežbe - planirano vs urađeno
               </div>
 
               {exercises.length === 0 ? (
@@ -293,7 +293,7 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
                         ) : null
                       ) : (
                         <div className="text-[11.5px] text-muted-foreground mt-0.5">
-                          Plan: {ex.sets} × {ex.planned_reps ?? "—"}
+                          Plan: {ex.sets} × {ex.planned_reps ?? "-"}
                           {ex.planned_weight ? ` @ ${ex.planned_weight} kg` : ""}
                         </div>
                       )}
@@ -332,7 +332,7 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
                                 done ? "text-foreground" : "text-muted-foreground/50"
                               )}
                             >
-                              {actW ?? "–"}
+                              {actW ?? "-"}
                               {wDelta != null && wDelta !== 0 && done && (
                                 <span
                                   className={cn(
@@ -354,7 +354,7 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
                                 done ? "text-foreground" : "text-muted-foreground/50"
                               )}
                             >
-                              {log?.reps ?? "–"}
+                              {log?.reps ?? "-"}
                             </div>
                             <div
                               className={cn(
@@ -362,7 +362,7 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
                                 done ? "text-foreground" : "text-muted-foreground/50"
                               )}
                             >
-                              {log?.rpe ?? "–"}
+                              {log?.rpe ?? "-"}
                             </div>
                             <div className="flex justify-center">
                               {done ? (

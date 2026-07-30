@@ -422,21 +422,21 @@ const WorkoutSummary = () => {
           <StatTile
             icon={<Heart className="h-4 w-4" />}
             label="Prosečan puls"
-            value={stats.hrAvg ? `${stats.hrAvg} bpm` : "—"}
+            value={stats.hrAvg ? `${stats.hrAvg} bpm` : "-"}
           />
         </div>
 
-        {/* Uvek vidljive (sat upise kcal/HR par sekundi posle finish-a; "—" dok ne stigne). */}
+        {/* Uvek vidljive (sat upise kcal/HR par sekundi posle finish-a; "-" dok ne stigne). */}
         <div className="grid grid-cols-2 gap-3 mt-3">
           <StatTile
             icon={<Heart className="h-4 w-4" />}
             label="Max puls"
-            value={stats.hrMax ? `${stats.hrMax} bpm` : "—"}
+            value={stats.hrMax ? `${stats.hrMax} bpm` : "-"}
           />
           <StatTile
             icon={<Flame className="h-4 w-4" />}
             label="Aktivne kcal"
-            value={stats.kcal ? `${Math.round(stats.kcal)} kcal` : "—"}
+            value={stats.kcal ? `${Math.round(stats.kcal)} kcal` : "-"}
           />
         </div>
 

@@ -123,7 +123,7 @@ const Invite = () => {
     init();
   }, [code]);
 
-  // ── FLOW A: magic link (vežbač je već ulogovan iz email invite) ──
+  // ------ FLOW A: magic link (vežbač je već ulogovan iz email invite) ------
   const completeMagicSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!sessionUserId) return;
@@ -167,8 +167,7 @@ const Invite = () => {
       }
 
       toast.success("Dobrodošao u FitLink!");
-      await supabase.auth.signOut();
-      navigate("/spremno?tip=registracija");
+      navigate("/vezbac", { replace: true });
     } catch (err: any) {
       toast.error(porukaGreske(err));
     } finally {
@@ -176,7 +175,7 @@ const Invite = () => {
     }
   };
 
-  // ── FLOW B: direktno otvorio link bez email-a (nije auth-ovan) ──
+  // ------ FLOW B: direktno otvorio link bez email-a (nije auth-ovan) ------
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -289,7 +288,7 @@ const Invite = () => {
       </div>
 
       {magicSession ? (
-        // FLOW A — već je ulogovan, samo set password
+        // FLOW A - već je ulogovan, samo set password
         <form onSubmit={completeMagicSignup} className="space-y-4">
           <div className="rounded-xl bg-success-soft text-success-soft-foreground px-4 py-3 flex items-start gap-2.5">
             <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
@@ -338,7 +337,7 @@ const Invite = () => {
           </Button>
         </form>
       ) : (
-        // FLOW B — direktan link, full signup
+        // FLOW B - direktan link, full signup
         <form onSubmit={handleSignup} className="space-y-4">
           <div>
             <Label htmlFor="name">Ime i prezime</Label>

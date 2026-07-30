@@ -110,7 +110,7 @@ const App = () => (
             <Route path="/trener/vezbac/:athleteId/live" element={trainer(<TrainerLiveWorkout />)} />
             </Route>
 
-            {/* Vežbač — protected, umotano u AthleteLayout (deljen lock sheet preko
+            {/* Vežbač - protected, umotano u AthleteLayout (deljen lock sheet preko
                 ClanarinaLockProvider + auto-enter u aktivan trening, montiran na svim tabovima).
                 Sve stranice se vide normalno; pojedine AKCIJE su zakljucane bez clanarine. */}
             <Route element={<AthleteLayout />}>

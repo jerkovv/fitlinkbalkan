@@ -386,7 +386,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                       const isDuration = !!ex.exercises?.is_duration_based;
                       const open = openExId === ex.id;
                       const advanced = !!advancedByEx[ex.id];
-                      const name = ex.exercises?.name_en?.trim() || ex.exercises?.name || "—";
+                      const name = ex.exercises?.name_en?.trim() || ex.exercises?.name || "-";
                       const thumb = ex.exercises?.thumbnail_url;
                       const setCount = rows.length || ex.sets;
                       const summary = isDuration
@@ -467,7 +467,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                                           if (v !== r.weight_kg) applySets(ex.id, rows.map((row, i) => (i === idx ? { ...row, weight_kg: v } : row)));
                                         }}
                                         className="h-8 text-sm text-center"
-                                        placeholder="—"
+                                        placeholder="-"
                                       />
                                       <Input
                                         key={`r-${r.id}`}

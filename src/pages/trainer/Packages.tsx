@@ -82,8 +82,8 @@ const Packages = () => {
     const pr = parseInt(form.price_rsd, 10);
 
     if (!name) return toast.error("Naziv je obavezan");
-    if (!sc || sc < 1 || sc > 200) return toast.error("Broj treninga 1–200");
-    if (!dd || dd < 1 || dd > 365) return toast.error("Trajanje 1–365 dana");
+    if (!sc || sc < 1 || sc > 200) return toast.error("Broj treninga 1-200");
+    if (!dd || dd < 1 || dd > 365) return toast.error("Trajanje 1-365 dana");
     if (isNaN(pr) || pr < 0) return toast.error("Cena mora biti broj");
 
     setSaving(true);

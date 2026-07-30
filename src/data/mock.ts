@@ -1,4 +1,4 @@
-// Shared mock data for FitLink — used by all screens until Supabase is wired up.
+// Shared mock data for FitLink - used by all screens until Supabase is wired up.
 
 export type AthleteStatus = "active" | "expiring" | "expired";
 
@@ -110,9 +110,9 @@ export const monthlyRevenueBars = [50, 65, 55, 80, 100];
 
 export const programDays = [
   {
-    title: "DAN 1 — PUSH 💪",
+    title: "DAN 1 - PUSH 💪",
     exercises: [
-      { name: "Bench Press", sets: 4, reps: "8–10", rest: "90s" },
+      { name: "Bench Press", sets: 4, reps: "8-10", rest: "90s" },
       { name: "OHP", sets: 3, reps: "10", rest: "60s" },
       { name: "Tricep PD", sets: 3, reps: "12", rest: "45s" },
     ],
@@ -120,7 +120,7 @@ export const programDays = [
 ];
 
 export const athleteWorkout = {
-  title: "Dan 3 — Legs 🦵",
+  title: "Dan 3 - Legs 🦵",
   progressLabel: "Dan 3 od 6",
   progressPct: 42,
   current: "Squat 🏋️",

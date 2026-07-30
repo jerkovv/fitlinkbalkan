@@ -179,7 +179,7 @@ const Home = () => {
 
         <div className="grid grid-cols-2 gap-3">
           <StatCard tone="brand" value={String(monthCount)} unit="treninga" label="Ovog meseca" />
-          <StatCard tone="success" value={next ? String(next.total_days) : "—"} unit="dana" label="U programu" />
+          <StatCard tone="success" value={next ? String(next.total_days) : "-"} unit="dana" label="U programu" />
         </div>
 
         <section>

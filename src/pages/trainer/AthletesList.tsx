@@ -409,7 +409,7 @@ const AthletesList = () => {
                       ? new Date(p.sent_at).toLocaleDateString("sr-Latn-RS", {
                           day: "2-digit", month: "short",
                         })
-                      : "—";
+                      : "-";
                     return (
                       <li
                         key={p.id}

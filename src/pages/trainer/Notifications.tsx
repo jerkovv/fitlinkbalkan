@@ -72,7 +72,7 @@ const Notifications = () => {
               {filter === "unread" ? "Sve si pročitao" : "Nema notifikacija"}
             </div>
             <div className="text-[12.5px] text-muted-foreground max-w-[260px]">
-              Kad ti vežbač rezerviše, otkaže ili završi trening — ovde ćeš videti.
+              Kad ti vežbač rezerviše, otkaže ili završi trening - ovde ćeš videti.
             </div>
           </div>
         ) : (

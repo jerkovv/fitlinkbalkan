@@ -234,7 +234,7 @@ const ActiveWorkout = () => {
   // Pozicija iz servera (poll). null dok prvi poll ne stigne.
   const [pos, setPos] = useState<WorkoutPos | null>(null);
 
-  // Lokalni log serija — SAMO za labele u listi serija (best-effort, optimistički).
+  // Lokalni log serija - SAMO za labele u listi serija (best-effort, optimistički).
   // NIJE izvor pozicije; markeri "urađeno" se izvode iz pos.setNumber.
   const [completedSets, setCompletedSets] = useState<CompletedSet[]>([]);
   const [finishing, setFinishing] = useState(false);
@@ -1013,7 +1013,7 @@ const ActiveWorkout = () => {
   }, [now, phoneTakeover, isOnline, watchEverPresent]);
 
   /* ------------------------- Heartbeat: athlete_heartbeat (samo HR + svežina) ------------------------- */
-  // Dira SAMO last_heartbeat i current_hr — nikad poziciju. Drži živi red svežim
+  // Dira SAMO last_heartbeat i current_hr - nikad poziciju. Drži živi red svežim
   // (poll filtrira last_heartbeat > now - 5min).
   useEffect(() => {
     if (!sessionId || finished) return;

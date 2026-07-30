@@ -61,7 +61,7 @@ const Index = () => {
           </p>
 
           <Link
-            to="/auth?mode=signup"
+            to="/auth"
             className="group block card-premium-hover p-5"
           >
             <div className="flex items-center gap-4">
@@ -82,7 +82,7 @@ const Index = () => {
 
           <Link
             to="/poziv"
-            className="block p-5 rounded-2xl bg-surface border border-hairline"
+            className="group block card-premium-hover p-5"
           >
             <div className="flex items-center gap-4">
               <div className="h-12 w-12 rounded-2xl bg-athlete-soft text-athlete-soft-foreground flex items-center justify-center">
@@ -96,6 +96,7 @@ const Index = () => {
                   Potreban ti je poziv od trenera
                 </div>
               </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition" />
             </div>
           </Link>
 

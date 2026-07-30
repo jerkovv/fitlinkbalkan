@@ -1,4 +1,4 @@
-// send-la-push — salje JEDAN APNs Live Activity push na dati push token.
+// send-la-push - salje JEDAN APNs Live Activity push na dati push token.
 //
 // FAZA 2a: samo funkcija. Okidac koji je zove (Faza 2b) dolazi kasnije; za sad se
 // poziva rucno (pg_net iz SQL-a sa Bearer <service_role_key>, ili interno).
@@ -21,7 +21,7 @@ const corsHeaders = {
 const APNS_PROD_HOST = "https://api.push.apple.com";
 const APNS_SANDBOX_HOST = "https://api.sandbox.push.apple.com";
 
-// ---- APNs JWT (ES256) — identicno send-push ---------------------------------
+// ---- APNs JWT (ES256) - identicno send-push ---------------------------------
 
 let cachedKey: CryptoKey | null = null;
 let cachedJwt: { token: string; iat: number } | null = null;
@@ -135,7 +135,7 @@ async function sendLAToHost(
   return { status: res.status, reason, apnsId: res.headers.get("apns-id"), body: bodyText };
 }
 
-// ---- Interna autorizacija — identicno send-push -----------------------------
+// ---- Interna autorizacija - identicno send-push -----------------------------
 
 function b64urlDecodeToString(b64url: string): string {
   const b64 = b64url.replace(/-/g, "+").replace(/_/g, "/");

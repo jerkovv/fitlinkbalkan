@@ -1,18 +1,80 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
+import { porukaGreske } from "@/lib/errorMessage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dumbbell } from "lucide-react";
+import { Dumbbell, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const InviteCode = () => {
   const navigate = useNavigate();
-  const [code, setCode] = useState("");
+  const [email, setEmail] = useState("");
+  const [token, setToken] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const emailValid = EMAIL_RE.test(email.trim());
+  const tokenValid = /^\d{6}$/.test(token.trim());
+  const canSubmit = emailValid && tokenValid && !submitting;
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!code.trim()) return;
-    navigate(`/invite/${code.trim().toLowerCase()}`);
+    if (!canSubmit) return;
+
+    const mejl = email.trim().toLowerCase();
+    const kod = token.trim();
+
+    setSubmitting(true);
+    try {
+      // Prvo slanje pozivnice ide kroz invite token; ponovno slanje i
+      // postojeci mejlovi kroz magiclink - probamo oba tipa.
+      let { error } = await supabase.auth.verifyOtp({
+        email: mejl,
+        token: kod,
+        type: "invite",
+      });
+      if (error) {
+        ({ error } = await supabase.auth.verifyOtp({
+          email: mejl,
+          token: kod,
+          type: "magiclink",
+        }));
+      }
+      if (error) {
+        const msg = (error.message ?? "").toLowerCase();
+        toast.error(
+          msg.includes("expired")
+            ? "Kod je istekao. Traži od trenera novi."
+            : "Kod nije ispravan. Proveri mejl i kod.",
+        );
+        return;
+      }
+
+      const { data: inviteRow, error: inviteErr } = await supabase
+        .from("invites")
+        .select("code")
+        .eq("email", mejl)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (inviteErr) {
+        toast.error(porukaGreske(inviteErr));
+        return;
+      }
+      if (!inviteRow) {
+        toast.error("Poziv nije pronađen. Javi se treneru.");
+        return;
+      }
+
+      navigate(`/invite/${inviteRow.code}`, { replace: true });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -42,27 +104,42 @@ const InviteCode = () => {
           Unesi kod poziva
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Kod ti stiže mejlom od trenera. Ako si dobio link, možeš i samo da ga otvoriš.
+          Kod od 6 cifara stiže ti mejlom od trenera.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <Label htmlFor="invite-code">Kod poziva</Label>
+          <Label htmlFor="invite-email">Email</Label>
           <Input
-            id="invite-code"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
+            id="invite-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             autoCapitalize="none"
             autoCorrect="off"
-            spellCheck={false}
             required
             className="mt-1.5"
           />
         </div>
 
-        <Button type="submit" className="w-full mt-6" disabled={!code.trim()}>
-          Proveri kod
+        <div>
+          <Label htmlFor="invite-token">Kod iz mejla</Label>
+          <Input
+            id="invite-token"
+            value={token}
+            onChange={(e) => setToken(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            inputMode="numeric"
+            maxLength={6}
+            autoComplete="one-time-code"
+            required
+            className="mt-1.5"
+          />
+        </div>
+
+        <Button type="submit" className="w-full mt-6" disabled={!canSubmit}>
+          {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          Nastavi
         </Button>
       </form>
 
