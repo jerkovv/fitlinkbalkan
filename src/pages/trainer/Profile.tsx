@@ -17,6 +17,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { DeleteAccountSheet } from "@/components/DeleteAccountSheet";
 
 const SPEC_SUGGESTIONS = [
   "Mršavljenje", "Hipertrofija", "Snaga", "Funkcionalni trening",
@@ -106,6 +107,16 @@ const Profile = () => {
 
   // FitLink pretplata (samo prikaz statusa; upravljanje je na webu).
   const [sub, setSub] = useState<TrainerSub | null>(null);
+
+  // Brisanje naloga - mejl uzimamo sveze iz auth (ne iz profiles) tacno pre otvaranja sheeta.
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteEmail, setDeleteEmail] = useState<string | null>(null);
+
+  const openDeleteSheet = async () => {
+    const { data } = await supabase.auth.getUser();
+    setDeleteEmail(data.user?.email ?? "");
+    setDeleteOpen(true);
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -484,7 +495,7 @@ const Profile = () => {
                 </div>
               </div>
               <p className="text-[12.5px] text-muted-foreground -mt-2">
-                Lični sajt sa tvojim paketima i bio-om — podeli na Instagramu ili WhatsApp-u.
+                Lični sajt sa tvojim paketima i bio-om - podeli na Instagramu ili WhatsApp-u.
               </p>
 
               <div className="flex items-start justify-between gap-4">
@@ -548,7 +559,7 @@ const Profile = () => {
                   id="headline"
                   value={headline}
                   onChange={(e) => setHeadline(e.target.value)}
-                  placeholder="Personal trener — snaga i mršavljenje za zauzete ljude"
+                  placeholder="Personal trener - snaga i mršavljenje za zauzete ljude"
                   maxLength={140}
                 />
                 <div className="text-[11px] text-muted-foreground text-right tnum">
@@ -744,10 +755,33 @@ const Profile = () => {
               )}
               Sačuvaj izmene
             </Button>
+
+            {/* Nalog - brisanje naloga, mora biti vidljivo direktno na ekranu (Apple 5.1.1(v)) */}
+            <Card className="p-5 space-y-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                Nalog
+              </div>
+              <button
+                type="button"
+                onClick={openDeleteSheet}
+                className="text-[13.5px] font-semibold text-destructive hover:text-destructive/80 transition"
+              >
+                Obriši nalog
+              </button>
+            </Card>
           </>
         )}
       </PhoneShell>
       <BottomNav role="trainer" />
+
+      {deleteEmail != null && (
+        <DeleteAccountSheet
+          open={deleteOpen}
+          onClose={() => setDeleteOpen(false)}
+          userEmail={deleteEmail}
+          role="trainer"
+        />
+      )}
     </>
   );
 };

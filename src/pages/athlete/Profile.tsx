@@ -20,6 +20,7 @@ import { WorkoutsList } from "@/components/wearables/WorkoutsList";
 import { useWearableConnections } from "@/hooks/useWearableConnections";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { DeleteAccountSheet } from "@/components/DeleteAccountSheet";
 
 type Goal = "lose_weight" | "gain_muscle" | "endurance" | "mobility" | "general";
 type Gender = "male" | "female" | "other";
@@ -42,6 +43,16 @@ const Profile = () => {
   const [trainer, setTrainer] = useState<{ name: string; phone: string | null; email: string | null } | null>(null);
   const [trainerInviteCode, setTrainerInviteCode] = useState<string | null>(null);
   const [tourOpen, setTourOpen] = useState(false);
+
+  // Brisanje naloga - mejl uzimamo sveze iz auth (ne iz profiles) tacno pre otvaranja sheeta.
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteEmail, setDeleteEmail] = useState<string | null>(null);
+
+  const openDeleteSheet = async () => {
+    const { data } = await supabase.auth.getUser();
+    setDeleteEmail(data.user?.email ?? "");
+    setDeleteOpen(true);
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -198,7 +209,7 @@ const Profile = () => {
                       const url = `${window.location.origin}/invite/${trainerInviteCode}?ref=${user.id}`;
                       try {
                         await navigator.clipboard.writeText(url);
-                        toast.success("Link kopiran — pošalji prijatelju");
+                        toast.success("Link kopiran - pošalji prijatelju");
                       } catch {
                         toast.error("Ne mogu da kopiram");
                       }
@@ -451,11 +462,34 @@ const Profile = () => {
             >
               <HelpCircle className="h-3.5 w-3.5" /> Pregled aplikacije
             </button>
+
+            {/* Nalog - brisanje naloga, mora biti vidljivo direktno na ekranu (Apple 5.1.1(v)) */}
+            <Card className="p-5 space-y-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                Nalog
+              </div>
+              <button
+                type="button"
+                onClick={openDeleteSheet}
+                className="text-[13.5px] font-semibold text-destructive hover:text-destructive/80 transition"
+              >
+                Obriši nalog
+              </button>
+            </Card>
           </>
         )}
       </PhoneShell>
       <BottomNav role="athlete" />
       {tourOpen && <AthleteOnboardingTour forceOpen onClose={() => setTourOpen(false)} />}
+
+      {deleteEmail != null && (
+        <DeleteAccountSheet
+          open={deleteOpen}
+          onClose={() => setDeleteOpen(false)}
+          userEmail={deleteEmail}
+          role="athlete"
+        />
+      )}
     </>
   );
 };

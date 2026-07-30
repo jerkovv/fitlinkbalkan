@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Apple, ClipboardList, Wallet, MessageSquare, Phone, Loader2, Plus, X, Check,
-  Dumbbell, Scale, UserMinus, Flame, Sparkles, Mail, Copy,
+  Dumbbell, Scale, UserMinus, Flame, Sparkles, Mail, Copy, Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import { InAppWorkoutsList } from "@/components/InAppWorkoutsList";
@@ -35,6 +35,7 @@ import { HealthMetricsCard } from "@/components/wearables/HealthMetricsCard";
 import { WearableTrendChart } from "@/components/wearables/WearableTrendChart";
 import { useWearableConnections } from "@/hooks/useWearableConnections";
 import { WorkoutsList } from "@/components/wearables/WorkoutsList";
+import { MembershipEditSheet } from "@/components/trainer/MembershipEditSheet";
 
 type AthleteData = {
   id: string;
@@ -105,6 +106,32 @@ const RISK_TEXT: Record<string, string> = {
 };
 
 const fmtVolume = (n: number) => (n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(Math.round(n)));
+
+// Status polje - njime trener rucno upravlja, ne racuna se iz datuma.
+const STATUS_LABEL: Record<string, string> = {
+  active: "Aktivna",
+  paused: "Pauzirana",
+  expired: "Istekla",
+  cancelled: "Otkazana",
+};
+const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "muted"> = {
+  active: "success",
+  paused: "warning",
+  expired: "danger",
+  cancelled: "muted",
+};
+
+// Bez roka na isteku (ends_on null) -> "Bez roka". Nista u bazi automatski ne
+// prebacuje clanarinu u expired, zato se ovaj badz racuna IZ ends_on, ne iz status kolone.
+const daysLeftBadge = (daysLeft: number | null): { label: string; tone: "success" | "warning" | "danger" | "muted" } => {
+  if (daysLeft == null) return { label: "Bez roka", tone: "muted" };
+  if (daysLeft < 0) return { label: "Istekla", tone: "danger" };
+  if (daysLeft <= 7) return { label: "Ističe uskoro", tone: "warning" };
+  return { label: "Aktivna", tone: "success" };
+};
+
+const fmtShortDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("sr-Latn-RS", { day: "numeric", month: "short" });
 
 // Premium stat kartica (isti jezik kao Finances StatTile).
 const StatBox = ({
@@ -184,6 +211,9 @@ const AthleteProfile = () => {
   const [activeMembership, setActiveMembership] = useState<{
     id: string;
     plan_name: string;
+    price: number | null;
+    status: string;
+    starts_on: string | null;
     ends_on: string | null;
     sessions_total: number | null;
     sessions_used: number;
@@ -191,6 +221,7 @@ const AthleteProfile = () => {
   const [bonusOpen, setBonusOpen] = useState(false);
   const [bonusCount, setBonusCount] = useState("1");
   const [bonusSaving, setBonusSaving] = useState(false);
+  const [membershipEditOpen, setMembershipEditOpen] = useState(false);
 
   // Nutrition assign dialog
   const [assignOpen, setAssignOpen] = useState(false);
@@ -284,16 +315,25 @@ const AthleteProfile = () => {
     setMetricsHistory(metrics);
     setLatestMetric(metrics[0] ?? null);
 
-    // Active membership
-    const { data: memData } = await supabase
+    // Clanarina - uzimamo SVE redove (ne samo status='active') da trener vidi
+    // i istekle/otkazane umesto prazne kartice. Sortiranje aktivna prvo, pa
+    // ends_on opadajuce (nema ga u supabase-js .order() kao izraz, radimo u JS-u).
+    const { data: memRows } = await supabase
       .from("memberships")
-      .select("id, plan_name, ends_on, sessions_total, sessions_used")
-      .eq("athlete_id", id)
-      .eq("status", "active")
-      .order("ends_on", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    setActiveMembership((memData as any) ?? null);
+      .select("id, plan_name, price, status, starts_on, ends_on, sessions_total, sessions_used")
+      .eq("athlete_id", id);
+    const sortedMem = ((memRows as any[]) ?? []).slice().sort((a, b) => {
+      const aActive = a.status === "active" ? 0 : 1;
+      const bActive = b.status === "active" ? 0 : 1;
+      if (aActive !== bActive) return aActive - bActive;
+      const aEnds = a.ends_on ?? "";
+      const bEnds = b.ends_on ?? "";
+      if (!aEnds && !bEnds) return 0;
+      if (!aEnds) return 1;
+      if (!bEnds) return -1;
+      return aEnds < bEnds ? 1 : aEnds > bEnds ? -1 : 0;
+    });
+    setActiveMembership(sortedMem[0] ?? null);
 
     setLoading(false);
   };
@@ -633,6 +673,20 @@ const AthleteProfile = () => {
     );
   }
 
+  const membershipDaysLeft = activeMembership?.ends_on
+    ? Math.ceil((new Date(activeMembership.ends_on).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : null;
+  const membershipDaysLeftInfo = daysLeftBadge(membershipDaysLeft);
+  const membershipPeriodText = activeMembership
+    ? activeMembership.starts_on && activeMembership.ends_on
+      ? `${fmtShortDate(activeMembership.starts_on)} - ${fmtShortDate(activeMembership.ends_on)}`
+      : activeMembership.ends_on
+        ? `do ${fmtShortDate(activeMembership.ends_on)}`
+        : activeMembership.starts_on
+          ? `od ${fmtShortDate(activeMembership.starts_on)}`
+          : "Bez datuma"
+    : "";
+
   return (
     <PhoneShell
       back="/trener/vezbaci"
@@ -930,7 +984,7 @@ const AthleteProfile = () => {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-[15px]">
-                  {latestMetric.weight_kg ? `${latestMetric.weight_kg} kg` : "—"}
+                  {latestMetric.weight_kg ? `${latestMetric.weight_kg} kg` : "-"}
                   {latestMetric.body_fat_pct ? ` · ${latestMetric.body_fat_pct}% masti` : ""}
                 </div>
                 <div className="text-[12px] text-muted-foreground">
@@ -1061,12 +1115,26 @@ const AthleteProfile = () => {
                   {activeMembership.sessions_total != null
                     ? `${activeMembership.sessions_used} / ${activeMembership.sessions_total} iskorišćeno`
                     : "Bez limita treninga"}
-                  {activeMembership.ends_on && ` · do ${new Date(activeMembership.ends_on).toLocaleDateString("sr-Latn-RS", { day: "numeric", month: "short" })}`}
                 </div>
               </div>
             </div>
-            <Chip tone="success">Aktivna</Chip>
+            <div className="flex flex-col items-end gap-1.5 shrink-0">
+              <Chip tone={STATUS_TONE[activeMembership.status] ?? "muted"}>
+                {STATUS_LABEL[activeMembership.status] ?? activeMembership.status}
+              </Chip>
+              <Chip tone={membershipDaysLeftInfo.tone}>{membershipDaysLeftInfo.label}</Chip>
+            </div>
           </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[12px] text-muted-foreground">{membershipPeriodText}</span>
+            {activeMembership.price != null && (
+              <span className="font-display text-[15px] font-bold tracking-tight text-foreground tnum shrink-0">
+                {activeMembership.price.toLocaleString("sr-Latn-RS")} RSD
+              </span>
+            )}
+          </div>
+
           {activeMembership.sessions_total != null && (
             <div className="h-1.5 bg-muted rounded-full overflow-hidden">
               <div
@@ -1077,24 +1145,42 @@ const AthleteProfile = () => {
               />
             </div>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setBonusOpen(true)}
-            className="w-full"
-          >
-            <Plus className="h-4 w-4 mr-1.5" /> Dodaj bonus treninge
-          </Button>
+
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBonusOpen(true)}
+              className="w-full"
+            >
+              <Plus className="h-4 w-4 mr-1.5" /> Dodaj bonus
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setMembershipEditOpen(true)}
+              className="w-full"
+            >
+              <Pencil className="h-4 w-4 mr-1.5" /> Izmeni
+            </Button>
+          </div>
         </Card>
       ) : (
         <Card className="p-5 text-center text-[13px] text-muted-foreground">
-          Vežbač nema aktivnu članarinu. Kad izabere paket, pojaviće se u{" "}
+          Vežbač nema članarinu. Kad izabere paket, pojaviće se u{" "}
           <Link to="/trener/uplate" className="text-primary font-semibold">
             Zahtevima za uplatu
           </Link>
           .
         </Card>
       )}
+
+      <MembershipEditSheet
+        open={membershipEditOpen}
+        onClose={() => setMembershipEditOpen(false)}
+        membershipId={activeMembership?.id ?? null}
+        onSaved={load}
+      />
 
       {/* Bonus sheet */}
       <FullScreenSheet open={bonusOpen} onClose={() => setBonusOpen(false)} title="Dodaj bonus treninge">
@@ -1214,7 +1300,7 @@ const AthleteProfile = () => {
                         {isCurrent && <Check className="h-3.5 w-3.5 text-primary" />}
                       </div>
                       <div className="text-[11px] text-muted-foreground">
-                        {t.target_kcal ? `${t.target_kcal} kcal` : "—"}
+                        {t.target_kcal ? `${t.target_kcal} kcal` : "-"}
                         {t.goal && ` · ${t.goal}`}
                       </div>
                     </div>

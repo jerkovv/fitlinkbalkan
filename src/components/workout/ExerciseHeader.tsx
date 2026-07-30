@@ -100,17 +100,22 @@ export const ExerciseHeader = ({
     };
   }, [useVideo, embed?.src]);
 
-  // iOS suspenduje <video> kad se ekran zakljuca (WKWebView gasi media pipeline da stedi
-  // bateriju/memoriju) - to je OS ponasanje, van nase kontrole. Ali posle otkljucavanja niko
-  // nije ponovo zvao play(), pa je video ostajao zamrznut dok neka DRUGA promena (npr. sledeca
-  // vezba) ne bi slucajno retrigerovala efekat iznad. visibilitychange VEC se pouzdano koristi
-  // na vise mesta u ovoj app-i (watch-presence, auth) za detekciju povratka iz pozadine - isti
-  // mehanizam ovde, bez ikakve nove native zavisnosti.
+  // iOS zakljucavanje ne samo pauzira <video> u WKWebView - cesto potpuno ugasi
+  // dekodovanje/mrezni tok (ne stedi se samo baterija, konekcija zaista padne). Zvati
+  // samo .play() na tako "mrtvom" baferu cesto ne pokrene nista - ostaje zamrznut
+  // poslednji frejm jer nema vise sta da se dekodira. .load() resetuje element i
+  // ponovo uspostavi izvor/konekciju (petlja je kratka, restart ispocetka se ne
+  // primeti); canplay/loadeddata listeneri iz efekta iznad ostaju zakaceni i sami
+  // pozovu play() cim load() zavrsi, pa ovde eksplicitni play() posle load() sluzi
+  // samo kao dodatni pokusaj bez cekanja na taj event.
   useEffect(() => {
     if (!useVideo) return;
     const onVisible = () => {
       if (document.visibilityState === "visible") {
-        videoRef.current?.play().catch(() => {});
+        const v = videoRef.current;
+        if (!v) return;
+        v.load();
+        v.play().catch(() => {});
       }
     };
     document.addEventListener("visibilitychange", onVisible);
