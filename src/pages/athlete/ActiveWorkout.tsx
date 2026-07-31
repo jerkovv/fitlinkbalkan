@@ -260,6 +260,47 @@ const ActiveWorkout = () => {
   // kad sat vozi trening - bez cekanja 2s poll-a. Poll (pos.currentHr) ostaje fallback.
   const [watchHr, setWatchHr] = useState<number | null>(null);
 
+  // Ref-mirror istog racuna kao HR pilula (linija sa "const hr = watchEverPresent ? ..."
+  // nize u renderu) - mora da postoji OVDE, pre eventualnog ranog return-a ispod, jer
+  // hook-ovi ne smeju da zavise od uslovnog toka. Koristi ga watch-check ispod da proveri
+  // "jos uvek nema pulsa" bez zastarelog closure-a.
+  const hrRef = useRef<number | null>(null);
+  useEffect(() => {
+    hrRef.current = watchEverPresent
+      ? (watchHr ?? pos?.currentHr ?? liveHr)
+      : (liveHr ?? pos?.currentHr ?? null);
+  }, [watchEverPresent, watchHr, pos, liveHr]);
+
+  // Provera "korisnik ima sat, ali puls ne stize" - JEDNOM po ulasku u trening, samo ako
+  // je sat koriscen u poslednjih 14 dana (watch_pairing_tokens.last_used_at). Bez ovog uslova
+  // bi solo korisnik koji je sat probao pre pola godine dobijao ovaj toast zauvek uzalud.
+  useEffect(() => {
+    if (!isNativeIOS() || !user) return;
+    let cancelled = false;
+    (async () => {
+      const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+      const { data } = await supabase
+        .from("watch_pairing_tokens")
+        .select("id")
+        .eq("user_id", user.id)
+        .gt("last_used_at", since)
+        .limit(1);
+      if (cancelled || !data?.length) return;
+      setTimeout(() => {
+        if (cancelled) return;
+        const cur = hrRef.current;
+        if (!cur || cur <= 0) {
+          toast("Ne stiže puls sa sata. Ako ga danas ne nosiš, slobodno nastavi.", {
+            duration: 5000,
+            action: { label: "Popravi", onClick: () => setWatchHelpOpen(true) },
+          });
+        }
+      }, 4500);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- namerno JEDNOM po mount-u, ne na svaku promenu user/hr
+  }, []);
+
   // Kardio (is_duration_based): stepper Minuti za tekucu vezbu (init iz plana ili 20) +
   // busy guard da "Zavrsi vezbu" ne okine dvaput dok RPC traje.
   const [cardioMinutes, setCardioMinutes] = useState(20);
