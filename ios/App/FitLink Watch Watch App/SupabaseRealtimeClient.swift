@@ -146,11 +146,16 @@ final class SupabaseRealtimeClient: ObservableObject {
     private var lastHadWorkout: Bool = false
     private var pollInterval: TimeInterval = 2.0  // 2 sekunde
     private var consecutiveErrors: Int = 0
-    // Grace/debounce za "Veza prekinuta": banner se pali TEK posle ODRZANOG prekida
-    // (>= offlineGraceSeconds), da tranzijentni mrezni blip (par neuspelih poll-ova) ne
-    // flipuje status. Oporavak je instant (isConnected=true na prvi uspeh). firstErrorAt =
-    // trenutak pocetka tekuceg niza gresaka (nil kad je poslednji poll bio uspesan).
-    private var firstErrorAt: Date? = nil
+    // Grace/debounce za "Veza prekinuta": banner se pali TEK kad je poslednji USPESAN poll
+    // stariji od offlineGraceSeconds - meri se od poslednjeg uspeha, ne od pocetka tekuceg
+    // niza gresaka. Stari pristup (firstErrorAt = pocetak niza gresaka, resetuje se na SVAKI
+    // pojedinacni uspeh) je davao lazan "Povezano" u dva slucaja: (1) povremeni usamljen uspeh
+    // usred pretezno neuspesnih poll-ova beskonacno iznova restartuje niz gresaka pre nego sto
+    // dostigne prag, i (2) posle dugog prekida polling-a (sat suspendovan pa se vrati), prvi
+    // neuspeh dobija SVEZ 15s grace umesto da odmah odrazi da je stvarna veza vec davno stala.
+    // lastSuccessfulPollAt resava oba - staleness se racuna direktno od trenutka poslednjeg
+    // potvrdjenog uspeha, bez posrednog "niza gresaka" konteksta.
+    private var lastSuccessfulPollAt: Date? = nil
     private let offlineGraceSeconds: TimeInterval = 15
     
     private let session: URLSession = {
@@ -184,7 +189,7 @@ final class SupabaseRealtimeClient: ObservableObject {
     
     private func startPolling() {
         consecutiveErrors = 0
-        firstErrorAt = nil
+        lastSuccessfulPollAt = nil
         // Prvi poll odmah
         Task { @MainActor in
             await pollOnce()
@@ -215,8 +220,24 @@ final class SupabaseRealtimeClient: ObservableObject {
             await pollOnce()
         }
     }
-    
-    private func pollOnce() async {
+
+    // OS (NWPathMonitor) javio da mrezni put vise ne postoji. NE verujemo mu na rec: na
+    // watchOS zna lazno da prijavi .unsatisfied dok bridged put kroz telefon i dalje radi
+    // (isti razlog zbog kog offline baner vec gleda ISHOD RPC-a, ne NWPath). Zato odmah
+    // izvrsimo JEDAN pravi poll i pustimo rezultat da odluci: uspeh = lazna uzbuna, nista se
+    // ne menja; neuspeh = prekid je stvaran, pa status ide ODMAH na "Veza prekinuta" bez
+    // cekanja 15s staleness prozora. Time potpun nestanak mreze pada za ~1s umesto 30-60s,
+    // a postepena detekcija ostaje netaknuta za slucaj "mreza radi ali server ne odgovara".
+    func verifyConnectionNow() {
+        guard pollTimer != nil else { return }
+        Task { @MainActor in
+            await pollOnce(authoritativeFailure: true)
+        }
+    }
+
+    // authoritativeFailure: neuspeh ovog poll-a je sam po sebi dokaz prekida (OS je vec
+    // javio da puta nema), pa preskace 15s grace prozor. Default false = normalan tik.
+    private func pollOnce(authoritativeFailure: Bool = false) async {
         // Hook za handshake retry (npr. dok je identitet nesiguran).
         onPollTick?()
 
@@ -233,8 +254,8 @@ final class SupabaseRealtimeClient: ObservableObject {
                 print("Polling: recovered after \(consecutiveErrors) errors")
                 consecutiveErrors = 0
             }
-            // Oporavak je instant: prvi uspesan poll ponistava tekuci niz gresaka i grace prozor.
-            firstErrorAt = nil
+            // Oporavak je instant: svez uspesan poll odmah pomera "poslednji uspeh" na sad.
+            lastSuccessfulPollAt = Date()
             // BACKOFF RESET: prvi uspesan poll posle backoff-a vrati interval na 2s ODMAH.
             if pollInterval != 2.0 {
                 restartPolling(interval: 2.0)
@@ -280,14 +301,17 @@ final class SupabaseRealtimeClient: ObservableObject {
             
         } catch {
             consecutiveErrors += 1
-            if firstErrorAt == nil { firstErrorAt = Date() }
-            let sustained = Date().timeIntervalSince(firstErrorAt ?? Date())
-            print("Polling: error #\(consecutiveErrors) (odrzano \(Int(sustained))s): \(error.localizedDescription)")
+            // Staleness = koliko je star POSLEDNJI STVARNI uspeh, ne dužina tekuceg niza
+            // gresaka. Ako nikad nije bilo uspeha (nil), tretiraj kao odmah stale.
+            let staleness = lastSuccessfulPollAt.map { Date().timeIntervalSince($0) } ?? .infinity
+            print("Polling: error #\(consecutiveErrors) (poslednji uspeh pre \(Int(staleness))s): \(error.localizedDescription)")
 
-            // GRACE: "Veza prekinuta" tek posle ODRZANOG prekida (>= offlineGraceSeconds).
-            // Vremenski (ne po broju gresaka) - robustno bez obzira koliko brzo poll pada.
-            // Tranzijentni blip (kratak niz gresaka) NE flipuje status; oporavak je instant gore.
-            if sustained >= offlineGraceSeconds {
+            // GRACE: "Veza prekinuta" tek kad je poslednji uspeh stariji od offlineGraceSeconds.
+            // Tranzijentni blip (par neuspelih poll-ova odmah posle uspeha) NE flipuje status;
+            // oporavak je instant gore (svaki uspeh odmah pomera lastSuccessfulPollAt na sad).
+            // authoritativeFailure preskace prag: OS je vec javio da mrezni put ne postoji i
+            // ova provera je to potvrdila stvarnim neuspelim pozivom - nema sta da se ceka.
+            if authoritativeFailure || staleness >= offlineGraceSeconds {
                 isConnected = false
             }
 

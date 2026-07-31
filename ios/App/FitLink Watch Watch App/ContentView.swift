@@ -230,6 +230,13 @@ struct ContentView: View {
             // Kad sat postane aktivan, ponovo povuci aktuelni identitet.
             if newPhase == .active {
                 phoneSession.requestCurrentToken()
+                // Isti gejt kao u network.isOnline handleru ispod: pokriva slucaj kad se mreza
+                // vrati DOK je app u pozadini (network.isOnline event prodje neiskoriscen), pa
+                // korisnik tek kasnije podigne ruku. Bez ovoga "Greska konekcije" ostaje
+                // zaglavljena jer je connectionError = nil samo u initializeConnection().
+                if connectionError != nil {
+                    Task { await initializeConnection() }
+                }
                 // Povratak u prvi plan = vezbac obicno blizu telefona, veza obnovljena.
                 Task { await flushPendingMetrics() }
                 flushQueue()   // KORAK C: odsviraj baferovane set-akcije
@@ -243,6 +250,27 @@ struct ContentView: View {
                 phoneSession.requestCurrentToken()
                 Task { await flushPendingMetrics() }
                 flushQueue()
+                // Oporavak iz ZAGLAVLJENE "Greska konekcije": kad pocetni getUserContext padne
+                // (app otvoren bez mreze), catch grana preskoci realtimeClient.connect() koji
+                // stoji na KRAJU do bloka -> polling nikad ne krene, pollTimer ostaje nil. Zato
+                // je forceRefresh() gore no-op (ima guard na pollTimer != nil) i nema nijednog
+                // poll-a koji bi se sam oporavio. Jedini izlaz je ponovo pokrenuti ceo init.
+                // Gejt na connectionError != nil radi dvoje: zdravu sesiju (trening u toku) ne
+                // dira, a ujedno sprecava preklapanje - initializeConnection() na samom ulasku
+                // postavi connectionError = nil, pa online event koji stigne dok init jos traje
+                // (retry pauze do 7s) ne okine drugi paralelni init.
+                if connectionError != nil {
+                    Task { await initializeConnection() }
+                }
+            } else {
+                // BRZI PUT za potpun nestanak mreze: bez ovoga se prekid vidi tek kroz
+                // staleness racunicu u pollOnce (15s prag + do ~10s kvantizacije zbog
+                // backoff-a) = 30-60s. NWPath se i ovde NE uzima kao dokaz (na watchOS ume
+                // lazno da prijavi .unsatisfied dok bridged put radi), nego samo kao OKIDAC:
+                // verifyConnectionNow odmah izvrsi jedan pravi poll i tek NJEGOV neuspeh
+                // obara status. Povratak online namerno NEMA simetricnu granu - "Povezano"
+                // se i dalje vraca samo kroz stvaran uspesan poll, nikad na optimizam.
+                realtimeClient.verifyConnectionNow()
             }
         }
         .onChange(of: phoneSession.pairingToken) { _ in
@@ -1253,7 +1281,34 @@ struct ContentView: View {
     }
     
     // MARK: - Init connection
-    
+
+    // Ogranicen retry SAMO za pocetni getUserContext poziv: prvi pokusaj odmah po
+    // ukljucivanju sata (Bluetooth/WiFi stek jos nestabilan) lako pukne na transportnoj
+    // gresci, a initializeConnection() se poziva samo na mount i na promenu tokena - bez
+    // ovoga bi sat ostao TRAJNO zaglavljen na "Greska konekcije" dok se rucno ne resetuje
+    // konekcija ili app ne ubije i ponovo otvori. Ukupno tacno 3 pokusaja (1 prvobitni + 2
+    // retry-ja); ako getUserContext STVARNO vrati nil (token opozvan), to NIJE greska koja
+    // se ovde hvata - throw izuzetka je jedini uslov za retry, "Token nevazeci" grana ostaje
+    // potpuno odvojena i ne prolazi kroz ovu petlju.
+    private func getUserContextWithRetry(token: String) async throws -> UserContextResponse? {
+        let maxAttempts = 3
+        let retryDelaysSeconds: [UInt64] = [2, 5]
+        var lastError: Error = SupabaseError.networkError("Unknown")
+
+        for attempt in 1...maxAttempts {
+            do {
+                return try await SupabaseClient.shared.getUserContext(token: token)
+            } catch {
+                lastError = error
+                if attempt < maxAttempts {
+                    print("Connection attempt \(attempt)/\(maxAttempts) failed, retrying...")
+                    try? await Task.sleep(nanoseconds: retryDelaysSeconds[attempt - 1] * 1_000_000_000)
+                }
+            }
+        }
+        throw lastError
+    }
+
     private func initializeConnection() async {
         isLoading = true
         connectionError = nil
@@ -1272,7 +1327,7 @@ struct ContentView: View {
         }
 
         do {
-            let context = try await SupabaseClient.shared.getUserContext(token: token)
+            let context = try await getUserContextWithRetry(token: token)
             noteRpcSuccess()   // server dosegnut
 
             guard let context = context else {
