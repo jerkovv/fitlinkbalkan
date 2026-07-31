@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff, Plus, Minus } from "lucide-react";
+import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff, Plus, Minus, Watch as WatchIcon } from "lucide-react";
 import { getHrColor, getHrZone } from "@/lib/workout/hrZone";
 import { isFreshWithinGrace } from "@/lib/liveWorkout";
 import { markWorkoutEntered } from "@/lib/workoutSession";
 import { WatchSync, isNativeIOS } from "@/lib/watchSync";
+import { WatchResetCard } from "@/components/WatchResetCard";
+import { FullScreenSheet, FullScreenSheetScroll } from "@/components/ui/full-screen-sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -247,6 +249,10 @@ const ActiveWorkout = () => {
   // Failsafe: ako prelaz ne razresi za ~7s, brendiran ekran NIJE terminalan -> error+retry.
   const [finishError, setFinishError] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
+  // Diskretan ulaz ka Watch reset sheet-u iz HR pilule - app ne zna pouzdano da li
+  // vezbac uopste ima sat (SOLO nikad ne zna unapred), pa umesto heuristike ovo je
+  // uvek prisutan, tih izlaz za slucaj kad se sat zaglavi (npr. "Provera naloga").
+  const [watchHelpOpen, setWatchHelpOpen] = useState(false);
 
   // Live HR (lokalni HealthKit stream na telefonu)
   const [liveHr, setLiveHr] = useState<number | null>(null);
@@ -1691,6 +1697,16 @@ const ActiveWorkout = () => {
               <span className="text-[13px] font-bold tnum leading-none">
                 {hr && hr > 0 ? hr : "-"}
               </span>
+              {isNativeIOS() && (
+                <button
+                  type="button"
+                  onClick={() => setWatchHelpOpen(true)}
+                  aria-label="Problem sa satom?"
+                  className="-mr-1 ml-0.5 h-5 w-5 rounded-full flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground active:scale-95 transition"
+                >
+                  <WatchIcon className="h-3.5 w-3.5" strokeWidth={2.2} />
+                </button>
+              )}
             </div>
           </div>
           <div className="h-1 bg-surface-2">
@@ -2025,6 +2041,16 @@ const ActiveWorkout = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <FullScreenSheet
+        open={watchHelpOpen}
+        onClose={() => setWatchHelpOpen(false)}
+        title="Problem sa satom?"
+      >
+        <FullScreenSheetScroll className="pt-5">
+          <WatchResetCard />
+        </FullScreenSheetScroll>
+      </FullScreenSheet>
     </div>
   );
 };
