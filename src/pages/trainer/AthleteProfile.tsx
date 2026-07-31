@@ -179,11 +179,20 @@ const AthleteProfile = () => {
     if (!id) return;
     setRemoving(true);
     try {
-      const { error } = await supabase
-        .from("athletes")
-        .update({ trainer_id: null })
-        .eq("id", id);
+      const { data, error } = await supabase.rpc("trainer_unassign_athlete", {
+        p_athlete_id: id,
+      });
       if (error) throw error;
+      if (!data?.success) {
+        const reason = data?.error;
+        throw new Error(
+          reason === "not_found"
+            ? "Vežbač nije pronađen."
+            : reason === "not_your_athlete"
+            ? "Nemaš dozvolu za ovu radnju."
+            : "Nešto nije u redu. Pokušaj ponovo."
+        );
+      }
       toast.success("Vežbač uklonjen");
       setRemoveOpen(false);
       navigate("/trener/vezbaci");
