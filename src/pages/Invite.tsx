@@ -52,25 +52,22 @@ const Invite = () => {
       let resolvedTrainerId: string | null = null;
 
       // 1) Probaj per-athlete invite zapis
-      const { data: inviteRow } = await supabase
-        .from("invites")
-        .select("trainer_id, status, expires_at, email, full_name")
-        .eq("code", code)
-        .maybeSingle();
+      const { data: inviteData } = await supabase.rpc("get_invite_by_code", { p_code: code } as any);
+      const inviteRow = inviteData as any;
 
-      if (inviteRow) {
+      if (inviteRow?.found) {
         if (inviteRow.status === "pending") {
           const expired =
             inviteRow.expires_at && new Date(inviteRow.expires_at) < new Date();
           if (expired) {
             setInvalidReason("expired");
           } else {
-            resolvedTrainerId = (inviteRow as any).trainer_id;
+            resolvedTrainerId = inviteRow.trainer_id;
             setHasInviteRow(true);
-            setInviteEmail((inviteRow as any).email ?? null);
-            setInviteFullName((inviteRow as any).full_name ?? null);
-            if ((inviteRow as any).email) setEmail((inviteRow as any).email);
-            if ((inviteRow as any).full_name) setFullName((inviteRow as any).full_name);
+            setInviteEmail(inviteRow.email ?? null);
+            setInviteFullName(inviteRow.full_name ?? null);
+            if (inviteRow.email) setEmail(inviteRow.email);
+            if (inviteRow.full_name) setFullName(inviteRow.full_name);
           }
         } else if (inviteRow.status === "accepted") {
           setInvalidReason("used");
@@ -81,13 +78,10 @@ const Invite = () => {
 
       // 2) Fallback: trener-level invite_code (public landing / referral / share)
       if (!resolvedTrainerId) {
-        const { data: trainerRow } = await supabase
-          .from("trainers")
-          .select("id")
-          .eq("invite_code", code)
-          .maybeSingle();
-        if (trainerRow?.id) {
-          resolvedTrainerId = trainerRow.id;
+        const { data: trainerData } = await supabase.rpc("get_trainer_by_code", { p_code: code } as any);
+        const trainerRow = trainerData as any;
+        if (trainerRow?.valid && trainerRow?.trainer_id) {
+          resolvedTrainerId = trainerRow.trainer_id;
           setHasInviteRow(false);
         }
       }
