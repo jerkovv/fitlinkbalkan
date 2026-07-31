@@ -260,10 +260,32 @@ const ActiveWorkout = () => {
   // kad sat vozi trening - bez cekanja 2s poll-a. Poll (pos.currentHr) ostaje fallback.
   const [watchHr, setWatchHr] = useState<number | null>(null);
 
+  // Kardio (is_duration_based): stepper Minuti za tekucu vezbu (init iz plana ili 20) +
+  // busy guard da "Zavrsi vezbu" ne okine dvaput dok RPC traje.
+  const [cardioMinutes, setCardioMinutes] = useState(20);
+  const [cardioBusy, setCardioBusy] = useState(false);
+
+  // Anti-trosenje serija: "Zavrsi set" zakljucan dok athlete_complete_set ne vrati.
+  // MORA da zivi OVDE (ne u SetLogger.submitting) - SetLogger je keyovan po poziciji pa ga
+  // optimisticki advance remountuje i unutrasnji guard ispari. Ref za sinhroni re-entry
+  // check u handleru, state za disable dugmeta preko remount-a.
+  const setBusyRef = useRef(false);
+  const [setBusy, setSetBusy] = useState(false);
+
+  // FAZA 1 - watch presence: NE parsiramo serverski timestamp (new Date(string) u WKWebView
+  // daje pogresno/starije vreme + clock skew -> lazni lock). Umesto toga: PROMENA stringa
+  // watch_last_hr_at = signal "sat se javio", a svezinu merimo telefonskim Date.now().
+  const lastSeenWatchTsRef = useRef<string | null>(null);   // poslednja vidjena vrednost
+  const watchSignalLocalRef = useRef<number | null>(null);  // Date.now() kad se PROMENILA
+  // Reaktivni mirror "sat se IKAD javio u ovoj sesiji" (== watchSignalLocalRef.current != null).
+  // State (ne ref) da se lock/baner preracunaju ODMAH kad sat prvi put javi, ne tek na 1s tik.
+  const [watchEverPresent, setWatchEverPresent] = useState(false);
+
   // Ref-mirror istog racuna kao HR pilula (linija sa "const hr = watchEverPresent ? ..."
-  // nize u renderu) - mora da postoji OVDE, pre eventualnog ranog return-a ispod, jer
-  // hook-ovi ne smeju da zavise od uslovnog toka. Koristi ga watch-check ispod da proveri
-  // "jos uvek nema pulsa" bez zastarelog closure-a.
+  // nize u renderu) - MORA da bude ISPOD watchEverPresent deklaracije (gore), jer je
+  // watchEverPresent const iz useState-a: referenca na njega pre ove linije baca
+  // ReferenceError (temporal dead zone) i obara ceo render u belo. Sve zavisnosti ovde
+  // moraju biti vec deklarisane iznad.
   const hrRef = useRef<number | null>(null);
   useEffect(() => {
     hrRef.current = watchEverPresent
@@ -301,26 +323,6 @@ const ActiveWorkout = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- namerno JEDNOM po mount-u, ne na svaku promenu user/hr
   }, []);
 
-  // Kardio (is_duration_based): stepper Minuti za tekucu vezbu (init iz plana ili 20) +
-  // busy guard da "Zavrsi vezbu" ne okine dvaput dok RPC traje.
-  const [cardioMinutes, setCardioMinutes] = useState(20);
-  const [cardioBusy, setCardioBusy] = useState(false);
-
-  // Anti-trosenje serija: "Zavrsi set" zakljucan dok athlete_complete_set ne vrati.
-  // MORA da zivi OVDE (ne u SetLogger.submitting) - SetLogger je keyovan po poziciji pa ga
-  // optimisticki advance remountuje i unutrasnji guard ispari. Ref za sinhroni re-entry
-  // check u handleru, state za disable dugmeta preko remount-a.
-  const setBusyRef = useRef(false);
-  const [setBusy, setSetBusy] = useState(false);
-
-  // FAZA 1 - watch presence: NE parsiramo serverski timestamp (new Date(string) u WKWebView
-  // daje pogresno/starije vreme + clock skew -> lazni lock). Umesto toga: PROMENA stringa
-  // watch_last_hr_at = signal "sat se javio", a svezinu merimo telefonskim Date.now().
-  const lastSeenWatchTsRef = useRef<string | null>(null);   // poslednja vidjena vrednost
-  const watchSignalLocalRef = useRef<number | null>(null);  // Date.now() kad se PROMENILA
-  // Reaktivni mirror "sat se IKAD javio u ovoj sesiji" (== watchSignalLocalRef.current != null).
-  // State (ne ref) da se lock/baner preracunaju ODMAH kad sat prvi put javi, ne tek na 1s tik.
-  const [watchEverPresent, setWatchEverPresent] = useState(false);
   // Trener je izabrao "Nastavi na telefonu" -> otkljucaj do kraja sesije.
   const [phoneTakeover, setPhoneTakeover] = useState(false);
   // Sinhroni ref za gejtovanje mutacija u handlerima (bez stale closure-a).
