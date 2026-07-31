@@ -1,8 +1,17 @@
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useConfirm } from "@/hooks/useConfirm";
 import { assignProgramToAthlete } from "@/lib/programAssignment";
+import {
+  DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors,
+} from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
+import {
+  SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { PhoneShell } from "@/components/PhoneShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +57,40 @@ type Athlete = { id: string; full_name: string | null; email: string };
 
 type ProgramBuilderMode = "template" | "assigned";
 
+// Sortable wrapper za red vezbe: drag handle je SAMO ikonica (render prop daje
+// attributes/listeners/ref pozivaocu), ne ceo red - da se drag ne kosi sa tap-om
+// na red za expand/collapse ili sa dugmetom za brisanje.
+function SortableExerciseRow({
+  id,
+  children,
+}: {
+  id: string;
+  children: (handle: {
+    setActivatorNodeRef: (el: HTMLElement | null) => void;
+    attributes: ReturnType<typeof useSortable>["attributes"];
+    listeners: ReturnType<typeof useSortable>["listeners"];
+    isDragging: boolean;
+  }) => ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+    useSortable({ id });
+  // touchAction/WebkitTouchCallout na CELOM redu (ne samo hendlu) - dugi pritisak
+  // na hendl inace moze da okine iOS native selekciju teksta susednog sadrzaja
+  // u redu (Copy/Look Up meni + plavi handle-ovi) umesto da pokrene drag.
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    touchAction: "none" as const,
+    WebkitTouchCallout: "none" as const,
+  };
+  return (
+    <div ref={setNodeRef} style={style} className="select-none">
+      {children({ setActivatorNodeRef, attributes, listeners: listeners ?? {}, isDragging })}
+    </div>
+  );
+}
+
 const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) => {
   const params = useParams<{ id?: string; assignedId?: string; athleteId?: string }>();
   // parentId = template_id (sablon) ili assigned_program_id (dodeljeni plan).
@@ -75,6 +118,15 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
       } as const;
   const confirm = useConfirm();
   const navigate = useNavigate();
+  // Mali prag pomeranja pre nego sto se drag aktivira - obican tap na hendl (ili
+  // slucajan dodir tokom skrola) ne sme da okine drag. TouchSensor uz delay+tolerance
+  // je dopuna za touch uredjaje - razdvaja skrol/tap liste od namernog prevlacenja,
+  // dok CSS (touch-action/webkit-touch-callout na hendlu) sprecava iOS da dugi
+  // pritisak protumaci kao pokusaj selekcije teksta (native "Copy/Look Up" meni).
+  const exerciseDndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+  );
   const [templateName, setTemplateName] = useState("");
   const [days, setDays] = useState<Day[]>([]);
   const [exByDay, setExByDay] = useState<Record<string, Exercise[]>>({});
@@ -257,6 +309,28 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
     load();
   };
 
+  // Rucni redosled (drag-and-drop): optimisticki azuriraj lokalni state (position
+  // polje takodje, da ostatak koda koji ga cita ostane tacan), pa batch-update
+  // position za SVE pogodjene redove u tom danu. Neuspeh -> reload iz baze (revert).
+  const onExerciseDragEnd = (dayId: string) => async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const current = exByDay[dayId] ?? [];
+    const oldIndex = current.findIndex((e) => e.id === active.id);
+    const newIndex = current.findIndex((e) => e.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(current, oldIndex, newIndex).map((e, i) => ({ ...e, position: i + 1 }));
+    setExByDay((prev) => ({ ...prev, [dayId]: reordered }));
+    const results = await Promise.all(
+      reordered.map((e) => supabase.from(cfg.exTable).update({ position: e.position } as any).eq("id", e.id)),
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) {
+      toast.error(porukaGreske(failed.error));
+      load();
+    }
+  };
+
 
   const openAssign = async () => {
     setAssignOpen(true);
@@ -381,6 +455,12 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                     {exList.length === 0 && (
                       <p className="text-xs text-muted-foreground text-center py-3">Nema vežbi u ovom danu</p>
                     )}
+                    <DndContext
+                      sensors={exerciseDndSensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={onExerciseDragEnd(d.id)}
+                    >
+                    <SortableContext items={exList.map((e) => e.id)} strategy={verticalListSortingStrategy}>
                     {exList.map((ex) => {
                       const rows = setsByEx[ex.id] ?? [];
                       const isDuration = !!ex.exercises?.is_duration_based;
@@ -394,9 +474,22 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                         : `${setCount} ${setCount === 1 ? "serija" : "serije"}${rows[0]?.weight_kg != null ? ` · ${rows[0].weight_kg} kg` : ""}`;
                       const cols = advanced ? "28px 1fr 1fr 60px 24px" : "28px 1fr 1fr 24px";
                       return (
-                        <div key={ex.id} className="bg-surface rounded-lg overflow-hidden">
-                          {/* Sazeti red: thumbnail iz baze + ime + sazetak + expand; brisanje desno */}
+                        <SortableExerciseRow key={ex.id} id={ex.id}>
+                          {({ setActivatorNodeRef, attributes, listeners }) => (
+                        <div className="bg-surface rounded-lg overflow-hidden">
+                          {/* Sazeti red: drag hendl + thumbnail iz baze + ime + sazetak + expand; brisanje desno */}
                           <div className="flex items-center gap-2.5 p-2.5">
+                            <button
+                              ref={setActivatorNodeRef}
+                              {...attributes}
+                              {...listeners}
+                              type="button"
+                              aria-label="Promeni redosled vežbe"
+                              style={{ WebkitTouchCallout: "none" }}
+                              className="shrink-0 h-8 w-6 flex items-center justify-center text-muted-foreground/40 touch-none select-none cursor-grab active:cursor-grabbing"
+                            >
+                              <GripVertical className="h-4 w-4" />
+                            </button>
                             <button
                               onClick={() => setOpenExId(open ? null : ex.id)}
                               className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
@@ -530,8 +623,12 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                             </div>
                           )}
                         </div>
+                          )}
+                        </SortableExerciseRow>
                       );
                     })}
+                    </SortableContext>
+                    </DndContext>
 
                     <button
                       onClick={() => openExercisePicker(d.id)}

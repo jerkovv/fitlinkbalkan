@@ -1176,12 +1176,22 @@ const AthleteProfile = () => {
           </div>
         </Card>
       ) : (
-        <Card className="p-5 text-center text-[13px] text-muted-foreground">
-          Vežbač nema članarinu. Kad izabere paket, pojaviće se u{" "}
-          <Link to="/trener/uplate" className="text-primary font-semibold">
-            Zahtevima za uplatu
-          </Link>
-          .
+        <Card className="p-5 space-y-3 text-center">
+          <p className="text-[13px] text-muted-foreground">
+            Vežbač nema članarinu. Kad izabere paket, pojaviće se u{" "}
+            <Link to="/trener/uplate" className="text-primary font-semibold">
+              Zahtevima za uplatu
+            </Link>
+            .
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setMembershipEditOpen(true)}
+            className="w-full"
+          >
+            <Plus className="h-4 w-4 mr-1.5" /> Dodaj članarinu
+          </Button>
         </Card>
       )}
 
@@ -1189,6 +1199,7 @@ const AthleteProfile = () => {
         open={membershipEditOpen}
         onClose={() => setMembershipEditOpen(false)}
         membershipId={activeMembership?.id ?? null}
+        athleteId={id}
         onSaved={load}
       />
 

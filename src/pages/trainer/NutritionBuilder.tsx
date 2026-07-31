@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useConfirm } from "@/hooks/useConfirm";
+import {
+  DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors,
+} from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
+import {
+  SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { PhoneShell } from "@/components/PhoneShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +22,7 @@ import {
   FullScreenSheet, FullScreenSheetHeader, FullScreenSheetScroll, FullScreenSheetFooter,
 } from "@/components/ui/full-screen-sheet";
 import {
-  Plus, Loader2, Apple, Search, Trash2, ChevronDown, ChevronUp, UserPlus, Check, CalendarDays, Send,
+  Plus, Loader2, Apple, Search, Trash2, ChevronDown, ChevronUp, GripVertical, UserPlus, Check, CalendarDays, Send,
 } from "lucide-react";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
@@ -56,6 +65,40 @@ const macros = (item: MealItem) => {
 
 type NutritionBuilderMode = "template" | "assigned";
 
+// Sortable wrapper za red namirnice - isti obrazac kao SortableExerciseRow u
+// ProgramBuilderNew.tsx, radi konzistentnosti: drag handle je SAMO ikonica
+// (render prop daje attributes/listeners/ref), ne ceo red.
+function SortableFoodItemRow({
+  id,
+  children,
+}: {
+  id: string;
+  children: (handle: {
+    setActivatorNodeRef: (el: HTMLElement | null) => void;
+    attributes: ReturnType<typeof useSortable>["attributes"];
+    listeners: ReturnType<typeof useSortable>["listeners"];
+    isDragging: boolean;
+  }) => ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+    useSortable({ id });
+  // touchAction/WebkitTouchCallout na CELOM redu (ne samo hendlu) - dugi pritisak
+  // na hendl inace moze da okine iOS native selekciju teksta susednog sadrzaja
+  // u redu (Copy/Look Up meni + plavi handle-ovi) umesto da pokrene drag.
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    touchAction: "none" as const,
+    WebkitTouchCallout: "none" as const,
+  };
+  return (
+    <div ref={setNodeRef} style={style} className="select-none">
+      {children({ setActivatorNodeRef, attributes, listeners: listeners ?? {}, isDragging })}
+    </div>
+  );
+}
+
 const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }) => {
   const params = useParams<{ id?: string; assignedId?: string; athleteId?: string }>();
   // parentId = template_id (sablon) ili assigned_plan_id (dodeljeni plan).
@@ -83,6 +126,15 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
         parentCol: "template_id",
       } as const;
   const confirm = useConfirm();
+  // Mali prag pomeranja pre nego sto se drag aktivira - obican tap na hendl (ili
+  // slucajan dodir tokom skrola) ne sme da okine drag. TouchSensor uz delay+tolerance
+  // je dopuna za touch uredjaje - razdvaja skrol/tap liste od namernog prevlacenja,
+  // dok CSS (touch-action/webkit-touch-callout na hendlu) sprecava iOS da dugi
+  // pritisak protumaci kao pokusaj selekcije teksta (native "Copy/Look Up" meni).
+  const foodItemDndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+  );
   const [templateName, setTemplateName] = useState("");
   const [days, setDays] = useState<Day[]>([]);
   const [mealsByDay, setMealsByDay] = useState<Record<string, Meal[]>>({});
@@ -109,6 +161,19 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   const [filterVegan, setFilterVegan] = useState(false);
   const [filterGlutenFree, setFilterGlutenFree] = useState(false);
   const [filterPosno, setFilterPosno] = useState(false);
+
+  // Predlog namirnice - kad pretraga ne nadje nista, trener moze da doda svoju
+  // (za_trenera: true, is_global: false - postaje globalna tek kad admin odobri).
+  const [addFoodOpen, setAddFoodOpen] = useState(false);
+  const [savingNewFood, setSavingNewFood] = useState(false);
+  const [newFoodName, setNewFoodName] = useState("");
+  const [newFoodCategory, setNewFoodCategory] = useState("");
+  const [newFoodKcal, setNewFoodKcal] = useState("");
+  const [newFoodProtein, setNewFoodProtein] = useState("");
+  const [newFoodCarbs, setNewFoodCarbs] = useState("");
+  const [newFoodFat, setNewFoodFat] = useState("");
+  const [newFoodServingSize, setNewFoodServingSize] = useState("100");
+  const [newFoodUnit, setNewFoodUnit] = useState("g");
 
   // Schedule
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -251,6 +316,55 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
     setPickedGrams(String(f.serving_size_g ?? 100));
   };
 
+  const openAddFood = () => {
+    setNewFoodName(foodQuery.trim());
+    setNewFoodCategory(activeCategory ?? availableCategories[0] ?? "");
+    setNewFoodKcal("");
+    setNewFoodProtein("");
+    setNewFoodCarbs("");
+    setNewFoodFat("");
+    setNewFoodServingSize("100");
+    setNewFoodUnit("g");
+    setAddFoodOpen(true);
+  };
+
+  const saveNewFood = async () => {
+    const name = newFoodName.trim();
+    if (!name) { toast.error("Naziv je obavezan"); return; }
+    if (!newFoodCategory) { toast.error("Izaberi kategoriju"); return; }
+    const kcal = parseFloat(newFoodKcal);
+    if (!Number.isFinite(kcal) || kcal < 0) { toast.error("Unesi ispravan broj kalorija"); return; }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { toast.error("Niste prijavljeni"); return; }
+
+    setSavingNewFood(true);
+    const { data, error } = await supabase
+      .from("food_items")
+      .insert({
+        name,
+        category: newFoodCategory,
+        kcal_per_100g: kcal,
+        protein_per_100g: parseFloat(newFoodProtein) || 0,
+        carbs_per_100g: parseFloat(newFoodCarbs) || 0,
+        fat_per_100g: parseFloat(newFoodFat) || 0,
+        serving_size_g: parseFloat(newFoodServingSize) || 100,
+        unit: newFoodUnit.trim() || "g",
+        created_by: user.id,
+        is_global: false,
+        za_trenera: true,
+      } as any)
+      .select("id, name, category, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, serving_size_g, is_vegan, is_gluten_free, is_posno")
+      .single();
+    setSavingNewFood(false);
+    if (error || !data) { toast.error(porukaGreske(error)); return; }
+
+    const created = data as Food;
+    setFoods((prev) => [...prev, created]);
+    setAddFoodOpen(false);
+    selectFood(created);
+  };
+
   const addFoodToMeal = async () => {
     if (!pickerMealId || !pickedFood) return;
     const grams = parseFloat(pickedGrams);
@@ -270,6 +384,28 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   const removeItem = async (itemId: string) => {
     await supabase.from(cfg.itemsTable).delete().eq("id", itemId);
     load();
+  };
+
+  // Rucni redosled namirnica u obroku (drag-and-drop): optimisticki azuriraj
+  // lokalni state (item_order polje takodje), pa batch-update item_order za SVE
+  // pogodjene redove u tom obroku. Neuspeh -> reload iz baze (revert).
+  const onFoodItemDragEnd = (mealId: string) => async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const current = itemsByMeal[mealId] ?? [];
+    const oldIndex = current.findIndex((it) => it.id === active.id);
+    const newIndex = current.findIndex((it) => it.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(current, oldIndex, newIndex).map((it, i) => ({ ...it, item_order: i + 1 }));
+    setItemsByMeal((prev) => ({ ...prev, [mealId]: reordered }));
+    const results = await Promise.all(
+      reordered.map((it) => supabase.from(cfg.itemsTable).update({ item_order: it.item_order } as any).eq("id", it.id)),
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) {
+      toast.error(porukaGreske(failed.error));
+      load();
+    }
   };
 
   const updateItemGrams = async (itemId: string, grams: number) => {
@@ -478,10 +614,29 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
                             </button>
                           </div>
 
+                          <DndContext
+                            sensors={foodItemDndSensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={onFoodItemDragEnd(m.id)}
+                          >
+                          <SortableContext items={items.map((it) => it.id)} strategy={verticalListSortingStrategy}>
                           {items.map((it) => {
                             const x = macros(it);
                             return (
-                              <div key={it.id} className="flex items-center gap-2 py-1.5 border-t border-hairline first:border-t-0">
+                              <SortableFoodItemRow key={it.id} id={it.id}>
+                                {({ setActivatorNodeRef, attributes, listeners }) => (
+                              <div className="flex items-center gap-2 py-1.5 border-t border-hairline first:border-t-0">
+                                <button
+                                  ref={setActivatorNodeRef}
+                                  {...attributes}
+                                  {...listeners}
+                                  type="button"
+                                  aria-label="Promeni redosled namirnice"
+                                  style={{ WebkitTouchCallout: "none" }}
+                                  className="shrink-0 h-6 w-5 flex items-center justify-center text-muted-foreground/40 touch-none select-none cursor-grab active:cursor-grabbing"
+                                >
+                                  <GripVertical className="h-3.5 w-3.5" />
+                                </button>
                                 <div className="flex-1 min-w-0">
                                   <div className="text-xs font-semibold truncate">{it.food_items?.name ?? "-"}</div>
                                   <div className="text-[10px] text-muted-foreground">
@@ -505,8 +660,12 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
                                   <Trash2 className="h-3 w-3 text-destructive" />
                                 </button>
                               </div>
+                                )}
+                              </SortableFoodItemRow>
                             );
                           })}
+                          </SortableContext>
+                          </DndContext>
 
                           <button
                             onClick={() => openFoodPicker(m.id)}
@@ -660,9 +819,18 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
 
             <FullScreenSheetScroll>
               {filteredFoods.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  Nema namirnica za odabrane filtere
-                </p>
+                <div className="text-center py-8 space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Nema namirnica za odabrane filtere
+                  </p>
+                  <button
+                    type="button"
+                    onClick={openAddFood}
+                    className="text-[13px] font-semibold text-primary hover:underline"
+                  >
+                    Nema je na listi? Dodaj je
+                  </button>
+                </div>
               ) : (
                 filteredFoods.map((f) => (
                   <button
@@ -757,6 +925,122 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
             </div>
           </FullScreenSheetScroll>
         )}
+      </FullScreenSheet>
+
+      {/* Predlog namirnice */}
+      <FullScreenSheet
+        open={addFoodOpen}
+        onClose={() => setAddFoodOpen(false)}
+        title="Dodaj namirnicu"
+      >
+        <FullScreenSheetScroll className="pt-5 space-y-4">
+          <div>
+            <Label htmlFor="new-food-name">Naziv</Label>
+            <Input
+              id="new-food-name"
+              value={newFoodName}
+              onChange={(e) => setNewFoodName(e.target.value)}
+              className="mt-1.5 h-14 text-base rounded-2xl"
+              autoFocus
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="new-food-category">Kategorija</Label>
+            <select
+              id="new-food-category"
+              value={newFoodCategory}
+              onChange={(e) => setNewFoodCategory(e.target.value)}
+              className="mt-1.5 w-full h-14 text-base rounded-2xl border border-hairline bg-surface px-4"
+            >
+              <option value="">Izaberi kategoriju</option>
+              {availableCategories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="new-food-kcal">Kalorije /100g</Label>
+              <Input
+                id="new-food-kcal"
+                type="number"
+                inputMode="decimal"
+                value={newFoodKcal}
+                onChange={(e) => setNewFoodKcal(e.target.value)}
+                className="mt-1.5 h-14 text-base rounded-2xl"
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-food-protein">Protein /100g</Label>
+              <Input
+                id="new-food-protein"
+                type="number"
+                inputMode="decimal"
+                value={newFoodProtein}
+                onChange={(e) => setNewFoodProtein(e.target.value)}
+                className="mt-1.5 h-14 text-base rounded-2xl"
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-food-carbs">Ugljeni hidrati /100g</Label>
+              <Input
+                id="new-food-carbs"
+                type="number"
+                inputMode="decimal"
+                value={newFoodCarbs}
+                onChange={(e) => setNewFoodCarbs(e.target.value)}
+                className="mt-1.5 h-14 text-base rounded-2xl"
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-food-fat">Masti /100g</Label>
+              <Input
+                id="new-food-fat"
+                type="number"
+                inputMode="decimal"
+                value={newFoodFat}
+                onChange={(e) => setNewFoodFat(e.target.value)}
+                className="mt-1.5 h-14 text-base rounded-2xl"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="new-food-serving">Veličina porcije (g)</Label>
+              <Input
+                id="new-food-serving"
+                type="number"
+                inputMode="decimal"
+                value={newFoodServingSize}
+                onChange={(e) => setNewFoodServingSize(e.target.value)}
+                className="mt-1.5 h-14 text-base rounded-2xl"
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-food-unit">Jedinica</Label>
+              <Input
+                id="new-food-unit"
+                value={newFoodUnit}
+                onChange={(e) => setNewFoodUnit(e.target.value)}
+                placeholder="g"
+                className="mt-1.5 h-14 text-base rounded-2xl"
+              />
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Namirnica će odmah biti dostupna samo tebi. Postaje globalna (vidljiva svim trenerima) tek kad je admin odobri.
+          </p>
+        </FullScreenSheetScroll>
+        <FullScreenSheetFooter>
+          <Button onClick={saveNewFood} disabled={savingNewFood} className="w-full">
+            {savingNewFood && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Dodaj namirnicu
+          </Button>
+        </FullScreenSheetFooter>
       </FullScreenSheet>
 
       {/* Schedule */}

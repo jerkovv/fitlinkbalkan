@@ -72,14 +72,21 @@ export const ProgressPhotos = ({ athleteId, canManage, sharedOnly = false, addLo
       return;
     }
     const paths = rows.map((r) => r.storage_path);
-    const { data: signed } = await supabase.storage
-      .from("progress-photos")
-      .createSignedUrls(paths, SIGN_TTL);
-    const urlMap = new Map<string, string>(
-      (signed ?? []).map((s: any) => [s.path, s.signedUrl ?? s.signedURL ?? ""])
-    );
-    setPhotos(rows.map((r) => ({ ...r, url: urlMap.get(r.storage_path) ?? "" })));
-    setLoading(false);
+    try {
+      const { data: signed, error: signErr } = await supabase.storage
+        .from("progress-photos")
+        .createSignedUrls(paths, SIGN_TTL);
+      if (signErr) throw signErr;
+      const urlMap = new Map<string, string>(
+        (signed ?? []).map((s: any) => [s.path, s.signedUrl ?? s.signedURL ?? ""])
+      );
+      setPhotos(rows.map((r) => ({ ...r, url: urlMap.get(r.storage_path) ?? "" })));
+    } catch (e) {
+      toast.error(porukaGreske(e));
+      setPhotos(rows.map((r) => ({ ...r, url: "" })));
+    } finally {
+      setLoading(false);
+    }
   }, [athleteId, sharedOnly]);
 
   useEffect(() => { load(); }, [load]);
@@ -153,9 +160,14 @@ export const ProgressPhotos = ({ athleteId, canManage, sharedOnly = false, addLo
       toast.error(porukaGreske(delErr));
       return;
     }
-    await supabase.storage.from("progress-photos").remove([p.storage_path]);
-    setPhotos((prev) => prev.filter((x) => x.id !== p.id));
-    toast.success("Fotka obrisana");
+    try {
+      const { error: rmErr } = await supabase.storage.from("progress-photos").remove([p.storage_path]);
+      if (rmErr) throw rmErr;
+      setPhotos((prev) => prev.filter((x) => x.id !== p.id));
+      toast.success("Fotka obrisana");
+    } catch (e) {
+      toast.error(porukaGreske(e));
+    }
   };
 
   const toggleCompare = (p: PhotoView) => {
