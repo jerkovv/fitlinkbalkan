@@ -24,16 +24,30 @@ export function WatchResetCard() {
     setResettingWatch(true);
     try {
       const { error: revokeErr } = await supabase.rpc("revoke_my_watch_tokens");
-      if (revokeErr) throw revokeErr;
+      if (revokeErr) {
+        console.error("[WatchResetCard] revoke_my_watch_tokens failed:", revokeErr);
+        throw revokeErr;
+      }
 
       const { data, error: tokenErr } = await supabase.rpc("get_or_create_watch_token");
-      if (tokenErr) throw tokenErr;
-      if (!data?.success || !data?.token) throw new Error("Token nije kreiran.");
+      if (tokenErr) {
+        console.error("[WatchResetCard] get_or_create_watch_token failed:", tokenErr);
+        throw tokenErr;
+      }
+      if (!data?.success || !data?.token) {
+        console.error("[WatchResetCard] get_or_create_watch_token returned no token:", data);
+        throw new Error("Token nije kreiran.");
+      }
 
-      await WatchSync.sendTokenToWatch({
-        token: data.token,
-        userId: data.user_id ?? user.id,
-      });
+      try {
+        await WatchSync.sendTokenToWatch({
+          token: data.token,
+          userId: data.user_id ?? user.id,
+        });
+      } catch (sendErr) {
+        console.error("[WatchResetCard] sendTokenToWatch failed:", sendErr);
+        throw sendErr;
+      }
 
       toast.success("Konekcija je resetovana. Sat će se ponovo povezati za par sekundi.");
     } catch (e) {

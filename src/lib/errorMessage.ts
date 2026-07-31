@@ -35,6 +35,16 @@ const KNOWN_CONSTRAINTS: { match: string; message: string }[] = [
   { match: "session_slot_templates", message: "Već imaš termin u to vreme za taj tip sesije." },
 ];
 
+// Poznate poruke iz native (Capacitor plugin) grešaka -> konkretna poruka.
+// Poklapanje po SADRZAJU teksta, ne po kodu - CapacitorException nema kodove
+// za ove slucajeve (vidi hasApiShape ispod za razlog zasto je ovo neophodno).
+const KNOWN_NATIVE_MESSAGES: { match: string; message: string }[] = [
+  { match: "not paired with this iPhone", message: "Sat nije uparen sa ovim telefonom. Upari ga u Watch aplikaciji na iPhone-u." },
+  { match: "Watch app is not installed", message: "FitLink nije instaliran na satu. Instaliraj ga iz Watch aplikacije." },
+  { match: "WCSession not available", message: "Sat trenutno nije dostupan. Proveri da li je u blizini i pokušaj ponovo." },
+  { match: "WCSession not yet activated", message: "Konekcija sa satom se još uspostavlja. Sačekaj par sekundi i pokušaj ponovo." },
+];
+
 // Postgres/PostgREST kodovi -> generican prevod, kad ime ogranicenja nije poznato.
 const CODE_MESSAGES: Record<string, string> = {
   "23514": "Uneta vrednost nije u dozvoljenom opsegu.",
@@ -80,6 +90,10 @@ export function porukaGreske(error: unknown): string {
     if (haystack.includes(known.match)) return known.message;
   }
 
+  for (const known of KNOWN_NATIVE_MESSAGES) {
+    if (haystack.includes(known.match)) return known.message;
+  }
+
   if (code === "PGRST301" || code === "401" || status === 401) {
     return "Sesija je istekla. Prijavi se ponovo.";
   }
@@ -104,7 +118,16 @@ export function porukaGreske(error: unknown): string {
   // greska iz baze nego vec rucno napisana poruka u samoj app-i (npr. "throw new Error(...)"
   // sa smislenim tekstom, kao "Niste prijavljeni"). Takve prosledjujemo kao sto jesu, umesto
   // da ih pregazimo genericnim fallback-om - fallback je rezervisan za NEPOZNATE baza/API greske.
-  const hasApiShape = e != null && typeof e === "object" && ("code" in e || "status" in e);
+  //
+  // VAZNO: proveravamo STVARNU vrednost, ne samo prisustvo kljuca. CapacitorException (native
+  // plugin greske) UVEK ima svojstvo "code" cak i kad mu je vrednost undefined (konstruktor ga
+  // postavlja bezuslovno) - "code" in e bi zato bilo tacno za bas svaku native gresku, i pass-through
+  // grana ispod nikad ne bi bila dostignuta za njih.
+  const hasApiShape =
+    e != null &&
+    typeof e === "object" &&
+    (("code" in e && e.code !== undefined && e.code !== null) ||
+      ("status" in e && e.status !== undefined && e.status !== null));
   if (!hasApiShape && e?.message && !looksTechnical(e.message)) {
     return e.message;
   }
