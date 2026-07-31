@@ -90,24 +90,64 @@ Deno.serve(async (req) => {
     const code = generateCode(10);
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-    const { data: inv, error: invErr } = await admin
+    // Ako vec postoji pending red za istog trenera i isti email (case-insensitive),
+    // osvezi njega umesto da se napravi paralelan drugi red - npr. trener greskom
+    // posalje dve pozivnice zaredom (typo pa ispravka), sto bi ostavilo dva pending
+    // reda za istog coveka i zbunilo kasniju pretragu po emailu (InviteCode.tsx).
+    const { data: existingInvite } = await admin
       .from("invites")
-      .insert({
-        trainer_id: trainerId,
-        code,
-        email,
-        full_name: fullName,
-        status: "pending",
-        expires_at: expiresAt,
-      })
-      .select("id, code")
-      .single();
+      .select("id")
+      .eq("trainer_id", trainerId)
+      .ilike("email", email)
+      .eq("status", "pending")
+      .maybeSingle();
 
-    if (invErr) {
-      return new Response(JSON.stringify({ error: invErr.message }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    let inv: { id: string; code: string };
+    // true samo kad je OVAJ poziv napravio nov red - gejtuje delete-na-neuspeh ispod,
+    // da neuspesno slanje mejla ne obrise tudju, prethodno vazecu pozivnicu koju je
+    // ovaj poziv samo azurirao (ne napravio).
+    const wasNewlyCreated = !existingInvite;
+
+    if (existingInvite) {
+      const { data: updated, error: updateErr } = await admin
+        .from("invites")
+        .update({
+          code,
+          full_name: fullName,
+          expires_at: expiresAt,
+        })
+        .eq("id", existingInvite.id)
+        .select("id, code")
+        .single();
+
+      if (updateErr) {
+        return new Response(JSON.stringify({ error: updateErr.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      inv = updated;
+    } else {
+      const { data: created, error: invErr } = await admin
+        .from("invites")
+        .insert({
+          trainer_id: trainerId,
+          code,
+          email,
+          full_name: fullName,
+          status: "pending",
+          expires_at: expiresAt,
+        })
+        .select("id, code")
+        .single();
+
+      if (invErr) {
+        return new Response(JSON.stringify({ error: invErr.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      inv = created;
     }
 
     // Ime trenera za mejl: primarno profiles.full_name; fallback trainers.studio_name.
@@ -160,14 +200,20 @@ Deno.serve(async (req) => {
         });
 
         if (linkErr) {
-          await admin.from("invites").delete().eq("id", inv.id);
+          // Brisi SAMO ako je ovaj poziv sam napravio red - inace bi obrisao tudju,
+          // prethodno vazecu pozivnicu koju smo samo azurirali (ne napravili).
+          if (wasNewlyCreated) {
+            await admin.from("invites").delete().eq("id", inv.id);
+          }
           return new Response(JSON.stringify({ error: linkErr.message }), {
             status: 500,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
       } else {
-        await admin.from("invites").delete().eq("id", inv.id);
+        if (wasNewlyCreated) {
+          await admin.from("invites").delete().eq("id", inv.id);
+        }
         return new Response(JSON.stringify({ error: emailErr.message }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
