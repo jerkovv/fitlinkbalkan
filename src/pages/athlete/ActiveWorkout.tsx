@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff, Plus, Minus, Watch as WatchIcon } from "lucide-react";
+import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff, Plus, Minus } from "lucide-react";
 import { getHrColor, getHrZone } from "@/lib/workout/hrZone";
 import { isFreshWithinGrace } from "@/lib/liveWorkout";
 import { markWorkoutEntered } from "@/lib/workoutSession";
 import { WatchSync, isNativeIOS } from "@/lib/watchSync";
-import { WatchResetCard } from "@/components/WatchResetCard";
-import { FullScreenSheet, FullScreenSheetScroll } from "@/components/ui/full-screen-sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -249,10 +247,6 @@ const ActiveWorkout = () => {
   // Failsafe: ako prelaz ne razresi za ~7s, brendiran ekran NIJE terminalan -> error+retry.
   const [finishError, setFinishError] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
-  // Diskretan ulaz ka Watch reset sheet-u iz HR pilule - app ne zna pouzdano da li
-  // vezbac uopste ima sat (SOLO nikad ne zna unapred), pa umesto heuristike ovo je
-  // uvek prisutan, tih izlaz za slucaj kad se sat zaglavi (npr. "Provera naloga").
-  const [watchHelpOpen, setWatchHelpOpen] = useState(false);
 
   // Live HR (lokalni HealthKit stream na telefonu)
   const [liveHr, setLiveHr] = useState<number | null>(null);
@@ -280,49 +274,6 @@ const ActiveWorkout = () => {
   // Reaktivni mirror "sat se IKAD javio u ovoj sesiji" (== watchSignalLocalRef.current != null).
   // State (ne ref) da se lock/baner preracunaju ODMAH kad sat prvi put javi, ne tek na 1s tik.
   const [watchEverPresent, setWatchEverPresent] = useState(false);
-
-  // Ref-mirror istog racuna kao HR pilula (linija sa "const hr = watchEverPresent ? ..."
-  // nize u renderu) - MORA da bude ISPOD watchEverPresent deklaracije (gore), jer je
-  // watchEverPresent const iz useState-a: referenca na njega pre ove linije baca
-  // ReferenceError (temporal dead zone) i obara ceo render u belo. Sve zavisnosti ovde
-  // moraju biti vec deklarisane iznad.
-  const hrRef = useRef<number | null>(null);
-  useEffect(() => {
-    hrRef.current = watchEverPresent
-      ? (watchHr ?? pos?.currentHr ?? liveHr)
-      : (liveHr ?? pos?.currentHr ?? null);
-  }, [watchEverPresent, watchHr, pos, liveHr]);
-
-  // Provera "korisnik ima sat, ali puls ne stize" - JEDNOM po ulasku u trening, samo ako
-  // je sat koriscen u poslednjih 14 dana (watch_pairing_tokens.last_used_at). Bez ovog uslova
-  // bi solo korisnik koji je sat probao pre pola godine dobijao ovaj toast zauvek uzalud.
-  useEffect(() => {
-    if (!isNativeIOS() || !user) return;
-    let cancelled = false;
-    (async () => {
-      const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
-      const { data } = await supabase
-        .from("watch_pairing_tokens")
-        .select("id")
-        .eq("user_id", user.id)
-        .gt("last_used_at", since)
-        .limit(1);
-      if (cancelled || !data?.length) return;
-      setTimeout(() => {
-        if (cancelled) return;
-        const cur = hrRef.current;
-        if (!cur || cur <= 0) {
-          toast("Ne stiže puls sa sata. Ako ga danas ne nosiš, slobodno nastavi.", {
-            duration: 5000,
-            action: { label: "Popravi", onClick: () => setWatchHelpOpen(true) },
-          });
-        }
-      }, 4500);
-    })();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- namerno JEDNOM po mount-u, ne na svaku promenu user/hr
-  }, []);
-
   // Trener je izabrao "Nastavi na telefonu" -> otkljucaj do kraja sesije.
   const [phoneTakeover, setPhoneTakeover] = useState(false);
   // Sinhroni ref za gejtovanje mutacija u handlerima (bez stale closure-a).
@@ -1740,16 +1691,6 @@ const ActiveWorkout = () => {
               <span className="text-[13px] font-bold tnum leading-none">
                 {hr && hr > 0 ? hr : "-"}
               </span>
-              {isNativeIOS() && (
-                <button
-                  type="button"
-                  onClick={() => setWatchHelpOpen(true)}
-                  aria-label="Problem sa satom?"
-                  className="-mr-1 ml-0.5 h-5 w-5 rounded-full flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground active:scale-95 transition"
-                >
-                  <WatchIcon className="h-3.5 w-3.5" strokeWidth={2.2} />
-                </button>
-              )}
             </div>
           </div>
           <div className="h-1 bg-surface-2">
@@ -2084,16 +2025,6 @@ const ActiveWorkout = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <FullScreenSheet
-        open={watchHelpOpen}
-        onClose={() => setWatchHelpOpen(false)}
-        title="Problem sa satom?"
-      >
-        <FullScreenSheetScroll className="pt-5">
-          <WatchResetCard />
-        </FullScreenSheetScroll>
-      </FullScreenSheet>
     </div>
   );
 };

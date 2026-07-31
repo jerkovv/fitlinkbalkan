@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { InAppWorkoutsList } from "@/components/InAppWorkoutsList";
 import { WorkoutsList } from "@/components/wearables/WorkoutsList";
+import { WatchResetCard } from "@/components/WatchResetCard";
+import { FullScreenSheet, FullScreenSheetScroll } from "@/components/ui/full-screen-sheet";
 
 type ProgramDay = {
   id: string;
@@ -34,6 +36,9 @@ const WorkoutHome = () => {
   const [daysInactive, setDaysInactive] = useState<number>(0);
   const [hasEverTrained, setHasEverTrained] = useState(true);
   const [startingFree, setStartingFree] = useState(false);
+  // Jedini ulaz (pored profila) ka resetovanju konekcije sa satom. Bez ikakvog uslova i
+  // bez provere da li korisnik uopste ima sat - diskretan, uvek isti, za svakoga.
+  const [watchHelpOpen, setWatchHelpOpen] = useState(false);
 
   // Slobodan trening: RPC pravi sesiju bez plana (day_id null) -> odlazak na free ekran.
   const startFreeWorkout = async () => {
@@ -217,6 +222,16 @@ const WorkoutHome = () => {
           </button>
         )}
 
+        <div className="flex justify-center -mt-1">
+          <button
+            type="button"
+            onClick={() => setWatchHelpOpen(true)}
+            className="text-[12px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition py-1"
+          >
+            Problem sa satom?
+          </button>
+        </div>
+
         {allDays.length > 0 && (
           <section>
             <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground mb-3">
@@ -316,6 +331,16 @@ const WorkoutHome = () => {
       </PhoneShell>
       <BottomNav role="athlete" />
       <AthleteOnboardingTour />
+
+      <FullScreenSheet
+        open={watchHelpOpen}
+        onClose={() => setWatchHelpOpen(false)}
+        title="Problem sa satom?"
+      >
+        <FullScreenSheetScroll className="pt-5">
+          <WatchResetCard />
+        </FullScreenSheetScroll>
+      </FullScreenSheet>
     </>
   );
 };

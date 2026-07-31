@@ -1,16 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Heart, Loader2, Check, Dumbbell, Flame, Watch as WatchIcon } from "lucide-react";
+import { Heart, Loader2, Check, Dumbbell, Flame } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { formatHMS } from "@/lib/time";
 import { isHrLive } from "@/lib/liveWorkout";
 import { ZONE_DEFS } from "@/lib/wearable/hrZones";
 import { cn } from "@/lib/utils";
-import { isNativeIOS } from "@/lib/watchSync";
-import { WatchResetCard } from "@/components/WatchResetCard";
-import { FullScreenSheet, FullScreenSheetScroll } from "@/components/ui/full-screen-sheet";
-import { toast } from "sonner";
 
 // Slobodan trening (bez plana): zivi dashboard u Apple stilu - trajanje, puls (+ zona),
 // kalorije, prosecan/max puls. Sesija ima day_id = null. Live HR/kalorije = ISTI realtime
@@ -49,9 +45,6 @@ const AthleteFreeWorkout = () => {
   const [maxHr, setMaxHr] = useState<number | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [loadError, setLoadError] = useState(false);
-  // Diskretan ulaz ka Watch reset sheet-u - isti kao u ActiveWorkout.tsx (nezavisna
-  // implementacija, ne deljena komponenta, pa je ova ikonica kopirana, ne izvucena).
-  const [watchHelpOpen, setWatchHelpOpen] = useState(false);
 
   const hrSeriesRef = useRef<HRPoint[]>([]);
   const finishedRef = useRef(false);
@@ -172,46 +165,6 @@ const AthleteFreeWorkout = () => {
     };
   }, [sessionId, goToSummary]);
 
-  // Ref-mirror istog racuna kao HR prikaz (linija sa "const hr = live && watchHr..." nize) -
-  // mora da postoji OVDE, pre ranih return-a ispod, jer hook-ovi ne smeju da zavise od
-  // uslovnog toka. Koristi ga watch-check ispod da proveri "jos uvek nema pulsa" bez
-  // zastarelog closure-a.
-  const hrRef = useRef<number | null>(null);
-  useEffect(() => {
-    const liveNow = isHrLive(watchLastHrAt);
-    hrRef.current = liveNow && watchHr && watchHr > 0 ? watchHr : null;
-  }, [watchLastHrAt, watchHr]);
-
-  // Provera "korisnik ima sat, ali puls ne stize" - JEDNOM po ulasku u trening, samo ako
-  // je sat koriscen u poslednjih 14 dana (watch_pairing_tokens.last_used_at). Bez ovog uslova
-  // bi solo korisnik koji je sat probao pre pola godine dobijao ovaj toast zauvek uzalud.
-  useEffect(() => {
-    if (!isNativeIOS() || !user) return;
-    let cancelled = false;
-    (async () => {
-      const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
-      const { data } = await supabase
-        .from("watch_pairing_tokens")
-        .select("id")
-        .eq("user_id", user.id)
-        .gt("last_used_at", since)
-        .limit(1);
-      if (cancelled || !data?.length) return;
-      setTimeout(() => {
-        if (cancelled) return;
-        const cur = hrRef.current;
-        if (!cur || cur <= 0) {
-          toast("Ne stiže puls sa sata. Ako ga danas ne nosiš, slobodno nastavi.", {
-            duration: 5000,
-            action: { label: "Popravi", onClick: () => setWatchHelpOpen(true) },
-          });
-        }
-      }, 4500);
-    })();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- namerno JEDNOM po mount-u, ne na svaku promenu user/hr
-  }, []);
-
   // 5) Zavrsi: ISTA finalize logika kao ActiveWorkout (complete_workout_session sa HR
   //    statistikom + serijom), pa navigacija na rezime. Idempotentno + timeout.
   const finish = useCallback(async () => {
@@ -321,16 +274,6 @@ const AthleteFreeWorkout = () => {
                 {hr ?? "-"}
               </span>
               <span className="text-[15px] font-semibold text-muted-foreground mb-2">bpm</span>
-              {isNativeIOS() && (
-                <button
-                  type="button"
-                  onClick={() => setWatchHelpOpen(true)}
-                  aria-label="Problem sa satom?"
-                  className="mb-2.5 h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground active:scale-95 transition"
-                >
-                  <WatchIcon className="h-4 w-4" strokeWidth={2.2} />
-                </button>
-              )}
             </div>
             {zoneName && (
               <div className="text-[15px] font-bold leading-none" style={{ color: zoneCol }}>
@@ -388,16 +331,6 @@ const AthleteFreeWorkout = () => {
           </button>
         </div>
       </div>
-
-      <FullScreenSheet
-        open={watchHelpOpen}
-        onClose={() => setWatchHelpOpen(false)}
-        title="Problem sa satom?"
-      >
-        <FullScreenSheetScroll className="pt-5">
-          <WatchResetCard />
-        </FullScreenSheetScroll>
-      </FullScreenSheet>
     </div>
   );
 };
