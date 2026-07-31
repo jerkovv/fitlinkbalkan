@@ -311,7 +311,25 @@ const Auth = () => {
 
         {mode === "signup" && (
           <p className="text-[11px] text-center text-muted-foreground/70">
-            Nastavkom prihvataš uslove korišćenja i politiku privatnosti.
+            Nastavkom prihvataš{" "}
+            <a
+              href="https://fitlink.rs/uslovi"
+              target="_blank"
+              rel="noreferrer"
+              className="underline"
+            >
+              uslove korišćenja
+            </a>{" "}
+            i{" "}
+            <a
+              href="https://fitlink.rs/privatnost"
+              target="_blank"
+              rel="noreferrer"
+              className="underline"
+            >
+              politiku privatnosti
+            </a>
+            .
           </p>
         )}
       </form>

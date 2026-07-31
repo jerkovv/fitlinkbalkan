@@ -22,6 +22,7 @@ import { Link } from "react-router-dom";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { DeleteAccountSheet } from "@/components/DeleteAccountSheet";
+import { WatchResetCard } from "@/components/WatchResetCard";
 
 type Goal = "lose_weight" | "gain_muscle" | "endurance" | "mobility" | "general";
 type Gender = "male" | "female" | "other";
@@ -56,6 +57,7 @@ const Profile = () => {
     setDeleteEmail(data.user?.email ?? "");
     setDeleteOpen(true);
   };
+
 
   useEffect(() => {
     if (!user) return;
@@ -448,6 +450,8 @@ const Profile = () => {
             >
               <HelpCircle className="h-3.5 w-3.5" /> Pregled aplikacije
             </button>
+
+            <WatchResetCard />
 
             {/* Nalog - brisanje naloga, mora biti vidljivo direktno na ekranu (Apple 5.1.1(v)) */}
             <Card className="p-5 space-y-3">

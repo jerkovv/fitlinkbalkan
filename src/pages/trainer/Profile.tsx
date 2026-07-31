@@ -19,6 +19,7 @@ import {
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { DeleteAccountSheet } from "@/components/DeleteAccountSheet";
+import { WatchResetCard } from "@/components/WatchResetCard";
 import { SITE_BASE, publicTrainerUrl } from "@/lib/publicUrl";
 
 const SITE_HOST = new URL(SITE_BASE).host;
@@ -772,6 +773,8 @@ const Profile = () => {
               )}
               Sačuvaj izmene
             </Button>
+
+            <WatchResetCard />
 
             {/* Nalog - brisanje naloga, mora biti vidljivo direktno na ekranu (Apple 5.1.1(v)) */}
             <Card className="p-5 space-y-3">
