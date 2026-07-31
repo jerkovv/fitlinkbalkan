@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Apple, ClipboardList, Wallet, MessageSquare, Phone, Loader2, Plus, X, Check,
+  Apple, ClipboardList, Wallet, Phone, Loader2, Plus, X, Check,
   Dumbbell, Scale, UserMinus, Flame, Sparkles, Mail, Copy, Pencil,
 } from "lucide-react";
 import { porukaGreske } from "@/lib/errorMessage";
@@ -748,10 +748,7 @@ const AthleteProfile = () => {
         )}
 
         <div className="grid grid-cols-3 gap-2 mt-5">
-          <button className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-surface/80 backdrop-blur hover:bg-surface transition">
-            <MessageSquare className="h-4 w-4 text-foreground" strokeWidth={2} />
-            <span className="text-[11px] font-semibold">Poruka</span>
-          </button>
+          <SendMessageToAthlete athleteId={athlete.id} athleteName={athlete.full_name ?? undefined} variant="stacked" />
           <button
             onClick={callAthlete}
             className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-surface/80 backdrop-blur hover:bg-surface transition"

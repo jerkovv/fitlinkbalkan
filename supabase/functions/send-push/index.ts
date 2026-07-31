@@ -1,9 +1,15 @@
 // send-push - APNs push notifikacije za FitLink.
 //
-// Prima { user_id, title, body, meta? }. Procita sve tokene tog korisnika iz
-// device_push_tokens, napravi APNs JWT (ES256), i posalje notifikaciju na svaki
-// token. Produkcijski host je default; na BadDeviceToken pada na sandbox (kljuc
-// je Sandbox & Production). Mrtve tokene (Unregistered / BadDeviceToken) brise.
+// Prima { user_id, title, body, meta?, notification_id?, kind?, recipient_role?,
+// athlete_id? }. Procita sve tokene tog korisnika iz device_push_tokens,
+// napravi APNs JWT (ES256), i posalje notifikaciju na svaki token. Produkcijski
+// host je default; na BadDeviceToken pada na sandbox (kljuc je Sandbox &
+// Production). Mrtve tokene (Unregistered / BadDeviceToken) brise.
+//
+// notification_id/kind/recipient_role/athlete_id (+ meta) idu u APNs payload
+// kao custom polja pored "aps" - Capacitor PushNotifications ih na klijentu
+// izlaze kao notification.data, sto tap handler koristi da pozove isti
+// getActionTarget koji vec radi in-app prikaz (vidi src/lib/pushNotifications.ts).
 //
 // Bezbednost: NIJE javno dostupna. Poziva je iskljucivo trigger na tabeli
 // notifications preko pg_net, koji salje Authorization: Bearer <service_role_key>.
@@ -232,6 +238,12 @@ Deno.serve(async (req) => {
     const title: string = (body?.title ?? "").toString();
     const text: string = body?.body == null ? "" : body.body.toString();
     const meta = body?.meta ?? null;
+    // Novo: identifikacija notifikacije za tap-routing na klijentu (opciono -
+    // stariji pozivaoci ili buduce greske u trigeru ne smeju da obore push).
+    const notificationId: string | null = body?.notification_id ? body.notification_id.toString() : null;
+    const kind: string | null = body?.kind ? body.kind.toString() : null;
+    const recipientRole: string | null = body?.recipient_role ? body.recipient_role.toString() : null;
+    const athleteId: string | null = body?.athlete_id ? body.athlete_id.toString() : null;
 
     if (!userId) return json({ error: "user_id required" }, 400);
     if (!title) return json({ error: "title required" }, 400);
@@ -253,13 +265,22 @@ Deno.serve(async (req) => {
 
     const jwt = await getApnsJwt();
 
-    // APNs payload: alert title+body, sound default, plus opcioni meta na vrhu.
+    // APNs payload: alert title+body, sound default, plus notification_id/
+    // kind/recipient_role/athlete_id + spljosten meta na vrhu (custom data,
+    // van "aps"). RESERVED cuva ova imena od slucajnog prepisivanja ako bi
+    // meta ikad slucajno nosila isti kljuc (danasnji trigeri to ne rade, ali
+    // je jeftina zastita).
+    const RESERVED_KEYS = new Set(["aps", "notification_id", "kind", "recipient_role", "athlete_id"]);
     const aps: Record<string, unknown> = { sound: "default" };
     aps.alert = text ? { title, body: text } : { title };
     const apnsPayload: Record<string, unknown> = { aps };
+    if (notificationId) apnsPayload.notification_id = notificationId;
+    if (kind) apnsPayload.kind = kind;
+    if (recipientRole) apnsPayload.recipient_role = recipientRole;
+    if (athleteId) apnsPayload.athlete_id = athleteId;
     if (meta && typeof meta === "object") {
       for (const [k, v] of Object.entries(meta)) {
-        if (k !== "aps") apnsPayload[k] = v;
+        if (!RESERVED_KEYS.has(k)) apnsPayload[k] = v;
       }
     }
 

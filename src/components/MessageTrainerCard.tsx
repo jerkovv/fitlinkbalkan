@@ -9,21 +9,36 @@ import {
   FullScreenSheetFooter,
 } from "@/components/ui/full-screen-sheet";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 
 const MAX = 1000;
 
-export const MessageTrainerCard = () => {
+interface Props {
+  // Isti trainer_id koji roditelj (athlete/Home.tsx) vec ucitava iz
+  // athletes.trainer_id (isti lookup kao athlete/Chat.tsx) - ne dupliramo upit ovde.
+  trainerId: string | null;
+}
+
+export const MessageTrainerCard = ({ trainerId }: Props) => {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
 
+  // Direktan insert u messages (isti thread koji koriste useChat.ts/ChatThread.tsx)
+  // umesto send_message_to_trainer RPC-a koji je pisao samo u notifications.
   const handleSend = async () => {
     const text = body.trim();
-    if (!text) return;
+    if (!text || !user || !trainerId) return;
     setSending(true);
-    const { error } = await supabase.rpc("send_message_to_trainer", { p_body: text });
+    const { error } = await supabase.from("messages").insert({
+      trainer_id: trainerId,
+      athlete_id: user.id,
+      sender_id: user.id,
+      body: text,
+    } as any);
     setSending(false);
     if (error) {
       toast.error(porukaGreske(error));
@@ -68,7 +83,7 @@ export const MessageTrainerCard = () => {
           </div>
         </FullScreenSheetScroll>
         <FullScreenSheetFooter>
-          <Button onClick={handleSend} disabled={sending || !body.trim()} className="w-full bg-gradient-brand text-white shadow-brand">
+          <Button onClick={handleSend} disabled={sending || !body.trim() || !user || !trainerId} className="w-full bg-gradient-brand text-white shadow-brand">
             {sending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (

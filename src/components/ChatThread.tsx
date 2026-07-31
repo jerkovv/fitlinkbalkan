@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Keyboard } from "@capacitor/keyboard";
+import { toast } from "sonner";
 import { useChat } from "@/hooks/useChat";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Loader2, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { porukaGreske } from "@/lib/errorMessage";
 
 // Isti keyboard-aware pristup kao FullScreenSheetFooter: visina tastature iz
 // Capacitor Keyboard plugin-a (resize mode je "none", pa WKWebView ne skuplja
@@ -87,7 +89,10 @@ export const ChatThread = ({
     if (!text) return;
     setDraft("");
     const r = await send(text);
-    if (r.error) setDraft(text); // restore na grešci
+    if (r.error) {
+      setDraft(text); // restore na grešci
+      toast.error(porukaGreske(r.error));
+    }
   };
 
   return (

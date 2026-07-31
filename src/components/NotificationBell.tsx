@@ -32,6 +32,7 @@ const KIND_META: Record<
   membership_activated: { icon: Check,          tone: "text-[hsl(var(--session-emerald-fg))] bg-[hsl(var(--session-emerald-bg))]" },
   membership_rejected:  { icon: AlertTriangle,  tone: "text-[hsl(var(--session-rose-fg))] bg-[hsl(var(--session-rose-bg))]" },
   broadcast:            { icon: Megaphone,      tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]" },
+  booking_canceled_by_trainer: { icon: CalendarX, tone: "text-[hsl(var(--session-rose-fg))] bg-[hsl(var(--session-rose-bg))]" },
   // waitlist
   waitlist_promoted:    { icon: CalendarClock,  tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]" },
   waitlist_joined:      { icon: Clock,          tone: "text-[hsl(var(--session-indigo-fg))] bg-[hsl(var(--session-indigo-bg))]" },

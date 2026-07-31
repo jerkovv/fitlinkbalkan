@@ -14,6 +14,7 @@ import {
   CalendarClock, Clock,
 } from "lucide-react";
 import type { AppNotification, NotificationKind } from "@/hooks/useNotifications";
+import { getActionTarget } from "@/lib/notificationTarget";
 import { cn } from "@/lib/utils";
 import { sessionColorClasses, formatTime } from "@/lib/session";
 
@@ -36,6 +37,7 @@ const KIND_META: Record<
   membership_activated: { icon: Check,         tone: "text-[hsl(var(--session-emerald-fg))] bg-[hsl(var(--session-emerald-bg))]", label: "Članarina aktivirana" },
   membership_rejected:  { icon: AlertTriangle, tone: "text-[hsl(var(--session-rose-fg))] bg-[hsl(var(--session-rose-bg))]",       label: "Zahtev odbijen" },
   broadcast:            { icon: Megaphone,     tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]",   label: "Obaveštenje" },
+  booking_canceled_by_trainer: { icon: CalendarX, tone: "text-[hsl(var(--session-rose-fg))] bg-[hsl(var(--session-rose-bg))]",     label: "Termin otkazan" },
   // waitlist
   waitlist_promoted:    { icon: CalendarClock, tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]",   label: "Lista čekanja" },
   waitlist_joined:      { icon: Clock,         tone: "text-[hsl(var(--session-indigo-fg))] bg-[hsl(var(--session-indigo-bg))]",   label: "Lista čekanja" },
@@ -68,45 +70,6 @@ const weekdayFromSlotDate = (raw: string): string | null => {
   if (!m) return null;
   const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
   return Number.isNaN(d.getTime()) ? null : WEEKDAYS_SR[d.getDay()];
-};
-
-interface ActionTarget {
-  path: string;
-  label: string;
-}
-
-const getActionTarget = (
-  n: AppNotification,
-): ActionTarget | null => {
-  if (n.recipient_role === "trainer") {
-    if (n.kind === "booking_created" || n.kind === "booking_canceled") {
-      const slotDate = n.meta?.slot_date as string | undefined;
-      const path = slotDate
-        ? `/trener/kalendar?date=${slotDate}`
-        : "/trener/kalendar";
-      return { path, label: "Otvori kalendar" };
-    }
-    if (n.kind === "payment_request" || n.kind === "payment_marked")
-      return { path: "/trener/uplate", label: "Otvori uplate" };
-    if (n.kind === "workout_completed" || n.kind === "message")
-      return { path: `/trener/vezbaci/${n.athlete_id}`, label: "Otvori profil vežbača" };
-    if (n.kind === "waitlist_joined") {
-      const slotDate = n.meta?.slot_date as string | undefined;
-      return { path: slotDate ? `/trener/kalendar?date=${slotDate}` : "/trener/kalendar", label: "Otvori kalendar" };
-    }
-    return null;
-  }
-  // athlete
-  if (n.kind === "program_assigned") return { path: "/vezbac/trening", label: "Otvori program" };
-  if (n.kind === "nutrition_assigned") return { path: "/vezbac/ishrana", label: "Otvori plan ishrane" };
-  if (n.kind === "membership_expiring" || n.kind === "membership_expired"
-      || n.kind === "membership_activated" || n.kind === "membership_rejected")
-    return { path: "/vezbac/clanarina", label: "Otvori članarinu" };
-  if (n.kind === "waitlist_promoted") {
-    const slotDate = n.meta?.slot_date as string | undefined;
-    return { path: slotDate ? `/vezbac/rezervacija?date=${slotDate}` : "/vezbac/rezervacija", label: "Otvori zakazivanje" };
-  }
-  return null;
 };
 
 interface Props {
@@ -201,7 +164,7 @@ export const NotificationDetail = ({ notification, open, onOpenChange }: Props) 
         {/* Vreme akcije, sekundarno (samo booking; ostali ga vec imaju gore) */}
         {hasBookingMeta && (
           <div className="text-[11px] text-muted-foreground tnum">
-            {notification.kind === "booking_canceled"
+            {notification.kind === "booking_canceled" || notification.kind === "booking_canceled_by_trainer"
               ? "Otkazano: "
               : notification.kind === "booking_created"
                 ? "Rezervisano: "

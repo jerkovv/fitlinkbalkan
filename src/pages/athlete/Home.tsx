@@ -22,6 +22,7 @@ const Home = () => {
   const [exerciseCount, setExerciseCount] = useState<number>(0);
   const [monthCount, setMonthCount] = useState<number>(0);
   const [trainerName, setTrainerName] = useState<string>("");
+  const [trainerId, setTrainerId] = useState<string | null>(null);
   const [fullName, setFullName] = useState<string | null>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
 
@@ -75,12 +76,13 @@ const Home = () => {
         .select("trainer_id")
         .eq("id", user.id)
         .maybeSingle();
-      const trainerId = (ath as any)?.trainer_id;
-      if (trainerId) {
+      const tId = (ath as any)?.trainer_id ?? null;
+      setTrainerId(tId);
+      if (tId) {
         const { data: tr } = await supabase
           .from("profiles")
           .select("full_name")
-          .eq("id", trainerId)
+          .eq("id", tId)
           .maybeSingle();
         setTrainerName((tr as any)?.full_name ?? "");
       }
@@ -219,7 +221,7 @@ const Home = () => {
           <span className="text-muted-foreground">→</span>
         </Link>
 
-        <MessageTrainerCard />
+        <MessageTrainerCard trainerId={trainerId} />
       </PhoneShell>
       <BottomNav role="athlete" />
     </>

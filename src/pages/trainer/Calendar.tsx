@@ -89,6 +89,11 @@ const Calendar = () => {
   const [waitlist, setWaitlist] = useState<WaitlistRow[]>([]);
   const [waitlistLoading, setWaitlistLoading] = useState(false);
 
+  // Busy stanja za otkazivanje - sprecavaju dupli submit (duplo tapkanje =
+  // dva DELETE/insert-a = dve notifikacije umesto jedne).
+  const [cancelingSlot, setCancelingSlot] = useState(false);
+  const [removingBookingId, setRemovingBookingId] = useState<string | null>(null);
+
   // 28 dana napred počev od danas (današnji dan = prvi)
   const days = useMemo(() => {
     return Array.from({ length: 28 }).map((_, i) => {
@@ -182,14 +187,16 @@ const Calendar = () => {
     );
 
   const cancelSlot = async (s: Slot) => {
-    if (!user || !s.template_id) return;
+    if (!user || !s.template_id || cancelingSlot) return;
     if (!(await confirm({ title: `Otkazati ${s.type_name} u ${formatTime(s.start_time)}?`, description: "Termin se otkazuje samo za ovaj dan.", destructive: true }))) return;
+    setCancelingSlot(true);
     const { error } = await supabase.from("session_slot_overrides").insert({
       trainer_id: user.id,
       date: toIsoDate(selectedDate),
       template_id: s.template_id,
       is_canceled: true,
     } as any);
+    setCancelingSlot(false);
     if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Termin otkazan za ovaj dan");
     setOpenSlot(null);
@@ -197,8 +204,11 @@ const Calendar = () => {
   };
 
   const removeBooking = async (id: string) => {
+    if (removingBookingId) return;
     if (!(await confirm({ title: "Ukloniti ovog vežbača iz termina?", destructive: true }))) return;
+    setRemovingBookingId(id);
     const { error } = await supabase.from("session_bookings").delete().eq("id", id);
+    setRemovingBookingId(null);
     if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Rezervacija uklonjena");
     load();
@@ -468,10 +478,15 @@ const Calendar = () => {
                           </Link>
                           <button
                             onClick={() => removeBooking(b.id)}
-                            className="h-7 w-7 rounded-full hover:bg-destructive-soft flex items-center justify-center text-destructive"
+                            disabled={removingBookingId === b.id}
+                            className="h-7 w-7 rounded-full hover:bg-destructive-soft flex items-center justify-center text-destructive disabled:opacity-50"
                             title="Ukloni"
                           >
-                            <X className="h-3.5 w-3.5" />
+                            {removingBookingId === b.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <X className="h-3.5 w-3.5" />
+                            )}
                           </button>
                         </li>
                       ))}
@@ -517,8 +532,14 @@ const Calendar = () => {
                       variant="outline"
                       className="w-full text-destructive hover:bg-destructive-soft"
                       onClick={() => cancelSlot(openSlot)}
+                      disabled={cancelingSlot}
                     >
-                      <Ban className="h-3.5 w-3.5 mr-1.5" /> Otkaži termin za ovaj dan
+                      {cancelingSlot ? (
+                        <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                      ) : (
+                        <Ban className="h-3.5 w-3.5 mr-1.5" />
+                      )}
+                      Otkaži termin za ovaj dan
                     </Button>
                   </div>
                 )}

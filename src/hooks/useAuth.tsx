@@ -1,10 +1,11 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 import type { Session, User } from "@supabase/supabase-js";
 import { App } from "@capacitor/app";
 import { supabase } from "@/lib/supabase";
 import type { AppRole } from "@/lib/database.types";
 import { WatchSync, isNativeIOS } from "@/lib/watchSync";
-import { registerPushNotifications, clearPushToken } from "@/lib/pushNotifications";
+import { registerPushNotifications, clearPushToken, setPushNavigateHandler } from "@/lib/pushNotifications";
 
 // Jedan pokušaj sync-a tokena Watch-u. Vraća true ako je native potvrdio uspeh.
 // Tihi no-op na web/Lovable preview-u.
@@ -119,6 +120,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [role, setRole] = useState<AppRole | null>(null);
   const [initializing, setInitializing] = useState(true);
   const [roleLoading, setRoleLoading] = useState(false);
+  const navigate = useNavigate();
+
+  // Push tap navigacija zivi u pushNotifications.ts (van React stabla) - ovde
+  // mu dajemo pravi navigate cim je dostupan (AuthProvider je unutar
+  // <BrowserRouter>, vidi App.tsx).
+  useEffect(() => {
+    setPushNavigateHandler(navigate);
+    return () => setPushNavigateHandler(null);
+  }, [navigate]);
 
   useEffect(() => {
     // 1. Listener PRVO
