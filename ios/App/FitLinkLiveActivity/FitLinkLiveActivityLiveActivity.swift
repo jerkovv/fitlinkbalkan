@@ -183,6 +183,73 @@ struct LiveActivityHRRing: View {
     }
 }
 
+// MARK: - Slobodan trening (deljeno: lock screen + Dynamic Island)
+
+// Jedna metrika desno (broj + sitna oznaka ispod).
+struct FreeMetric: View {
+    let value: String
+    let label: String
+    let valueColor: Color
+    let labelColor: Color
+    var size: CGFloat = laFreeMetricSize
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 1) {
+            Text(value)
+                .font(.system(size: size, weight: .heavy, design: .rounded))
+                .monospacedDigit()
+                .foregroundColor(valueColor)
+            Text(label)
+                .font(.system(size: laZoneSize, weight: .heavy))
+                .tracking(0.3)
+                .foregroundColor(labelColor)
+        }
+        .fixedSize()
+    }
+}
+
+// Stoperica veliko levo + puls/kalorije desno. Metrike samo kad stvarno postoje
+// (bez sata nema ni jedne) - tada ostaje cista kartica sa stopericom.
+struct FreeWorkoutMetricsRow: View {
+    let state: FitLinkLiveActivityAttributes.ContentState
+    let startedAt: Date
+    var timerSize: CGFloat = laFreeTimerSize
+    var metricSize: CGFloat = laFreeMetricSize
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            workoutTimerText(startedAt)
+                .font(.system(size: timerSize, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundColor(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .layoutPriority(1)
+
+            Spacer(minLength: 8)
+
+            if let hr = state.heartRate, state.watchConnected {
+                FreeMetric(
+                    value: "\(hr)",
+                    label: hrZoneLabelSr(state.hrZone),
+                    valueColor: hrZoneColor(state.hrZone),
+                    labelColor: hrZoneColor(state.hrZone),
+                    size: metricSize
+                )
+            }
+            if let kcal = state.activeCalories {
+                FreeMetric(
+                    value: "\(kcal)",
+                    label: "KCAL",
+                    valueColor: laKcalColor,
+                    labelColor: laTxtFaint,
+                    size: metricSize
+                )
+            }
+        }
+    }
+}
+
 // MARK: - Lock screen (LAYOUT A: cist Lyfta blok - bez prstena, bez NEXT reda)
 
 struct LiveActivityLockScreenView: View {
@@ -221,52 +288,8 @@ struct LiveActivityLockScreenView: View {
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
 
-            HStack(alignment: .center, spacing: 12) {
-                workoutTimerText(startedAt)
-                    .font(.system(size: laFreeTimerSize, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                    .layoutPriority(1)
-
-                Spacer(minLength: 8)
-
-                // Metrike samo kad stvarno postoje (bez sata nema ni pulsa ni kalorija) -
-                // tada ostaje cista kartica sa stopericom, bez praznih placeholder-a.
-                if let hr = state.heartRate, state.watchConnected {
-                    freeMetric(
-                        value: "\(hr)",
-                        label: hrZoneLabelSr(state.hrZone),
-                        valueColor: hrZoneColor(state.hrZone),
-                        labelColor: hrZoneColor(state.hrZone)
-                    )
-                }
-                if let kcal = state.activeCalories {
-                    freeMetric(
-                        value: "\(kcal)",
-                        label: "KCAL",
-                        valueColor: laKcalColor,
-                        labelColor: laTxtFaint
-                    )
-                }
-            }
+            FreeWorkoutMetricsRow(state: state, startedAt: startedAt)
         }
-    }
-
-    // Jedna metrika desno (broj + sitna oznaka ispod).
-    private func freeMetric(value: String, label: String, valueColor: Color, labelColor: Color) -> some View {
-        VStack(alignment: .trailing, spacing: 1) {
-            Text(value)
-                .font(.system(size: laFreeMetricSize, weight: .heavy, design: .rounded))
-                .monospacedDigit()
-                .foregroundColor(valueColor)
-            Text(label)
-                .font(.system(size: laZoneSize, weight: .heavy))
-                .tracking(0.3)
-                .foregroundColor(labelColor)
-        }
-        .fixedSize()
     }
 
     private var plannedBody: some View {
@@ -357,18 +380,36 @@ struct FitLinkLiveActivityLiveActivity: Widget {
                         .padding(.leading, 6)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    // Premium margina od ivice ostrva (ne skroz uz rub, da se "0:12" ne sece).
-                    workoutTimerText(startedAt)
-                        .font(.system(size: 14, weight: .semibold))
-                        .monospacedDigit()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .multilineTextAlignment(.trailing)
-                        .foregroundColor(laTxtDim)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                        .padding(.trailing, 8)
+                    // Slobodan trening: stoperica ide dole kao glavni element, pa gore
+                    // desno stoji naziv (isto kao lock screen). Inace vreme, kao i dosad.
+                    Group {
+                        if state.isFreeWorkout == true {
+                            Text("Slobodan trening")
+                                .font(.system(size: 14, weight: .semibold))
+                        } else {
+                            // Premium margina od ivice ostrva (ne skroz uz rub, da se "0:12" ne sece).
+                            workoutTimerText(startedAt)
+                                .font(.system(size: 14, weight: .semibold))
+                                .monospacedDigit()
+                        }
+                    }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .multilineTextAlignment(.trailing)
+                    .foregroundColor(laTxtDim)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.trailing, 8)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
+                    if state.isFreeWorkout == true {
+                        FreeWorkoutMetricsRow(
+                            state: state,
+                            startedAt: startedAt,
+                            timerSize: 30,
+                            metricSize: 18
+                        )
+                        .padding(.top, 2)
+                    } else {
                     HStack(spacing: 12) {
                         LiveActivityThumb(imageFileName: state.imageFileName, size: 50, corner: 11, iconSize: 22)
                         VStack(alignment: .leading, spacing: 3) {
@@ -377,15 +418,7 @@ struct FitLinkLiveActivityLiveActivity: Widget {
                                 .foregroundColor(.white)
                                 .lineLimit(2)
                                 .minimumScaleFactor(0.85)
-                            if state.isFreeWorkout == true {
-                                // Slobodan trening: nema serija -> kalorije, i to samo kad postoje.
-                                if let kcal = state.activeCalories {
-                                    Text("\(kcal) kcal")
-                                        .font(.system(size: 14, weight: .medium))
-                                        .foregroundColor(laTxtDim)
-                                        .lineLimit(1)
-                                }
-                            } else if isRest, let end = state.restEndsAt {
+                            if isRest, let end = state.restEndsAt {
                                 HStack(spacing: 5) {
                                     Text("Pauza")
                                         .font(.system(size: 14, weight: .semibold))
@@ -425,6 +458,7 @@ struct FitLinkLiveActivityLiveActivity: Widget {
                         }
                     }
                     .padding(.top, 2)
+                    }
                 }
             } compactLeading: {
                 // Brend usko (hugguje), manji font -> pilula kraca, premium kao LYFTA.
