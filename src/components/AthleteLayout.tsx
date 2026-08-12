@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { ClanarinaLockProvider } from "@/components/clanarina/ClanarinaLockProvider";
 import { markWorkoutEntered, hasEnteredWorkout } from "@/lib/workoutSession";
+import { TrenerNeaktivanTraka } from "@/components/TrenerNeaktivanTraka";
 
 // Layout za sve vezbac tabove (Pocetna, Trening, Rezervisi, Napredak, Clanarina, ...).
 // Montiran je SVE VREME dok je vezbac u app-u (parent ruta sa <Outlet/>), pa auto-enter
@@ -121,6 +122,7 @@ export const AthleteLayout = () => {
   return (
     <ClanarinaLockProvider>
       <Outlet />
+      <TrenerNeaktivanTraka />
     </ClanarinaLockProvider>
   );
 };
