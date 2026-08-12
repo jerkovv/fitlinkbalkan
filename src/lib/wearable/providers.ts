@@ -127,41 +127,45 @@ export interface AvailableProvider {
 }
 
 /**
+ * Provajderi kod kojih povezivanje STVARNO radi.
+ *
+ * Sve ostalo (Fitbit, Garmin, Strava, Polar, WHOOP, Google Fit, Health Connect)
+ * je zasad samo popis: OAuth tokovi nisu napisani. Dok su stajali kao dostupni,
+ * dugme "Poveži" je javljalo "Povezano, sinhronizovano 14 novih treninga" a
+ * nista se nije povezalo ni sinhronizovalo. To je i obicna laz prema korisniku i
+ * stvar zbog koje Apple ume da odbije build.
+ *
+ * Kad neki provajder profunkcionise, dodaje se ovde i sam izlazi iz "Uskoro".
+ */
+const RADI: Provider[] = ["apple_health"];
+
+/**
  * Vraća listu provajdera za trenutno okruženje.
- * Apple Health i Health Connect su uvek prikazani na nativnoj
- * odgovarajućoj platformi, a na webu su "Uskoro".
+ *
+ * Provajder je dostupan samo ako je stvarno implementiran I ako ga platforma
+ * podrzava; u suprotnom ide u "Uskoro", bez dugmeta za povezivanje.
  */
 export const getAvailableProviders = (
   platform: Platform = detectPlatform(),
 ): AvailableProvider[] => {
-  const isIOS = platform === "ios";
-  const isAndroid = platform === "android";
+  const redosled: Provider[] = [
+    "apple_health",
+    "health_connect",
+    "fitbit",
+    "google_fit",
+    "strava",
+    "garmin",
+    "polar",
+    "whoop",
+  ];
 
-  const list: AvailableProvider[] = [];
-
-  // Apple Health
-  list.push({
-    meta: PROVIDER_META.apple_health,
-    comingSoon: !isIOS,
-  });
-
-  // Health Connect
-  list.push({
-    meta: PROVIDER_META.health_connect,
-    comingSoon: !isAndroid,
-  });
-
-  // OAuth provideri (rade i na webu i na native-u)
-  (["fitbit", "google_fit", "strava", "garmin", "polar", "whoop"] as Provider[]).forEach((id) => {
+  return redosled.map((id) => {
     const meta = PROVIDER_META[id];
-    if (meta.supportedPlatforms.includes(platform)) {
-      list.push({ meta, comingSoon: false });
-    } else {
-      list.push({ meta, comingSoon: true });
-    }
+    return {
+      meta,
+      comingSoon: !RADI.includes(id) || !meta.supportedPlatforms.includes(platform),
+    };
   });
-
-  return list;
 };
 
 export const isNativeProvider = (p: Provider) =>
