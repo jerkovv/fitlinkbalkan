@@ -17,6 +17,7 @@ import { useConfirm } from "@/hooks/useConfirm";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, Plus, Pencil, Trash2, Package } from "lucide-react";
 import { toast } from "sonner";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 
 type Pkg = {
   id: string;
@@ -31,6 +32,7 @@ const PACKAGE_LIMIT = 20;
 const empty = { name: "", sessions_count: "12", duration_days: "28", price_rsd: "12000" };
 
 const Packages = () => {
+  const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
   const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
@@ -75,6 +77,7 @@ const Packages = () => {
   };
 
   const save = async () => {
+    if (locked) return openLock();
     if (!user) return;
     const name = form.name.trim();
     const sc = parseInt(form.sessions_count, 10);
@@ -102,6 +105,7 @@ const Packages = () => {
   };
 
   const toggleActive = async (p: Pkg) => {
+    if (locked) return openLock();
     const { error } = await supabase
       .from("membership_packages")
       .update({ is_active: !p.is_active })
@@ -111,6 +115,7 @@ const Packages = () => {
   };
 
   const remove = async (p: Pkg) => {
+    if (locked) return openLock();
     if (!(await confirm({ title: `Obriši paket "${p.name}"?`, destructive: true }))) return;
     const { error } = await supabase.from("membership_packages").delete().eq("id", p.id);
     if (error) return toast.error(porukaGreske(error));

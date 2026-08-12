@@ -13,6 +13,7 @@ import { supabase } from "@/lib/supabase";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 
 const MAX = 1000;
 
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export const BroadcastButton = ({ fab = false }: Props) => {
+  const { locked, openLock } = usePretplataLock();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -29,6 +31,7 @@ export const BroadcastButton = ({ fab = false }: Props) => {
   const [sending, setSending] = useState(false);
 
   const handleSend = async () => {
+    if (locked) return openLock();
     const text = body.trim();
     if (!text) return;
     setSending(true);

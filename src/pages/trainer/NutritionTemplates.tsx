@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/full-screen-sheet";
 import { Plus, Apple, ChevronRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 
 type Template = {
   id: string;
@@ -26,6 +27,7 @@ type Template = {
 };
 
 const NutritionTemplates = () => {
+  const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
   const [items, setItems] = useState<Template[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -68,6 +70,7 @@ const NutritionTemplates = () => {
   useEffect(() => { load(); }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
+    if (locked) return openLock();
     e.preventDefault();
     if (!user) return;
     setSubmitting(true);

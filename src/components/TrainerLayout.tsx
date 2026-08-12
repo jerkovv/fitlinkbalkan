@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
-import { Loader2, Lock, LogOut } from "lucide-react";
+import { Outlet } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
+import { PretplataLockProvider } from "@/components/pretplata/PretplataLockProvider";
 
 // Tvrdi gating trenerskog dela app-a: bez aktivne FitLink pretplate trener vidi LOCK
 // ekran umesto trenerskog UI-a. Montiran je nad svim /trener/* rutama (parent <Outlet/>),
@@ -38,48 +38,8 @@ const FullScreenLoader = () => (
   </div>
 );
 
-const TrainerLockScreen = ({
-  fact,
-  signingOut,
-  onSignOut,
-}: {
-  fact: string | null;
-  signingOut: boolean;
-  onSignOut: () => void;
-}) => (
-  <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-background px-6 text-center">
-    <div className="w-full max-w-sm">
-      <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-soft">
-        <Lock className="h-7 w-7 text-primary" strokeWidth={2.2} />
-      </div>
-      <h1 className="font-display text-[26px] leading-[1.1] font-bold tracking-tight text-foreground">
-        Nalog nema aktivnu pretplatu
-      </h1>
-      <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
-        Trenerske funkcije su trenutno nedostupne.
-      </p>
-      {fact && <p className="mt-2 text-[13.5px] text-muted-foreground/80">{fact}</p>}
-      <Button
-        variant="outline"
-        size="lg"
-        className="mt-8 w-full"
-        onClick={onSignOut}
-        disabled={signingOut}
-      >
-        {signingOut ? (
-          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-        ) : (
-          <LogOut className="h-4 w-4 mr-2" />
-        )}
-        Odjava
-      </Button>
-    </div>
-  </div>
-);
-
 export const TrainerLayout = () => {
-  const { role, loading, signOut } = useAuth();
-  const nav = useNavigate();
+  const { role, loading } = useAuth();
 
   // false posle unmount-a: async provera ne sme da menja stanje otkacenog layout-a.
   const aliveRef = useRef(true);
@@ -88,7 +48,6 @@ export const TrainerLayout = () => {
   // null = jos proveravamo (prikazi kratak loading, ne prazno). true/false = rezultat provere.
   const [access, setAccess] = useState<boolean | null>(null);
   const [lockFact, setLockFact] = useState<string | null>(null);
-  const [signingOut, setSigningOut] = useState(false);
 
   // Prethodni pristup: toast "Pretplata aktivna" bukne SAMO na prelaz false -> true
   // (ne na prvi ulazak dok je pretplata vec aktivna).
@@ -159,16 +118,6 @@ export const TrainerLayout = () => {
     return () => clearInterval(id);
   }, [role, access, checkAccess]);
 
-  const handleSignOut = async () => {
-    setSigningOut(true);
-    try {
-      await signOut();
-      nav("/auth", { replace: true });
-    } catch {
-      if (aliveRef.current) setSigningOut(false);
-    }
-  };
-
   // Ne-treneri (ucitavanje, vezbac, nalog bez uloge): renderuj Outlet; ProtectedRoute
   // po ruti resava auth i preusmerenje po ulozi. Gating vazi SAMO za potvrdjene trenere.
   if (loading || role !== "trainer") {
@@ -179,17 +128,15 @@ export const TrainerLayout = () => {
     return <FullScreenLoader />;
   }
 
-  if (!access) {
-    return (
-      <TrainerLockScreen
-        fact={lockFact}
-        signingOut={signingOut}
-        onSignOut={handleSignOut}
-      />
-    );
-  }
-
-  return <Outlet />;
+  // Bez pretplate NE zatvaramo app: trener vidi ekrane i moze da razgleda, ali su
+  // izmene zakljucane (usePretplataLock().guard na akcijama) uz stalnu traku i sheet
+  // sa objasnjenjem. Provera/poll iznad i dalje radi, pa se otkljuca cim pretplata
+  // postane aktivna.
+  return (
+    <PretplataLockProvider locked={!access} fact={lockFact}>
+      <Outlet />
+    </PretplataLockProvider>
+  );
 };
 
 export default TrainerLayout;

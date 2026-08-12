@@ -16,6 +16,7 @@ import {
 import { Plus, ClipboardList, ChevronRight, Loader2, Target, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirm } from "@/hooks/useConfirm";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 
 type Template = {
   id: string;
@@ -27,6 +28,7 @@ type Template = {
 };
 
 const ProgramTemplates = () => {
+  const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
   const confirm = useConfirm();
   const [items, setItems] = useState<Template[]>([]);
@@ -69,6 +71,7 @@ const ProgramTemplates = () => {
   useEffect(() => { load(); }, []);
 
   const handleDeleteTemplate = async (t: Template) => {
+    if (locked) return openLock();
     if (!(await confirm({
       title: "Obrisati program?",
       description: "Program ce biti trajno obrisan. Vezbaci kojima je dodeljen zadrzavaju svoju kopiju.",
@@ -82,6 +85,7 @@ const ProgramTemplates = () => {
   };
 
   const handleCreate = async (e: React.FormEvent) => {
+    if (locked) return openLock();
     e.preventDefault();
     if (!user) return;
     setSubmitting(true);

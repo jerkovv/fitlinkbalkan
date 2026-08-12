@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useConfirm } from "@/hooks/useConfirm";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { cn } from "@/lib/utils";
 import { Loader2, Banknote, Receipt, Check, X, Inbox, ChevronRight, IdCard } from "lucide-react";
 import { porukaGreske } from "@/lib/errorMessage";
@@ -122,6 +123,7 @@ const StatTile = ({
 );
 
 const Payments = () => {
+  const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
   const confirm = useConfirm();
 
@@ -158,6 +160,7 @@ const Payments = () => {
   useEffect(() => { load(); }, [user]);
 
   const confirmPurchase = async (p: Purchase) => {
+    if (locked) return openLock();
     setBusyId(p.id);
     const { error } = await supabase.rpc("confirm_membership_purchase", {
       p_purchase_id: p.id,
@@ -171,6 +174,7 @@ const Payments = () => {
   };
 
   const rejectPurchase = async (p: Purchase) => {
+    if (locked) return openLock();
     if (!(await confirm({ title: `Odbiti zahtev "${p.package_name}"?`, destructive: true }))) return;
     setBusyId(p.id);
     const { error } = await supabase.rpc("reject_membership_purchase", {

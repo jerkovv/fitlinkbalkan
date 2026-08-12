@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import {
   sessionColorClasses, dateToWeekday, toIsoDate, formatTime, addMinutesToTime, weekdayLabelsShort,
 } from "@/lib/session";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 
 type Slot = {
   session_type_id: string;
@@ -69,6 +70,7 @@ const parseDateParam = (raw: string | null): Date | null => {
 };
 
 const Calendar = () => {
+  const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
   const confirm = useConfirm();
   const [searchParams] = useSearchParams();
@@ -187,6 +189,7 @@ const Calendar = () => {
     );
 
   const cancelSlot = async (s: Slot) => {
+    if (locked) return openLock();
     if (!user || !s.template_id || cancelingSlot) return;
     if (!(await confirm({ title: `Otkazati ${s.type_name} u ${formatTime(s.start_time)}?`, description: "Termin se otkazuje samo za ovaj dan.", destructive: true }))) return;
     setCancelingSlot(true);
@@ -204,6 +207,7 @@ const Calendar = () => {
   };
 
   const removeBooking = async (id: string) => {
+    if (locked) return openLock();
     if (removingBookingId) return;
     if (!(await confirm({ title: "Ukloniti ovog vežbača iz termina?", destructive: true }))) return;
     setRemovingBookingId(id);

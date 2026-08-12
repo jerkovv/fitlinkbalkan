@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 
 type MembershipStatus = "active" | "paused" | "expired" | "cancelled";
 
@@ -92,6 +93,7 @@ interface MembershipEditSheetProps {
 }
 
 export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, onSaved }: MembershipEditSheetProps) => {
+  const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
   const isCreate = !membershipId;
   const [loading, setLoading] = useState(!isCreate);
@@ -197,6 +199,7 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, on
     : originalStatus != null && originalStatus !== "active" && form.status === "active";
 
   const save = async () => {
+    if (locked) return openLock();
     if (!membershipId && (!athleteId || !user)) return;
     const name = form.plan_name.trim();
     if (!name) return toast.error("Naziv plana je obavezan");

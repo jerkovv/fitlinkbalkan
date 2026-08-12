@@ -21,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 
 type AthleteRow = {
   id: string;
@@ -88,6 +89,7 @@ const filters: { key: "all" | "active" | "expiring" | "expired"; label: string }
 ];
 
 const AthletesList = () => {
+  const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
   const [filter, setFilter] = useState<"all" | "active" | "expiring" | "expired">("all");
   const [q, setQ] = useState("");
@@ -198,6 +200,7 @@ const AthletesList = () => {
   const [sending, setSending] = useState(false);
 
   const sendInvite = async () => {
+    if (locked) return openLock();
     const name = inviteName.trim();
     const email = inviteEmail.trim().toLowerCase();
     if (!name) { toast.error("Unesi ime vežbača"); return; }
@@ -237,6 +240,7 @@ const AthletesList = () => {
   };
 
   const resendInvite = async (inv: PendingInvite) => {
+    if (locked) return openLock();
     if (!inv.email) return;
     setResendingId(inv.id);
     try {
@@ -274,6 +278,7 @@ const AthletesList = () => {
   };
 
   const confirmDeleteInvite = async () => {
+    if (locked) return openLock();
     if (!inviteToDelete) return;
     setDeletingInvite(true);
     try {
