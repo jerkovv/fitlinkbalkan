@@ -3,7 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Card, SectionTitle, StatCard } from "@/components/ui-bits";
-import { Play, CalendarPlus, Apple, Loader2, Dumbbell, UserRound, Lock } from "lucide-react";
+import {
+  Play, CalendarPlus, Apple, Loader2, Dumbbell, UserRound, Lock,
+  Flame, Trophy, Scale, TrendingDown, TrendingUp,
+} from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import { MessageTrainerCard } from "@/components/MessageTrainerCard";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -12,6 +15,21 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useClanarinaLock } from "@/components/clanarina/useClanarinaLock";
 import { getNextWorkoutDay, type NextWorkoutDay } from "@/lib/workouts";
+
+/**
+ * Kratak pregled napretka za pocetnu.
+ *
+ * Ranije je na ovom mestu stajala fiksna recenica "Zavrsi prvih nekoliko treninga
+ * da vidis statistiku rekorda" - pisala je i vezbacu sa dvadeset odradjenih
+ * treninga i gomilom rekorda. Sad se cita stvarno stanje, a ta recenica ostaje
+ * samo za onog ko zaista jos nema nista.
+ */
+type Napredak = {
+  nizNedelja: number;
+  ukupnoTreninga: number;
+  rekord: { vezba: string; kg: number; pon: number } | null;
+  tezina: { sada: number; promena: number } | null;
+};
 
 const Home = () => {
   const { user } = useAuth();
@@ -25,6 +43,7 @@ const Home = () => {
   const [trainerId, setTrainerId] = useState<string | null>(null);
   const [fullName, setFullName] = useState<string | null>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
+  const [napredak, setNapredak] = useState<Napredak | null>(null);
 
   const emailHandle = (user?.email ?? "").split("@")[0] ?? "";
   const firstName = (fullName?.trim() || emailHandle).split(/\s+/)[0] ?? "";
@@ -86,6 +105,51 @@ const Home = () => {
           .maybeSingle();
         setTrainerName((tr as any)?.full_name ?? "");
       }
+
+      // Napredak: niz nedelja, najjaci rekord i kretanje tezine.
+      const [streakRes, prRes, metRes] = await Promise.all([
+        supabase.rpc("get_athlete_streak", { p_athlete_id: user.id } as any),
+        supabase
+          .from("personal_records")
+          .select("best_weight_kg, best_weight_reps, best_e1rm_kg, exercises(name)")
+          .eq("athlete_id", user.id)
+          .not("best_weight_kg", "is", null)
+          .order("best_e1rm_kg", { ascending: false, nullsFirst: false })
+          .limit(1),
+        supabase
+          .from("body_metrics")
+          .select("weight_kg, recorded_on")
+          .eq("athlete_id", user.id)
+          .not("weight_kg", "is", null)
+          .order("recorded_on", { ascending: false })
+          .limit(8),
+      ]);
+
+      const streak = (streakRes.data as any)?.[0] ?? streakRes.data ?? null;
+      const topPr = (prRes.data as any[])?.[0] ?? null;
+      const merenja = ((metRes.data as any[]) ?? []).map((m) => Number(m.weight_kg));
+
+      setNapredak({
+        nizNedelja: streak?.weeks_streak ?? 0,
+        ukupnoTreninga: streak?.total_workouts ?? 0,
+        rekord: topPr
+          ? {
+              vezba: topPr.exercises?.name ?? "Vežba",
+              kg: Number(topPr.best_weight_kg),
+              pon: topPr.best_weight_reps ?? 0,
+            }
+          : null,
+        // Promena je prvo merenje u nizu (najnovije) naspram najstarijeg koji imamo.
+        tezina:
+          merenja.length >= 2
+            ? {
+                sada: merenja[0],
+                promena: Math.round((merenja[0] - merenja[merenja.length - 1]) * 10) / 10,
+              }
+            : merenja.length === 1
+              ? { sada: merenja[0], promena: 0 }
+              : null,
+      });
 
       setLoading(false);
     };
@@ -188,9 +252,82 @@ const Home = () => {
           <SectionTitle action={<Link to="/vezbac/napredak" className="text-[12px] font-semibold text-primary">Napredak →</Link>}>
             Tvoj napredak
           </SectionTitle>
-          <Card className="p-5 text-[13px] text-muted-foreground">
-            Završi prvih nekoliko treninga da vidiš statistiku rekorda.
-          </Card>
+          {napredak && (napredak.ukupnoTreninga > 0 || napredak.rekord || napredak.tezina) ? (
+            <Card className="p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-2xl bg-surface-2 px-3.5 py-3">
+                  <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    <Flame className="h-3 w-3" /> Niz
+                  </div>
+                  <div className="mt-1 font-display text-[22px] font-bold tracking-tight leading-none tnum">
+                    {napredak.nizNedelja}
+                    <span className="text-[12px] font-semibold text-muted-foreground ml-1">
+                      {napredak.nizNedelja === 1 ? "nedelja" : "nedelje"}
+                    </span>
+                  </div>
+                </div>
+                <div className="rounded-2xl bg-surface-2 px-3.5 py-3">
+                  <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    <Dumbbell className="h-3 w-3" /> Ukupno
+                  </div>
+                  <div className="mt-1 font-display text-[22px] font-bold tracking-tight leading-none tnum">
+                    {napredak.ukupnoTreninga}
+                    <span className="text-[12px] font-semibold text-muted-foreground ml-1">treninga</span>
+                  </div>
+                </div>
+              </div>
+
+              {napredak.rekord && (
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-xl bg-warning/10 text-warning flex items-center justify-center shrink-0">
+                    <Trophy className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                      Najjači rekord
+                    </div>
+                    <div className="text-[13.5px] font-semibold truncate">{napredak.rekord.vezba}</div>
+                  </div>
+                  <div className="text-[14px] font-bold tnum shrink-0">
+                    {napredak.rekord.kg} kg × {napredak.rekord.pon}
+                  </div>
+                </div>
+              )}
+
+              {napredak.tezina && (
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <Scale className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                      Težina
+                    </div>
+                    <div className="text-[13.5px] font-semibold tnum">{napredak.tezina.sada} kg</div>
+                  </div>
+                  {napredak.tezina.promena !== 0 && (
+                    <div
+                      className={`inline-flex items-center gap-1 text-[13px] font-bold tnum shrink-0 ${
+                        napredak.tezina.promena < 0 ? "text-success" : "text-foreground"
+                      }`}
+                    >
+                      {napredak.tezina.promena < 0 ? (
+                        <TrendingDown className="h-3.5 w-3.5" />
+                      ) : (
+                        <TrendingUp className="h-3.5 w-3.5" />
+                      )}
+                      {napredak.tezina.promena > 0 ? "+" : ""}
+                      {napredak.tezina.promena} kg
+                    </div>
+                  )}
+                </div>
+              )}
+            </Card>
+          ) : (
+            <Card className="p-5 text-[13px] text-muted-foreground">
+              Završi prvih nekoliko treninga da vidiš statistiku rekorda.
+            </Card>
+          )}
         </section>
 
         <Link
