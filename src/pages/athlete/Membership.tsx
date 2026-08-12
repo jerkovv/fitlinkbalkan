@@ -10,12 +10,13 @@ import { supabase } from "@/lib/supabase";
 import { useConfirm } from "@/hooks/useConfirm";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Loader2, ShieldCheck, Package, Banknote, Receipt, Clock, X, Plus, Copy, Check, Landmark, QrCode,
+  Loader2, ShieldCheck, Package, Banknote, Receipt, Clock, X, Plus, Copy, Check, Landmark, QrCode, Lock,
 } from "lucide-react";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { generateIpsQrDataUrl } from "@/lib/ipsQr";
 import { useMembershipAccess } from "@/hooks/useMembershipAccess";
+import { useClanarinaLock } from "@/components/clanarina/useClanarinaLock";
 
 type Membership = {
   id: string;
@@ -171,6 +172,9 @@ const BankSlip = ({ bank, amount }: { bank: BankInfo | null; amount: number }) =
 
 const Membership = () => {
   const { state: pristupState } = useMembershipAccess();
+  // Zakljucano dugme ostaje na dodir: guard otvara zajednicki lock sheet
+  // sa objasnjenjem, umesto da bude sivo i nemo.
+  const { guard } = useClanarinaLock();
   // Trener bez pretplate: zahtev bi server ionako odbio, pa ne nudimo dugme.
   const trenerNeaktivan = pristupState === "trainer_inactive";
   const { user } = useAuth();
@@ -371,25 +375,24 @@ const Membership = () => {
             )}
 
             <Button
-              onClick={openStore}
+              onClick={trenerNeaktivan ? guard(openStore) : openStore}
               size="lg"
-              disabled={!trainerId || packages.length === 0 || trenerNeaktivan}
+              disabled={!trainerId || packages.length === 0}
               className="w-full bg-gradient-brand text-white shadow-brand hover:opacity-95"
             >
-              <Plus className="h-4 w-4 mr-2" />
+              {trenerNeaktivan ? (
+                <Lock className="h-4 w-4 mr-2" strokeWidth={2.5} />
+              ) : (
+                <Plus className="h-4 w-4 mr-2" />
+              )}
               {ctaLabel}
             </Button>
 
-            {trenerNeaktivan ? (
-              <p className="text-center text-[12px] text-muted-foreground -mt-2">
-                Trener trenutno nije aktivan, pa ne možeš da zatražiš članarinu.
-                Javi mu se — čim se aktivira, paketi su ponovo dostupni.
-              </p>
-            ) : packages.length === 0 ? (
+            {packages.length === 0 && (
               <p className="text-center text-[12px] text-muted-foreground -mt-2">
                 Trener još nije postavio pakete.
               </p>
-            ) : null}
+            )}
 
             {recent.length > 0 && (
               <section>
