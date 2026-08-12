@@ -27,6 +27,8 @@ type LiveActivityFields = {
   watchConnected: boolean;
   thumbnailUrl?: string;
   weightText?: string;
+  isFreeWorkout?: boolean;   // native prelazi na raspored bez vezbe/serija
+  activeCalories?: number;
 };
 interface LiveActivityPluginDef {
   start(options: LiveActivityFields & { athleteName: string; workoutStartedAtMs: number }): Promise<{ success: boolean }>;
@@ -53,20 +55,23 @@ const laEnd = async () => {
   try { await LiveActivity.end(); } catch { /* no-op */ }
 };
 
-// Slobodan trening nema vezbe ni serije, a nativni prikaz uvek ispisuje ILI
-// "Serija x/y" ILI "n min" - zato ide duration grana sa PROTEKLIM minutima
-// ("Serija 0/0" bi bilo besmisleno). Ime "vezbe" nosi naziv treninga.
+// Slobodan trening nema vezbe ni serije - `isFreeWorkout` prebacuje nativni prikaz
+// na svoj raspored (stoperica veliko + puls + kalorije), umesto "Serija x/y" reda.
 const FREE_LA_TITLE = "Slobodan trening";
-const freeLaFields = (elapsedMin: number, hr: number | null): LiveActivityFields => ({
+const freeLaFields = (
+  hr: number | null,
+  kcal: number | null,
+): LiveActivityFields => ({
   exerciseName: FREE_LA_TITLE,
   setNumber: 0,
   totalSets: 0,
   heartRate: hr ?? undefined,
   hrZone: getHrZone(hr),
   isResting: false,
-  isDurationBased: true,
-  durationMinutes: elapsedMin,
+  isDurationBased: false,
   watchConnected: hr != null,
+  isFreeWorkout: true,
+  activeCalories: kcal ?? undefined,
 });
 
 // Slobodan trening (bez plana): zivi dashboard u Apple stilu - trajanje, puls (+ zona),
@@ -266,24 +271,25 @@ const AthleteFreeWorkout = () => {
     if (!liveActivitySupported) return;
     if (startedAtMs == null || finishedRef.current) return;
 
-    // Isti izvor pulsa kao prikaz: samo svez puls sa sata.
+    // Isti izvor pulsa kao prikaz: samo svez puls sa sata. Stopericu native broji
+    // sam (Text(timerInterval:)), pa protekle minute NE treba slati.
     const hr = isHrLive(watchLastHrAt) && watchHr && watchHr > 0 ? watchHr : null;
-    const elapsedMin = Math.max(0, Math.floor((now - startedAtMs) / 60000));
-    const fields = freeLaFields(elapsedMin, hr);
+    const kcal = activeCalories != null ? Math.round(activeCalories) : null;
+    const fields = freeLaFields(hr, kcal);
     const nowMs = Date.now();
 
     if (!laStartedRef.current) {
       laStartedRef.current = true;
-      laLastKeyRef.current = `${elapsedMin}|${fields.hrZone}|${fields.watchConnected}`;
+      laLastKeyRef.current = `${fields.hrZone}|${fields.watchConnected}|${kcal ?? ""}`;
       laLastHrRef.current = hr;
       laLastSentAtRef.current = nowMs;
       laStart({ athleteName: "", workoutStartedAtMs: startedAtMs, ...fields });
       return;
     }
 
-    // Struktura = minut/zona/prisustvo sata (salje odmah); sam puls throttle-ovan
+    // Struktura = zona/prisustvo sata/kalorije (salje odmah); sam puls throttle-ovan
     // na >3 bpm ili 5s, isto kao ActiveWorkout - da LA ne bombardujemo update-ima.
-    const structKey = `${elapsedMin}|${fields.hrZone}|${fields.watchConnected}`;
+    const structKey = `${fields.hrZone}|${fields.watchConnected}|${kcal ?? ""}`;
     const structChanged = structKey !== laLastKeyRef.current;
     const hrDelta = Math.abs((hr ?? 0) - (laLastHrRef.current ?? 0));
     const stale = nowMs - laLastSentAtRef.current > 5000;
@@ -293,7 +299,7 @@ const AthleteFreeWorkout = () => {
       laLastSentAtRef.current = nowMs;
       laUpdate(fields);
     }
-  }, [startedAtMs, now, watchHr, watchLastHrAt]);
+  }, [startedAtMs, now, watchHr, watchLastHrAt, activeCalories]);
 
   // END na napustanje ekrana (finish/kraj sa sata oba navigiraju -> unmount). Idempotentno.
   useEffect(() => {

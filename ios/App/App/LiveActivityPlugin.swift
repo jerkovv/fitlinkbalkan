@@ -169,7 +169,9 @@ public class LiveActivityPlugin: CAPPlugin {
             weightText: call.getString("weightText"),
             nextExerciseName: call.getString("nextExerciseName"),
             nextInfo: call.getString("nextInfo"),
-            watchConnected: call.getBool("watchConnected") ?? false
+            watchConnected: call.getBool("watchConnected") ?? false,
+            isFreeWorkout: call.getBool("isFreeWorkout"),
+            activeCalories: call.getInt("activeCalories")
         )
     }
 }

@@ -35,6 +35,11 @@ struct FitLinkLiveActivityAttributes: ActivityAttributes {
         var nextInfo: String?         // npr "4 serije" ili nil
         var watchConnected: Bool      // sat prisutan -> prikazuje se puls; false -> bez HR
         var imageFileName: String?    // ime kesirane slike u App Group, nil dok se ne skine
+        // Slobodan trening (bez plana): nema vezbe ni serija, pa ima svoj raspored -
+        // stoperica kao glavni element + puls + kalorije. Opciono (Bool?/Int?) da
+        // aktivnost pokrenuta starijim buildom i dalje moze da se dekodira.
+        var isFreeWorkout: Bool? = nil
+        var activeCalories: Int? = nil   // aktivne kalorije (samo slobodan trening)
     }
     var athleteName: String           // fiksno, ime vezbaca (za sad nas trening)
     var workoutStartedAt: Date        // fiksno, pocetak treninga (stoperica broji unapred)
