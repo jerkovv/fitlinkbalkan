@@ -15,6 +15,7 @@ import {
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { generateIpsQrDataUrl } from "@/lib/ipsQr";
+import { useMembershipAccess } from "@/hooks/useMembershipAccess";
 
 type Membership = {
   id: string;
@@ -169,6 +170,9 @@ const BankSlip = ({ bank, amount }: { bank: BankInfo | null; amount: number }) =
 };
 
 const Membership = () => {
+  const { state: pristupState } = useMembershipAccess();
+  // Trener bez pretplate: zahtev bi server ionako odbio, pa ne nudimo dugme.
+  const trenerNeaktivan = pristupState === "trainer_inactive";
   const { user } = useAuth();
   const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
@@ -369,18 +373,23 @@ const Membership = () => {
             <Button
               onClick={openStore}
               size="lg"
-              disabled={!trainerId || packages.length === 0}
+              disabled={!trainerId || packages.length === 0 || trenerNeaktivan}
               className="w-full bg-gradient-brand text-white shadow-brand hover:opacity-95"
             >
               <Plus className="h-4 w-4 mr-2" />
               {ctaLabel}
             </Button>
 
-            {packages.length === 0 && (
+            {trenerNeaktivan ? (
+              <p className="text-center text-[12px] text-muted-foreground -mt-2">
+                Trener trenutno nije aktivan, pa ne možeš da zatražiš članarinu.
+                Javi mu se — čim se aktivira, paketi su ponovo dostupni.
+              </p>
+            ) : packages.length === 0 ? (
               <p className="text-center text-[12px] text-muted-foreground -mt-2">
                 Trener još nije postavio pakete.
               </p>
-            )}
+            ) : null}
 
             {recent.length > 0 && (
               <section>
