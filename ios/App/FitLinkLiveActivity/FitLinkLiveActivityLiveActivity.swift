@@ -194,7 +194,9 @@ struct FreeMetric: View {
     var size: CGFloat = laFreeMetricSize
 
     var body: some View {
-        VStack(alignment: .trailing, spacing: 1) {
+        // Broj centriran IZNAD oznake (oznaka je sira) - desno poravnanje bi
+        // jednocifrenu vrednost ("6" nad "KCAL") gurnulo skroz uz desnu ivicu.
+        VStack(alignment: .center, spacing: 1) {
             Text(value)
                 .font(.system(size: size, weight: .heavy, design: .rounded))
                 .monospacedDigit()
