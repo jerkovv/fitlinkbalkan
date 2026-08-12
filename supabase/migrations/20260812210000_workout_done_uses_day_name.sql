@@ -1,0 +1,8 @@
+-- Poruka "zavrsio trening" je pisala samo "Dan 1", iako dan ima ime koje je
+-- trener sam napisao ("Dan 1 - Zadnjica"). Trener je iz notifikacije morao da
+-- pogadja sta je vezbac radio.
+--
+-- Sad se uzima ime dana iz assigned_program_days, a "Dan N" ostaje samo kad
+-- imena nema.
+--
+-- Telo funkcije je primenjeno kroz MCP; ovaj fajl je zapis te izmene.

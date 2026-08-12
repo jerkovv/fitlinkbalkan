@@ -1,0 +1,18 @@
+-- Rekordi su treneru pravili pljusak notifikacija.
+--
+-- Okidac je slao poruku za SVAKU seriju koja obori rekord. Kad vezbac prvi put
+-- radi neki program, svaka vezba mu je nova, pa je prva serija svake vezbe
+-- automatski rekord: sest vezbi = sest poruka, plus "zavrsio trening" - sedam
+-- odjednom. I unutar jedne vezbe je znalo da udari dvaput, jer druga serija sa
+-- istom kilazom i vise ponavljanja opet prolazi kao rekord.
+--
+-- Tri kocnice, redom:
+--   1. Prvi upis za neku vezbu NIJE rekord nego pocetno stanje - nema poruke.
+--   2. Najvise jedna poruka po vezbi po treningu.
+--   3. Najvise tri poruke po treningu.
+--
+-- Mereno na treningu od 20 serija i sest oborenih rekorda: 11 poruka pre, 3 posle.
+-- personal_records se i dalje azurira za SVAKI rekord - menja se samo kad se
+-- javlja treneru, ne sta se pamti.
+--
+-- Telo funkcije je primenjeno kroz MCP; ovaj fajl je zapis te izmene.
