@@ -107,14 +107,19 @@ export const TrainerLayout = () => {
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [role, checkAccess]);
 
-  // Poll na 5s dok pristup NIJE potvrdjen (jos proveravamo ili je zakljucano) -> auto-otkljucavanje
-  // cim pretplata postane aktivna. Cim je pristup true, poll se gasi. Preskace kad je app u pozadini.
+  // Poll u OBA smera. Ranije se gasio cim je pristup potvrdjen, pa treneru kome
+  // pretplata istekne dok app stoji otvoren nista nije zakljucavalo ekran - radio
+  // je dalje sve dok ne izadje i vrati se. Server bi ga odbio, ali bi dugmad
+  // izgledala ziva i akcije bi pucale greskom umesto da se uredno zakljucaju.
+  //
+  // Zakljucano -> 5s (da se otkljuca skoro odmah cim plati).
+  // Otkljucano -> 60s (dovoljno da istek primeti u roku od minuta, bez suvisnih poziva).
+  // Preskace kad je app u pozadini.
   useEffect(() => {
     if (role !== "trainer") return;
-    if (access === true) return;
     const id = setInterval(() => {
       if (document.visibilityState === "visible") checkAccess();
-    }, 5000);
+    }, access === true ? 60000 : 5000);
     return () => clearInterval(id);
   }, [role, access, checkAccess]);
 

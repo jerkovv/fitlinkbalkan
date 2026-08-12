@@ -24,14 +24,22 @@ export const TrenerNeaktivanTraka = () => {
     };
 
     proveri();
-    // Osvezi kad se app vrati u prvi plan - da traka nestane cim trener plati.
+
+    // Osvezi na povratak app-a u prvi plan I periodicno. Bez intervala traka bi
+    // ostala da visi (ili izostala) sve dok vezbac ne izadje iz app-a i vrati se -
+    // a status trenera se menja bez njegovog ucesca.
     const naVidljivost = () => {
       if (document.visibilityState === "visible") proveri();
     };
     document.addEventListener("visibilitychange", naVidljivost);
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") proveri();
+    }, 60000);
+
     return () => {
       otkazano = true;
       document.removeEventListener("visibilitychange", naVidljivost);
+      clearInterval(id);
     };
   }, [user, role]);
 
