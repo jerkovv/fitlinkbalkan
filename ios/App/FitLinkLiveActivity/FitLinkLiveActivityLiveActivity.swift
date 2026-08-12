@@ -70,17 +70,26 @@ private func restCountdownRange(_ end: Date) -> ClosedRange<Date> {
     return end > now ? now...end : now...now.addingTimeInterval(1)
 }
 
-private func setOrDurationText(_ s: FitLinkLiveActivityAttributes.ContentState) -> String {
-    s.isDurationBased ? "\(s.durationMinutes ?? 0) min" : "Serija \(s.setNumber)/\(s.totalSets)"
+// nil = nema sta smisleno da se pokaze. Kad ukupan broj serija nije poznat
+// (totalSets 0) NE pisemo "Serija 1/0" - bolje prazno nego besmislen podatak.
+private func setOrDurationText(_ s: FitLinkLiveActivityAttributes.ContentState) -> String? {
+    if s.isDurationBased { return "\(s.durationMinutes ?? 0) min" }
+    guard s.totalSets > 0 else { return nil }
+    return "Serija \(s.setNumber)/\(s.totalSets)"
 }
 
 // "Serija x/y" (ili "n min") + " · weightText" (samo snaga, ako stigne). Lyfta stil.
-private func setLineText(_ s: FitLinkLiveActivityAttributes.ContentState) -> String {
-    var base = setOrDurationText(s)
-    if !s.isDurationBased, let w = s.weightText, !w.isEmpty {
-        base += " · \(w)"
+// nil kad nema nijednog dela - tada se ceo red izostavlja.
+private func setLineText(_ s: FitLinkLiveActivityAttributes.ContentState) -> String? {
+    let base = setOrDurationText(s)
+    var weight: String? = nil
+    if !s.isDurationBased, let w = s.weightText, !w.isEmpty { weight = w }
+    switch (base, weight) {
+    case let (b?, w?): return "\(b) · \(w)"
+    case let (b?, nil): return b
+    case let (nil, w?): return w
+    case (nil, nil):   return nil
     }
-    return base
 }
 
 // Stoperica treninga: broji UNAPRED od pocetka. showsHours: true -> ispod 1h "M:SS"
@@ -223,6 +232,8 @@ struct LiveActivityLockScreenView: View {
 
                 Spacer(minLength: 8)
 
+                // Metrike samo kad stvarno postoje (bez sata nema ni pulsa ni kalorija) -
+                // tada ostaje cista kartica sa stopericom, bez praznih placeholder-a.
                 if let hr = state.heartRate, state.watchConnected {
                     freeMetric(
                         value: "\(hr)",
@@ -311,8 +322,8 @@ struct LiveActivityLockScreenView: View {
                     .foregroundColor(.white)
             }
             .lineLimit(1)
-        } else {
-            Text(setLineText(state))
+        } else if let line = setLineText(state) {
+            Text(line)
                 .font(.system(size: laSubSize, weight: .medium))
                 .foregroundColor(laTxtDim)
                 .lineLimit(1)
@@ -367,7 +378,7 @@ struct FitLinkLiveActivityLiveActivity: Widget {
                                 .lineLimit(2)
                                 .minimumScaleFactor(0.85)
                             if state.isFreeWorkout == true {
-                                // Slobodan trening: nema serija -> kalorije (ili nista dok ih nema).
+                                // Slobodan trening: nema serija -> kalorije, i to samo kad postoje.
                                 if let kcal = state.activeCalories {
                                     Text("\(kcal) kcal")
                                         .font(.system(size: 14, weight: .medium))
@@ -388,8 +399,8 @@ struct FitLinkLiveActivityLiveActivity: Widget {
                                         .foregroundColor(.white)
                                 }
                                 .lineLimit(1)
-                            } else {
-                                Text(setLineText(state))
+                            } else if let line = setLineText(state) {
+                                Text(line)
                                     .font(.system(size: 14, weight: .medium))
                                     .foregroundColor(laTxtDim)
                                     .lineLimit(1)
