@@ -26,24 +26,18 @@ export const PretplataLockProvider = ({ locked, fact, children }: Props) => {
           type="button"
           onClick={openLock}
           aria-label="Nemaš aktivnu pretplatu, dodirni za objašnjenje"
-          // Iznad donje navigacije (fixed, z-30, visina ~64px + mb-3), da ne
-          // prekrije ni tabove ni zaglavlje stranice.
-          className="fixed left-1/2 z-40 w-[calc(100%-24px)] max-w-[416px] -translate-x-1/2
-                     inline-flex items-center gap-2.5 rounded-2xl border border-hairline
-                     bg-surface/95 px-4 py-2.5 shadow-large backdrop-blur-xl
+          // Lebdi IZNAD donje navigacije (ona je fixed, z-30, ~67px + mb-3), sa
+          // dovoljnim odmakom da se ne dodiruju. Violet tinta, da se ne cita kao
+          // jos jedna kartica u sadrzaju.
+          className="fixed left-1/2 z-40 w-[calc(100%-32px)] max-w-[400px] -translate-x-1/2
+                     inline-flex items-center gap-2.5 rounded-2xl border border-primary/20
+                     bg-primary-soft/95 px-3.5 py-2.5 shadow-large backdrop-blur-xl
                      active:scale-[0.99] transition"
-          style={{ bottom: "calc(env(safe-area-inset-bottom) + 76px)" }}
+          style={{ bottom: "calc(env(safe-area-inset-bottom) + 100px)" }}
         >
-          <span className="flex h-7 w-7 flex-none items-center justify-center rounded-xl bg-primary-soft">
-            <Lock className="h-3.5 w-3.5 text-primary" strokeWidth={2.4} />
-          </span>
-          <span className="min-w-0 text-left">
-            <span className="block text-[12.5px] font-semibold leading-tight text-foreground">
-              Nemaš aktivnu pretplatu
-            </span>
-            <span className="block truncate text-[11px] leading-tight text-muted-foreground">
-              Izmene su zaključane
-            </span>
+          <Lock className="h-4 w-4 flex-none text-primary" strokeWidth={2.5} />
+          <span className="min-w-0 flex-1 text-left text-[12.5px] font-semibold leading-tight text-primary-soft-foreground">
+            Nemaš aktivnu pretplatu - izmene su zaključane
           </span>
         </button>
       )}

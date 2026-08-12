@@ -31,6 +31,7 @@ import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { ExercisePickerSheet } from "@/components/exercises/ExercisePickerSheet";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { LockMark } from "@/components/pretplata/LockMark";
 
 type Day = { id: string; day_number: number; name: string; notes: string | null };
 type Exercise = {
@@ -776,7 +777,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
               className="w-full h-12 bg-gradient-brand text-white shadow-brand"
             >
               {notifying ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-              Pošalji vežbaču
+              <LockMark className="mr-1.5" />Pošalji vežbaču
             </Button>
           </div>
         </div>

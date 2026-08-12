@@ -27,6 +27,7 @@ import {
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { LockMark } from "@/components/pretplata/LockMark";
 
 type Day = { id: string; day_number: number; name: string };
 type Meal = { id: string; day_id: string; meal_order: number; name: string; time_hint: string | null };
@@ -1144,7 +1145,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
             className="w-full bg-gradient-brand text-white shadow-brand"
           >
             {notifying ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-            Pošalji vežbaču
+            <LockMark className="mr-1.5" />Pošalji vežbaču
           </Button>
         </div>
       )}

@@ -14,6 +14,7 @@ import { Loader2, Banknote, Receipt, Check, X, Inbox, ChevronRight, IdCard } fro
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { MembershipEditSheet } from "@/components/trainer/MembershipEditSheet";
+import { LockMark } from "@/components/pretplata/LockMark";
 
 type Purchase = {
   id: string;
@@ -328,7 +329,7 @@ const Payments = () => {
                         onClick={() => rejectPurchase(p)}
                         disabled={busyId === p.id}
                       >
-                        <X className="h-4 w-4 mr-1.5" /> Odbij
+                        <LockMark className="mr-1.5" /><X className="h-4 w-4 mr-1.5" /> Odbij
                       </Button>
                       <Button
                         onClick={() => confirmPurchase(p)}
@@ -340,6 +341,7 @@ const Payments = () => {
                         ) : (
                           <Check className="h-4 w-4 mr-1.5" />
                         )}
+                        <LockMark className="mr-1.5" />
                         Potvrdi
                       </Button>
                     </div>

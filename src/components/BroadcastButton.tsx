@@ -14,6 +14,7 @@ import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { LockMark } from "@/components/pretplata/LockMark";
 
 const MAX = 1000;
 
@@ -80,7 +81,7 @@ export const BroadcastButton = ({ fab = false }: Props) => {
 
       {!fab && (
         <Button className="gap-2" onClick={() => setOpen(true)}>
-          <Megaphone className="h-4 w-4" /> Obaveštenje
+          <LockMark /><Megaphone className="h-4 w-4" /> Obaveštenje
         </Button>
       )}
 

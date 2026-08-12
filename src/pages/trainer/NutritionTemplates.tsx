@@ -16,6 +16,7 @@ import {
 import { Plus, Apple, ChevronRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { LockMark } from "@/components/pretplata/LockMark";
 
 type Template = {
   id: string;
@@ -143,7 +144,7 @@ const NutritionTemplates = () => {
           <FullScreenSheetFooter>
             <Button type="submit" disabled={submitting} className="w-full bg-gradient-brand text-white shadow-brand">
               {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Kreiraj plan
+              <LockMark className="mr-1.5" />Kreiraj plan
             </Button>
           </FullScreenSheetFooter>
         </form>

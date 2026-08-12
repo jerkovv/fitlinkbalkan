@@ -17,6 +17,7 @@ import { Plus, ClipboardList, ChevronRight, Loader2, Target, Trash2 } from "luci
 import { toast } from "sonner";
 import { useConfirm } from "@/hooks/useConfirm";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { LockMark } from "@/components/pretplata/LockMark";
 
 type Template = {
   id: string;
@@ -143,7 +144,7 @@ const ProgramTemplates = () => {
           <FullScreenSheetFooter>
             <Button type="submit" disabled={submitting} className="w-full bg-gradient-brand text-white shadow-brand">
               {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Kreiraj program
+              <LockMark className="mr-1.5" />Kreiraj program
             </Button>
           </FullScreenSheetFooter>
         </form>

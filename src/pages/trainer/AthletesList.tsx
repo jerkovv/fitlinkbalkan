@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { LockMark } from "@/components/pretplata/LockMark";
 
 type AthleteRow = {
   id: string;
@@ -442,7 +443,7 @@ const AthletesList = () => {
               onClick={() => setInviteOpen(true)}
               className="w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-brand text-white py-4 text-[14px] font-semibold shadow-brand active:scale-[0.99] transition"
             >
-              <Mail className="h-4 w-4" /> Pozovi vežbača emailom
+              <LockMark /><Mail className="h-4 w-4" /> Pozovi vežbača emailom
             </button>
           </>
         )}
