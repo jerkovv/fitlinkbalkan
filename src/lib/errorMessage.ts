@@ -45,6 +45,34 @@ const KNOWN_NATIVE_MESSAGES: { match: string; message: string }[] = [
   { match: "WCSession not yet activated", message: "Konekcija sa satom se još uspostavlja. Sačekaj par sekundi i pokušaj ponovo." },
 ];
 
+// Supabase Auth (GoTrue) greske -> konkretna poruka. Nose status 400/422, pa bez ovoga
+// padaju na generican fallback ("Nesto nije u redu") i korisnik ne zna da je pogresio
+// lozinku. Poklapa se I po code-u (noviji supabase-js) I po tekstu poruke (stariji
+// klijenti / neki tokovi salju samo message) - dovoljno je da se jedno poklopi.
+//
+// Namerno NE razdvajamo "pogresan email" od "pogresna lozinka": GoTrue vraca istu
+// gresku za oba, da se ne moze ispitivanjem otkriti koji email postoji u bazi.
+const KNOWN_AUTH: { code?: string; match?: string; message: string }[] = [
+  { code: "invalid_credentials", match: "Invalid login credentials",
+    message: "Pogrešan email ili lozinka." },
+  { code: "email_not_confirmed", match: "Email not confirmed",
+    message: "Nalog još nije potvrđen. Otvori link koji smo ti poslali na email." },
+  { code: "user_already_exists", match: "User already registered",
+    message: "Nalog sa tim email-om već postoji. Prijavi se ili resetuj lozinku." },
+  { code: "weak_password", match: "Password should be at least",
+    message: "Lozinka mora imati bar 6 znakova." },
+  { code: "same_password", match: "New password should be different",
+    message: "Nova lozinka mora biti različita od stare." },
+  { code: "otp_expired", match: "Token has expired or is invalid",
+    message: "Kod je istekao ili nije ispravan. Zatraži novi." },
+  { code: "over_email_send_rate_limit", match: "Email rate limit exceeded",
+    message: "Previše pokušaja. Sačekaj minut pa probaj ponovo." },
+  { code: "over_request_rate_limit", match: "For security purposes, you can only request this after",
+    message: "Previše pokušaja. Sačekaj minut pa probaj ponovo." },
+  { match: "Unable to validate email address",
+    message: "Email adresa nije ispravna." },
+];
+
 // Postgres/PostgREST kodovi -> generican prevod, kad ime ogranicenja nije poznato.
 const CODE_MESSAGES: Record<string, string> = {
   "23514": "Uneta vrednost nije u dozvoljenom opsegu.",
@@ -92,6 +120,11 @@ export function porukaGreske(error: unknown): string {
 
   for (const known of KNOWN_NATIVE_MESSAGES) {
     if (haystack.includes(known.match)) return known.message;
+  }
+
+  for (const known of KNOWN_AUTH) {
+    if (known.code && code === known.code) return known.message;
+    if (known.match && haystack.includes(known.match)) return known.message;
   }
 
   if (code === "PGRST301" || code === "401" || status === 401) {
