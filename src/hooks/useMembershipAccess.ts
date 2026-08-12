@@ -2,7 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
-export type MembershipState = "active" | "expired" | "none" | "paused" | "cancelled";
+// "trainer_inactive" = trener nema aktivnu FitLink pretplatu; vezbac je tada
+// zakljucan bez obzira na svoju clanarinu (server to vraca iz
+// get_my_membership_access).
+export type MembershipState =
+  | "active" | "expired" | "none" | "paused" | "cancelled" | "trainer_inactive";
 
 export interface MembershipAccess {
   loading: boolean;

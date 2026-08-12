@@ -16,6 +16,7 @@ const TITLES: Record<MembershipState, string> = {
   none: "Nemaš aktivnu članarinu",
   paused: "Članarina je pauzirana",
   cancelled: "Članarina je otkazana",
+  trainer_inactive: "Trener nije aktivan",
 };
 
 // "2026-07-05" -> "5.7.2026."
@@ -63,7 +64,9 @@ export const ClanarinaLockSheet = ({
             {TITLES[state] || "Nemaš aktivnu članarinu"}
           </DrawerTitle>
           <DrawerDescription className="text-[14.5px] leading-relaxed text-muted-foreground max-w-[340px]">
-            Da otključaš treninge, ishranu i zakazivanje, obnovi članarinu kod trenera{ime}.
+            {state === "trainer_inactive"
+              ? `Tvoj trener${ime} trenutno nije aktivan u aplikaciji, pa su treninzi, ishrana i zakazivanje zaključani. Javi mu se.`
+              : `Da otključaš treninge, ishranu i zakazivanje, obnovi članarinu kod trenera${ime}.`}
           </DrawerDescription>
           {expiredOn && (
             <div className="text-[13px] text-muted-foreground/70 mt-1">Istekla {expiredOn}</div>
@@ -79,12 +82,14 @@ export const ClanarinaLockSheet = ({
               Piši treneru
             </button>
           )}
-          <button
-            onClick={() => go("/vezbac/clanarina")}
-            className="h-11 rounded-2xl text-[14px] font-semibold text-muted-foreground hover:text-foreground transition"
-          >
-            Pogledaj članarinu
-          </button>
+          {state !== "trainer_inactive" && (
+            <button
+              onClick={() => go("/vezbac/clanarina")}
+              className="h-11 rounded-2xl text-[14px] font-semibold text-muted-foreground hover:text-foreground transition"
+            >
+              Pogledaj članarinu
+            </button>
+          )}
         </DrawerFooter>
       </DrawerContent>
     </Drawer>
