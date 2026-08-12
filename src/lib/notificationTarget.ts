@@ -32,7 +32,7 @@ export const getActionTarget = (
     }
     if (n.kind === "payment_request" || n.kind === "payment_marked")
       return { path: "/trener/uplate", label: "Otvori uplate" };
-    if (n.kind === "workout_completed" || n.kind === "message")
+    if (n.kind === "workout_completed" || n.kind === "message" || n.kind === "pr_set")
       return { path: `/trener/vezbaci/${n.athlete_id}`, label: "Otvori profil vežbača" };
     if (n.kind === "waitlist_joined") {
       const slotDate = n.meta?.slot_date as string | undefined;
@@ -43,6 +43,7 @@ export const getActionTarget = (
   // athlete
   if (n.kind === "program_assigned") return { path: "/vezbac/trening", label: "Otvori program" };
   if (n.kind === "nutrition_assigned") return { path: "/vezbac/ishrana", label: "Otvori plan ishrane" };
+  if (n.kind === "message_from_trainer") return { path: "/vezbac/chat", label: "Otvori chat" };
   if (n.kind === "membership_expiring" || n.kind === "membership_expired"
       || n.kind === "membership_activated" || n.kind === "membership_rejected")
     return { path: "/vezbac/clanarina", label: "Otvori članarinu" };
