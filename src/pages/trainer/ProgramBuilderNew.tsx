@@ -94,7 +94,7 @@ function SortableExerciseRow({
 }
 
 const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) => {
-  const { locked, openLock } = usePretplataLock();
+  const { locked, openLock, guard } = usePretplataLock();
   const params = useParams<{ id?: string; assignedId?: string; athleteId?: string }>();
   // parentId = template_id (sablon) ili assigned_program_id (dodeljeni plan).
   const parentId = mode === "assigned" ? params.assignedId : params.id;
@@ -252,6 +252,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
   };
 
   const openExercisePicker = (dayId: string) => {
+    if (locked) return openLock();
     setPickerDayId(dayId);
   };
 
@@ -415,7 +416,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
       title={mode === "assigned" ? "Izmeni plan" : templateName}
       rightSlot={
         <button
-          onClick={() => setAddDayOpen(true)}
+          onClick={guard(() => setAddDayOpen(true))}
           className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-brand active:scale-95 transition"
         >
           <Plus className="h-4 w-4" strokeWidth={2.5} />
@@ -435,7 +436,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
           <p className="text-sm text-muted-foreground mb-4 px-8">
             Program se sastoji iz dana koji se rotiraju.
           </p>
-          <Button onClick={() => setAddDayOpen(true)}>
+          <Button onClick={guard(() => setAddDayOpen(true))}>
             <Plus className="h-4 w-4 mr-1.5" /> Novi dan
           </Button>
         </div>

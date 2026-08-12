@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Loader2, Plus, Pencil, Trash2, Package } from "lucide-react";
 import { toast } from "sonner";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { LockMark } from "@/components/pretplata/LockMark";
 
 type Pkg = {
   id: string;
@@ -60,12 +61,14 @@ const Packages = () => {
   const activeCount = packages.filter((p) => p.is_active).length;
 
   const openNew = () => {
+    if (locked) return openLock();
     setEditing(null);
     setForm(empty);
     setOpen(true);
   };
 
   const openEdit = (p: Pkg) => {
+    if (locked) return openLock();
     setEditing(p);
     setForm({
       name: p.name,
@@ -145,7 +148,7 @@ const Packages = () => {
             size="sm"
             className="bg-gradient-brand text-white shadow-brand"
           >
-            <Plus className="h-4 w-4 mr-1.5" /> Novi paket
+            <LockMark className="mr-1.5" /><Plus className="h-4 w-4 mr-1.5" /> Novi paket
           </Button>
         </div>
 

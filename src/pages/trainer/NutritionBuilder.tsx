@@ -102,7 +102,7 @@ function SortableFoodItemRow({
 }
 
 const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }) => {
-  const { locked, openLock } = usePretplataLock();
+  const { locked, openLock, guard } = usePretplataLock();
   const params = useParams<{ id?: string; assignedId?: string; athleteId?: string }>();
   // parentId = template_id (sablon) ili assigned_plan_id (dodeljeni plan).
   const parentId = mode === "assigned" ? params.assignedId : params.id;
@@ -307,6 +307,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   };
 
   const openFoodPicker = async (mealId: string) => {
+    if (locked) return openLock();
     setPickerMealId(mealId);
     setPickedFood(null);
     setPickedGrams("100");
@@ -538,7 +539,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
       title={mode === "assigned" ? "Izmeni plan ishrane" : templateName}
       rightSlot={
         <button
-          onClick={() => setAddDayOpen(true)}
+          onClick={guard(() => setAddDayOpen(true))}
           className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-brand active:scale-95 transition"
         >
           <Plus className="h-4 w-4" strokeWidth={2.5} />
@@ -558,7 +559,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
           <p className="text-sm text-muted-foreground mb-4 px-8">
             Plan ima dane (Dan 1, Dan 2…). U nedeljnom rasporedu biraš koji dan ide kog dana.
           </p>
-          <Button onClick={() => setAddDayOpen(true)}>
+          <Button onClick={guard(() => setAddDayOpen(true))}>
             <Plus className="h-4 w-4 mr-1.5" /> Novi dan
           </Button>
         </div>
@@ -566,7 +567,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
         <div className="space-y-3 pb-32">
           {/* Week schedule button */}
           <button
-            onClick={() => setScheduleOpen(true)}
+            onClick={guard(() => setScheduleOpen(true))}
             className="w-full card-premium-hover p-4 flex items-center gap-3"
           >
             <div className="h-10 w-10 rounded-xl bg-gradient-brand-soft flex items-center justify-center shrink-0">

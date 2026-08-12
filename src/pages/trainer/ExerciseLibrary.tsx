@@ -71,7 +71,7 @@ const muscleLabel = (v: string) => MUSCLE_GROUPS.find((m) => m.value === v)?.lab
 const equipLabel = (v: string) => EQUIPMENT.find((e) => e.value === v)?.label ?? v;
 
 const ExerciseLibrary = () => {
-  const { locked, openLock } = usePretplataLock();
+  const { locked, openLock, guard } = usePretplataLock();
   const { user } = useAuth();
   const [items, setItems] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
@@ -164,7 +164,7 @@ const ExerciseLibrary = () => {
         </Link>
         <span className="eyebrow text-muted-foreground">Biblioteka</span>
         <button
-          onClick={() => setOpen(true)}
+          onClick={guard(() => setOpen(true))}
           className="h-9 w-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-brand"
         >
           <Plus className="h-4 w-4" />

@@ -169,7 +169,7 @@ const StatBox = ({
 );
 
 const AthleteProfile = () => {
-  const { locked, openLock } = usePretplataLock();
+  const { locked, openLock, guard } = usePretplataLock();
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -1167,7 +1167,7 @@ const AthleteProfile = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setBonusOpen(true)}
+              onClick={guard(() => setBonusOpen(true))}
               className="w-full"
             >
               <Plus className="h-4 w-4 mr-1.5" /> Dodaj bonus
@@ -1175,7 +1175,7 @@ const AthleteProfile = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setMembershipEditOpen(true)}
+              onClick={guard(() => setMembershipEditOpen(true))}
               className="w-full"
             >
               <Pencil className="h-4 w-4 mr-1.5" /> Izmeni
@@ -1194,7 +1194,7 @@ const AthleteProfile = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setMembershipEditOpen(true)}
+            onClick={guard(() => setMembershipEditOpen(true))}
             className="w-full"
           >
             <Plus className="h-4 w-4 mr-1.5" /> Dodaj članarinu
@@ -1391,7 +1391,7 @@ const AthleteProfile = () => {
 
       <section className="pt-2">
         <button
-          onClick={() => setRemoveOpen(true)}
+          onClick={guard(() => setRemoveOpen(true))}
           className="w-full flex items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 hover:bg-destructive/10 text-destructive py-3.5 text-[13.5px] font-semibold transition"
         >
           <UserMinus className="h-4 w-4" />

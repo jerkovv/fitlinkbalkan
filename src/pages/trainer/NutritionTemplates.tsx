@@ -28,7 +28,7 @@ type Template = {
 };
 
 const NutritionTemplates = () => {
-  const { locked, openLock } = usePretplataLock();
+  const { locked, openLock, guard } = usePretplataLock();
   const { user } = useAuth();
   const [items, setItems] = useState<Template[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -100,7 +100,7 @@ const NutritionTemplates = () => {
       title="Planovi ishrane"
       rightSlot={
         <button
-          onClick={() => setOpen(true)}
+          onClick={guard(() => setOpen(true))}
           className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-brand active:scale-95 transition"
         >
           <Plus className="h-4 w-4" strokeWidth={2.5} />
@@ -162,8 +162,8 @@ const NutritionTemplates = () => {
           <p className="text-sm text-muted-foreground mb-4 px-8">
             Napravi prvi plan i dodeli ga vežbačima.
           </p>
-          <Button onClick={() => setOpen(true)}>
-            <Plus className="h-4 w-4 mr-1.5" /> Novi plan
+          <Button onClick={guard(() => setOpen(true))}>
+            <LockMark className="mr-1.5" /><Plus className="h-4 w-4 mr-1.5" /> Novi plan
           </Button>
         </div>
       ) : (

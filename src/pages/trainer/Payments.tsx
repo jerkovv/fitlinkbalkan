@@ -241,6 +241,7 @@ const Payments = () => {
   }, [overview, ovFilter, sortKey]);
 
   const openEdit = (membershipId: string) => {
+    if (locked) return openLock();
     setEditMembershipId(membershipId);
     setEditOpen(true);
   };

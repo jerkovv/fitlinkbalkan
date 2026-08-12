@@ -20,6 +20,7 @@ import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { DeleteAccountSheet } from "@/components/DeleteAccountSheet";
 import { SITE_BASE, publicTrainerUrl } from "@/lib/publicUrl";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 
 const SITE_HOST = new URL(SITE_BASE).host;
 
@@ -68,6 +69,7 @@ function subLabel(sub: TrainerSub | null): string | null {
 }
 
 const Profile = () => {
+  const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -208,6 +210,7 @@ const Profile = () => {
   };
 
   const handleSave = async () => {
+    if (locked) return openLock();
     if (!user) return;
 
     const slugClean = publicSlug.trim().toLowerCase();

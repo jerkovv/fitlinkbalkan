@@ -29,7 +29,7 @@ type Template = {
 };
 
 const ProgramTemplates = () => {
-  const { locked, openLock } = usePretplataLock();
+  const { locked, openLock, guard } = usePretplataLock();
   const { user } = useAuth();
   const confirm = useConfirm();
   const [items, setItems] = useState<Template[]>([]);
@@ -112,7 +112,7 @@ const ProgramTemplates = () => {
       title="Programi"
       rightSlot={
         <button
-          onClick={() => setOpen(true)}
+          onClick={guard(() => setOpen(true))}
           className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-brand active:scale-95 transition"
         >
           <Plus className="h-4 w-4" strokeWidth={2.5} />
@@ -162,8 +162,8 @@ const ProgramTemplates = () => {
           <p className="text-sm text-muted-foreground mb-4 px-8">
             Kreiraj prvi program i dodeli ga svojim vežbačima.
           </p>
-          <Button onClick={() => setOpen(true)}>
-            <Plus className="h-4 w-4 mr-1.5" /> Novi program
+          <Button onClick={guard(() => setOpen(true))}>
+            <LockMark className="mr-1.5" /><Plus className="h-4 w-4 mr-1.5" /> Novi program
           </Button>
         </div>
       ) : (

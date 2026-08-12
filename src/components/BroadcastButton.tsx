@@ -24,7 +24,7 @@ interface Props {
 }
 
 export const BroadcastButton = ({ fab = false }: Props) => {
-  const { locked, openLock } = usePretplataLock();
+  const { locked, openLock, guard } = usePretplataLock();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -64,7 +64,7 @@ export const BroadcastButton = ({ fab = false }: Props) => {
           <div className="w-full max-w-[440px] px-5 flex justify-end">
             <button
               type="button"
-              onClick={() => setOpen(true)}
+              onClick={guard(() => setOpen(true))}
               aria-label="Pošalji obaveštenje svima"
               className={cn(
                 "pointer-events-auto h-14 px-5 rounded-full",
@@ -80,7 +80,7 @@ export const BroadcastButton = ({ fab = false }: Props) => {
       )}
 
       {!fab && (
-        <Button className="gap-2" onClick={() => setOpen(true)}>
+        <Button className="gap-2" onClick={guard(() => setOpen(true))}>
           <LockMark /><Megaphone className="h-4 w-4" /> Obaveštenje
         </Button>
       )}

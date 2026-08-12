@@ -99,12 +99,14 @@ const SessionSettings = () => {
 
   // ===== Type CRUD =====
   const openNewType = () => {
+    if (locked) return openLock();
     setEditingType(null);
     setTypeForm({ name: "", color: "violet", capacity: "1", duration_min: "60" });
     setTypeOpen(true);
   };
 
   const openEditType = (t: SessionType) => {
+    if (locked) return openLock();
     setEditingType(t);
     setTypeForm({
       name: t.name,
@@ -175,6 +177,7 @@ const SessionSettings = () => {
 
   // ===== Slot template CRUD =====
   const openNewSlot = (weekday?: number) => {
+    if (locked) return openLock();
     if (types.length === 0) { toast.error("Prvo napravi tip sesije"); return; }
     setSlotForm({
       session_type_id: types[0].id,

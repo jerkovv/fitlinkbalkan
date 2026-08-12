@@ -90,7 +90,7 @@ const filters: { key: "all" | "active" | "expiring" | "expired"; label: string }
 ];
 
 const AthletesList = () => {
-  const { locked, openLock } = usePretplataLock();
+  const { locked, openLock, guard } = usePretplataLock();
   const { user } = useAuth();
   const [filter, setFilter] = useState<"all" | "active" | "expiring" | "expired">("all");
   const [q, setQ] = useState("");
@@ -440,7 +440,7 @@ const AthletesList = () => {
             )}
 
             <button
-              onClick={() => setInviteOpen(true)}
+              onClick={guard(() => setInviteOpen(true))}
               className="w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-brand text-white py-4 text-[14px] font-semibold shadow-brand active:scale-[0.99] transition"
             >
               <LockMark /><Mail className="h-4 w-4" /> Pozovi vežbača emailom
