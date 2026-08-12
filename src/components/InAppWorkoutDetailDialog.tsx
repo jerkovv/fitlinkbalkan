@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui-bits";
-import { cn } from "@/lib/utils";
+import { cn, razlikaKg } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import {
   computeMaxHR, formatDuration, type HRPair, type ZoneBucket,
@@ -270,10 +270,7 @@ export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange }: Prop
                       <div className="px-3.5 py-2 space-y-1">
                         {(ex.sets ?? []).map((s) => {
                           // Delta vs plan: stvarna tezina - planirana (samo kad ima plana).
-                          const wDelta =
-                            ex.planned_weight_kg != null && s.weight_kg != null
-                              ? s.weight_kg - ex.planned_weight_kg
-                              : null;
+                          const wDelta = razlikaKg(s.weight_kg, ex.planned_weight_kg);
                           return (
                             <div
                               key={s.set_number}
@@ -295,7 +292,7 @@ export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange }: Prop
                                   </>
                                 )}
                               </span>
-                              {wDelta != null && wDelta !== 0 && s.done && (
+                              {wDelta != null && s.done && (
                                 <span
                                   className={cn(
                                     "inline-flex items-center gap-0.5 text-[10px] font-semibold shrink-0",

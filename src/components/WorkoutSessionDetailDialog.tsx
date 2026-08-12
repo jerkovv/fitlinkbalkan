@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabase";
 import { Loader2, Dumbbell, Clock, CalendarDays, TrendingUp, TrendingDown, Minus, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, razlikaKg } from "@/lib/utils";
 
 type Props = {
   sessionId: string | null;
@@ -315,8 +315,7 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
 
                         const planW = ex.planned_weight;
                         const actW = log?.weight_kg != null ? Number(log.weight_kg) : null;
-                        const wDelta =
-                          planW != null && actW != null ? actW - Number(planW) : null;
+                        const wDelta = razlikaKg(actW, planW);
 
                         return (
                           <div
@@ -333,7 +332,7 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
                               )}
                             >
                               {actW ?? "-"}
-                              {wDelta != null && wDelta !== 0 && done && (
+                              {wDelta != null && done && (
                                 <span
                                   className={cn(
                                     "text-[10px] font-semibold",
