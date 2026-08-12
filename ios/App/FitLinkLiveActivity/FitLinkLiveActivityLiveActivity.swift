@@ -409,6 +409,10 @@ struct FitLinkLiveActivityLiveActivity: Widget {
                             metricSize: 18
                         )
                         .padding(.top, 2)
+                        // Prosireno ostrvo ide do zaobljenih uglova - bez ove margine
+                        // se oznaka desne metrike ("LAKO") sece o ivicu.
+                        .padding(.trailing, 14)
+                        .padding(.leading, 2)
                     } else {
                     HStack(spacing: 12) {
                         LiveActivityThumb(imageFileName: state.imageFileName, size: 50, corner: 11, iconSize: 22)
