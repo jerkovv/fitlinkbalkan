@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { DeleteAccountSheet } from "@/components/DeleteAccountSheet";
 import { SITE_BASE, publicTrainerUrl } from "@/lib/publicUrl";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { PravnoIPodrska } from "@/components/PravnoIPodrska";
 
 const SITE_HOST = new URL(SITE_BASE).host;
 
@@ -777,6 +778,8 @@ const Profile = () => {
             </Button>
 
             {/* Nalog - brisanje naloga, mora biti vidljivo direktno na ekranu (Apple 5.1.1(v)) */}
+            <PravnoIPodrska />
+
             <Card className="p-5 space-y-3">
               <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 Nalog

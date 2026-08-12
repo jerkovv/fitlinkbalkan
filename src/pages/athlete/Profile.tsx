@@ -23,6 +23,7 @@ import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { DeleteAccountSheet } from "@/components/DeleteAccountSheet";
 import { WatchResetCard } from "@/components/WatchResetCard";
+import { PravnoIPodrska } from "@/components/PravnoIPodrska";
 
 type Goal = "lose_weight" | "gain_muscle" | "endurance" | "mobility" | "general";
 type Gender = "male" | "female" | "other";
@@ -454,6 +455,8 @@ const Profile = () => {
             <WatchResetCard />
 
             {/* Nalog - brisanje naloga, mora biti vidljivo direktno na ekranu (Apple 5.1.1(v)) */}
+            <PravnoIPodrska />
+
             <Card className="p-5 space-y-3">
               <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 Nalog
