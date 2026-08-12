@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
-import { Briefcase, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { BrandGlyph } from "@/components/BrandMark";
 
 // Gde vodi link za potvrdu naloga iz mejla. Landing (fitlink.rs), NE app.fitlink.rs:
 // posle potvrde trener treba da vidi sta dalje (pretplata), a ne da upadne pravo u
@@ -164,7 +165,7 @@ const Auth = () => {
 
       <div className="mb-8">
         <div className="h-12 w-12 rounded-2xl bg-trainer-soft text-trainer-soft-foreground flex items-center justify-center mb-4">
-          <Briefcase className="h-5 w-5" strokeWidth={2.25} />
+          <BrandGlyph className="h-4" />
         </div>
         <h1 className="font-display text-[32px] leading-tight font-bold tracking-tightest">
           {mode === "login" && "Dobrodošao nazad"}

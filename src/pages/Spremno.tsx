@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { CheckCircle2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { BrandWordmark } from "@/components/BrandMark";
 
 const COPY: Record<string, { title: string; subtitle: string }> = {
   registracija: {
@@ -45,8 +46,8 @@ export default function Spremno() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f7f7fb] px-5">
       <div className="w-full max-w-md rounded-3xl bg-white border border-[#ececf2] shadow-sm px-7 py-10 text-center">
-        <div className="text-[22px] font-extrabold tracking-tight text-[#16161f] mb-8">
-          Fit<span className="text-[#8935E9]">Link</span>
+        <div className="flex justify-center mb-8">
+          <BrandWordmark className="h-5 text-[#16161f]" />
         </div>
 
         <div className="flex justify-center mb-6">

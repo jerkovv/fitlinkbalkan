@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { Dumbbell, Loader2, CheckCircle2 } from "lucide-react";
+import { BrandGlyph } from "@/components/BrandMark";
 
 const Invite = () => {
   const { code } = useParams<{ code: string }>();
@@ -259,7 +260,7 @@ const Invite = () => {
     >
       <div className="mb-8">
         <div className="h-12 w-12 rounded-2xl bg-athlete-soft text-athlete-soft-foreground flex items-center justify-center mb-4">
-          <Dumbbell className="h-5 w-5" strokeWidth={2.25} />
+          <BrandGlyph className="h-4" />
         </div>
         <h1 className="font-display text-[32px] leading-tight font-bold tracking-tightest">
           {magicSession
