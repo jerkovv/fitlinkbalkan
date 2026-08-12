@@ -43,8 +43,10 @@ const Notifications = () => {
           ) : undefined
         }
       >
-        {/* Filter tabs */}
-        <div className="inline-flex p-1 rounded-full bg-surface-2">
+        {/* Filter tabovi + slanje obavestenja u istom redu: dugme je tako uvek
+            vidljivo i ne bori se sa plutajucim tab barom na dnu. */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="inline-flex p-1 rounded-full bg-surface-2">
           {(["all", "unread"] as Filter[]).map((f) => (
             <button
               key={f}
@@ -59,6 +61,8 @@ const Notifications = () => {
               {f === "all" ? "Sve" : `Nepročitane${unreadCount > 0 ? ` · ${unreadCount}` : ""}`}
             </button>
           ))}
+          </div>
+          <BroadcastButton pill />
         </div>
 
         {loading ? (
@@ -100,7 +104,6 @@ const Notifications = () => {
         open={!!selected}
         onOpenChange={(o) => !o && setSelected(null)}
       />
-      <BroadcastButton fab />
       <BottomNav role="trainer" />
     </>
   );

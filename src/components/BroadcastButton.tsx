@@ -19,11 +19,19 @@ import { LockMark } from "@/components/pretplata/LockMark";
 const MAX = 1000;
 
 interface Props {
-  /** Render kao floating action button umesto inline dugmeta */
-  fab?: boolean;
+  /**
+   * Kompaktna gradijentna pilula, za red uz filter tabove.
+   *
+   * Ranije je ovde stajao floating action button (fixed, bottom-28). Padao je
+   * ispod plutajuceg tab bara - i po z-indeksu (z-20 naspram z-30) i po visini,
+   * jer tab bar sa safe-area zonom bude visi od 112px. Dugme se prakticno nije
+   * videlo, a i preko liste je smetalo. Sad stoji u toku stranice, uvek vidljivo,
+   * bez preklapanja.
+   */
+  pill?: boolean;
 }
 
-export const BroadcastButton = ({ fab = false }: Props) => {
+export const BroadcastButton = ({ pill = false }: Props) => {
   const { locked, openLock, guard } = usePretplataLock();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -59,27 +67,23 @@ export const BroadcastButton = ({ fab = false }: Props) => {
 
   return (
     <>
-      {fab && (
-        <div className="fixed inset-x-0 bottom-28 z-20 pointer-events-none flex justify-center">
-          <div className="w-full max-w-[440px] px-5 flex justify-end">
-            <button
-              type="button"
-              onClick={guard(() => setOpen(true))}
-              aria-label="Pošalji obaveštenje svima"
-              className={cn(
-                "pointer-events-auto h-14 px-5 rounded-full",
-                "bg-gradient-brand text-white shadow-brand font-bold text-[13px] tracking-tight",
-                "inline-flex items-center gap-2 active:scale-95 transition",
-              )}
-            >
-              <Megaphone className="h-4 w-4" strokeWidth={2.5} />
-              Obaveštenje
-            </button>
-          </div>
-        </div>
+      {pill && (
+        <button
+          type="button"
+          onClick={guard(() => setOpen(true))}
+          aria-label="Pošalji obaveštenje svima"
+          className={cn(
+            "h-9 pl-3 pr-4 rounded-full shrink-0",
+            "bg-gradient-brand text-white shadow-brand font-bold text-[12.5px] tracking-tight",
+            "inline-flex items-center gap-1.5 active:scale-95 transition",
+          )}
+        >
+          {locked ? <LockMark /> : <Megaphone className="h-3.5 w-3.5" strokeWidth={2.5} />}
+          Obaveštenje
+        </button>
       )}
 
-      {!fab && (
+      {!pill && (
         <Button className="gap-2" onClick={guard(() => setOpen(true))}>
           <LockMark /><Megaphone className="h-4 w-4" /> Obaveštenje
         </Button>
