@@ -33,6 +33,10 @@ const KNOWN_CONSTRAINTS: { match: string; message: string }[] = [
   { match: "food_items_grams_per_unit_check", message: "Gramaža po jedinici mora biti veća od nule." },
   // Preneto iz stare src/lib/dbError.ts (sad ukinut fajl) da se ne izgubi postojeca poruka.
   { match: "session_slot_templates", message: "Već imaš termin u to vreme za taj tip sesije." },
+  // Serverska brana za pretplatu (require_active_trainer_sub). UI ovo vec hvata
+  // pre poziva, pa je ovde samo da poruka ne padne na generican fallback ako
+  // nesto ipak prodje (npr. pretplata istekne izmedju provere i slanja).
+  { match: "aktivnu FitLink pretplatu", message: "Nalog nema aktivnu pretplatu, izmene su zaključane." },
 ];
 
 // Poznate poruke iz native (Capacitor plugin) grešaka -> konkretna poruka.
