@@ -1,12 +1,73 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Heart, Loader2, Check, Dumbbell, Flame } from "lucide-react";
+import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor/core";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { formatHMS } from "@/lib/time";
 import { isHrLive } from "@/lib/liveWorkout";
 import { ZONE_DEFS } from "@/lib/wearable/hrZones";
+import { getHrZone } from "@/lib/workout/hrZone";
 import { cn } from "@/lib/utils";
+
+// ---- Nativni Live Activity plugin (iOS-only) ----
+// Isti most kao u ActiveWorkout.tsx ("LiveActivity"): definisan lokalno jer svaki
+// pozivalac drzi svoj (isto radi i trenerov Dashboard). Sve je no-op van iOS-a /
+// bez plugina - ne rusi web ni Android.
+type LiveActivityFields = {
+  exerciseName: string;
+  setNumber: number;
+  totalSets: number;
+  heartRate?: number;
+  hrZone: string;
+  isResting: boolean;
+  restEndsAtMs?: number;
+  isDurationBased: boolean;
+  durationMinutes?: number;
+  watchConnected: boolean;
+  thumbnailUrl?: string;
+  weightText?: string;
+};
+interface LiveActivityPluginDef {
+  start(options: LiveActivityFields & { athleteName: string; workoutStartedAtMs: number }): Promise<{ success: boolean }>;
+  update(options: LiveActivityFields): Promise<{ success: boolean }>;
+  end(): Promise<{ success: boolean }>;
+  addListener(
+    eventName: "laPushToken",
+    listenerFunc: (data: { token: string }) => void,
+  ): Promise<PluginListenerHandle>;
+}
+const LiveActivity = registerPlugin<LiveActivityPluginDef>("LiveActivity");
+const liveActivitySupported = Capacitor.getPlatform() === "ios";
+
+const laStart = async (opts: LiveActivityFields & { athleteName: string; workoutStartedAtMs: number }) => {
+  if (!liveActivitySupported) return;
+  try { await LiveActivity.start(opts); } catch { /* iOS < 16.2 / plugin nedostupan -> no-op */ }
+};
+const laUpdate = async (opts: LiveActivityFields) => {
+  if (!liveActivitySupported) return;
+  try { await LiveActivity.update(opts); } catch { /* no-op */ }
+};
+const laEnd = async () => {
+  if (!liveActivitySupported) return;
+  try { await LiveActivity.end(); } catch { /* no-op */ }
+};
+
+// Slobodan trening nema vezbe ni serije, a nativni prikaz uvek ispisuje ILI
+// "Serija x/y" ILI "n min" - zato ide duration grana sa PROTEKLIM minutima
+// ("Serija 0/0" bi bilo besmisleno). Ime "vezbe" nosi naziv treninga.
+const FREE_LA_TITLE = "Slobodan trening";
+const freeLaFields = (elapsedMin: number, hr: number | null): LiveActivityFields => ({
+  exerciseName: FREE_LA_TITLE,
+  setNumber: 0,
+  totalSets: 0,
+  heartRate: hr ?? undefined,
+  hrZone: getHrZone(hr),
+  isResting: false,
+  isDurationBased: true,
+  durationMinutes: elapsedMin,
+  watchConnected: hr != null,
+});
 
 // Slobodan trening (bez plana): zivi dashboard u Apple stilu - trajanje, puls (+ zona),
 // kalorije, prosecan/max puls. Sesija ima day_id = null. Live HR/kalorije = ISTI realtime
@@ -191,6 +252,79 @@ const AthleteFreeWorkout = () => {
     try { await Promise.race([rpc, timeout]); } catch { /* svejedno idi na rezime */ }
     goToSummary();
   }, [sessionId, finishing, goToSummary]);
+
+  /* ------------------------- Live Activity (iOS lock screen) ------------------------- */
+  // START jednom kad znamo pocetak sesije, UPDATE na promenu pulsa/zone/minuta,
+  // END na unmount (odlazak na rezime ide kroz navigaciju -> unmount). Citamo SAMO
+  // postojeci state - ne diramo poll, realtime ni finalize.
+  const laStartedRef = useRef(false);
+  const laLastKeyRef = useRef<string>("");
+  const laLastHrRef = useRef<number | null>(null);
+  const laLastSentAtRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!liveActivitySupported) return;
+    if (startedAtMs == null || finishedRef.current) return;
+
+    // Isti izvor pulsa kao prikaz: samo svez puls sa sata.
+    const hr = isHrLive(watchLastHrAt) && watchHr && watchHr > 0 ? watchHr : null;
+    const elapsedMin = Math.max(0, Math.floor((now - startedAtMs) / 60000));
+    const fields = freeLaFields(elapsedMin, hr);
+    const nowMs = Date.now();
+
+    if (!laStartedRef.current) {
+      laStartedRef.current = true;
+      laLastKeyRef.current = `${elapsedMin}|${fields.hrZone}|${fields.watchConnected}`;
+      laLastHrRef.current = hr;
+      laLastSentAtRef.current = nowMs;
+      laStart({ athleteName: "", workoutStartedAtMs: startedAtMs, ...fields });
+      return;
+    }
+
+    // Struktura = minut/zona/prisustvo sata (salje odmah); sam puls throttle-ovan
+    // na >3 bpm ili 5s, isto kao ActiveWorkout - da LA ne bombardujemo update-ima.
+    const structKey = `${elapsedMin}|${fields.hrZone}|${fields.watchConnected}`;
+    const structChanged = structKey !== laLastKeyRef.current;
+    const hrDelta = Math.abs((hr ?? 0) - (laLastHrRef.current ?? 0));
+    const stale = nowMs - laLastSentAtRef.current > 5000;
+    if (structChanged || hrDelta > 3 || stale) {
+      laLastKeyRef.current = structKey;
+      laLastHrRef.current = hr;
+      laLastSentAtRef.current = nowMs;
+      laUpdate(fields);
+    }
+  }, [startedAtMs, now, watchHr, watchLastHrAt]);
+
+  // END na napustanje ekrana (finish/kraj sa sata oba navigiraju -> unmount). Idempotentno.
+  useEffect(() => {
+    return () => { laEnd(); };
+  }, []);
+
+  // Push token: native emituje "laPushToken" kad ga ActivityKit isporuci -> upis u bazu,
+  // da server moze da azurira LA dok je telefon zakljucan. iOS-only, tih na gresku.
+  useEffect(() => {
+    if (!liveActivitySupported) return;
+    let handle: PluginListenerHandle | null = null;
+    let cancelled = false;
+    (async () => {
+      try {
+        const h = await LiveActivity.addListener("laPushToken", (data) => {
+          const token = data?.token;
+          if (!token) return;
+          supabase.rpc("athlete_set_la_token", { p_token: token } as any)
+            .then(() => undefined, () => undefined);
+        });
+        if (cancelled) { h.remove(); return; }
+        handle = h;
+      } catch {
+        /* plugin/listener nedostupan -> no-op */
+      }
+    })();
+    return () => {
+      cancelled = true;
+      handle?.remove();
+    };
+  }, []);
 
   if (loadError) {
     return (
