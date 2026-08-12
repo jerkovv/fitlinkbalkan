@@ -31,6 +31,7 @@
       "size" : "29x29"
     },
     {
+      "filename" : "icon_notificationCenter_45mm_2x.png",
       "idiom" : "watch",
       "role" : "notificationCenter",
       "scale" : "2x",
