@@ -68,14 +68,18 @@ struct TrainerAthleteRow: View {
                 // grane (pauza se vidi samo u aplikaciji, ne na kartici). Fiksna sirina -> poravnanje.
                 Group {
                     if let hr = athlete.hr {
+                        // Srce I broj u boji zone, isto kao lista "Trenira uzivo" u
+                        // aplikaciji - da se intenzitet vidi na prvi pogled, bez citanja
+                        // brojke. Ranije je srce bilo sivo pa je kartica delovala mrtvo.
+                        let zonaBoja = hrZoneColor(athlete.zone)
                         HStack(spacing: 3) {
                             Image(systemName: "heart.fill")
                                 .font(.system(size: 10))
-                                .foregroundStyle(laTxtFaint)
+                                .foregroundStyle(zonaBoja)
                             Text("\(hr)")
                                 .font(.system(size: valueSize, weight: .semibold))
                                 .monospacedDigit()
-                                .foregroundStyle(.white)
+                                .foregroundStyle(zonaBoja)
                         }
                     } else {
                         Color.clear.frame(width: colWidth)
