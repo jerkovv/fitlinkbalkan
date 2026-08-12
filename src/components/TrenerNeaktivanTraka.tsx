@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { useLocation } from "react-router-dom";
+import { AlertTriangle, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -9,9 +10,17 @@ import { useAuth } from "@/hooks/useAuth";
 //
 // Namerno NE pominje pretplatu ni novac - to je odnos trenera i FitLink-a, ne
 // vezbaca. Vezbac dobija samo posledicu i sta da uradi.
+// Ekrani gde traka NE sme da se pojavi: tokom aktivnog treninga prekriva listu
+// serija, a vezbac usred seta ionako ne moze nista da uradi povodom nje.
+const SAKRIJ_NA = ["/vezbac/trening/aktivan/", "/vezbac/slobodan-trening/"];
+
 export const TrenerNeaktivanTraka = () => {
   const { user, role } = useAuth();
+  const { pathname } = useLocation();
   const [neaktivan, setNeaktivan] = useState(false);
+  // Zatvaranje vazi do sledeceg pokretanja app-a: poruka se procita jednom i ne
+  // stoji preko sadrzaja, ali se sledeci put opet javi dok se stanje ne promeni.
+  const [zatvoreno, setZatvoreno] = useState(false);
 
   useEffect(() => {
     if (!user || role !== "athlete") return;
@@ -43,7 +52,8 @@ export const TrenerNeaktivanTraka = () => {
     };
   }, [user, role]);
 
-  if (!neaktivan) return null;
+  if (!neaktivan || zatvoreno) return null;
+  if (SAKRIJ_NA.some((p) => pathname.startsWith(p))) return null;
 
   return (
     <div
@@ -54,12 +64,21 @@ export const TrenerNeaktivanTraka = () => {
       role="status"
     >
       <AlertTriangle className="h-4 w-4 mt-px flex-none text-warning-soft-foreground" strokeWidth={2.5} />
-      <span className="min-w-0 text-left text-[12.5px] font-semibold leading-snug text-warning-soft-foreground">
+      <span className="min-w-0 flex-1 text-left text-[12.5px] font-semibold leading-snug text-warning-soft-foreground">
         Trener nije aktivan
         <span className="block font-medium opacity-80">
           Ne može da ti dodeljuje planove ni potvrđuje uplate. Javi mu se.
         </span>
       </span>
+      <button
+        type="button"
+        onClick={() => setZatvoreno(true)}
+        aria-label="Zatvori"
+        className="-mr-1 -mt-1 flex h-7 w-7 flex-none items-center justify-center rounded-full
+                   text-warning-soft-foreground/70 active:opacity-60 transition"
+      >
+        <X className="h-4 w-4" strokeWidth={2.5} />
+      </button>
     </div>
   );
 };
