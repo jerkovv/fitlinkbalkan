@@ -11,6 +11,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 
 const MAX = 1000;
 
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export const SendMessageToAthlete = ({ athleteId, athleteName, variant = "default" }: Props) => {
+  const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [body, setBody] = useState("");
@@ -29,6 +31,7 @@ export const SendMessageToAthlete = ({ athleteId, athleteName, variant = "defaul
   // Direktan insert u messages (isti thread koji koriste useChat.ts/ChatThread.tsx)
   // umesto send_message_to_athlete RPC-a koji je pisao samo u notifications.
   const handleSend = async () => {
+    if (locked) return openLock();
     const text = body.trim();
     if (!text || !user) return;
     setSending(true);

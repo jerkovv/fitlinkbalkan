@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { Calendar, CreditCard, Dumbbell, MessageCircle, Loader2 } from "lucide-react";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 
 type Prefs = {
   bookings: boolean;
@@ -26,6 +27,7 @@ const ROWS: { key: keyof Prefs; icon: any; title: string; desc: string }[] = [
 ];
 
 const NotificationSettings = () => {
+  const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
   const [prefs, setPrefs] = useState<Prefs>(DEFAULTS);
   const [loading, setLoading] = useState(true);
@@ -46,6 +48,7 @@ const NotificationSettings = () => {
   }, [user]);
 
   const toggle = async (key: keyof Prefs) => {
+    if (locked) return openLock();
     if (!user) return;
     const next = { ...prefs, [key]: !prefs[key] };
     setPrefs(next);

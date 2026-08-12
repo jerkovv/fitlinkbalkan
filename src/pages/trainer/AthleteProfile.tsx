@@ -37,6 +37,7 @@ import { WearableTrendChart } from "@/components/wearables/WearableTrendChart";
 import { useWearableConnections } from "@/hooks/useWearableConnections";
 import { WorkoutsList } from "@/components/wearables/WorkoutsList";
 import { MembershipEditSheet } from "@/components/trainer/MembershipEditSheet";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 
 type AthleteData = {
   id: string;
@@ -168,6 +169,7 @@ const StatBox = ({
 );
 
 const AthleteProfile = () => {
+  const { locked, openLock } = usePretplataLock();
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -176,6 +178,7 @@ const AthleteProfile = () => {
   const [removing, setRemoving] = useState(false);
 
   const confirmRemoveAthlete = async () => {
+    if (locked) return openLock();
     if (!id) return;
     setRemoving(true);
     try {
@@ -349,6 +352,7 @@ const AthleteProfile = () => {
   };
 
   const addBonus = async () => {
+    if (locked) return openLock();
     if (!activeMembership) return;
     const n = parseInt(bonusCount, 10);
     if (!n || n < 1) return toast.error("Unesi broj treninga");
@@ -496,6 +500,7 @@ const AthleteProfile = () => {
   };
 
   const assignProgram = async (templateId: string) => {
+    if (locked) return openLock();
     if (!user || !id) return;
     setProgAssigning(templateId);
     try {
@@ -513,6 +518,7 @@ const AthleteProfile = () => {
   // Plan od nule: RPC kreira prazan assigned_programs (source_template_id NULL),
   // postaje tekuci jer je najnoviji assigned_at, pa otvaramo isti editor (mode assigned).
   const createCustomProgram = async (e: React.FormEvent) => {
+    if (locked) return openLock();
     e.preventDefault();
     if (!id) return;
     setCustomCreating(true);
@@ -531,6 +537,7 @@ const AthleteProfile = () => {
   // Plan ishrane od nule: RPC kreira prazan assigned_nutrition_plans (tiho, bez
   // notifikacije), trener gradi pa eksplicitno "Obavesti vezbaca" iz editora.
   const createCustomNutrition = async (e: React.FormEvent) => {
+    if (locked) return openLock();
     e.preventDefault();
     if (!id) return;
     setCustomNutCreating(true);
@@ -591,6 +598,7 @@ const AthleteProfile = () => {
   };
 
   const makeNewFromDraft = async () => {
+    if (locked) return openLock();
     if (!draftResume) return;
     const { kind, draftId } = draftResume;
     // Draft nije poslat -> nema istorije, pravi DELETE je bezbedan (CASCADE brise dane/obroke).
@@ -615,6 +623,7 @@ const AthleteProfile = () => {
   };
 
   const assignTemplate = async (templateId: string) => {
+    if (locked) return openLock();
     if (!user || !id) return;
     setAssigning(templateId);
     try {
@@ -637,6 +646,7 @@ const AthleteProfile = () => {
   };
 
   const unassignPlan = async () => {
+    if (locked) return openLock();
     if (!activePlan || !id) return;
     if (!(await confirm({ title: "Otkazati aktivni plan ishrane?", destructive: true }))) return;
     // Obrisi SVE planove ishrane ovog vezbaca odjednom (jedan klik = prazno).

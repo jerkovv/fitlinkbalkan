@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 
 type Day = { id: string; day_number: number; name: string };
 type Meal = { id: string; day_id: string; meal_order: number; name: string; time_hint: string | null };
@@ -100,6 +101,7 @@ function SortableFoodItemRow({
 }
 
 const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }) => {
+  const { locked, openLock } = usePretplataLock();
   const params = useParams<{ id?: string; assignedId?: string; athleteId?: string }>();
   // parentId = template_id (sablon) ili assigned_plan_id (dodeljeni plan).
   const parentId = mode === "assigned" ? params.assignedId : params.id;
@@ -257,6 +259,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   }, [foods]);
 
   const handleAddDay = async (e: React.FormEvent) => {
+    if (locked) return openLock();
     e.preventDefault();
     if (!parentId) return;
     const nextNum = (days[days.length - 1]?.day_number ?? 0) + 1;
@@ -272,6 +275,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   };
 
   const handleDeleteDay = async (dayId: string) => {
+    if (locked) return openLock();
     if (!(await confirm({ title: "Obrisati dan?", description: "Dan i svi obroci biće obrisani.", destructive: true }))) return;
     const { error } = await supabase.from(cfg.daysTable).delete().eq("id", dayId);
     if (error) { toast.error(porukaGreske(error)); return; }
@@ -279,6 +283,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   };
 
   const handleAddMeal = async (e: React.FormEvent) => {
+    if (locked) return openLock();
     e.preventDefault();
     if (!addMealForDayId) return;
     const currMeals = mealsByDay[addMealForDayId] ?? [];
@@ -294,6 +299,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   };
 
   const handleDeleteMeal = async (mealId: string) => {
+    if (locked) return openLock();
     if (!(await confirm({ title: "Obrisati obrok?", destructive: true }))) return;
     await supabase.from(cfg.mealsTable).delete().eq("id", mealId);
     load();
@@ -329,6 +335,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   };
 
   const saveNewFood = async () => {
+    if (locked) return openLock();
     const name = newFoodName.trim();
     if (!name) { toast.error("Naziv je obavezan"); return; }
     if (!newFoodCategory) { toast.error("Izaberi kategoriju"); return; }
@@ -366,6 +373,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   };
 
   const addFoodToMeal = async () => {
+    if (locked) return openLock();
     if (!pickerMealId || !pickedFood) return;
     const grams = parseFloat(pickedGrams);
     if (!grams || grams <= 0) { toast.error("Unesi gramažu"); return; }
@@ -382,6 +390,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   };
 
   const removeItem = async (itemId: string) => {
+    if (locked) return openLock();
     await supabase.from(cfg.itemsTable).delete().eq("id", itemId);
     load();
   };
@@ -390,6 +399,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   // lokalni state (item_order polje takodje), pa batch-update item_order za SVE
   // pogodjene redove u tom obroku. Neuspeh -> reload iz baze (revert).
   const onFoodItemDragEnd = (mealId: string) => async (event: DragEndEvent) => {
+    if (locked) return openLock();
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const current = itemsByMeal[mealId] ?? [];
@@ -409,6 +419,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   };
 
   const updateItemGrams = async (itemId: string, grams: number) => {
+    if (locked) return openLock();
     await supabase.from(cfg.itemsTable).update({ grams } as any).eq("id", itemId);
     load();
   };
@@ -438,6 +449,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   }, [foods, foodQuery, activeCategory, filterVegan, filterGlutenFree, filterPosno]);
 
   const setScheduleDay = async (weekday: number, dayId: string | null) => {
+    if (locked) return openLock();
     if (!parentId) return;
     setSchedule((prev) => prev.map((s) => s.weekday === weekday ? { ...s, day_id: dayId } : s));
     // Upsert
@@ -490,6 +502,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   };
 
   const handleAssign = async (targetAthleteId: string) => {
+    if (locked) return openLock();
     if (!parentId) return;
     setAssigning(targetAthleteId);
     const { error } = await supabase.rpc("assign_nutrition_plan_to_athlete", {
@@ -505,6 +518,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   // Custom plan ishrane se kreira tiho; trener eksplicitno obavesti vezbaca kad
   // zavrsi. RPC vraca false ako je vec poslata notifikacija za ovaj plan.
   const notifyAthlete = async () => {
+    if (locked) return openLock();
     if (!parentId) return;
     setNotifying(true);
     const { data, error } = await supabase.rpc("notify_athlete_about_nutrition", {

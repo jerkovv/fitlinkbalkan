@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 
 export const useExerciseBookmarks = () => {
+  const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
   const userId = user?.id ?? null;
   const qc = useQueryClient();
@@ -26,6 +28,7 @@ export const useExerciseBookmarks = () => {
 
   const mutation = useMutation({
     mutationFn: async (exerciseId: string) => {
+      if (locked) return openLock();
       if (!userId) throw new Error("not auth");
       const isBookmarked = bookmarks.has(exerciseId);
       if (isBookmarked) {

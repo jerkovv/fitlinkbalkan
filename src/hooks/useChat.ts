@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 
 export type ChatMessage = {
   id: string;
@@ -25,6 +26,7 @@ interface UseChatArgs {
  * - markRead() → poziva mark_thread_read RPC
  */
 export const useChat = ({ trainerId, athleteId }: UseChatArgs) => {
+  const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,6 +102,8 @@ export const useChat = ({ trainerId, athleteId }: UseChatArgs) => {
 
   const send = useCallback(
     async (body: string) => {
+      // Van trenerskog dela je context otkljucan, pa ovo ne dira vezbaca.
+      if (locked) { openLock(); return { error: "locked" as const }; }
       const text = body.trim();
       if (!text || !trainerId || !athleteId || !user) return { error: "no-input" as const };
       setSending(true);
@@ -112,7 +116,7 @@ export const useChat = ({ trainerId, athleteId }: UseChatArgs) => {
       setSending(false);
       return { error: error?.message ?? null };
     },
-    [trainerId, athleteId, user],
+    [trainerId, athleteId, user, locked, openLock],
   );
 
   const markRead = useCallback(async () => {

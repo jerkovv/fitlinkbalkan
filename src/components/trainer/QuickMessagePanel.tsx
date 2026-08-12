@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 
 type MessageType = "text" | "encouragement" | "warning";
 
@@ -35,6 +36,7 @@ const fmtTime = (iso: string) => {
 };
 
 export const QuickMessagePanel = ({ sessionId }: QuickMessagePanelProps) => {
+  const { locked, openLock } = usePretplataLock();
   const [sending, setSending] = useState(false);
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<SentMessage[]>([]);
@@ -95,6 +97,7 @@ export const QuickMessagePanel = ({ sessionId }: QuickMessagePanelProps) => {
   }, [sessionId]);
 
   const send = async (message: string, type: MessageType) => {
+    if (locked) return openLock();
     const trimmed = message.trim();
     if (!trimmed || sending) return;
     setSending(true);

@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 
 type Args = {
   dayId: string;
@@ -11,8 +12,10 @@ type Args = {
 };
 
 export const useAddExercisesToDay = ({ dayId, table = "program_template_exercises", onSuccess }: Args) => {
+  const { locked, openLock } = usePretplataLock();
   return useMutation({
     mutationFn: async (exerciseIds: string[]) => {
+      if (locked) return openLock();
       if (!dayId || exerciseIds.length === 0) return;
 
       const { data: maxRow, error: maxErr } = await supabase

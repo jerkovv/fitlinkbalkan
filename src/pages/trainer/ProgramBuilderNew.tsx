@@ -30,6 +30,7 @@ import {
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { ExercisePickerSheet } from "@/components/exercises/ExercisePickerSheet";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 
 type Day = { id: string; day_number: number; name: string; notes: string | null };
 type Exercise = {
@@ -92,6 +93,7 @@ function SortableExerciseRow({
 }
 
 const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) => {
+  const { locked, openLock } = usePretplataLock();
   const params = useParams<{ id?: string; assignedId?: string; athleteId?: string }>();
   // parentId = template_id (sablon) ili assigned_program_id (dodeljeni plan).
   const parentId = mode === "assigned" ? params.assignedId : params.id;
@@ -220,6 +222,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
   useEffect(() => { load(); }, [parentId]);
 
   const handleAddDay = async (e: React.FormEvent) => {
+    if (locked) return openLock();
     e.preventDefault();
     if (!parentId) return;
     const nextNum = (days[days.length - 1]?.day_number ?? 0) + 1;
@@ -236,6 +239,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
   };
 
   const handleDeleteDay = async (dayId: string) => {
+    if (locked) return openLock();
     if (!(await confirm({ title: "Obrisati dan?", description: "Dan i sve njegove vežbe biće obrisani.", destructive: true }))) return;
     // Assigned: SOFT delete (CASCADE bi pobrisao set_logs/workout_session_logs = istoriju).
     const { error } = cfg.softDelete
@@ -253,6 +257,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
   // Brisanje celog SABLONA (samo template mod). CASCADE brise dane+vezbe;
   // assigned_programs.source_template_id -> SET NULL (dodeljeni zadrzavaju kopiju).
   const handleDeleteProgram = async () => {
+    if (locked) return openLock();
     if (mode !== "template" || !parentId) return;
     if (!(await confirm({
       title: "Obrisati program?",
@@ -266,6 +271,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
   };
 
   const updateExercise = async (exId: string, patch: Partial<Exercise>) => {
+    if (locked) return openLock();
     const { error } = await supabase.from(cfg.exTable).update(patch as any).eq("id", exId);
     if (error) { toast.error(porukaGreske(error)); return; }
     load();
@@ -277,6 +283,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
   // ni viskove. Redosled p_sets = redosled setova; id i set_number se NE salju (server dodeljuje).
   // (Bez load() na uspeh - lokalni setsByEx je vec azuriran optimisticki, da input ne treperi.)
   const saveSets = async (exId: string, rows: SetRow[]) => {
+    if (locked) return openLock();
     const p_sets = rows.map((r) => ({
       reps: r.reps?.trim() ? r.reps.trim() : null,
       weight_kg: r.weight_kg,
@@ -301,6 +308,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
   };
 
   const removeExercise = async (exId: string) => {
+    if (locked) return openLock();
     // Assigned: SOFT delete (set_logs ima CASCADE -> pravi DELETE bi pobrisao istoriju serija).
     const { error } = cfg.softDelete
       ? await supabase.from(cfg.exTable).update({ deleted_at: new Date().toISOString() } as any).eq("id", exId)
@@ -313,6 +321,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
   // polje takodje, da ostatak koda koji ga cita ostane tacan), pa batch-update
   // position za SVE pogodjene redove u tom danu. Neuspeh -> reload iz baze (revert).
   const onExerciseDragEnd = (dayId: string) => async (event: DragEndEvent) => {
+    if (locked) return openLock();
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const current = exByDay[dayId] ?? [];
@@ -369,6 +378,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
   };
 
   const handleAssign = async (targetAthleteId: string) => {
+    if (locked) return openLock();
     if (!parentId) return;
     setAssigning(targetAthleteId);
     try {
@@ -385,6 +395,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
   // Custom plan se kreira tiho (bez notifikacije); trener eksplicitno obavesti
   // vezbaca kad zavrsi. RPC vraca false ako je vec poslata notifikacija za ovaj plan.
   const notifyAthlete = async () => {
+    if (locked) return openLock();
     if (!parentId) return;
     setNotifying(true);
     const { data, error } = await supabase.rpc("notify_athlete_about_program", {

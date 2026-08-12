@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import {
   sessionColors, sessionColorClasses, weekdayLabelsLong, weekdayLabelsShort, formatTime,
 } from "@/lib/session";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 
 type SessionType = {
   id: string;
@@ -41,6 +42,7 @@ type Template = {
 };
 
 const SessionSettings = () => {
+  const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
   const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
@@ -114,6 +116,7 @@ const SessionSettings = () => {
   };
 
   const submitType = async () => {
+    if (locked) return openLock();
     if (!user) return;
     if (!typeForm.name.trim()) { toast.error("Naziv obavezan"); return; }
     // Parsiraj i validiraj TEK ovde (na submit), ne na svaki keystroke - polje ostaje slobodno
@@ -159,6 +162,7 @@ const SessionSettings = () => {
   };
 
   const deleteType = async (t: SessionType) => {
+    if (locked) return openLock();
     if (!(await confirm({ title: `Obrisati tip "${t.name}"?`, description: "Postojeće rezervacije ostaju.", destructive: true }))) return;
     const { error } = await supabase
       .from("session_types")
@@ -181,6 +185,7 @@ const SessionSettings = () => {
   };
 
   const submitSlot = async () => {
+    if (locked) return openLock();
     if (!user) return;
     setSavingSlot(true);
     const { error } = await supabase.from("session_slot_templates").insert({
@@ -197,6 +202,7 @@ const SessionSettings = () => {
   };
 
   const deleteSlot = async (id: string) => {
+    if (locked) return openLock();
     if (!(await confirm({ title: "Ukloniti ovaj termin iz nedeljnog rasporeda?", destructive: true }))) return;
     const { error } = await supabase.from("session_slot_templates").delete().eq("id", id);
     if (error) { toast.error(porukaGreske(error)); return; }

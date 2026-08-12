@@ -21,6 +21,7 @@ import {
 import { ArrowLeft, Plus, Search, Dumbbell, Loader2, User2, Globe2, PlayCircle } from "lucide-react";
 import { toast } from "sonner";
 import { VideoModal } from "@/components/VideoModal";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 
 type Exercise = {
   id: string;
@@ -70,6 +71,7 @@ const muscleLabel = (v: string) => MUSCLE_GROUPS.find((m) => m.value === v)?.lab
 const equipLabel = (v: string) => EQUIPMENT.find((e) => e.value === v)?.label ?? v;
 
 const ExerciseLibrary = () => {
+  const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
   const [items, setItems] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,6 +122,7 @@ const ExerciseLibrary = () => {
   }, [items, muscleFilter, scopeFilter, query, user?.id]);
 
   const handleCreate = async (e: React.FormEvent) => {
+    if (locked) return openLock();
     e.preventDefault();
     if (!user) return;
     setSubmitting(true);
