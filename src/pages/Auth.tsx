@@ -11,6 +11,11 @@ import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { Briefcase, Loader2 } from "lucide-react";
 
+// Gde vodi link za potvrdu naloga iz mejla. Landing (fitlink.rs), NE app.fitlink.rs:
+// posle potvrde trener treba da vidi sta dalje (pretplata), a ne da upadne pravo u
+// zakljucan trenerski deo. Mora biti u Supabase Auth -> Redirect URLs listi.
+const POTVRDA_URL = "https://fitlink.rs/nalog-potvrdjen";
+
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -48,11 +53,14 @@ const Auth = () => {
     setSubmitting(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/spremno?tip=potvrda`,
+            // Fiksan javni URL, NE window.location.origin: u native app-u je origin
+            // "capacitor://localhost", sto ne moze da stoji u mejlu. Potvrda vodi na
+            // landing stranicu koja objasni pretplatu, pa dalje na /pretplata.
+            emailRedirectTo: POTVRDA_URL,
             data: {
               full_name: fullName,
               role: "trainer", // Treneri se slobodno registruju
@@ -60,6 +68,18 @@ const Auth = () => {
           },
         });
         if (error) throw error;
+
+        // Nalog sa tim mejlom vec postoji (kao trener ILI kao vezbac): GoTrue tada
+        // NE vraca gresku - lazira uspeh da se ne moze ispitivanjem otkriti koji
+        // mejlovi postoje - ali vrati korisnika sa PRAZNOM listom identiteta i ne
+        // posalje nijedan mejl. Bez ove provere korisnik ceka aktivaciju koja nikad
+        // ne stigne.
+        if (data.user && (data.user.identities?.length ?? 0) === 0) {
+          throw new Error(
+            "Nalog sa tim email-om već postoji. Prijavi se ili resetuj lozinku.",
+          );
+        }
+
         toast.success("Nalog kreiran! Proveri email za potvrdu.");
         navigate("/proveri-mejl", { state: { email } });
       } else if (mode === "forgot") {
