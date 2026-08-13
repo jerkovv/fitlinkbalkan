@@ -133,6 +133,131 @@ async function sendToHost(
   return { status: res.status, reason, apnsId: res.headers.get("apns-id") };
 }
 
+// ---- FCM v1 (Android) -------------------------------------------------------
+//
+// Android ne razume APNs. Token iz device_push_tokens sa platform='android' je
+// FCM registracioni token i ide na Google-ov endpoint.
+//
+// Autorizacija je drugacija nego kod Apple-a: umesto trajnog ES256 tokena koji
+// se salje direktno, Google trazi da se servisnim nalogom (RS256) potpise JWT,
+// pa da se on RAZMENI za pristupni token koji vazi sat vremena.
+//
+// Tajne: FCM_PROJECT_ID, FCM_CLIENT_EMAIL, FCM_PRIVATE_KEY - sve tri iz JSON-a
+// koji Firebase da kad se napravi servisni nalog.
+
+let fcmKey: CryptoKey | null = null;
+let fcmToken: { token: string; exp: number } | null = null;
+
+async function getFcmSigningKey(): Promise<CryptoKey> {
+  if (fcmKey) return fcmKey;
+  const pem = Deno.env.get("FCM_PRIVATE_KEY");
+  if (!pem) throw new Error("FCM_PRIVATE_KEY missing");
+  fcmKey = await crypto.subtle.importKey(
+    "pkcs8",
+    pemToPkcs8Bytes(pem),
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  return fcmKey;
+}
+
+async function getFcmAccessToken(): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  // Google-ov token vazi 1h; menjamo ga 5 min ranije.
+  if (fcmToken && now < fcmToken.exp - 300) return fcmToken.token;
+
+  const clientEmail = Deno.env.get("FCM_CLIENT_EMAIL");
+  if (!clientEmail) throw new Error("FCM_CLIENT_EMAIL missing");
+
+  const header = { alg: "RS256", typ: "JWT" };
+  const payload = {
+    iss: clientEmail,
+    scope: "https://www.googleapis.com/auth/firebase.messaging",
+    aud: "https://oauth2.googleapis.com/token",
+    iat: now,
+    exp: now + 3600,
+  };
+  const signingInput =
+    `${b64urlFromString(JSON.stringify(header))}.${b64urlFromString(JSON.stringify(payload))}`;
+  const sig = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    await getFcmSigningKey(),
+    new TextEncoder().encode(signingInput),
+  );
+  const assertion = `${signingInput}.${b64urlFromBytes(new Uint8Array(sig))}`;
+
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion,
+    }),
+  });
+  const j = await res.json();
+  if (!res.ok || !j.access_token) {
+    throw new Error(`FCM token exchange failed: ${res.status} ${JSON.stringify(j)}`);
+  }
+  fcmToken = { token: j.access_token, exp: now + (j.expires_in ?? 3600) };
+  return fcmToken.token;
+}
+
+async function sendFcm(
+  token: string,
+  title: string,
+  body: string | null,
+  data: Record<string, unknown>,
+): Promise<SendResult> {
+  const projectId = Deno.env.get("FCM_PROJECT_ID");
+  if (!projectId) throw new Error("FCM_PROJECT_ID missing");
+
+  // FCM prima data iskljucivo kao string:string. Sve sto nije string mora da
+  // se serijalizuje, inace Google odbije ceo zahtev sa 400.
+  const flat: Record<string, string> = {};
+  for (const [k, v] of Object.entries(data)) {
+    if (v === null || v === undefined) continue;
+    flat[k] = typeof v === "string" ? v : JSON.stringify(v);
+  }
+
+  const res = await fetch(
+    `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${await getFcmAccessToken()}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        message: {
+          token,
+          notification: body ? { title, body } : { title },
+          data: flat,
+          android: {
+            priority: "HIGH",
+            notification: { sound: "default", default_vibrate_timings: true },
+          },
+        },
+      }),
+    },
+  );
+
+  let reason: string | null = null;
+  if (res.status !== 200) {
+    try {
+      const j = await res.json();
+      // Google vraca ugnjezden kod; UNREGISTERED znaci mrtav token, isto sto
+      // je kod Apple-a "Unregistered".
+      reason = j?.error?.details?.[0]?.errorCode ?? j?.error?.status ?? null;
+    } catch {
+      reason = null;
+    }
+  } else {
+    await res.arrayBuffer().catch(() => undefined);
+  }
+  return { status: res.status, reason, apnsId: null };
+}
+
 // ---- Interna autorizacija ---------------------------------------------------
 // Pozivalac je trigger preko pg_net, koji salje Bearer <service_role_key> iz
 // Vault-a. Ne oslanjamo se na bajt-poklapanje sa auto-injektovanim env kljucem,
@@ -263,7 +388,10 @@ Deno.serve(async (req) => {
       return json({ ok: true, sent: 0, failed: 0, deleted: 0, results: [] });
     }
 
-    const jwt = await getApnsJwt();
+    // APNs JWT samo ako medju tokenima ima iOS uredjaja. Korisnik koji ima
+    // isključivo Android telefon ne sme da padne zato sto APNs tajne fale.
+    const imaIos = rows.some((r) => (r.platform as string | null) !== "android");
+    const jwt = imaIos ? await getApnsJwt() : "";
 
     // APNs payload: alert title+body, sound default, plus notification_id/
     // kind/recipient_role/athlete_id + spljosten meta na vrhu (custom data,
@@ -293,13 +421,25 @@ Deno.serve(async (req) => {
       const token = row.token as string;
       const tail = token.slice(-6);
       try {
-        let r = await sendToHost(APNS_PROD_HOST, token, jwt, bundleId, apnsPayload);
-        let host = "prod";
+        let r: SendResult;
+        let host: string;
 
-        // BadDeviceToken cesto znaci pogresno okruzenje -> probaj sandbox.
-        if (r.reason === "BadDeviceToken") {
-          r = await sendToHost(APNS_SANDBOX_HOST, token, jwt, bundleId, apnsPayload);
-          host = "sandbox";
+        if ((row.platform as string | null) === "android") {
+          // Android: isti sadrzaj, drugi protokol. Custom polja se salju kao
+          // FCM "data", odakle ih Capacitor izlaze kao notification.data - isto
+          // mesto gde ih tap handler i ocekuje na iOS-u.
+          const { aps: _aps, ...custom } = apnsPayload as Record<string, unknown>;
+          r = await sendFcm(token, title, text ?? null, custom);
+          host = "fcm";
+        } else {
+          r = await sendToHost(APNS_PROD_HOST, token, jwt, bundleId, apnsPayload);
+          host = "prod";
+
+          // BadDeviceToken cesto znaci pogresno okruzenje -> probaj sandbox.
+          if (r.reason === "BadDeviceToken") {
+            r = await sendToHost(APNS_SANDBOX_HOST, token, jwt, bundleId, apnsPayload);
+            host = "sandbox";
+          }
         }
 
         if (r.status === 200) {
@@ -311,7 +451,12 @@ Deno.serve(async (req) => {
             `send-push: FAIL token …${tail} (${host}) status=${r.status} reason=${r.reason}`,
           );
           // Mrtav token -> obrisi red.
-          if (r.reason === "Unregistered" || r.reason === "BadDeviceToken") {
+          // "Unregistered"/"BadDeviceToken" su Apple-ovi, "UNREGISTERED" i
+          // "INVALID_ARGUMENT" Google-ovi - u oba slucaja token je mrtav.
+          if (
+            r.reason === "Unregistered" || r.reason === "BadDeviceToken" ||
+            r.reason === "UNREGISTERED" || r.reason === "INVALID_ARGUMENT"
+          ) {
             const { error: delErr } = await admin
               .from("device_push_tokens")
               .delete()

@@ -14,11 +14,17 @@ import { supabase } from "@/lib/supabase";
 import { getActionTarget, getPushFallbackPath } from "@/lib/notificationTarget";
 import type { NotificationKind } from "@/hooks/useNotifications";
 
-const isNativeIOS = (): boolean =>
-  Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
+// Push radi na obe nativne platforme. iOS token je APNs, Android FCM - server
+// bira protokol po koloni platform u device_push_tokens.
+const pushPodrzan = (): boolean =>
+  Capacitor.isNativePlatform() &&
+  (Capacitor.getPlatform() === "ios" || Capacitor.getPlatform() === "android");
 
 // Poslednji APNs token ovog uredjaja - cuva se i u localStorage da bi odjava
 // (koja moze doci posle reload-a) znala koji red da obrise.
+// Ime je istorijsko - kljuc sad drzi i FCM token na Androidu. Ne preimenuje se
+// da postojecim iOS instalacijama ne ostane siroce pod starim kljucem, koje
+// odjava vise ne bi umela da obrise.
 const TOKEN_KEY = "fitlink.apnsToken";
 
 let listenersBound = false;
@@ -105,7 +111,7 @@ async function upsertToken(token: string) {
         {
           user_id: currentUserId,
           token,
-          platform: "ios",
+          platform: Capacitor.getPlatform(),
           updated_at: new Date().toISOString(),
         },
         { onConflict: "token" },
@@ -155,8 +161,8 @@ export async function registerPushNotifications(userId: string) {
   console.log(
     `[Push] registerPushNotifications called (userId=${userId}, native=${native}, platform=${platform})`,
   );
-  if (!isNativeIOS()) {
-    console.log("[Push] not native iOS - skipping (web/preview no-op)");
+  if (!pushPodrzan()) {
+    console.log("[Push] nije nativna platforma - preskacem (web/preview)");
     return;
   }
   currentUserId = userId;
@@ -190,7 +196,7 @@ export async function registerPushNotifications(userId: string) {
 export async function clearPushToken() {
   const token = localStorage.getItem(TOKEN_KEY);
   currentUserId = null;
-  if (!isNativeIOS() || !token) return;
+  if (!pushPodrzan() || !token) return;
   try {
     const { error } = await supabase
       .from("device_push_tokens")
