@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FitLink</string>
+    <string name="title_activity_main">FitLink</string>
+    <string name="package_name">rs.fitlink.app</string>
+    <string name="custom_url_scheme">rs.fitlink.app</string>
+</resources>
