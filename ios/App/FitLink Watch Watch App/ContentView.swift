@@ -501,17 +501,14 @@ struct ContentView: View {
                 
                 Spacer()
                 
-                VStack(spacing: 0) {
-                    Text("FitLink")
-                        .font(.system(size: 28, weight: .heavy))
-                        .tracking(-0.7)
-                        .foregroundColor(.white)
-                    
-                    Text("Balkan")
-                        .font(.system(size: 16, weight: .bold))
-                        .tracking(-0.4)
-                        .foregroundStyle(LinearGradient.brandGradient)
-                }
+                // Pravi logo umesto ispisanog imena. Beo je, jer je ekran crn, a
+                // dugme ispod nosi brend gradijent - dva gradijenta jedan iznad
+                // drugog bi se tukla.
+                Image("logo-wordmark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 118)
+                    .accessibilityLabel("FitLink")
                 
                 Spacer()
                 
@@ -547,8 +544,6 @@ struct ContentView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
 
-                // Build oznaka živi SAMO ovde (idle), u svom prostoru.
-                buildLabel
             }
             .padding(.horizontal, 8)
             .padding(.bottom, 6)
@@ -1201,13 +1196,6 @@ struct ContentView: View {
                 }
             }
         )
-    }
-
-    // Sitna, prigušena build oznaka - SAMO na idle ekranu, nikad na radnim.
-    private var buildLabel: some View {
-        Text("build T33")
-            .font(.system(size: 9, weight: .semibold))
-            .foregroundColor(.white.opacity(0.3))
     }
 
     // Jedan red lestvice (koristi ga stil Lestvica Pro). Aktivna zona je veca,
