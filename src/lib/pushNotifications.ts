@@ -1,8 +1,8 @@
-// APNs push registracija (iOS, Capacitor).
+// Push registracija (iOS i Android, Capacitor).
 //
 // Pri logovanju / startu (kad je korisnik ulogovan) trazimo dozvolu i
-// registrujemo se za remote notifikacije. Kad APNs vrati device token, upisemo
-// ga u device_push_tokens (user_id = trenutni korisnik, platform 'ios'),
+// registrujemo se za remote notifikacije. Kad stigne token - APNs na iOS-u,
+// FCM na Androidu - upisemo ga u device_push_tokens sa stvarnom platformom,
 // upsert na token (jedinstven indeks na token). Isti kod za trenera i vezbaca.
 //
 // Na odjavu brisemo token OVOG uredjaja (po vrednosti) dok sesija jos vazi, da
@@ -20,7 +20,7 @@ const pushPodrzan = (): boolean =>
   Capacitor.isNativePlatform() &&
   (Capacitor.getPlatform() === "ios" || Capacitor.getPlatform() === "android");
 
-// Poslednji APNs token ovog uredjaja - cuva se i u localStorage da bi odjava
+// Poslednji token ovog uredjaja - cuva se i u localStorage da bi odjava
 // (koja moze doci posle reload-a) znala koji red da obrise.
 // Ime je istorijsko - kljuc sad drzi i FCM token na Androidu. Ne preimenuje se
 // da postojecim iOS instalacijama ne ostane siroce pod starim kljucem, koje
@@ -121,7 +121,7 @@ async function upsertToken(token: string) {
       return;
     }
     localStorage.setItem(TOKEN_KEY, token);
-    console.log("[Push] APNs token saved");
+    console.log("[Push] token sacuvan");
   } catch (e) {
     console.error("[Push] upsert token threw:", e);
   }
@@ -133,10 +133,29 @@ async function upsertToken(token: string) {
 async function bindListeners() {
   if (listenersBound) return;
   listenersBound = true;
+
+  // Android: bez izricito napravljenog kanala obavestenja padaju u sistemski
+  // "Miscellaneous", pa korisnik u podesavanjima ne vidi o cemu se radi i ne
+  // moze da ih ugasi odvojeno. Ime kanala mora da se poklapa sa
+  // default_notification_channel_id iz AndroidManifest-a.
+  if (Capacitor.getPlatform() === "android") {
+    try {
+      await PushNotifications.createChannel({
+        id: "fitlink_obavestenja",
+        name: "Obaveštenja",
+        description: "Treninzi, termini, članarine i poruke",
+        importance: 4,
+        visibility: 1,
+        vibration: true,
+      });
+    } catch (e) {
+      console.warn("[Push] kanal nije napravljen:", e);
+    }
+  }
   console.log("[Push] binding registration listeners (once)");
 
   await PushNotifications.addListener("registration", (t) => {
-    console.log(`[Push] registration event - APNs token received (…${t.value.slice(-6)})`);
+    console.log(`[Push] registracija - stigao token (…${t.value.slice(-6)})`);
     void upsertToken(t.value);
   });
 

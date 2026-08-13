@@ -33,6 +33,18 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
+
+        <!-- Bez ovoga Android uzme ikonicu iz pokretaca i prikaze je kao belu
+             mrlju, a obavestenje pada u kanal "Miscellaneous". -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_fitlink" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_color" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="fitlink_obavestenja" />
     </application>
 
     <!-- Permissions -->
