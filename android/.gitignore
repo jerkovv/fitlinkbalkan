@@ -99,3 +99,9 @@ app/src/main/assets/public
 app/src/main/assets/capacitor.config.json
 app/src/main/assets/capacitor.plugins.json
 app/src/main/res/xml/config.xml
+
+# Kljuc za potpisivanje izdanja i lozinke - NIKAD u git.
+# Gubitak ovih fajlova znaci da ne mozes da posaljes azuriranje.
+*.jks
+*.keystore
+keystore.properties

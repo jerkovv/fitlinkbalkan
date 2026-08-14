@@ -1,5 +1,14 @@
 apply plugin: 'com.android.application'
 
+// Lozinke za potpisivanje stoje u android/keystore.properties, koji NIJE u
+// gitu. Ako fajla nema, release se gradi nepotpisan - build i dalje prolazi,
+// pa neko ko klonira repo moze da radi bez kljuca.
+def kljucFajl = rootProject.file("keystore.properties")
+def kljuc = new Properties()
+if (kljucFajl.exists()) {
+    kljuc.load(new FileInputStream(kljucFajl))
+}
+
 android {
     namespace = "rs.fitlink.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,8 +25,21 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (kljucFajl.exists()) {
+                storeFile file(kljuc['storeFile'])
+                storePassword kljuc['storePassword']
+                keyAlias kljuc['keyAlias']
+                keyPassword kljuc['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
+            if (kljucFajl.exists()) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
