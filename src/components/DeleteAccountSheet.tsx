@@ -33,10 +33,36 @@ export const DeleteAccountSheet = ({ open, onClose, userEmail, role }: DeleteAcc
 
   const matches = confirmText.trim().toLowerCase() === userEmail.trim().toLowerCase();
 
+  // Brisanje naloga rusi auth.users, a sve tabele kaskadno otpadaju za njim.
+  // Fajlovi u storage-u NE otpadaju - storage.objects nema vezu ka auth.users,
+  // pa bi progres fotografije ostale zauvek. Brisemo ih rucno, dok sesija jos
+  // vazi (RLS dozvoljava brisanje samo svog foldera <uid>/...).
+  const obrisiFotografije = async () => {
+    const { data: userData } = await supabase.auth.getUser();
+    const uid = userData?.user?.id;
+    if (!uid) return;
+    const { data: fajlovi, error } = await supabase.storage
+      .from("progress-photos")
+      .list(uid, { limit: 1000 });
+    if (error || !fajlovi?.length) return;
+    await supabase.storage
+      .from("progress-photos")
+      .remove(fajlovi.map((f) => `${uid}/${f.name}`));
+  };
+
   const handleDelete = async () => {
     if (!matches || deleting) return;
     setDeleting(true);
     try {
+      // Namerno pre RPC-a i namerno bez prekidanja toka ako pukne - nalog se
+      // brise u svakom slucaju, fajl bez naloga je manja steta od naloga koji
+      // je korisnik trazio da nestane a nije.
+      try {
+        await obrisiFotografije();
+      } catch (e) {
+        console.warn("[Brisanje naloga] fotografije nisu obrisane:", e);
+      }
+
       const { data, error } = await supabase.rpc("delete_my_account", {
         p_confirm: confirmText.trim(),
       });
