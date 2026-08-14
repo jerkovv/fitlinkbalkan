@@ -286,24 +286,29 @@ const Dashboard = () => {
       >
         <ActiveAthletesList />
 
-        {/* Uzivo monitor toggle - Live Activity sa aktivnim vezbacima */}
-        <div className="flex items-center gap-3 rounded-2xl bg-surface border border-hairline px-4 py-3">
-          <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-            <Radio className="h-[18px] w-[18px] text-primary" strokeWidth={2} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[14px] font-semibold">Uživo monitor</div>
-            <div className="text-[12px] text-muted-foreground truncate">
-              Live Activity sa aktivnim vežbačima
+        {/* Uzivo monitor toggle - Live Activity sa aktivnim vezbacima.
+            Samo iOS: Live Activity ne postoji na Androidu, pa se ceo red skriva.
+            Ranije je stajao sa ugasenim prekidacem, sto je obecavalo funkciju
+            koje na tom telefonu nema. */}
+        {liveActivitySupported && (
+          <div className="flex items-center gap-3 rounded-2xl bg-surface border border-hairline px-4 py-3">
+            <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <Radio className="h-[18px] w-[18px] text-primary" strokeWidth={2} />
             </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[14px] font-semibold">Uživo monitor</div>
+              <div className="text-[12px] text-muted-foreground truncate">
+                Live Activity sa aktivnim vežbačima
+              </div>
+            </div>
+            <Switch
+              checked={monitorOn}
+              onCheckedChange={toggleMonitor}
+              disabled={monitorBusy}
+              aria-label="Uživo monitor"
+            />
           </div>
-          <Switch
-            checked={monitorOn}
-            onCheckedChange={toggleMonitor}
-            disabled={monitorBusy || !liveActivitySupported}
-            aria-label="Uživo monitor"
-          />
-        </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <StatCard tone="brand" value={String(activeAthletes)} unit="članova" label="Aktivnih" />
