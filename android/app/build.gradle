@@ -28,7 +28,9 @@ android {
     signingConfigs {
         release {
             if (kljucFajl.exists()) {
-                storeFile file(kljuc['storeFile'])
+                // rootProject.file, ne file() - file() razresava u odnosu na
+                // app/ modul, a kljuc stoji u android/ pored keystore.properties.
+                storeFile rootProject.file(kljuc['storeFile'])
                 storePassword kljuc['storePassword']
                 keyAlias kljuc['keyAlias']
                 keyPassword kljuc['keyPassword']
