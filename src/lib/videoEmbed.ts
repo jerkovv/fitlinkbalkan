@@ -1,4 +1,10 @@
 /**
+ * Ugradjeni plejer ide na youtube-nocookie.com, ne na youtube.com. Isti plejer,
+ * ista funkcija, ali YouTube ne postavlja kolacice za pracenje dok korisnik ne
+ * pokrene video. Bez toga se kroz nas web-prikaz prikupljaju podaci o uredjaju
+ * cim se ekran vezbe otvori, sto bismo morali da prijavimo u Play upitniku o
+ * bezbednosti podataka kao deljenje sa trecom stranom.
+ *
  * Konvertuje YouTube/Vimeo URL u embed formu, ili vraća original (npr. .mp4 link).
  */
 export function toEmbedUrl(url: string): { type: "youtube" | "vimeo" | "video" | "iframe"; src: string } | null {
@@ -10,14 +16,14 @@ export function toEmbedUrl(url: string): { type: "youtube" | "vimeo" | "video" |
     // YouTube
     if (host === "youtube.com" || host === "m.youtube.com") {
       const v = u.searchParams.get("v");
-      if (v) return { type: "youtube", src: `https://www.youtube.com/embed/${v}?rel=0` };
+      if (v) return { type: "youtube", src: `https://www.youtube-nocookie.com/embed/${v}?rel=0` };
       // shorts
       const shortsMatch = u.pathname.match(/^\/shorts\/([a-zA-Z0-9_-]+)/);
-      if (shortsMatch) return { type: "youtube", src: `https://www.youtube.com/embed/${shortsMatch[1]}?rel=0` };
+      if (shortsMatch) return { type: "youtube", src: `https://www.youtube-nocookie.com/embed/${shortsMatch[1]}?rel=0` };
     }
     if (host === "youtu.be") {
       const id = u.pathname.replace(/^\//, "");
-      if (id) return { type: "youtube", src: `https://www.youtube.com/embed/${id}?rel=0` };
+      if (id) return { type: "youtube", src: `https://www.youtube-nocookie.com/embed/${id}?rel=0` };
     }
 
     // Vimeo
