@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application
         android:allowBackup="true"
@@ -50,4 +51,18 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- capacitor-health uvlaci sedam Health Connect dozvola samim tim sto je
+         u projektu, iako Health Connect jos nije povezan ni u jednom ekranu.
+         Trazenje dozvola koje se ne koriste je razlog za odbijanje na Play-u, a
+         zdravstvene dozvole uz to traze i zasebnu prijavu i odobrenje.
+         Uklanjaju se dok se funkcija stvarno ne napravi - tada se ovaj blok
+         brise i podnosi Health Connect prijava. -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" tools:node="remove" />
+    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" tools:node="remove" />
+    <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED" tools:node="remove" />
+    <uses-permission android:name="android.permission.health.READ_STEPS" tools:node="remove" />
+    <uses-permission android:name="android.permission.health.READ_DISTANCE" tools:node="remove" />
+    <uses-permission android:name="android.permission.health.READ_EXERCISE" tools:node="remove" />
+    <uses-permission android:name="android.permission.health.READ_EXERCISE_ROUTE" tools:node="remove" />
 </manifest>
