@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import { ReactNode } from "react";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
+import { cn } from "@/lib/utils";
 
 interface PhoneShellProps {
   /** Large title (Apple-style). Pass a string for default styling, or any node. */
@@ -24,12 +26,24 @@ export const PhoneShell = ({
   hasBottomNav = false,
   children,
 }: PhoneShellProps) => {
+  // Desktop web (app.fitlink.rs u pregledaču, ne native app): isti sadržaj,
+  // ali bez mobilnog 440px "telefona" nasred širokog ekrana i bez fiksnog
+  // dvh scroll-kontejnera - TrainerWebShell već daje scroll okvir. Native i
+  // uzak web (telefon otvara app.fitlink.rs) ne diramo, identično kao pre.
+  const desktop = useDesktopWeb();
+
   return (
-    <div className={`phone-shell ${hasBottomNav ? "pb-36" : "pb-10"} animate-fade-in`}>
-      <div className="phone-shell-sticky">
+    <div
+      className={cn(
+        desktop
+          ? "w-full max-w-[860px] mx-auto animate-fade-in"
+          : `phone-shell ${hasBottomNav ? "pb-36" : "pb-10"} animate-fade-in`,
+      )}
+    >
+      <div className={desktop ? undefined : "phone-shell-sticky"}>
         {/* Top bar - back + right action */}
         {(back || rightSlot) && (
-          <div className="flex items-center justify-between px-6 pt-1">
+          <div className={cn("flex items-center justify-between", desktop ? "pt-1" : "px-6 pt-1")}>
             {back ? (
               <Link
                 to={back}
@@ -44,7 +58,7 @@ export const PhoneShell = ({
         )}
 
         {/* Large Apple-style title */}
-        <header className="px-6 pt-2 pb-3">
+        <header className={desktop ? "pt-2 pb-5" : "px-6 pt-2 pb-3"}>
           {eyebrow && (
             <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-1.5">
               {eyebrow}
@@ -60,7 +74,7 @@ export const PhoneShell = ({
         </header>
       </div>
 
-      <main className="px-6 pt-3 space-y-4">{children}</main>
+      <main className={desktop ? "space-y-4" : "px-6 pt-3 space-y-4"}>{children}</main>
     </div>
   );
 };

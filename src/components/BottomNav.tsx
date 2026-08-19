@@ -4,6 +4,7 @@ import {
   Dumbbell, TrendingUp, IdCard, CalendarPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 
 interface BottomNavProps {
   role: "trainer" | "athlete";
@@ -26,6 +27,12 @@ const athleteLinks = [
 
 export const BottomNav = ({ role }: BottomNavProps) => {
   const links = role === "trainer" ? trainerLinks : athleteLinks;
+
+  // Trenerski desktop web ima TrainerWebSidebar umesto donje trake - ne
+  // dupliraj navigaciju. Vežbač na desktopu i dalje dobija mobilni prikaz
+  // (nemamo poseban desktop shell za vežbače), pa se njemu traka ne dira.
+  const desktop = useDesktopWeb();
+  if (desktop && role === "trainer") return null;
 
   return (
     <nav

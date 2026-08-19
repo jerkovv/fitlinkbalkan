@@ -4,7 +4,10 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 import { PretplataLockProvider } from "@/components/pretplata/PretplataLockProvider";
+import { TrainerWebShell } from "@/components/trainer/web/TrainerWebShell";
+import { TrainerWebPaywall } from "@/components/trainer/web/TrainerWebPaywall";
 
 // Tvrdi gating trenerskog dela app-a: bez aktivne FitLink pretplate trener vidi LOCK
 // ekran umesto trenerskog UI-a. Montiran je nad svim /trener/* rutama (parent <Outlet/>),
@@ -40,6 +43,7 @@ const FullScreenLoader = () => (
 
 export const TrainerLayout = () => {
   const { role, loading } = useAuth();
+  const desktop = useDesktopWeb();
 
   // false posle unmount-a: async provera ne sme da menja stanje otkacenog layout-a.
   const aliveRef = useRef(true);
@@ -133,10 +137,19 @@ export const TrainerLayout = () => {
     return <FullScreenLoader />;
   }
 
-  // Bez pretplate NE zatvaramo app: trener vidi ekrane i moze da razgleda, ali su
-  // izmene zakljucane (usePretplataLock().guard na akcijama) uz stalnu traku i sheet
-  // sa objasnjenjem. Provera/poll iznad i dalje radi, pa se otkljuca cim pretplata
-  // postane aktivna.
+  // Desktop web (app.fitlink.rs u pregledaču, ne native app): tvrd gejt.
+  // Apple zabranjuje kupovni CTA unutar app-a, ali ovde nismo u App Store-u,
+  // pa dashboard uopste ne postoji dok se trener ne pretplati - isti obrazac
+  // kao vecina SaaS proizvoda. checkAccess() iznad vec pollu na 5s dok je
+  // zakljucano, pa paywall sam nestaje cim webhook upise aktivnu pretplatu.
+  if (desktop) {
+    return access ? <TrainerWebShell /> : <TrainerWebPaywall fact={lockFact} />;
+  }
+
+  // Native i mobilni web: trener vidi ekrane i moze da razgleda, ali su izmene
+  // zakljucane (usePretplataLock().guard na akcijama) uz stalnu traku i sheet
+  // sa objasnjenjem - BEZ kupovnog CTA (App Store zahtev). Provera/poll iznad
+  // i dalje radi, pa se otkljuca cim pretplata postane aktivna.
   return (
     <PretplataLockProvider locked={!access} fact={lockFact}>
       <Outlet />
