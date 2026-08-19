@@ -117,6 +117,14 @@ Deno.serve(async (req) => {
         // Godisnji jednokratni (payment): napravi fakturu. Subscription je vec pravi -
         // invoice_creation na subscription modu baca gresku, pa ide samo u payment granu.
         : {
+            // Nalog je zajednicki sa apgrejd.com, pa se opis na izvodu NE dira
+            // globalno. Kod jednokratne karticne naplate Stripe ne da da se
+            // zameni ceo opis, samo da se na prefiks naloga zakaci dodatak -
+            // trener na izvodu vidi npr. "APGREJD* FitLink".
+            // Mesecna pretplata ide drugim putem: tamo opis dolazi sa
+            // proizvoda (Product.statement_descriptor), sto se podesava u
+            // Stripe-u i takodje ne dira nalog.
+            payment_intent_data: { statement_descriptor_suffix: "FitLink" },
             invoice_creation: {
               enabled: true,
               invoice_data: {
