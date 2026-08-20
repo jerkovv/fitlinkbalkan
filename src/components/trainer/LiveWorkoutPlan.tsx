@@ -33,6 +33,8 @@ type DayExercise = {
 
 type DayFull = {
   day_name: string;
+  /** true = slobodan trening (nema plan dana). */
+  is_free?: boolean;
   exercises: DayExercise[];
 };
 
@@ -87,7 +89,8 @@ export const LiveWorkoutPlan = ({
   currentSetNumber,
 }: {
   sessionId: string;
-  dayId: string;
+  /** null = slobodan trening (nema plan dana, vezbe zive uz sesiju). */
+  dayId: string | null;
   athleteId: string;
   currentIdx: number | null;
   /** Sluzi kao okidac za osvezavanje danasnjih serija kad vezbac zavrsi set. */
@@ -114,16 +117,15 @@ export const LiveWorkoutPlan = ({
   const ucitaj = useCallback(async () => {
     // Isti RPC koji koristi i vezbacev ekran; trener sme da ga zove jer
     // funkcija propusta i p.trainer_id = auth.uid().
-    // p_session_id: ako je trener danas nesto menjao, trening ima svoj spisak
-    // vezbi i RPC vraca NJEGA umesto sablona dana.
-    const { data } = await supabase.rpc("get_workout_day_full" as any, {
-      p_day_id: dayId,
+    // Po SESIJI, ne po danu: slobodan trening nema day_id, a i kod treninga sa
+    // planom ovo vraca vezbe SESIJE ako je trener danas nesto menjao.
+    const { data } = await supabase.rpc("get_session_plan_full" as any, {
       p_session_id: sessionId,
     });
     const d = (Array.isArray(data) ? data[0] : data) as DayFull | null;
     setDay(d ?? null);
     setLoading(false);
-  }, [dayId, sessionId]);
+  }, [sessionId]);
 
   // Serije upisane u OVOM treningu. Trener ih ima pravo da cita ("trainer reads
   // set logs" RLS politika). set_logs nije u realtime objavi, pa se osvezava kad
@@ -274,6 +276,7 @@ export const LiveWorkoutPlan = ({
   };
 
   const vezbe = day?.exercises ?? [];
+  const jeSlobodan = !!day?.is_free;
   const { byExercise: prosliPut } = useLastPerformance(
     athleteId,
     vezbe.map((e) => e.exercise_id),
@@ -286,10 +289,35 @@ export const LiveWorkoutPlan = ({
       </div>
     );
   }
+  // Prazan spisak je NORMALNO stanje slobodnog treninga, ne greska - zato ovde
+  // stoji i dugme za dodavanje. Ranije je pisalo samo "nema vezbe", pa je trener
+  // u slobodnom treningu dolazio u corsokak.
   if (!vezbe.length) {
     return (
-      <div className="text-[13px] text-muted-foreground py-2">
-        Ovaj trening nema vežbe.
+      <div className="py-1">
+        <div className="text-[13px] text-muted-foreground pb-2">
+          {jeSlobodan
+            ? "Slobodan trening - vežbač trenira bez plana. Dodaj vežbe ako hoćeš da mu ih pratiš."
+            : "Ovaj trening nema vežbe."}
+        </div>
+        <button
+          type="button"
+          onClick={() => setDodajem(true)}
+          className="h-9 w-full rounded-lg border border-hairline bg-surface-2 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 transition"
+        >
+          <Plus className="h-3.5 w-3.5" strokeWidth={2.4} />
+          Dodaj vežbe
+        </button>
+
+        <ExercisePickerSheet
+          open={dodajem}
+          dayId={dayId}
+          dayName={day?.day_name ?? "Trening"}
+          table="assigned_program_exercises"
+          onClose={() => setDodajem(false)}
+          onAdded={() => setDodajem(false)}
+          onPickMany={(ids) => void dodajVezbe(ids)}
+        />
       </div>
     );
   }

@@ -477,8 +477,9 @@ const LiveWorkoutView = () => {
           {watchConnected && <HrMiniChart points={(session.hr_series as any) ?? []} />}
 
           {/* Plan treninga koji vezbac upravo radi, sa istorijom po vezbi.
-              Slobodan trening nema day_id (ni vezbe), pa se kartica preskace. */}
-          {session.day_id && athleteId && (
+              Prikazuje se i za SLOBODAN trening: on nema day_id, ali sme da
+              dobije vezbe (zive uz sesiju), pa trener i tu moze da ih doda. */}
+          {athleteId && (
             <Card className="p-4">
               <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3">
                 Trening

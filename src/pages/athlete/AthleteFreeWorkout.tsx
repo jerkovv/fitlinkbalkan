@@ -9,6 +9,7 @@ import { isHrLive } from "@/lib/liveWorkout";
 import { ZONE_DEFS } from "@/lib/wearable/hrZones";
 import { getHrZone } from "@/lib/workout/hrZone";
 import { cn } from "@/lib/utils";
+import { FreeWorkoutExercises } from "@/components/workout/FreeWorkoutExercises";
 
 // ---- Nativni Live Activity plugin (iOS-only) ----
 // Isti most kao u ActiveWorkout.tsx ("LiveActivity"): definisan lokalno jer svaki
@@ -111,6 +112,11 @@ const AthleteFreeWorkout = () => {
   const [maxHr, setMaxHr] = useState<number | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  // Vezbe koje trener doda usred SLOBODNOG treninga. plan_version je signal da
+  // se spisak promenio; pozicija dolazi iz istog zivog reda, pa nema drugog polla.
+  const [planVersion, setPlanVersion] = useState<number | null>(null);
+  const [exIdx, setExIdx] = useState<number | null>(null);
+  const [setNo, setSetNo] = useState<number | null>(null);
 
   const hrSeriesRef = useRef<HRPoint[]>([]);
   const finishedRef = useRef(false);
@@ -186,6 +192,9 @@ const AthleteFreeWorkout = () => {
       }
       const cal = row.current_active_calories;
       if (typeof cal === "number") setActiveCalories(cal);
+      if (typeof row.plan_version === "number") setPlanVersion(row.plan_version);
+      if (typeof row.current_exercise_idx === "number") setExIdx(row.current_exercise_idx);
+      if (typeof row.current_set_number === "number") setSetNo(row.current_set_number);
       if (row.current_state === "completed") goToSummary();
     };
 
@@ -193,7 +202,7 @@ const AthleteFreeWorkout = () => {
       if (cancelled || finishedRef.current) return;
       const { data } = await supabase
         .from("workout_live_state")
-        .select("current_hr, current_active_calories, watch_last_hr_at, current_state")
+        .select("current_hr, current_active_calories, watch_last_hr_at, current_state, plan_version, current_exercise_idx, current_set_number")
         .eq("session_log_id", sessionId)
         .maybeSingle();
       if (data) applyLive(data);
@@ -455,6 +464,18 @@ const AthleteFreeWorkout = () => {
             </div>
           )}
         </div>
+
+        {/* Vezbe koje je trener dodao usred treninga. Dok ih nema, komponenta
+            vraca null i ekran ostaje isti kakav je i bio - cista stoperica. */}
+        {sessionId && (
+          <FreeWorkoutExercises
+            sessionId={sessionId}
+            planVersion={planVersion}
+            currentIdx={exIdx}
+            currentSetNumber={setNo}
+            disabled={finishing}
+          />
+        )}
 
         {/* Zavrsi */}
         <div
