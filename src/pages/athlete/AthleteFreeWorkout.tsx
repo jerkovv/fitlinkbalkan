@@ -130,6 +130,9 @@ const AthleteFreeWorkout = () => {
   const [planInfo, setPlanInfo] = useState<{ ukupno: number; totalSets: number | null } | null>(null);
   // X u zaglavlju: prekid treninga (isto kao u klasicnom treningu).
   const [closeOpen, setCloseOpen] = useState(false);
+  // Pauza posle serije: motor je upisuje u zivi red, odavde stize do tajmera.
+  const [liveState, setLiveState] = useState<string | null>(null);
+  const [restEndsAtIso, setRestEndsAtIso] = useState<string | null>(null);
 
   const hrSeriesRef = useRef<HRPoint[]>([]);
   const finishedRef = useRef(false);
@@ -205,6 +208,8 @@ const AthleteFreeWorkout = () => {
       }
       const cal = row.current_active_calories;
       if (typeof cal === "number") setActiveCalories(cal);
+      if (typeof row.current_state === "string") setLiveState(row.current_state);
+      setRestEndsAtIso((row.rest_ends_at as string | null) ?? null);
       if (typeof row.plan_version === "number") setPlanVersion(row.plan_version);
       if (typeof row.current_exercise_idx === "number") setExIdx(row.current_exercise_idx);
       if (typeof row.current_set_number === "number") setSetNo(row.current_set_number);
@@ -215,7 +220,7 @@ const AthleteFreeWorkout = () => {
       if (cancelled || finishedRef.current) return;
       const { data } = await supabase
         .from("workout_live_state")
-        .select("current_hr, current_active_calories, watch_last_hr_at, current_state, plan_version, current_exercise_idx, current_set_number")
+        .select("current_hr, current_active_calories, watch_last_hr_at, current_state, rest_ends_at, plan_version, current_exercise_idx, current_set_number")
         .eq("session_log_id", sessionId)
         .maybeSingle();
       if (data) applyLive(data);
@@ -550,6 +555,8 @@ const AthleteFreeWorkout = () => {
             currentSetNumber={setNo}
             disabled={finishing}
             onPlan={setPlanInfo}
+            liveState={liveState}
+            restEndsAtIso={restEndsAtIso}
           />
         )}
 

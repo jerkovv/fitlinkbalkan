@@ -6,6 +6,7 @@ import { porukaGreske } from "@/lib/errorMessage";
 import { SetLogger } from "@/components/workout/SetLogger";
 import { ExerciseHeader } from "@/components/workout/ExerciseHeader";
 import { RestOfWorkout } from "@/components/workout/RestOfWorkout";
+import { RestTimer } from "@/components/workout/RestTimer";
 
 type SetDetail = {
   set_number: number;
@@ -67,6 +68,8 @@ export const FreeWorkoutExercises = ({
   currentSetNumber,
   disabled,
   onPlan,
+  liveState,
+  restEndsAtIso,
 }: {
   sessionId: string;
   /** Menja se kad trener doda ili promeni vezbu - okidac za ponovno citanje. */
@@ -76,6 +79,10 @@ export const FreeWorkoutExercises = ({
   disabled?: boolean;
   /** Roditelju treba broj vezbi za zaglavlje ("Vezba 2 od 5"), a plan se cita ovde. */
   onPlan?: (info: { ukupno: number; totalSets: number | null }) => void;
+  /** current_state iz zivog reda: 'rest' znaci da traje pauza. */
+  liveState?: string | null;
+  /** rest_ends_at iz zivog reda (ISO), rezerva kad nemamo lokalni kraj. */
+  restEndsAtIso?: string | null;
 }) => {
   const [plan, setPlan] = useState<SessionPlan | null>(null);
   const [salje, setSalje] = useState(false);
@@ -83,6 +90,11 @@ export const FreeWorkoutExercises = ({
   // (inace se efekat vrti na svakoj promeni pozicije).
   const idxRef = useRef(0);
   idxRef.current = currentIdx ?? 0;
+  // Kraj pauze u LOKALNIM ms. Racuna se iz rest_seconds koje vrati sam RPC, pa
+  // nema poredjenja serverskog sata sa telefonskim - to je u WKWebView-u vec
+  // pravilo probleme. Serverski rest_ends_at je samo rezerva za povratak u
+  // trening (osvezena stranica, pauzu pokrenuo sat).
+  const [restEndsAtMs, setRestEndsAtMs] = useState<number | null>(null);
 
   const ucitaj = useCallback(async () => {
     const { data } = await supabase.rpc("get_session_plan_full" as any, {
@@ -101,6 +113,21 @@ export const FreeWorkoutExercises = ({
     void ucitaj();
   }, [ucitaj, planVersion]);
 
+  // Zivi red je izvor istine za "da li pauza traje": ako je sat preskocio pauzu
+  // ili je serija zavrsena drugde, state prestaje da bude 'rest' i tajmer se gasi.
+  useEffect(() => {
+    if (liveState !== "rest") { setRestEndsAtMs(null); return; }
+    if (restEndsAtMs != null) return;
+    // Nemamo lokalni kraj (povratak u trening) -> uzmi serverski, ali samo ako je
+    // razuman. Iskrivljen sat telefona bi inace dao tajmer od par sati ili odmah 0.
+    if (!restEndsAtIso) return;
+    const kraj = new Date(restEndsAtIso).getTime();
+    const preostalo = kraj - Date.now();
+    if (Number.isFinite(kraj) && preostalo > 0 && preostalo < 60 * 60 * 1000) {
+      setRestEndsAtMs(kraj);
+    }
+  }, [liveState, restEndsAtIso, restEndsAtMs]);
+
   const vezbe = plan?.exercises ?? [];
   if (!vezbe.length) return null;
 
@@ -109,9 +136,23 @@ export const FreeWorkoutExercises = ({
   const setNumber = currentSetNumber ?? 1;
   const cilj = trenutna ? ciljSerije(trenutna, setNumber) : null;
 
+  const preskociPauzu = async () => {
+    setRestEndsAtMs(null);
+    const { error } = await supabase.rpc("athlete_skip_rest" as any, { p_session_id: sessionId });
+    if (error) toast.error(porukaGreske(error));
+  };
+
+  const produziPauzu = async (sekundi: number) => {
+    setRestEndsAtMs((k) => (k != null ? k + sekundi * 1000 : k));
+    const { error } = await supabase.rpc("athlete_extend_rest" as any, {
+      p_session_id: sessionId, p_seconds: sekundi,
+    });
+    if (error) toast.error(porukaGreske(error));
+  };
+
   const zavrsiSeriju = async (d: { reps: number; weight_kg: number; rpe: number | null }) => {
     setSalje(true);
-    const { error } = await supabase.rpc("athlete_complete_set" as any, {
+    const { data, error } = await supabase.rpc("athlete_complete_set" as any, {
       p_session_id: sessionId,
       p_reps: d.reps,
       p_weight: d.weight_kg,
@@ -119,6 +160,10 @@ export const FreeWorkoutExercises = ({
     });
     setSalje(false);
     if (error) { toast.error(porukaGreske(error)); return; }
+    const r = data as { state?: string; rest_seconds?: number } | null;
+    if (r?.state === "rest" && typeof r.rest_seconds === "number" && r.rest_seconds > 0) {
+      setRestEndsAtMs(Date.now() + r.rest_seconds * 1000);
+    }
     await ucitaj();
   };
 
@@ -160,6 +205,23 @@ export const FreeWorkoutExercises = ({
       {/* Ceo spisak ISPOD i sklopljen, isti obrazac kao u klasicnom treningu:
           usred serije se gleda serija, a spisak je tu kad zatreba. */}
       <RestOfWorkout vezbe={vezbe} currentIdx={idx} />
+
+      {/* Pauza je do sada postojala samo na satu: motor je upisivao rest u zivi
+          red, a slobodan ekran ga nikad nije citao. Isti tajmer kao u klasicnom
+          treningu. */}
+      {restEndsAtMs != null && (
+        <RestTimer
+          endsAt={restEndsAtMs}
+          subtitle={
+            trenutna
+              ? `Sledeća serija ${Math.min(setNumber, trenutna.sets)} od ${trenutna.sets}`
+              : undefined
+          }
+          onDone={() => void preskociPauzu()}
+          onAddSeconds={(sek) => void produziPauzu(sek)}
+          disabled={disabled}
+        />
+      )}
     </div>
   );
 };
