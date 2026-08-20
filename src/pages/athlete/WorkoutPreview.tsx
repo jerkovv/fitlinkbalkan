@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Dumbbell, History, Loader2, Play, Trophy } from "lucide-react";
+import { Dumbbell, History, Loader2, Play, Trophy } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useLastPerformance } from "@/hooks/useLastPerformance";
+import { PhoneShell } from "@/components/PhoneShell";
 
 type SetDetail = {
   set_number: number;
@@ -149,36 +150,22 @@ export default function WorkoutPreview() {
   }
 
   return (
-    <div>
-      <div className="px-5 pt-3">
-        <button
-          onClick={() => nav("/vezbac/trening")}
-          aria-label="Nazad"
-          className="h-9 w-9 -ml-1 rounded-full bg-surface-2 inline-flex items-center justify-center"
-        >
-          <ArrowLeft className="h-4 w-4" strokeWidth={2.4} />
-        </button>
-
-        <div className="mt-3">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            {day?.day_number != null ? `Dan ${day.day_number}` : "Trening"}
-          </div>
-          <h1 className="font-display text-[26px] font-bold tracking-tighter leading-tight mt-0.5">
-            {day?.day_name ?? "Trening"}
-          </h1>
-          <div className="text-[13px] text-muted-foreground mt-1 tnum">
-            {vezbe.length} {vezbe.length === 1 ? "vežba" : "vežbi"}
-            {ukupnoSerija > 0 && ` · ${ukupnoSerija} serija`}
-          </div>
-        </div>
+    <PhoneShell
+      back="/vezbac/trening"
+      eyebrow={day?.day_number != null ? `Dan ${day.day_number}` : "Trening"}
+      title={day?.day_name ?? "Trening"}
+    >
+      <div className="px-6 -mt-2 text-[13px] text-muted-foreground tnum">
+        {vezbe.length} {vezbe.length === 1 ? "vežba" : "vežbi"}
+        {ukupnoSerija > 0 && ` · ${ukupnoSerija} serija`}
       </div>
 
       {!vezbe.length ? (
-        <div className="px-5 py-8 text-[13.5px] text-muted-foreground">
+        <div className="px-6 py-8 text-[13.5px] text-muted-foreground">
           Ovaj trening još nema vežbe.
         </div>
       ) : (
-        <div className="px-5 mt-4 space-y-2">
+        <div className="px-6 mt-4 space-y-2">
           {vezbe.map((ex, i) => {
             const ime = ex.exercise.name_en?.trim() || ex.exercise.name;
             const istorija = prosliPut[ex.exercise_id];
@@ -252,7 +239,7 @@ export default function WorkoutPreview() {
           a fiksirani element unutar transformisanog pretka ne racuna pozicioniranje
           prema prozoru. Isti obrazac koristi i slobodan trening. */}
       <div
-        className="px-5 pt-5"
+        className="px-6 pt-5"
         style={{ paddingBottom: "calc(max(env(safe-area-inset-bottom), 16px) + 12px)" }}
       >
         <button
@@ -264,6 +251,6 @@ export default function WorkoutPreview() {
           Počni trening
         </button>
       </div>
-    </div>
+    </PhoneShell>
   );
 }
