@@ -91,5 +91,5 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.get_last_exercise_performance(uuid, uuid[]) FROM public;
+REVOKE ALL ON FUNCTION public.get_last_exercise_performance(uuid, uuid[]) FROM public, anon;
 GRANT EXECUTE ON FUNCTION public.get_last_exercise_performance(uuid, uuid[]) TO authenticated;

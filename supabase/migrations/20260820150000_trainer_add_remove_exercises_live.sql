@@ -152,9 +152,9 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public._trainer_resync_live(uuid, uuid) FROM public;
+REVOKE ALL ON FUNCTION public._trainer_resync_live(uuid, uuid) FROM public, anon;
 GRANT EXECUTE ON FUNCTION public._trainer_resync_live(uuid, uuid) TO authenticated;
-REVOKE ALL ON FUNCTION public.trainer_remove_exercises(uuid, uuid[]) FROM public;
+REVOKE ALL ON FUNCTION public.trainer_remove_exercises(uuid, uuid[]) FROM public, anon;
 GRANT EXECUTE ON FUNCTION public.trainer_remove_exercises(uuid, uuid[]) TO authenticated;
-REVOKE ALL ON FUNCTION public.trainer_add_exercises(uuid, uuid[]) FROM public;
+REVOKE ALL ON FUNCTION public.trainer_add_exercises(uuid, uuid[]) FROM public, anon;
 GRANT EXECUTE ON FUNCTION public.trainer_add_exercises(uuid, uuid[]) TO authenticated;

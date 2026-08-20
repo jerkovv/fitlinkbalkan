@@ -138,5 +138,5 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.trainer_replace_exercise(uuid, uuid, uuid) FROM public;
+REVOKE ALL ON FUNCTION public.trainer_replace_exercise(uuid, uuid, uuid) FROM public, anon;
 GRANT EXECUTE ON FUNCTION public.trainer_replace_exercise(uuid, uuid, uuid) TO authenticated;

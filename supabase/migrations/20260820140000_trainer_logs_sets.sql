@@ -156,9 +156,9 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.trainer_log_next_set(uuid, integer, numeric, numeric, integer) FROM public;
+REVOKE ALL ON FUNCTION public.trainer_log_next_set(uuid, integer, numeric, numeric, integer) FROM public, anon;
 GRANT EXECUTE ON FUNCTION public.trainer_log_next_set(uuid, integer, numeric, numeric, integer) TO authenticated;
-REVOKE ALL ON FUNCTION public.trainer_update_set(uuid, uuid, integer, integer, numeric, numeric) FROM public;
+REVOKE ALL ON FUNCTION public.trainer_update_set(uuid, uuid, integer, integer, numeric, numeric) FROM public, anon;
 GRANT EXECUTE ON FUNCTION public.trainer_update_set(uuid, uuid, integer, integer, numeric, numeric) TO authenticated;
-REVOKE ALL ON FUNCTION public._trainer_session_guard(uuid) FROM public;
+REVOKE ALL ON FUNCTION public._trainer_session_guard(uuid) FROM public, anon;
 GRANT EXECUTE ON FUNCTION public._trainer_session_guard(uuid) TO authenticated;
