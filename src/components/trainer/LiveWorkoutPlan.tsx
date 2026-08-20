@@ -110,8 +110,6 @@ export const LiveWorkoutPlan = ({
   // Otvorena vezba (mreza se vidi samo za nju). null = prati trenutnu vezbu
   // vezbaca, "" = sve sklopljeno, inace id bas te vezbe.
   const [otvorena, setOtvorena] = useState<string | null>(null);
-  // Vezba ciji se CILJ menja (koliko serija/ponavljanja/kg treba da uradi).
-  const [cilj, setCilj] = useState<{ apeId: string; sets: string; reps: string; kg: string } | null>(null);
 
   const ucitaj = useCallback(async () => {
     // Isti RPC koji koristi i vezbacev ekran; trener sme da ga zove jer
@@ -251,37 +249,61 @@ export const LiveWorkoutPlan = ({
     await ucitajDanas();
   };
 
-  /** Ispravka vec upisane celije (kg ili ponavljanja) - salje se na izlazak iz polja. */
-  const sacuvajCeliju = async (ex: DayExercise, setNumber: number) => {
+  /**
+   * Izlazak iz polja u mrezi. Isto polje znaci dve stvari, po stanju serije:
+   *
+   * - serija JOS NIJE cekirana -> to je CILJ te serije. Trener upise 50 kg i
+   *   vezbacu se odmah promeni cilj, pa i predlog u "Aktivna serija".
+   * - serija JESTE cekirana -> to je ispravka onoga sto je stvarno dignuto.
+   *
+   * Zato nema zasebnog dugmeta za cilj: polje je vec na pravom mestu.
+   */
+  const sacuvajCeliju = async (
+    ex: DayExercise,
+    setNumber: number,
+    upisana: DanasnjiSet | undefined,
+  ) => {
     const kljuc = `${ex.id}:${setNumber}`;
     const d = unos[kljuc];
     if (!d) return;
-    const { error } = await supabase.rpc("trainer_log_set" as any, {
+
+    if (upisana) {
+      const { error } = await supabase.rpc("trainer_log_set" as any, {
+        p_session_id: sessionId, p_ape_id: ex.id, p_set_number: setNumber,
+        p_reps: broj(d.reps ?? ""), p_weight: broj(d.kg ?? ""),
+      });
+      if (error) { toast.error(porukaGreske(error)); return; }
+      await ucitajDanas();
+      return;
+    }
+
+    const { error } = await supabase.rpc("trainer_set_set_target" as any, {
       p_session_id: sessionId, p_ape_id: ex.id, p_set_number: setNumber,
-      p_reps: broj(d.reps ?? ""), p_weight: broj(d.kg ?? ""),
+      p_reps: (d.reps ?? "").trim() || null, p_weight: broj(d.kg ?? ""),
     });
     if (error) { toast.error(porukaGreske(error)); return; }
-    await ucitajDanas();
+    // Otkucano se brise da polje opet prikazuje CILJ kao bledi tekst - tako se
+    // na prvi pogled razlikuje zadato od odradjenog.
+    setUnos((u) => { const n = { ...u }; delete n[kljuc]; return n; });
+    await ucitaj();
   };
 
   /**
-   * Izmena CILJA vezbe za danas: koliko serija, ponavljanja i kila TREBA da uradi.
-   * Menja plan, pa vazi samo za ovaj trening i podize plan_version - vezbacev
-   * telefon i sat odmah pokazu nove brojeve.
+   * Dodavanje serije vezbi za danas. Menja plan, pa vazi samo za ovaj trening i
+   * podize plan_version - vezbacev telefon i sat odmah vide novi broj serija.
    */
-  const sacuvajCilj = async (ex: DayExercise, sets: number | null, reps: number | null, kg: number | null) => {
+  const dodajSeriju = async (ex: DayExercise, sets: number) => {
     setSalje(true);
     const { data, error } = await supabase.rpc("trainer_set_exercise_target" as any, {
       p_session_id: sessionId, p_ape_id: ex.id,
-      p_sets: sets, p_reps: reps, p_weight: kg,
+      p_sets: sets, p_reps: null, p_weight: null,
     });
     setSalje(false);
     if (error) { toast.error(porukaGreske(error)); return; }
     // Kardio okidac drzi trajanje na jednoj seriji - reci to, ne pretvarati se.
     const r = data as { capped?: boolean; sets?: number } | null;
     if (r?.capped) toast.info(`Vežba na minute ostaje na ${r.sets} seriji`);
-    else toast.success("Izmenjeno");
-    setCilj(null);
+    else toast.success("Dodata serija");
     await ucitaj();
     await ucitajDanas();
   };
@@ -364,7 +386,6 @@ export const LiveWorkoutPlan = ({
         const danasnje = danas[ex.id] ?? [];
         const kardio = !!ex.exercise.is_duration_based;
         const brojSerija = Math.max(ex.sets ?? 0, ex.set_details?.length ?? 0) || 1;
-        const menjamCilj = cilj?.apeId === ex.id;
         const otvorenaId = otvorena ?? (currentIdx != null ? vezbe[currentIdx]?.id : undefined);
         const razvijena = otvorenaId === ex.id;
         const upisanih = danasnje.length;
@@ -539,7 +560,7 @@ export const LiveWorkoutPlan = ({
                       <Input
                         value={vKg}
                         onChange={(e) => postaviCeliju(kljuc, "kg", e.target.value)}
-                        onBlur={() => { if (upisana) void sacuvajCeliju(ex, sn); }}
+                        onBlur={() => void sacuvajCeliju(ex, sn, upisana)}
                         inputMode="decimal"
                         placeholder={c?.weight_kg != null ? String(Number(c.weight_kg)) : "-"}
                         aria-label={`Kilaža, serija ${sn}`}
@@ -548,7 +569,7 @@ export const LiveWorkoutPlan = ({
                       <Input
                         value={vReps}
                         onChange={(e) => postaviCeliju(kljuc, "reps", e.target.value)}
-                        onBlur={() => { if (upisana) void sacuvajCeliju(ex, sn); }}
+                        onBlur={() => void sacuvajCeliju(ex, sn, upisana)}
                         inputMode="numeric"
                         placeholder={c?.reps ?? "-"}
                         aria-label={`Ponavljanja, serija ${sn}`}
@@ -577,98 +598,18 @@ export const LiveWorkoutPlan = ({
                   );
                 })}
 
-                <div className="mt-2 flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    disabled={salje}
-                    onClick={() => void sacuvajCilj(ex, brojSerija + 1, null, null)}
-                    className="h-9 flex-1 rounded-lg bg-surface-2 text-[12px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 transition disabled:opacity-50"
-                  >
-                    <Plus className="h-3.5 w-3.5" strokeWidth={2.6} />
-                    Dodaj seriju
-                  </button>
-                  <button
-                    type="button"
-                    disabled={salje}
-                    onClick={() =>
-                      setCilj(
-                        menjamCilj
-                          ? null
-                          : {
-                              apeId: ex.id,
-                              sets: String(brojSerija),
-                              reps: ex.set_details?.[0]?.reps ?? (ex.reps != null ? String(ex.reps) : ""),
-                              kg: ex.set_details?.[0]?.weight_kg != null
-                                ? String(Number(ex.set_details[0].weight_kg))
-                                : ex.weight_kg != null ? String(Number(ex.weight_kg)) : "",
-                            },
-                      )
-                    }
-                    className={cn(
-                      "h-9 flex-1 rounded-lg text-[12px] font-semibold inline-flex items-center justify-center gap-1.5 transition disabled:opacity-50",
-                      menjamCilj
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-surface-2 text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    <Pencil className="h-3.5 w-3.5" strokeWidth={2.4} />
-                    Promeni cilj
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  disabled={salje}
+                  onClick={() => void dodajSeriju(ex, brojSerija + 1)}
+                  className="mt-2 h-9 w-full rounded-lg bg-surface-2 text-[12px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 transition disabled:opacity-50"
+                >
+                  <Plus className="h-3.5 w-3.5" strokeWidth={2.6} />
+                  Dodaj seriju
+                </button>
               </div>
             )}
 
-            {/* Izmena CILJA: koliko serija, ponavljanja i kila TREBA da uradi.
-                Odvojeno od mreze namerno - mreza je sta JESTE odradjeno. */}
-            {razvijena && menjamCilj && (
-              <div className="mt-2 ml-[38px] rounded-lg border border-primary/30 bg-primary-soft/40 p-2">
-                <div className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground pb-1.5">
-                  Cilj za danas
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Input
-                    value={cilj.sets}
-                    onChange={(e) => setCilj({ ...cilj, sets: e.target.value })}
-                    inputMode="numeric" placeholder="serija" aria-label="Broj serija"
-                    className="h-9 w-[62px] text-[13px] text-center tnum"
-                  />
-                  <span className="text-muted-foreground text-[13px]">x</span>
-                  <Input
-                    value={cilj.reps}
-                    onChange={(e) => setCilj({ ...cilj, reps: e.target.value })}
-                    inputMode="numeric" placeholder="ponav." aria-label="Ponavljanja"
-                    className="h-9 w-[68px] text-[13px] text-center tnum"
-                  />
-                  <Input
-                    value={cilj.kg}
-                    onChange={(e) => setCilj({ ...cilj, kg: e.target.value })}
-                    inputMode="decimal" placeholder="kg" aria-label="Kilaža"
-                    className="h-9 w-[62px] text-[13px] text-center tnum"
-                  />
-                  {/* Popunjeno polje sakrije placeholder, pa jedinica stoji uz njega. */}
-                  <span className="text-muted-foreground text-[12px]">kg</span>
-                </div>
-                <div className="flex items-center gap-1.5 pt-1.5">
-                  <button
-                    type="button"
-                    disabled={salje}
-                    onClick={() => void sacuvajCilj(ex, broj(cilj.sets), broj(cilj.reps), broj(cilj.kg))}
-                    className="h-9 flex-1 rounded-lg bg-gradient-brand text-white text-[12.5px] font-semibold shadow-brand disabled:opacity-50 inline-flex items-center justify-center gap-1.5"
-                  >
-                    {salje ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                           : <Check className="h-3.5 w-3.5" strokeWidth={3} />}
-                    Sačuvaj cilj
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCilj(null)}
-                    className="h-9 px-3 rounded-lg bg-surface-2 text-[12.5px] font-semibold text-muted-foreground"
-                  >
-                    Otkaži
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         );
       })}
