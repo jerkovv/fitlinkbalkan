@@ -735,25 +735,25 @@ const ActiveWorkout = () => {
   );
 
   /* ------------------------- Trener promenio plan usred treninga ------------------------- */
-  // Plan se inace ucita TACNO jednom (init effect). Kad trener zameni vezbu, server
-  // podigne workout_live_state.plan_version; ovo je jedini put kojim izmena stigne
-  // do vezbaca dok trenira.
+  // Plan se inace ucita TACNO jednom (init effect). Kad trener zameni, obrise ili
+  // doda vezbu, server podigne workout_live_state.plan_version; ovo je jedini put
+  // kojim izmena stigne do vezbaca dok trenira.
   //
-  // Primenjuje se SAMO ako je broj vezbi ostao isti: pos.exerciseIdx je indeks u nizu,
-  // pa bi promenjena duzina znacila da pokazuje na drugu vezbu (ili van niza). Zamena
-  // (trainer_replace_exercise) nikad ne menja broj vezbi, pa je poklapanje ocekivano;
-  // ako se ipak ne poklopi, bolje je zadrzati stari plan nego pomeriti vezbaca usred serije.
+  // Broj vezbi SME da se promeni (brisanje/dodavanje). Nekada je ovde stajala brana
+  // koja je propustala samo isti broj, jer je pos.exerciseIdx indeks u nizu pa bi
+  // druga duzina pokazivala na pogresnu vezbu. Ta brana vise nije potrebna:
+  // _trainer_resync_live na serveru u ISTOM upisu u zivi red posalje i novi
+  // plan_version i preracunatu poziciju (watch_compute_position), pa oboje stize u
+  // jednom realtime dogadjaju. U kratkom trenutku dok se plan dovlaci indeks moze
+  // pasti van niza - render to vec podnosi (`if (!pos || !current)` -> spiner).
   const reloadPlan = useCallback(async () => {
     if (!dayId || finishedRef.current || unmountedRef.current) return;
     const { data, error } = await supabase.rpc("get_workout_day_full", { p_day_id: dayId } as any);
     if (error || unmountedRef.current || finishedRef.current) return;
     const svez = (Array.isArray(data) ? data[0] : data) as DayFull | null;
+    // Prazan odgovor (greska u mrezi, RLS) NE sme da obrise plan pod rukama.
     if (!svez?.exercises?.length) return;
-    setDay((stari) => {
-      if (!stari) return stari;
-      if (stari.exercises.length !== svez.exercises.length) return stari;
-      return svez;
-    });
+    setDay((stari) => (stari ? svez : stari));
   }, [dayId]);
 
   // Zajednicko za poll i realtime: prva vidjena vrednost se samo pamti, svaka

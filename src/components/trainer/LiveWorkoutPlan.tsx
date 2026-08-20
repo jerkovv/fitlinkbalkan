@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Check, Dumbbell, History, Loader2, Pencil, Repeat2 } from "lucide-react";
+import { Check, Dumbbell, History, Loader2, Pencil, Plus, Repeat2, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
@@ -102,6 +102,10 @@ export const LiveWorkoutPlan = ({
   const [reps, setReps] = useState("");
   // Serija koju trener ispravlja: null = nijedna.
   const [ispravljam, setIspravljam] = useState<{ apeId: string; setNumber: number } | null>(null);
+  // Rezim oznacavanja vise vezbi za brisanje. null = iskljucen.
+  const [oznaceno, setOznaceno] = useState<Set<string> | null>(null);
+  // Sheet za dodavanje novih vezbi na kraj treninga.
+  const [dodajem, setDodajem] = useState(false);
 
   const ucitaj = useCallback(async () => {
     // Isti RPC koji koristi i vezbacev ekran; trener sme da ga zove jer
@@ -183,6 +187,38 @@ export const LiveWorkoutPlan = ({
     await ucitajDanas();
   };
 
+  // Brisanje vise vezbi odjednom. Server odbija vezbu koja vec ima upisanu
+  // seriju, i sam preracuna poziciju vezbaca posle brisanja.
+  const obrisiOznacene = async () => {
+    if (!oznaceno || oznaceno.size === 0) return;
+    setSalje(true);
+    const { error } = await supabase.rpc("trainer_remove_exercises" as any, {
+      p_session_id: sessionId,
+      p_ids: [...oznaceno],
+    });
+    setSalje(false);
+    if (error) { toast.error(porukaGreske(error)); return; }
+    toast.success(`Obrisano ${oznaceno.size}`);
+    setOznaceno(null);
+    await ucitaj();
+    await ucitajDanas();
+  };
+
+  // Dodavanje novih vezbi na kraj treninga (3 serije x 10, kao u builderu).
+  const dodajVezbe = async (ids: string[]) => {
+    if (!ids.length) return;
+    setSalje(true);
+    const { error } = await supabase.rpc("trainer_add_exercises" as any, {
+      p_session_id: sessionId,
+      p_exercise_ids: ids,
+    });
+    setSalje(false);
+    setDodajem(false);
+    if (error) { toast.error(porukaGreske(error)); return; }
+    toast.success(`Dodato ${ids.length}`);
+    await ucitaj();
+  };
+
   // Ispravka vec upisane serije (svoje ili vezbaceve). Menja samo brojeve -
   // broj odradjenih serija ostaje isti, pa vezbac ne skace na drugu poziciju.
   const ispraviSeriju = async () => {
@@ -223,8 +259,55 @@ export const LiveWorkoutPlan = ({
     );
   }
 
+  const uOznacavanju = oznaceno !== null;
+
   return (
     <div className="space-y-1.5">
+      {/* Traka radnji nad celim treningom. U rezimu oznacavanja menja se u
+          "obrisi N / otkazi", da se ne mesa sa radnjama po pojedinacnoj vezbi. */}
+      <div className="flex items-center gap-1.5 pb-1">
+        {uOznacavanju ? (
+          <>
+            <button
+              type="button"
+              disabled={salje || oznaceno.size === 0}
+              onClick={() => void obrisiOznacene()}
+              className="h-8 flex-1 rounded-lg bg-destructive text-destructive-foreground text-[12.5px] font-semibold inline-flex items-center justify-center gap-1.5 disabled:opacity-40 transition"
+            >
+              {salje ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                     : <Trash2 className="h-3.5 w-3.5" strokeWidth={2.4} />}
+              Obriši {oznaceno.size > 0 ? oznaceno.size : ""}
+            </button>
+            <button
+              type="button"
+              onClick={() => setOznaceno(null)}
+              className="h-8 px-3 rounded-lg bg-surface-2 text-[12.5px] font-semibold text-muted-foreground"
+            >
+              Otkaži
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => setOznaceno(new Set())}
+              className="h-8 flex-1 rounded-lg border border-hairline bg-surface-2 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 transition"
+            >
+              <Trash2 className="h-3.5 w-3.5" strokeWidth={2.2} />
+              Obriši vežbe
+            </button>
+            <button
+              type="button"
+              onClick={() => setDodajem(true)}
+              className="h-8 flex-1 rounded-lg border border-hairline bg-surface-2 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 transition"
+            >
+              <Plus className="h-3.5 w-3.5" strokeWidth={2.4} />
+              Dodaj vežbe
+            </button>
+          </>
+        )}
+      </div>
+
       {vezbe.map((ex, i) => {
         const trenutna = currentIdx != null && i === currentIdx;
         const odradjena = currentIdx != null && i < currentIdx;
@@ -245,16 +328,44 @@ export const LiveWorkoutPlan = ({
             )}
           >
             <div className="flex items-center gap-2.5">
-              <div
-                className={cn(
-                  "h-7 w-7 rounded-lg flex items-center justify-center shrink-0 text-[11px] font-bold tnum",
-                  trenutna
-                    ? "bg-gradient-brand text-white shadow-brand"
-                    : "bg-surface-2 text-muted-foreground",
-                )}
-              >
-                {odradjena ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : i + 1}
-              </div>
+              {uOznacavanju ? (
+                // Vezba sa vec upisanom serijom se ne moze obrisati (server je
+                // odbija), pa se ni ne nudi za oznacavanje.
+                <button
+                  type="button"
+                  disabled={danasnje.length > 0}
+                  onClick={() =>
+                    setOznaceno((s) => {
+                      const n = new Set(s ?? []);
+                      if (n.has(ex.id)) n.delete(ex.id);
+                      else n.add(ex.id);
+                      return n;
+                    })
+                  }
+                  aria-label={`Označi ${ime}`}
+                  className={cn(
+                    "h-7 w-7 rounded-lg border-2 flex items-center justify-center shrink-0 transition",
+                    danasnje.length > 0
+                      ? "border-hairline bg-surface-2 opacity-40"
+                      : oznaceno?.has(ex.id)
+                        ? "border-destructive bg-destructive text-destructive-foreground"
+                        : "border-hairline bg-surface hover:border-destructive/50",
+                  )}
+                >
+                  {oznaceno?.has(ex.id) && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                </button>
+              ) : (
+                <div
+                  className={cn(
+                    "h-7 w-7 rounded-lg flex items-center justify-center shrink-0 text-[11px] font-bold tnum",
+                    trenutna
+                      ? "bg-gradient-brand text-white shadow-brand"
+                      : "bg-surface-2 text-muted-foreground",
+                  )}
+                >
+                  {odradjena ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : i + 1}
+                </div>
+              )}
 
               {ex.exercise.thumbnail_url ? (
                 <img
@@ -287,7 +398,7 @@ export const LiveWorkoutPlan = ({
                   zavrsene vezbe bi prepisalo ono sto je vezbac vec uradio.
                   Dugme nosi i rec, ne samo ikonicu: gola strelica se ne cita kao
                   "zameni vezbu" i trener je ne prepozna. */}
-              {!odradjena && (
+              {!odradjena && !uOznacavanju && (
                 <button
                   type="button"
                   onClick={() => setMenjam(ex.id)}
@@ -356,7 +467,7 @@ export const LiveWorkoutPlan = ({
 
             {/* Unos: na TRENUTNOJ vezbi upisuje sledecu seriju, a kad je izabrana
                 neka vec upisana - ispravlja bas nju. */}
-            {(trenutna || ispravljamOvde) && (
+            {(trenutna || ispravljamOvde) && !uOznacavanju && (
               <div className="mt-2 flex items-center gap-1.5 pl-[38px]">
                 <Input
                   value={kg}
@@ -405,6 +516,18 @@ export const LiveWorkoutPlan = ({
 
       {/* Isti birac vezbi kao u builderu, u rezimu zamene (onPick) - bira se
           jedna vezba i vraca ovamo umesto da se dodaje u dan. */}
+      {/* Dodavanje novih vezbi na kraj treninga - obican (visestruki) rezim
+          biraca, isti kao u builderu. */}
+      <ExercisePickerSheet
+        open={dodajem}
+        dayId={dayId}
+        dayName={day?.day_name ?? "Trening"}
+        table="assigned_program_exercises"
+        onClose={() => setDodajem(false)}
+        onAdded={() => setDodajem(false)}
+        onPickMany={(ids) => void dodajVezbe(ids)}
+      />
+
       <ExercisePickerSheet
         open={menjam !== null}
         dayId={dayId}

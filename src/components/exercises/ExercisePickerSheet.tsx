@@ -27,9 +27,16 @@ type Props = {
    * Koristi ga trener kad usred treninga menja vezbu (zauzeta sprava).
    */
   onPick?: (exerciseId: string) => void;
+  /**
+   * Kao onPick, ali visestruko: sheet vrati SVE izabrane vezbe umesto da ih sam
+   * upise u dan. Koristi se kad upis mora da ide kroz RPC (dodavanje vezbi usred
+   * treninga ide preko trainer_add_exercises, koji uz upis i obavesti vezbacev
+   * telefon - direktan insert bi vezbi dodao, a on ih ne bi video).
+   */
+  onPickMany?: (exerciseIds: string[]) => void;
 };
 
-export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAdded, onPick }: Props) => {
+export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAdded, onPick, onPickMany }: Props) => {
   const [muscle, setMuscle] = useState<MuscleGroupId>("grudi");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [searchOpen, setSearchOpen] = useState(false);
@@ -109,6 +116,12 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAd
 
   const handleConfirm = () => {
     if (selected.size === 0) return;
+    if (onPickMany) {
+      const ids = [...selected];
+      setSelected(new Set());
+      onPickMany(ids);
+      return;
+    }
     if (onPick) {
       const [id] = [...selected];
       setSelected(new Set());
