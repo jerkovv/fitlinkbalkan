@@ -26,7 +26,8 @@ export const AthleteLayout = () => {
       markWorkoutEntered(sessionId);
       // day_id == null -> slobodan trening (bez plana, npr. pokrenut sa sata); inace
       // normalan trening po danu plana. markWorkoutEntered iznad spreca povratnu navigaciju.
-      if (dayId) nav(`/vezbac/trening/${dayId}`);
+      // /aktivan/ namerno: ovo je POVRATAK u zapocet trening, ne pregled.
+      if (dayId) nav(`/vezbac/trening/aktivan/${dayId}`);
       else nav(`/vezbac/slobodan-trening/${sessionId}`);
     },
     [nav],

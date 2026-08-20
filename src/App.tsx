@@ -44,6 +44,7 @@ import TrainerLiveAthletes from "./pages/trainer/LiveAthletesView.tsx";
 
 import AthleteHome from "./pages/athlete/Home.tsx";
 import AthleteWorkout from "./pages/athlete/ActiveWorkout.tsx";
+import AthleteWorkoutPreview from "./pages/athlete/WorkoutPreview.tsx";
 import AthleteFreeWorkout from "./pages/athlete/AthleteFreeWorkout.tsx";
 import AthleteWorkoutSummary from "./pages/athlete/WorkoutSummary.tsx";
 import AthleteWorkoutHome from "./pages/athlete/WorkoutHome.tsx";
@@ -134,7 +135,9 @@ const App = () => (
               <Route path="/vezbac/trening/aktivan/:dayId" element={athlete(<AthleteWorkout />)} />
               <Route path="/vezbac/trening/zavrsen/:sessionId" element={athlete(<AthleteWorkoutSummary />)} />
               <Route path="/vezbac/slobodan-trening/:sessionId" element={athlete(<AthleteFreeWorkout />)} />
-              <Route path="/vezbac/trening/:dayId" element={athlete(<AthleteWorkout />)} />
+              {/* Tap na dan vodi na PREGLED; trening krece tek na dugme unutra.
+                  Zapocet trening se vraca kroz /aktivan/ i pregled preskace. */}
+              <Route path="/vezbac/trening/:dayId" element={athlete(<AthleteWorkoutPreview />)} />
               <Route path="/vezbac/rezervacija" element={athlete(<AthleteBooking />)} />
               <Route path="/vezbac/napredak" element={athlete(<AthleteProgress />)} />
               <Route path="/vezbac/ishrana" element={athlete(<AthleteNutrition />)} />

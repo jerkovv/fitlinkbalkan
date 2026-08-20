@@ -22,6 +22,7 @@ import { porukaGreske } from "@/lib/errorMessage";
 import { cn } from "@/lib/utils";
 import { ExerciseHeader } from "@/components/workout/ExerciseHeader";
 import { SetLogger } from "@/components/workout/SetLogger";
+import { RestOfWorkout } from "@/components/workout/RestOfWorkout";
 import { RestTimer } from "@/components/workout/RestTimer";
 import { Network } from "@capacitor/network";
 import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor/core";
@@ -1982,6 +1983,11 @@ const ActiveWorkout = () => {
               />
             </>
           )}
+
+          {/* Ceo trening - sklopljeno, da se usred serije gleda serija. */}
+          {day?.exercises?.length ? (
+            <RestOfWorkout vezbe={day.exercises} currentIdx={exerciseIdx} />
+          ) : null}
 
           {/* Manual finish */}
           <button

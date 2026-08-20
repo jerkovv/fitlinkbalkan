@@ -202,7 +202,7 @@ const Home = () => {
           </Card>
         ) : next ? (
           <button
-            onClick={guard(() => navigate(`/vezbac/trening/aktivan/${next.day_id}`))}
+            onClick={guard(() => navigate(`/vezbac/trening/${next.day_id}`))}
             className="block w-full text-left"
           >
             <Card className="p-5 bg-gradient-brand text-white border-0 shadow-brand relative overflow-hidden">
