@@ -114,7 +114,10 @@ export const FreeWorkoutExercises = ({
 
       <div className="rounded-xl border border-hairline bg-surface divide-y divide-hairline mb-4">
         {vezbe.map((ex, i) => {
-          const ime = ex.exercise.name_en?.trim() || ex.exercise.name;
+          // Vezbacu SRPSKI naziv. Engleski se ovde namerno ne prikazuje: red je
+          // zbijen, a spisak ide i do 10 vezbi - drugi red imena bi ga izduzio.
+          // U pregledu pre treninga, gde ima mesta, stoje oba.
+          const ime = ex.exercise.name;
           const aktivna = i === idx;
           const gotova = i < idx;
           return (

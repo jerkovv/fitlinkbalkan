@@ -84,7 +84,10 @@ export const RestOfWorkout = ({
       {otvoreno && (
         <div className="border-t border-hairline divide-y divide-hairline">
           {vezbe.map((ex, i) => {
-            const ime = ex.exercise.name_en?.trim() || ex.exercise.name;
+            // Vezbacu SRPSKI naziv. Engleski se ovde namerno ne prikazuje: red je
+            // zbijen, a spisak ide i do 10 vezbi - drugi red imena bi ga izduzio.
+            // U pregledu pre treninga, gde ima mesta, stoje oba.
+            const ime = ex.exercise.name;
             const gotova = i < currentIdx;
             const aktivna = i === currentIdx;
             return (

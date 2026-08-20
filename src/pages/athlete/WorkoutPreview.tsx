@@ -167,37 +167,60 @@ export default function WorkoutPreview() {
       ) : (
         <div className="px-6 mt-4 space-y-2">
           {vezbe.map((ex, i) => {
-            const ime = ex.exercise.name_en?.trim() || ex.exercise.name;
             const istorija = prosliPut[ex.exercise_id];
             const rekord =
               istorija?.best_weight_kg != null && Number(istorija.best_weight_kg) > 0
                 ? Number(istorija.best_weight_kg)
                 : null;
             return (
-              <div key={ex.id} className="rounded-xl border border-hairline bg-surface p-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-7 w-7 rounded-lg bg-surface-2 text-muted-foreground flex items-center justify-center shrink-0 text-[11px] font-bold tnum">
-                    {i + 1}
+              <div key={ex.id} className="rounded-2xl border border-hairline bg-surface p-3">
+                <div className="flex items-start gap-3">
+                  {/* Slika je glavni orijentir - po njoj se vezba prepoznaje brze
+                      nego po imenu, pa nosi i redni broj u uglu. */}
+                  <div className="relative shrink-0">
+                    {ex.exercise.thumbnail_url ? (
+                      <img
+                        src={ex.exercise.thumbnail_url}
+                        alt=""
+                        loading="lazy"
+                        className="h-[68px] w-[68px] rounded-xl object-cover bg-surface-2"
+                      />
+                    ) : (
+                      <div className="h-[68px] w-[68px] rounded-xl bg-surface-2 flex items-center justify-center">
+                        <Dumbbell className="h-6 w-6 text-muted-foreground/50" />
+                      </div>
+                    )}
+                    <span className="absolute -top-1.5 -left-1.5 h-6 w-6 rounded-full bg-foreground text-background flex items-center justify-center text-[11px] font-bold tnum shadow-sm">
+                      {i + 1}
+                    </span>
                   </div>
 
-                  {ex.exercise.thumbnail_url ? (
-                    <img
-                      src={ex.exercise.thumbnail_url}
-                      alt=""
-                      loading="lazy"
-                      className="h-11 w-11 rounded-lg object-cover bg-surface-2 shrink-0"
-                    />
-                  ) : (
-                    <div className="h-11 w-11 rounded-lg bg-surface-2 flex items-center justify-center shrink-0">
-                      <Dumbbell className="h-4 w-4 text-muted-foreground/60" />
+                  <div className="flex-1 min-w-0 pt-0.5">
+                    {/* Srpski naziv je glavni; engleski ide ispod, sitnije - da se
+                        vezba prepozna i po nazivu iz sale. Kod 7 vezbi su nazivi
+                        isti, pa se drugi red tada preskace. */}
+                    <div className="text-[15px] font-semibold leading-tight">
+                      {ex.exercise.name}
                     </div>
-                  )}
+                    {ex.exercise.name_en?.trim() &&
+                      ex.exercise.name_en.trim().toLowerCase() !== ex.exercise.name.trim().toLowerCase() && (
+                        <div className="text-[11.5px] text-muted-foreground/80 leading-tight mt-0.5 truncate">
+                          {ex.exercise.name_en}
+                        </div>
+                      )}
 
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[14px] font-semibold truncate">{ime}</div>
-                    <div className="text-[12px] text-muted-foreground truncate tnum">
-                      {ciljTekst(ex)}
-                      {ex.exercise.primary_muscle && ` · ${ex.exercise.primary_muscle}`}
+                    {/* Bez prelamanja: kad se misic ne uklopi, skracuje se. Sa
+                        flex-wrap je kod duzih naziva padao u svoj red, pa je
+                        visina kartice skakala od vezbe do vezbe. */}
+                    <div className="flex items-center gap-2 mt-2 min-w-0">
+                      <span className="inline-flex shrink-0 items-center rounded-md bg-surface-2 px-2 py-1 text-[12px] font-semibold tnum">
+                        {ciljTekst(ex)}
+                      </span>
+                      {ex.exercise.primary_muscle && (
+                        <span className="text-[11.5px] text-muted-foreground truncate">
+                          {ex.exercise.primary_muscle}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -205,26 +228,28 @@ export default function WorkoutPreview() {
                 {/* Sta je digao poslednji put za bas ovu vezbu - da zna odakle
                     krece, umesto da se seca u sali. */}
                 {istorija?.performed_at && istorija.sets.length > 0 && (
-                  <div className="mt-2 flex items-start gap-1.5 pl-[40px]">
-                    <History
-                      className="h-3 w-3 text-muted-foreground shrink-0 mt-[3px]"
-                      strokeWidth={2.2}
-                    />
-                    <div className="flex flex-wrap items-center gap-1">
-                      {istorija.sets.map((s) => (
-                        <span
-                          key={s.set_number}
-                          className="inline-flex items-center rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium tnum text-muted-foreground"
-                        >
-                          {setTekst(s)}
-                        </span>
-                      ))}
+                  <div className="mt-2.5 pt-2.5 border-t border-hairline">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <History className="h-3 w-3 text-muted-foreground shrink-0" strokeWidth={2.2} />
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Prošli put
+                      </span>
                       {rekord != null && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground ml-0.5">
+                        <span className="ml-auto inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">
                           <Trophy className="h-3 w-3 text-warning shrink-0" strokeWidth={2.2} />
                           {rekord} kg
                         </span>
                       )}
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {istorija.sets.map((s) => (
+                        <span
+                          key={s.set_number}
+                          className="inline-flex items-center rounded-md bg-surface-2 px-1.5 py-0.5 text-[11.5px] font-medium tnum"
+                        >
+                          {setTekst(s)}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 )}
