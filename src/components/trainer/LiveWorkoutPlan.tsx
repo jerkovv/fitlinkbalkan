@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { Check, Dumbbell, History, Loader2, Repeat2 } from "lucide-react";
+import { Check, Dumbbell, History, Loader2, Pencil, Repeat2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { porukaGreske } from "@/lib/errorMessage";
 import { useLastPerformance } from "@/hooks/useLastPerformance";
 import { ExercisePickerSheet } from "@/components/exercises/ExercisePickerSheet";
+import { Input } from "@/components/ui/input";
 
 type SetDetail = {
   set_number: number;
@@ -33,6 +34,15 @@ type DayExercise = {
 type DayFull = {
   day_name: string;
   exercises: DayExercise[];
+};
+
+/** Serija upisana U OVOM treningu (set_logs). */
+type DanasnjiSet = {
+  exercise_id: string;      // assigned_program_exercises.id
+  set_number: number;
+  reps: number | null;
+  weight_kg: number | null;
+  logged_by_trainer: boolean;
 };
 
 /** "40 kg x 10" ili samo "x 10" za vezbe sa sopstvenom tezinom. */
@@ -71,17 +81,27 @@ export const LiveWorkoutPlan = ({
   dayId,
   athleteId,
   currentIdx,
+  currentSetNumber,
 }: {
   sessionId: string;
   dayId: string;
   athleteId: string;
   currentIdx: number | null;
+  /** Sluzi kao okidac za osvezavanje danasnjih serija kad vezbac zavrsi set. */
+  currentSetNumber: number | null;
 }) => {
   const [day, setDay] = useState<DayFull | null>(null);
   const [loading, setLoading] = useState(true);
   // Vezba koju trener menja (assigned_program_exercises.id), null = sheet zatvoren.
   const [menjam, setMenjam] = useState<string | null>(null);
   const [salje, setSalje] = useState(false);
+  // Serije upisane u ovom treningu, grupisane po vezbi.
+  const [danas, setDanas] = useState<Record<string, DanasnjiSet[]>>({});
+  // Unos za sledecu seriju (kg / ponavljanja).
+  const [kg, setKg] = useState("");
+  const [reps, setReps] = useState("");
+  // Serija koju trener ispravlja: null = nijedna.
+  const [ispravljam, setIspravljam] = useState<{ apeId: string; setNumber: number } | null>(null);
 
   const ucitaj = useCallback(async () => {
     // Isti RPC koji koristi i vezbacev ekran; trener sme da ga zove jer
@@ -92,10 +112,31 @@ export const LiveWorkoutPlan = ({
     setLoading(false);
   }, [dayId]);
 
+  // Serije upisane u OVOM treningu. Trener ih ima pravo da cita ("trainer reads
+  // set logs" RLS politika). set_logs nije u realtime objavi, pa se osvezava kad
+  // se promeni pozicija vezbaca - a ona se menja bas kad neko upise seriju.
+  const ucitajDanas = useCallback(async () => {
+    const { data } = await supabase
+      .from("set_logs")
+      .select("exercise_id, set_number, reps, weight_kg, logged_by_trainer")
+      .eq("session_log_id", sessionId)
+      .eq("done", true)
+      .order("set_number");
+    const grupisano: Record<string, DanasnjiSet[]> = {};
+    for (const red of ((data ?? []) as DanasnjiSet[])) {
+      (grupisano[red.exercise_id] ??= []).push(red);
+    }
+    setDanas(grupisano);
+  }, [sessionId]);
+
   useEffect(() => {
     setLoading(true);
     void ucitaj();
   }, [ucitaj]);
+
+  useEffect(() => {
+    void ucitajDanas();
+  }, [ucitajDanas, currentIdx, currentSetNumber]);
 
   // Zamena vezbe usred treninga. Server proverava da je sesija ziva, da je vezbac
   // bas ovog trenera i da vezba pripada BAS ovom danu, pa podigne plan_version -
@@ -116,6 +157,49 @@ export const LiveWorkoutPlan = ({
     }
     toast.success(`Zamenjeno: ${(data as any)?.name ?? "vežba"}`);
     await ucitaj();
+  };
+
+  const broj = (t: string): number | null => {
+    const v = t.trim().replace(",", ".");
+    if (!v) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  // Trener belezi seriju koju je vezbac upravo odradio. Server sam bira KOJI je
+  // set na redu (isto kao kad vezbac klikne), pa se broj upisanih serija i
+  // pozicija ne mogu razici.
+  const upisiSeriju = async () => {
+    setSalje(true);
+    const { error } = await supabase.rpc("trainer_log_next_set" as any, {
+      p_session_id: sessionId,
+      p_reps: broj(reps),
+      p_weight: broj(kg),
+    });
+    setSalje(false);
+    if (error) { toast.error(porukaGreske(error)); return; }
+    setKg(""); setReps("");
+    toast.success("Upisano");
+    await ucitajDanas();
+  };
+
+  // Ispravka vec upisane serije (svoje ili vezbaceve). Menja samo brojeve -
+  // broj odradjenih serija ostaje isti, pa vezbac ne skace na drugu poziciju.
+  const ispraviSeriju = async () => {
+    if (!ispravljam) return;
+    setSalje(true);
+    const { error } = await supabase.rpc("trainer_update_set" as any, {
+      p_session_id: sessionId,
+      p_assigned_exercise_id: ispravljam.apeId,
+      p_set_number: ispravljam.setNumber,
+      p_reps: broj(reps),
+      p_weight: broj(kg),
+    });
+    setSalje(false);
+    if (error) { toast.error(porukaGreske(error)); return; }
+    setIspravljam(null); setKg(""); setReps("");
+    toast.success("Izmenjeno");
+    await ucitajDanas();
   };
 
   const vezbe = day?.exercises ?? [];
@@ -146,6 +230,8 @@ export const LiveWorkoutPlan = ({
         const odradjena = currentIdx != null && i < currentIdx;
         const ime = ex.exercise.name_en?.trim() || ex.exercise.name;
         const istorija = prosliPut[ex.exercise_id];
+        const danasnje = danas[ex.id] ?? [];
+        const ispravljamOvde = ispravljam?.apeId === ex.id;
 
         return (
           <div
@@ -230,6 +316,84 @@ export const LiveWorkoutPlan = ({
                     </span>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* DANAS odradjeno. Tap na seriju je ispravka - trener sme da menja
+                i svoj i vezbacev upis. Tackica oznacava sta je uneo trener. */}
+            {danasnje.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1 pl-[38px]">
+                {danasnje.map((d) => {
+                  const bira = ispravljamOvde && ispravljam?.setNumber === d.set_number;
+                  return (
+                    <button
+                      key={d.set_number}
+                      type="button"
+                      onClick={() => {
+                        setIspravljam({ apeId: ex.id, setNumber: d.set_number });
+                        setKg(d.weight_kg != null ? String(Number(d.weight_kg)) : "");
+                        setReps(d.reps != null ? String(d.reps) : "");
+                      }}
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold tnum transition",
+                        bira
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-success-soft text-success-soft-foreground",
+                      )}
+                    >
+                      {d.logged_by_trainer && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+                      )}
+                      {setTekst(d)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Unos: na TRENUTNOJ vezbi upisuje sledecu seriju, a kad je izabrana
+                neka vec upisana - ispravlja bas nju. */}
+            {(trenutna || ispravljamOvde) && (
+              <div className="mt-2 flex items-center gap-1.5 pl-[38px]">
+                <Input
+                  value={kg}
+                  onChange={(e) => setKg(e.target.value)}
+                  inputMode="decimal"
+                  placeholder="kg"
+                  aria-label="Kilaža"
+                  className="h-9 w-[68px] text-[13px] text-center"
+                />
+                <Input
+                  value={reps}
+                  onChange={(e) => setReps(e.target.value)}
+                  inputMode="numeric"
+                  placeholder="ponav."
+                  aria-label="Ponavljanja"
+                  className="h-9 w-[74px] text-[13px] text-center"
+                />
+                <button
+                  type="button"
+                  disabled={salje}
+                  onClick={() => void (ispravljamOvde ? ispraviSeriju() : upisiSeriju())}
+                  className="h-9 flex-1 rounded-lg bg-gradient-brand text-white text-[12.5px] font-semibold shadow-brand disabled:opacity-50 inline-flex items-center justify-center gap-1.5"
+                >
+                  {salje ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : ispravljamOvde ? (
+                    <><Pencil className="h-3.5 w-3.5" strokeWidth={2.4} />Izmeni</>
+                  ) : (
+                    <><Check className="h-3.5 w-3.5" strokeWidth={3} />Upiši seriju</>
+                  )}
+                </button>
+                {ispravljamOvde && (
+                  <button
+                    type="button"
+                    onClick={() => { setIspravljam(null); setKg(""); setReps(""); }}
+                    className="h-9 px-3 rounded-lg bg-surface-2 text-[12.5px] font-semibold text-muted-foreground"
+                  >
+                    Otkaži
+                  </button>
+                )}
               </div>
             )}
           </div>

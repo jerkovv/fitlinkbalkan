@@ -488,6 +488,7 @@ const LiveWorkoutView = () => {
                 dayId={session.day_id}
                 athleteId={athleteId}
                 currentIdx={state?.current_exercise_idx ?? null}
+                currentSetNumber={state?.current_set_number ?? null}
               />
             </Card>
           )}
