@@ -215,41 +215,6 @@ export const LiveWorkoutPlan = ({
     setUnos((u) => ({ ...u, [kljuc]: { ...u[kljuc], [polje]: v } }));
 
   /**
-   * Cekiranje/odcekiranje jedne celije mreze.
-   *
-   * Upisuje se BAS ta serija, ne "sledeca na redu" - zato server racuna poziciju
-   * kao prvu seriju koja NEDOSTAJE, pa rupa (upisana 2 dok je 1 prazna) vise ne
-   * zaglavljuje vezbaca. Zivi red se ne dira: tempo je vezbacev.
-   */
-  const prebaciSeriju = async (
-    ex: DayExercise,
-    setNumber: number,
-    upisana: DanasnjiSet | undefined,
-  ) => {
-    const kljuc = `${ex.id}:${setNumber}`;
-    setSalje(true);
-    if (upisana) {
-      const { error } = await supabase.rpc("trainer_unlog_set" as any, {
-        p_session_id: sessionId, p_ape_id: ex.id, p_set_number: setNumber,
-      });
-      setSalje(false);
-      if (error) { toast.error(porukaGreske(error)); return; }
-      setUnos((u) => { const n = { ...u }; delete n[kljuc]; return n; });
-    } else {
-      const c = ex.set_details?.find((d) => d.set_number === setNumber);
-      const kgTekst = unos[kljuc]?.kg ?? (c?.weight_kg != null ? String(Number(c.weight_kg)) : "");
-      const repsTekst = unos[kljuc]?.reps ?? c?.reps ?? "";
-      const { error } = await supabase.rpc("trainer_log_set" as any, {
-        p_session_id: sessionId, p_ape_id: ex.id, p_set_number: setNumber,
-        p_reps: broj(repsTekst), p_weight: broj(kgTekst),
-      });
-      setSalje(false);
-      if (error) { toast.error(porukaGreske(error)); return; }
-    }
-    await ucitajDanas();
-  };
-
-  /**
    * Izlazak iz polja u mrezi. Isto polje znaci dve stvari, po stanju serije:
    *
    * - serija JOS NIJE cekirana -> to je CILJ te serije. Trener upise 50 kg i
@@ -575,25 +540,26 @@ export const LiveWorkoutPlan = ({
                         aria-label={`Ponavljanja, serija ${sn}`}
                         className="h-8 px-1 text-[12.5px] text-center tnum"
                       />
-                      {/* Tackica na cekiranom polju znaci da je broj uneo trener. */}
-                      <button
-                        type="button"
-                        disabled={salje}
-                        onClick={() => void prebaciSeriju(ex, sn, upisana)}
-                        aria-label={upisana ? `Poništi seriju ${sn}` : `Upiši seriju ${sn}`}
-                        aria-pressed={!!upisana}
+                      {/* Zeleno je VEZBACEVO stanje - pali se kad on zavrsi tu
+                          seriju. Namerno nije dugme: trener ga ne sme ni skinuti
+                          ni staviti (server to i odbija), pa lazno tapljiv
+                          element samo obecava sto ne moze da ispuni.
+                          Tackica znaci da je brojeve uneo trener. */}
+                      <div
+                        role="img"
+                        aria-label={upisana ? `Serija ${sn} odrađena` : `Serija ${sn} nije odrađena`}
                         className={cn(
-                          "relative h-8 w-8 rounded-lg flex items-center justify-center transition disabled:opacity-50",
+                          "relative h-8 w-8 rounded-lg flex items-center justify-center",
                           upisana
                             ? "bg-success text-success-foreground"
-                            : "bg-surface-2 text-muted-foreground/50 hover:text-foreground",
+                            : "bg-surface-2 text-muted-foreground/30",
                         )}
                       >
                         <Check className="h-4 w-4" strokeWidth={3} />
                         {upisana?.logged_by_trainer && (
                           <span className="absolute h-1.5 w-1.5 rounded-full bg-current opacity-70 translate-x-[11px] -translate-y-[11px]" />
                         )}
-                      </button>
+                      </div>
                     </div>
                   );
                 })}
