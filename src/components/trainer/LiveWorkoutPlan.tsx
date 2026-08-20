@@ -45,6 +45,9 @@ type DanasnjiSet = {
   logged_by_trainer: boolean;
 };
 
+/** Raspored kolona mreze: serija | prosli put | kg | ponavljanja | cekiranje. */
+const KOLONE = "grid grid-cols-[20px_minmax(0,1fr)_56px_56px_32px] gap-x-2 items-center";
+
 /** "40 kg x 10" ili samo "x 10" za vezbe sa sopstvenom tezinom. */
 const setTekst = (s: { reps: number | null; weight_kg: number | null }): string => {
   const kg = s.weight_kg != null && Number(s.weight_kg) > 0 ? `${Number(s.weight_kg)} kg` : null;
@@ -97,15 +100,15 @@ export const LiveWorkoutPlan = ({
   const [salje, setSalje] = useState(false);
   // Serije upisane u ovom treningu, grupisane po vezbi.
   const [danas, setDanas] = useState<Record<string, DanasnjiSet[]>>({});
-  // Unos za sledecu seriju (kg / ponavljanja).
-  const [kg, setKg] = useState("");
-  const [reps, setReps] = useState("");
-  // Serija koju trener ispravlja: null = nijedna.
-  const [ispravljam, setIspravljam] = useState<{ apeId: string; setNumber: number } | null>(null);
   // Rezim oznacavanja vise vezbi za brisanje. null = iskljucen.
   const [oznaceno, setOznaceno] = useState<Set<string> | null>(null);
   // Sheet za dodavanje novih vezbi na kraj treninga.
   const [dodajem, setDodajem] = useState(false);
+  // Rukom otkucane vrednosti po celiji mreze, kljuc "apeId:brojSerije".
+  // Drzi se odvojeno od upisanog, da kucanje ne bude pregazeno osvezavanjem.
+  const [unos, setUnos] = useState<Record<string, { kg?: string; reps?: string }>>({});
+  // Vezba ciji se CILJ menja (koliko serija/ponavljanja/kg treba da uradi).
+  const [cilj, setCilj] = useState<{ apeId: string; sets: string; reps: string; kg: string } | null>(null);
 
   const ucitaj = useCallback(async () => {
     // Isti RPC koji koristi i vezbacev ekran; trener sme da ga zove jer
@@ -175,23 +178,6 @@ export const LiveWorkoutPlan = ({
     return Number.isFinite(n) ? n : null;
   };
 
-  // Trener belezi seriju koju je vezbac upravo odradio. Server sam bira KOJI je
-  // set na redu (isto kao kad vezbac klikne), pa se broj upisanih serija i
-  // pozicija ne mogu razici.
-  const upisiSeriju = async () => {
-    setSalje(true);
-    const { error } = await supabase.rpc("trainer_log_next_set" as any, {
-      p_session_id: sessionId,
-      p_reps: broj(reps),
-      p_weight: broj(kg),
-    });
-    setSalje(false);
-    if (error) { toast.error(porukaGreske(error)); return; }
-    setKg(""); setReps("");
-    toast.success("Upisano");
-    await ucitajDanas();
-  };
-
   // Brisanje vise vezbi odjednom. Server odbija vezbu koja vec ima upisanu
   // seriju, i sam preracuna poziciju vezbaca posle brisanja.
   const obrisiOznacene = async () => {
@@ -224,22 +210,76 @@ export const LiveWorkoutPlan = ({
     await ucitaj();
   };
 
-  // Ispravka vec upisane serije (svoje ili vezbaceve). Menja samo brojeve -
-  // broj odradjenih serija ostaje isti, pa vezbac ne skace na drugu poziciju.
-  const ispraviSeriju = async () => {
-    if (!ispravljam) return;
+  const postaviCeliju = (kljuc: string, polje: "kg" | "reps", v: string) =>
+    setUnos((u) => ({ ...u, [kljuc]: { ...u[kljuc], [polje]: v } }));
+
+  /**
+   * Cekiranje/odcekiranje jedne celije mreze.
+   *
+   * Upisuje se BAS ta serija, ne "sledeca na redu" - zato server racuna poziciju
+   * kao prvu seriju koja NEDOSTAJE, pa rupa (upisana 2 dok je 1 prazna) vise ne
+   * zaglavljuje vezbaca. Zivi red se ne dira: tempo je vezbacev.
+   */
+  const prebaciSeriju = async (
+    ex: DayExercise,
+    setNumber: number,
+    upisana: DanasnjiSet | undefined,
+  ) => {
+    const kljuc = `${ex.id}:${setNumber}`;
     setSalje(true);
-    const { error } = await supabase.rpc("trainer_update_set" as any, {
-      p_session_id: sessionId,
-      p_assigned_exercise_id: ispravljam.apeId,
-      p_set_number: ispravljam.setNumber,
-      p_reps: broj(reps),
-      p_weight: broj(kg),
+    if (upisana) {
+      const { error } = await supabase.rpc("trainer_unlog_set" as any, {
+        p_session_id: sessionId, p_ape_id: ex.id, p_set_number: setNumber,
+      });
+      setSalje(false);
+      if (error) { toast.error(porukaGreske(error)); return; }
+      setUnos((u) => { const n = { ...u }; delete n[kljuc]; return n; });
+    } else {
+      const c = ex.set_details?.find((d) => d.set_number === setNumber);
+      const kgTekst = unos[kljuc]?.kg ?? (c?.weight_kg != null ? String(Number(c.weight_kg)) : "");
+      const repsTekst = unos[kljuc]?.reps ?? c?.reps ?? "";
+      const { error } = await supabase.rpc("trainer_log_set" as any, {
+        p_session_id: sessionId, p_ape_id: ex.id, p_set_number: setNumber,
+        p_reps: broj(repsTekst), p_weight: broj(kgTekst),
+      });
+      setSalje(false);
+      if (error) { toast.error(porukaGreske(error)); return; }
+    }
+    await ucitajDanas();
+  };
+
+  /** Ispravka vec upisane celije (kg ili ponavljanja) - salje se na izlazak iz polja. */
+  const sacuvajCeliju = async (ex: DayExercise, setNumber: number) => {
+    const kljuc = `${ex.id}:${setNumber}`;
+    const d = unos[kljuc];
+    if (!d) return;
+    const { error } = await supabase.rpc("trainer_log_set" as any, {
+      p_session_id: sessionId, p_ape_id: ex.id, p_set_number: setNumber,
+      p_reps: broj(d.reps ?? ""), p_weight: broj(d.kg ?? ""),
+    });
+    if (error) { toast.error(porukaGreske(error)); return; }
+    await ucitajDanas();
+  };
+
+  /**
+   * Izmena CILJA vezbe za danas: koliko serija, ponavljanja i kila TREBA da uradi.
+   * Menja plan, pa vazi samo za ovaj trening i podize plan_version - vezbacev
+   * telefon i sat odmah pokazu nove brojeve.
+   */
+  const sacuvajCilj = async (ex: DayExercise, sets: number | null, reps: number | null, kg: number | null) => {
+    setSalje(true);
+    const { data, error } = await supabase.rpc("trainer_set_exercise_target" as any, {
+      p_session_id: sessionId, p_ape_id: ex.id,
+      p_sets: sets, p_reps: reps, p_weight: kg,
     });
     setSalje(false);
     if (error) { toast.error(porukaGreske(error)); return; }
-    setIspravljam(null); setKg(""); setReps("");
-    toast.success("Izmenjeno");
+    // Kardio okidac drzi trajanje na jednoj seriji - reci to, ne pretvarati se.
+    const r = data as { capped?: boolean; sets?: number } | null;
+    if (r?.capped) toast.info(`Vežba na minute ostaje na ${r.sets} seriji`);
+    else toast.success("Izmenjeno");
+    setCilj(null);
+    await ucitaj();
     await ucitajDanas();
   };
 
@@ -319,7 +359,9 @@ export const LiveWorkoutPlan = ({
         const ime = ex.exercise.name_en?.trim() || ex.exercise.name;
         const istorija = prosliPut[ex.exercise_id];
         const danasnje = danas[ex.id] ?? [];
-        const ispravljamOvde = ispravljam?.apeId === ex.id;
+        const kardio = !!ex.exercise.is_duration_based;
+        const brojSerija = Math.max(ex.sets ?? 0, ex.set_details?.length ?? 0) || 1;
+        const menjamCilj = cilj?.apeId === ex.id;
 
         return (
           <div
@@ -394,9 +436,41 @@ export const LiveWorkoutPlan = ({
                 >
                   {ime}
                 </div>
-                <div className="text-[11.5px] text-muted-foreground truncate tnum">
-                  {ciljTekst(ex)}
-                </div>
+                {/* Sam red cilja je dugme: pise tacno ono sto menja ("3 x 10 ·
+                    50 kg"), pa ne treba jos jedno dugme koje bi jelo ime vezbe.
+                    Olovka stoji uz tekst da se vidi da je tapljiv. */}
+                {uOznacavanju ? (
+                  <div className="text-[11.5px] text-muted-foreground truncate tnum">
+                    {ciljTekst(ex)}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={salje}
+                    onClick={() =>
+                      setCilj(
+                        menjamCilj
+                          ? null
+                          : {
+                              apeId: ex.id,
+                              sets: String(brojSerija),
+                              reps: ex.set_details?.[0]?.reps ?? (ex.reps != null ? String(ex.reps) : ""),
+                              kg: ex.set_details?.[0]?.weight_kg != null
+                                ? String(Number(ex.set_details[0].weight_kg))
+                                : ex.weight_kg != null ? String(Number(ex.weight_kg)) : "",
+                            },
+                      )
+                    }
+                    aria-label={`Promeni cilj za ${ime}`}
+                    className={cn(
+                      "flex items-center gap-1 text-[11.5px] tnum transition disabled:opacity-50",
+                      menjamCilj ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <span className="truncate">{ciljTekst(ex)}</span>
+                    <Pencil className="h-3 w-3 shrink-0 opacity-70" strokeWidth={2.4} />
+                  </button>
+                )}
               </div>
 
               {/* Zamena se nudi samo za vezbe koje jos nisu odradjene - menjanje
@@ -415,104 +489,155 @@ export const LiveWorkoutPlan = ({
                   Zameni
                 </button>
               )}
+
             </div>
 
-            {/* Sta je digao poslednji put za bas ovu vezbu - da trener zna
-                koji broj danas da mu zada, bez otvaranja profila. */}
-            {istorija?.performed_at && istorija.sets.length > 0 && (
+            {/* Kardio nema mrezu, pa mu prosli put stoji ovde. */}
+            {kardio && istorija?.performed_at && istorija.sets.length > 0 && (
               <div className="mt-1.5 flex items-start gap-1.5 pl-[38px]">
-                <History
-                  className="h-3 w-3 text-muted-foreground shrink-0 mt-[3px]"
-                  strokeWidth={2.2}
-                />
+                <History className="h-3 w-3 text-muted-foreground shrink-0 mt-[3px]" strokeWidth={2.2} />
                 <div className="flex flex-wrap gap-1">
-                  {istorija.sets.map((s) => (
-                    <span
-                      key={s.set_number}
-                      className="inline-flex items-center rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium tnum text-muted-foreground"
-                    >
-                      {setTekst(s)}
+                  {istorija.sets.map((s2) => (
+                    <span key={s2.set_number} className="inline-flex items-center rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium tnum text-muted-foreground">
+                      {setTekst(s2)}
                     </span>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* DANAS odradjeno. Tap na seriju je ispravka - trener sme da menja
-                i svoj i vezbacev upis. Tackica oznacava sta je uneo trener. */}
-            {danasnje.length > 0 && (
-              <div className="mt-1.5 flex flex-wrap gap-1 pl-[38px]">
-                {danasnje.map((d) => {
-                  const bira = ispravljamOvde && ispravljam?.setNumber === d.set_number;
+            {/* MREZA: jedan red po seriji - sta je bilo prosli put, i sta je
+                danas dignuto. Trener upisuje u BILO KOJU celiju, i pre i posle
+                zavrsetka treninga; cekiranje ne dira vezbacev tempo.
+                Kardio se meri minutima i po okidacu ima tacno jednu seriju, pa
+                za njega mreza nema smisla - ostaje samo cilj. */}
+            {!uOznacavanju && !kardio && (
+              <div className="mt-2 pl-[38px]">
+                <div className={cn(KOLONE, "pb-1 text-[9.5px] uppercase tracking-wider font-semibold text-muted-foreground")}>
+                  <span>Ser.</span>
+                  <span>Prošli put</span>
+                  <span className="text-center">Kg</span>
+                  <span className="text-center">Pon.</span>
+                  <span />
+                </div>
+
+                {Array.from({ length: brojSerija }, (_, k) => k + 1).map((sn) => {
+                  const upisana = danasnje.find((d) => d.set_number === sn);
+                  const c = ex.set_details?.find((d) => d.set_number === sn);
+                  const pro = istorija?.sets.find((d) => d.set_number === sn);
+                  const kljuc = `${ex.id}:${sn}`;
+                  const vKg = unos[kljuc]?.kg
+                    ?? (upisana?.weight_kg != null ? String(Number(upisana.weight_kg)) : "");
+                  const vReps = unos[kljuc]?.reps
+                    ?? (upisana?.reps != null ? String(upisana.reps) : "");
                   return (
-                    <button
-                      key={d.set_number}
-                      type="button"
-                      onClick={() => {
-                        setIspravljam({ apeId: ex.id, setNumber: d.set_number });
-                        setKg(d.weight_kg != null ? String(Number(d.weight_kg)) : "");
-                        setReps(d.reps != null ? String(d.reps) : "");
-                      }}
-                      className={cn(
-                        "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold tnum transition",
-                        bira
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-success-soft text-success-soft-foreground",
-                      )}
-                    >
-                      {d.logged_by_trainer && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-                      )}
-                      {setTekst(d)}
-                    </button>
+                    <div key={sn} className={cn(KOLONE, "py-[3px]")}>
+                      <span className="text-[12.5px] font-bold tnum">{sn}</span>
+                      <span className="text-[11px] tnum text-muted-foreground truncate">
+                        {pro ? setTekst(pro) : "-"}
+                      </span>
+                      <Input
+                        value={vKg}
+                        onChange={(e) => postaviCeliju(kljuc, "kg", e.target.value)}
+                        onBlur={() => { if (upisana) void sacuvajCeliju(ex, sn); }}
+                        inputMode="decimal"
+                        placeholder={c?.weight_kg != null ? String(Number(c.weight_kg)) : "-"}
+                        aria-label={`Kilaža, serija ${sn}`}
+                        className="h-8 px-1 text-[12.5px] text-center tnum"
+                      />
+                      <Input
+                        value={vReps}
+                        onChange={(e) => postaviCeliju(kljuc, "reps", e.target.value)}
+                        onBlur={() => { if (upisana) void sacuvajCeliju(ex, sn); }}
+                        inputMode="numeric"
+                        placeholder={c?.reps ?? "-"}
+                        aria-label={`Ponavljanja, serija ${sn}`}
+                        className="h-8 px-1 text-[12.5px] text-center tnum"
+                      />
+                      {/* Tackica na cekiranom polju znaci da je broj uneo trener. */}
+                      <button
+                        type="button"
+                        disabled={salje}
+                        onClick={() => void prebaciSeriju(ex, sn, upisana)}
+                        aria-label={upisana ? `Poništi seriju ${sn}` : `Upiši seriju ${sn}`}
+                        aria-pressed={!!upisana}
+                        className={cn(
+                          "relative h-8 w-8 rounded-lg flex items-center justify-center transition disabled:opacity-50",
+                          upisana
+                            ? "bg-success text-success-foreground"
+                            : "bg-surface-2 text-muted-foreground/50 hover:text-foreground",
+                        )}
+                      >
+                        <Check className="h-4 w-4" strokeWidth={3} />
+                        {upisana?.logged_by_trainer && (
+                          <span className="absolute h-1.5 w-1.5 rounded-full bg-current opacity-70 translate-x-[11px] -translate-y-[11px]" />
+                        )}
+                      </button>
+                    </div>
                   );
                 })}
-              </div>
-            )}
 
-            {/* Unos: na TRENUTNOJ vezbi upisuje sledecu seriju, a kad je izabrana
-                neka vec upisana - ispravlja bas nju. */}
-            {(trenutna || ispravljamOvde) && !uOznacavanju && (
-              <div className="mt-2 flex items-center gap-1.5 pl-[38px]">
-                <Input
-                  value={kg}
-                  onChange={(e) => setKg(e.target.value)}
-                  inputMode="decimal"
-                  placeholder="kg"
-                  aria-label="Kilaža"
-                  className="h-9 w-[68px] text-[13px] text-center"
-                />
-                <Input
-                  value={reps}
-                  onChange={(e) => setReps(e.target.value)}
-                  inputMode="numeric"
-                  placeholder="ponav."
-                  aria-label="Ponavljanja"
-                  className="h-9 w-[74px] text-[13px] text-center"
-                />
                 <button
                   type="button"
                   disabled={salje}
-                  onClick={() => void (ispravljamOvde ? ispraviSeriju() : upisiSeriju())}
-                  className="h-9 flex-1 rounded-lg bg-gradient-brand text-white text-[12.5px] font-semibold shadow-brand disabled:opacity-50 inline-flex items-center justify-center gap-1.5"
+                  onClick={() => void sacuvajCilj(ex, brojSerija + 1, null, null)}
+                  className="mt-1.5 h-8 w-full rounded-lg bg-surface-2 text-[12px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 transition disabled:opacity-50"
                 >
-                  {salje ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : ispravljamOvde ? (
-                    <><Pencil className="h-3.5 w-3.5" strokeWidth={2.4} />Izmeni</>
-                  ) : (
-                    <><Check className="h-3.5 w-3.5" strokeWidth={3} />Upiši seriju</>
-                  )}
+                  <Plus className="h-3.5 w-3.5" strokeWidth={2.6} />
+                  Dodaj seriju
                 </button>
-                {ispravljamOvde && (
+              </div>
+            )}
+
+            {/* Izmena CILJA: koliko serija, ponavljanja i kila TREBA da uradi.
+                Odvojeno od mreze namerno - mreza je sta JESTE odradjeno. */}
+            {menjamCilj && (
+              <div className="mt-2 ml-[38px] rounded-lg border border-primary/30 bg-primary-soft/40 p-2">
+                <div className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground pb-1.5">
+                  Cilj za danas
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    value={cilj.sets}
+                    onChange={(e) => setCilj({ ...cilj, sets: e.target.value })}
+                    inputMode="numeric" placeholder="serija" aria-label="Broj serija"
+                    className="h-9 w-[62px] text-[13px] text-center tnum"
+                  />
+                  <span className="text-muted-foreground text-[13px]">x</span>
+                  <Input
+                    value={cilj.reps}
+                    onChange={(e) => setCilj({ ...cilj, reps: e.target.value })}
+                    inputMode="numeric" placeholder="ponav." aria-label="Ponavljanja"
+                    className="h-9 w-[68px] text-[13px] text-center tnum"
+                  />
+                  <Input
+                    value={cilj.kg}
+                    onChange={(e) => setCilj({ ...cilj, kg: e.target.value })}
+                    inputMode="decimal" placeholder="kg" aria-label="Kilaža"
+                    className="h-9 w-[62px] text-[13px] text-center tnum"
+                  />
+                  {/* Popunjeno polje sakrije placeholder, pa jedinica stoji uz njega. */}
+                  <span className="text-muted-foreground text-[12px]">kg</span>
+                </div>
+                <div className="flex items-center gap-1.5 pt-1.5">
                   <button
                     type="button"
-                    onClick={() => { setIspravljam(null); setKg(""); setReps(""); }}
+                    disabled={salje}
+                    onClick={() => void sacuvajCilj(ex, broj(cilj.sets), broj(cilj.reps), broj(cilj.kg))}
+                    className="h-9 flex-1 rounded-lg bg-gradient-brand text-white text-[12.5px] font-semibold shadow-brand disabled:opacity-50 inline-flex items-center justify-center gap-1.5"
+                  >
+                    {salje ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                           : <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                    Sačuvaj cilj
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCilj(null)}
                     className="h-9 px-3 rounded-lg bg-surface-2 text-[12.5px] font-semibold text-muted-foreground"
                   >
                     Otkaži
                   </button>
-                )}
+                </div>
               </div>
             )}
           </div>
