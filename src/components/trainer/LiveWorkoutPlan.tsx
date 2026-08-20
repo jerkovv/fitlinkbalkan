@@ -444,29 +444,32 @@ export const LiveWorkoutPlan = ({
                 </div>
               )}
 
-              {ex.exercise.thumbnail_url ? (
-                <img
-                  src={ex.exercise.thumbnail_url}
-                  alt=""
-                  loading="lazy"
-                  className="h-9 w-9 rounded-lg object-cover bg-surface-2 shrink-0"
-                />
-              ) : (
-                <div className="h-9 w-9 rounded-lg bg-surface-2 flex items-center justify-center shrink-0">
-                  <Dumbbell className="h-4 w-4 text-muted-foreground/60" />
-                </div>
-              )}
-
-              {/* Ceo blok sa imenom je prekidac: tap otvara mrezu bas te vezbe.
-                  Cilj se ODAVDE ne menja - dugme u dugmetu nije ispravan HTML,
-                  pa "Cilj" stoji dole uz mrezu, gde se ionako i koristi. */}
+              {/* Slicica, ime, cilj I STRELICA su u ISTOM dugmetu. Ranije je
+                  strelica stajala pored njega, pa je tap bas po njoj - a ona
+                  najvise i lici na "otvori" - padao u prazno.
+                  Cilj se odavde ne menja: dugme u dugmetu nije ispravan HTML,
+                  pa cilj ide kroz polja u mrezi. */}
               <button
                 type="button"
                 disabled={uOznacavanju}
                 onClick={() => setOtvorena(razvijena ? "" : ex.id)}
                 aria-expanded={razvijena}
-                className="flex-1 min-w-0 text-left disabled:cursor-default"
+                className="flex-1 min-w-0 flex items-center gap-2.5 text-left disabled:cursor-default"
               >
+                {ex.exercise.thumbnail_url ? (
+                  <img
+                    src={ex.exercise.thumbnail_url}
+                    alt=""
+                    loading="lazy"
+                    className="h-9 w-9 rounded-lg object-cover bg-surface-2 shrink-0"
+                  />
+                ) : (
+                  <div className="h-9 w-9 rounded-lg bg-surface-2 flex items-center justify-center shrink-0">
+                    <Dumbbell className="h-4 w-4 text-muted-foreground/60" />
+                  </div>
+                )}
+
+                <span className="flex-1 min-w-0">
                 <div
                   className={cn(
                     "text-[13.5px] font-semibold truncate",
@@ -485,17 +488,18 @@ export const LiveWorkoutPlan = ({
                     </span>
                   )}
                 </div>
-              </button>
+                </span>
 
-              {!uOznacavanju && (
-                <ChevronDown
-                  className={cn(
-                    "h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform",
-                    razvijena && "rotate-180",
-                  )}
-                  strokeWidth={2.4}
-                />
-              )}
+                {!uOznacavanju && (
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform",
+                      razvijena && "rotate-180",
+                    )}
+                    strokeWidth={2.4}
+                  />
+                )}
+              </button>
 
               {/* Zamena se nudi samo za vezbe koje jos nisu odradjene - menjanje
                   zavrsene vezbe bi prepisalo ono sto je vezbac vec uradio.
