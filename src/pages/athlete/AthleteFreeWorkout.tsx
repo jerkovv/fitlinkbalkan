@@ -1,7 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Heart, Loader2, Check, Dumbbell, Flame } from "lucide-react";
+import { Heart, Loader2, Check, Dumbbell, Flame, X } from "lucide-react";
 import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor/core";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { formatHMS } from "@/lib/time";
@@ -117,6 +127,9 @@ const AthleteFreeWorkout = () => {
   const [planVersion, setPlanVersion] = useState<number | null>(null);
   const [exIdx, setExIdx] = useState<number | null>(null);
   const [setNo, setSetNo] = useState<number | null>(null);
+  const [planInfo, setPlanInfo] = useState<{ ukupno: number; totalSets: number | null } | null>(null);
+  // X u zaglavlju: prekid treninga (isto kao u klasicnom treningu).
+  const [closeOpen, setCloseOpen] = useState(false);
 
   const hrSeriesRef = useRef<HRPoint[]>([]);
   const finishedRef = useRef(false);
@@ -242,6 +255,18 @@ const AthleteFreeWorkout = () => {
 
   // 5) Zavrsi: ISTA finalize logika kao ActiveWorkout (complete_workout_session sa HR
   //    statistikom + serijom), pa navigacija na rezime. Idempotentno + timeout.
+  // Prekid: isti RPC kao u klasicnom treningu. Brise sesiju, pa sa njom i vezbe
+  // koje su vezane za nju (ON DELETE CASCADE) - nista ne ostaje da visi.
+  const confirmCancel = useCallback(async () => {
+    finishedRef.current = true;
+    if (sessionId) {
+      await supabase.rpc("cancel_workout_session", { p_session_id: sessionId } as any);
+      await supabase.from("workout_live_state" as any).delete().eq("session_log_id", sessionId);
+    }
+    setCloseOpen(false);
+    nav("/vezbac");
+  }, [sessionId, nav]);
+
   const finish = useCallback(async () => {
     if (!sessionId || finishing || finishedRef.current) return;
     setFinishing(true);
@@ -383,17 +408,55 @@ const AthleteFreeWorkout = () => {
   const hrAvg = bpms.length ? Math.round(bpms.reduce((a, b) => a + b, 0) / bpms.length) : null;
   const hrPeak = bpms.length ? Math.max(...bpms) : null;
 
+  const imaVezbe = (planInfo?.ukupno ?? 0) > 0;
+
   return (
     <div className="h-[100dvh] overflow-y-auto bg-background">
+      {/* Zaglavlje kao u klasicnom treningu: izlaz na X, sta se trenutno radi i
+          puls. Bez njega se iz slobodnog treninga moglo izaci samo zavrsavanjem. */}
       <div
-        className="mx-auto w-full max-w-[440px] min-h-screen flex flex-col px-6"
-        style={{ paddingTop: "calc(max(env(safe-area-inset-top), 20px) + 20px)" }}
+        className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-hairline"
+        style={{ paddingTop: "calc(max(env(safe-area-inset-top), 20px) + 8px)" }}
       >
-        <div className="text-center">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            Slobodan trening
+        <div className="mx-auto w-full max-w-[440px] px-4 pb-3 flex items-center gap-3">
+          <button
+            onClick={() => setCloseOpen(true)}
+            aria-label="Zatvori"
+            className="h-10 w-10 rounded-full bg-surface border border-hairline flex items-center justify-center shrink-0"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Slobodan trening · {formatHMS(elapsedS)}
+            </div>
+            <div className="text-[13px] font-bold text-foreground truncate">
+              {imaVezbe && exIdx != null
+                ? `Vežba ${Math.min(exIdx + 1, planInfo!.ukupno)} od ${planInfo!.ukupno}` +
+                  (setNo != null && planInfo!.totalSets
+                    ? ` · Serija ${Math.min(setNo, planInfo!.totalSets)} od ${planInfo!.totalSets}`
+                    : "")
+                : "Bez plana"}
+            </div>
+          </div>
+          <div
+            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full bg-surface border border-hairline shrink-0"
+            style={{ color: zoneCol }}
+            aria-label="Trenutni puls"
+          >
+            <Heart
+              className={cn("h-3.5 w-3.5", hr && "animate-pulse")}
+              strokeWidth={2.4}
+              fill={hr ? "currentColor" : "none"}
+            />
+            <span className="text-[13px] font-bold tnum leading-none">{hr ?? "-"}</span>
           </div>
         </div>
+      </div>
+
+      <div
+        className="mx-auto w-full max-w-[440px] min-h-screen flex flex-col px-6 pt-5"
+      >
 
         {/* Zivi dashboard (Apple stil): trajanje -> puls+zona -> kalorije -> avg/max */}
         <div className="flex-1 flex flex-col items-center justify-center gap-7 py-6">
@@ -474,6 +537,7 @@ const AthleteFreeWorkout = () => {
             currentIdx={exIdx}
             currentSetNumber={setNo}
             disabled={finishing}
+            onPlan={setPlanInfo}
           />
         )}
 
@@ -482,16 +546,41 @@ const AthleteFreeWorkout = () => {
           className="pt-4"
           style={{ paddingBottom: "calc(max(env(safe-area-inset-bottom), 16px) + 16px)" }}
         >
-          <button
-            onClick={finish}
-            disabled={finishing}
-            className="w-full h-14 rounded-2xl bg-gradient-brand text-white font-bold text-[15px] inline-flex items-center justify-center gap-2 shadow-brand active:scale-[0.98] transition disabled:opacity-60"
-          >
-            {finishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" strokeWidth={3} />}
-            {finishing ? "Završavam..." : "Završi trening"}
-          </button>
+          {imaVezbe ? (
+            <button
+              onClick={finish}
+              disabled={finishing}
+              className="w-full text-[12px] font-semibold text-muted-foreground py-3 disabled:opacity-50"
+            >
+              {finishing ? "Završavam..." : "Završi trening odmah"}
+            </button>
+          ) : (
+            <button
+              onClick={finish}
+              disabled={finishing}
+              className="w-full h-14 rounded-2xl bg-gradient-brand text-white font-bold text-[15px] inline-flex items-center justify-center gap-2 shadow-brand active:scale-[0.98] transition disabled:opacity-60"
+            >
+              {finishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" strokeWidth={3} />}
+              {finishing ? "Završavam..." : "Završi trening"}
+            </button>
+          )}
         </div>
       </div>
+
+      <AlertDialog open={closeOpen} onOpenChange={setCloseOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Prekini trening?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Da li želiš da prekineš trening? Sav napredak će biti izgubljen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Otkaži</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmCancel}>Da, prekini</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

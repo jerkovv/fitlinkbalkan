@@ -126,13 +126,13 @@ export const RestOfWorkout = ({
                 <div className="flex-1 min-w-0">
                   <div
                     className={cn(
-                      "text-[13px] font-semibold truncate",
+                      "text-[13px] font-semibold leading-snug line-clamp-2",
                       aktivna && "text-primary-soft-foreground",
                     )}
                   >
                     {ime}
                   </div>
-                  <div className="text-[11.5px] text-muted-foreground truncate tnum">
+                  <div className="text-[11.5px] text-muted-foreground tnum">
                     {ciljTekst(ex)}
                   </div>
                 </div>

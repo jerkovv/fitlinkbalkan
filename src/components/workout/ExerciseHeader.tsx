@@ -58,8 +58,11 @@ export const ExerciseHeader = ({
   exerciseId,
 }: ExerciseHeaderProps) => {
   const [instructionsOpen, setInstructionsOpen] = useState(false);
-  const primary = nameEn?.trim() || name;
-  const showSecondary = !!(nameEn && nameEn.trim() && name && nameEn.trim() !== name);
+  // SRPSKI je glavni naziv, engleski ide ispod sitnije. Ranije je bilo obrnuto,
+  // pa je vezbacu na sopstvenom treningu krupno pisalo "Barbell Bench Press".
+  // Engleski se zadrzava jer je sprava u sali obelezena bas njime.
+  const primary = name;
+  const showSecondary = !!(nameEn && nameEn.trim() && nameEn.trim() !== name.trim());
 
   const [videoFailed, setVideoFailed] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
@@ -171,7 +174,7 @@ export const ExerciseHeader = ({
           {primary}
         </h2>
         {showSecondary && (
-          <p className="text-[14px] text-muted-foreground">{name}</p>
+          <p className="text-[14px] text-muted-foreground">{nameEn}</p>
         )}
         {primaryMuscle && (
           <div className="pt-1.5">

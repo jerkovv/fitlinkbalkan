@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, Dumbbell, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { porukaGreske } from "@/lib/errorMessage";
 import { SetLogger } from "@/components/workout/SetLogger";
+import { ExerciseHeader } from "@/components/workout/ExerciseHeader";
 
 type SetDetail = {
   set_number: number;
@@ -23,7 +24,10 @@ type PlanExercise = {
   exercise: {
     name: string;
     name_en: string | null;
+    primary_muscle: string | null;
     thumbnail_url: string | null;
+    video_url: string | null;
+    instructions: string | null;
     is_duration_based: boolean | null;
   };
 };
@@ -61,6 +65,7 @@ export const FreeWorkoutExercises = ({
   currentIdx,
   currentSetNumber,
   disabled,
+  onPlan,
 }: {
   sessionId: string;
   /** Menja se kad trener doda ili promeni vezbu - okidac za ponovno citanje. */
@@ -68,9 +73,15 @@ export const FreeWorkoutExercises = ({
   currentIdx: number | null;
   currentSetNumber: number | null;
   disabled?: boolean;
+  /** Roditelju treba broj vezbi za zaglavlje ("Vezba 2 od 5"), a plan se cita ovde. */
+  onPlan?: (info: { ukupno: number; totalSets: number | null }) => void;
 }) => {
   const [plan, setPlan] = useState<SessionPlan | null>(null);
   const [salje, setSalje] = useState(false);
+  // Indeks kroz ref: ucitaj() ga cita, a ne sme da mu bude u zavisnostima
+  // (inace se efekat vrti na svakoj promeni pozicije).
+  const idxRef = useRef(0);
+  idxRef.current = currentIdx ?? 0;
 
   const ucitaj = useCallback(async () => {
     const { data } = await supabase.rpc("get_session_plan_full" as any, {
@@ -78,8 +89,12 @@ export const FreeWorkoutExercises = ({
     });
     const p = (Array.isArray(data) ? data[0] : data) as SessionPlan | null;
     // Prazan odgovor (mreza, RLS) NE sme da obrise vezbe pod rukama.
-    if (p) setPlan((stari) => (p.exercises?.length || !stari ? p : stari));
-  }, [sessionId]);
+    if (p) {
+      setPlan((stari) => (p.exercises?.length || !stari ? p : stari));
+      const n = p.exercises?.length ?? 0;
+      if (n) onPlan?.({ ukupno: n, totalSets: p.exercises[Math.min(idxRef.current, n - 1)]?.sets ?? null });
+    }
+  }, [sessionId, onPlan]);
 
   useEffect(() => {
     void ucitaj();
@@ -154,11 +169,14 @@ export const FreeWorkoutExercises = ({
               )}
 
               <div className="flex-1 min-w-0">
-                <div className={cn("text-[13.5px] font-semibold truncate",
+                {/* Bez truncate: nazivi vezbi su dugi ("Potisak sa klupe sa
+                    sipkom na kosoj klupi") i sa sasecanjem se ne razlikuju.
+                    Prelama se u najvise dva reda. */}
+                <div className={cn("text-[13.5px] font-semibold leading-snug line-clamp-2",
                                    aktivna && "text-primary-soft-foreground")}>
                   {ime}
                 </div>
-                <div className="text-[11.5px] text-muted-foreground truncate tnum">
+                <div className="text-[11.5px] text-muted-foreground tnum">
                   {ex.sets} x {ciljSerije(ex, 1).repsTekst ?? "-"}
                   {ciljSerije(ex, 1).weight != null && ciljSerije(ex, 1).weight! > 0
                     ? ` · ${ciljSerije(ex, 1).weight} kg`
@@ -175,6 +193,23 @@ export const FreeWorkoutExercises = ({
           );
         })}
       </div>
+
+      {/* Video i uputstvo TRENUTNE vezbe - isto sto vezbac ima u klasicnom
+          treningu. Bez ovoga trener doda vezbu, a vezbac nema gde da vidi kako
+          se radi. */}
+      {trenutna && (
+        <div className="mb-4">
+          <ExerciseHeader
+            exerciseId={trenutna.exercise_id}
+            name={trenutna.exercise.name}
+            nameEn={trenutna.exercise.name_en}
+            primaryMuscle={trenutna.exercise.primary_muscle}
+            thumbnailUrl={trenutna.exercise.thumbnail_url}
+            videoUrl={trenutna.exercise.video_url}
+            instructions={trenutna.exercise.instructions}
+          />
+        </div>
+      )}
 
       {trenutna && cilj && (
         salje ? (
