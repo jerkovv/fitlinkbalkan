@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { porukaGreske } from "@/lib/errorMessage";
 import { useAuth } from "@/hooks/useAuth";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -76,6 +77,10 @@ const equipLabel = (v: string) => EQUIPMENT.find((e) => e.value === v)?.label ??
 
 const ExerciseLibrary = () => {
   const { locked, openLock, guard } = usePretplataLock();
+  // Stranica ne ide kroz PhoneShell (ima svoje zaglavlje sa "+"), pa desktop
+  // raspored mora sama da resi - inace na sirokom ekranu ostaje telefonska
+  // kolona od 440px nasred monitora.
+  const desktop = useDesktopWeb();
   const { user } = useAuth();
   const [items, setItems] = useState<Exercise[]>([]);
   const [ukupno, setUkupno] = useState<number | null>(null);
@@ -227,20 +232,41 @@ const ExerciseLibrary = () => {
   };
 
   return (
-    <div className="phone-shell px-5 py-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <Link to="/trener" className="h-9 w-9 rounded-full bg-surface-2 flex items-center justify-center">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <span className="eyebrow text-muted-foreground">Biblioteka</span>
-        <button
-          onClick={guard(() => setOpen(true))}
-          className="h-9 w-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-brand"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
-      </div>
+    <div className={desktop ? "w-full max-w-[1100px] mx-auto px-8 py-8" : "phone-shell px-5 py-6"}>
+      {/* Header. Na desktopu nema strelice nazad - navigaciju nosi sidebar - a
+          "+" dobija rec, jer na sirokom ekranu gola ikonica nema susede da je
+          objasne. */}
+      {desktop ? (
+        <div className="flex items-center justify-between gap-4 mb-5">
+          <div>
+            <h1 className="font-display text-[28px] font-bold tracking-tightest">Biblioteka vežbi</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {ukupno != null ? `${ukupno} vežbi` : "Učitavam..."}
+              {ukupno != null && items.length < ukupno && ` · prikazano ${items.length}`}
+            </p>
+          </div>
+          <button
+            onClick={guard(() => setOpen(true))}
+            className="h-10 shrink-0 rounded-xl bg-primary text-primary-foreground px-4 inline-flex items-center gap-2 text-sm font-semibold shadow-brand"
+          >
+            <Plus className="h-4 w-4" />
+            Nova vežba
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between mb-5">
+          <Link to="/trener" className="h-9 w-9 rounded-full bg-surface-2 flex items-center justify-center">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <span className="eyebrow text-muted-foreground">Biblioteka</span>
+          <button
+            onClick={guard(() => setOpen(true))}
+            className="h-9 w-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-brand"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       <FullScreenSheet open={open} onClose={() => setOpen(false)} title="Nova vežba">
         <form onSubmit={handleCreate} className="flex flex-1 min-h-0 flex-col">
@@ -305,14 +331,18 @@ const ExerciseLibrary = () => {
         </form>
       </FullScreenSheet>
 
+      {!desktop && (
+        <>
       <h1 className="font-display text-[28px] font-bold tracking-tightest mb-1">Biblioteka vežbi</h1>
       <p className="text-sm text-muted-foreground mb-4">
         {ukupno != null ? `${ukupno} vežbi` : "Učitavam..."}
         {ukupno != null && items.length < ukupno && ` · prikazano ${items.length}`}
       </p>
+        </>
+      )}
 
       {/* Search */}
-      <div className="relative mb-3">
+      <div className={`relative mb-3 ${desktop ? "max-w-md" : ""}`}>
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           value={query}
@@ -323,7 +353,7 @@ const ExerciseLibrary = () => {
       </div>
 
       {/* Scope filter pills */}
-      <div className="flex gap-2 mb-3 no-scrollbar overflow-x-auto">
+      <div className={`flex gap-2 mb-3 ${desktop ? "flex-wrap" : "no-scrollbar overflow-x-auto"}`}>
         {([
           { v: "all", l: "Sve" },
           { v: "global", l: "Globalne" },
@@ -344,7 +374,7 @@ const ExerciseLibrary = () => {
       </div>
 
       {/* Muscle filter pills */}
-      <div className="flex gap-2 mb-5 no-scrollbar overflow-x-auto">
+      <div className={`flex gap-2 mb-5 ${desktop ? "flex-wrap" : "no-scrollbar overflow-x-auto"}`}>
         {MUSCLE_GROUPS.map((m) => (
           <button
             key={m.value}
@@ -373,7 +403,7 @@ const ExerciseLibrary = () => {
           <p className="text-sm text-muted-foreground">Nema rezultata</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className={desktop ? "grid grid-cols-2 xl:grid-cols-3 gap-2 items-start" : "space-y-2"}>
           {filtered.map((ex) => (
             <button
               key={ex.id}
@@ -407,7 +437,7 @@ const ExerciseLibrary = () => {
               type="button"
               onClick={() => void ucitajJos()}
               disabled={ucitavamJos}
-              className="w-full h-11 rounded-xl bg-surface-2 text-[13px] font-semibold text-muted-foreground hover:text-foreground transition disabled:opacity-50"
+              className={`h-11 rounded-xl bg-surface-2 text-[13px] font-semibold text-muted-foreground hover:text-foreground transition disabled:opacity-50 ${desktop ? "col-span-full" : "w-full"}`}
             >
               {ucitavamJos ? "Učitavam..." : "Učitaj još"}
             </button>
