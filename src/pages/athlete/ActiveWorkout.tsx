@@ -467,6 +467,9 @@ const ActiveWorkout = () => {
     (async () => {
       setLoading(true);
 
+      // Bez p_session_id: sesija se pravi TEK nize (start_workout_session traži
+      // dayData.assigned_program_id, pa dan mora prvi). Ako trening ima svoj
+      // spisak vezbi, dovlaci ga reloadPlan cim sessionId stigne.
       const { data: dayRaw, error: dayErr } = await supabase.rpc(
         "get_workout_day_full",
         { p_day_id: dayId } as any
@@ -511,6 +514,11 @@ const ActiveWorkout = () => {
         return;
       }
       setSessionId(sid as unknown as string);
+      // Ref odmah (efekat koji ga inace postavlja jos nije stigao), pa onda plan
+      // ponovo - trening koji je trener ranije menjao ima svoj spisak vezbi i
+      // prvi upis gore ga nije mogao videti.
+      sessionIdRef.current = sid as unknown as string;
+      void reloadPlan();
       setLoading(false);
     })();
   }, [dayId, user]);
@@ -748,7 +756,10 @@ const ActiveWorkout = () => {
   // pasti van niza - render to vec podnosi (`if (!pos || !current)` -> spiner).
   const reloadPlan = useCallback(async () => {
     if (!dayId || finishedRef.current || unmountedRef.current) return;
-    const { data, error } = await supabase.rpc("get_workout_day_full", { p_day_id: dayId } as any);
+    const { data, error } = await supabase.rpc("get_workout_day_full", {
+      p_day_id: dayId,
+      p_session_id: sessionIdRef.current,
+    } as any);
     if (error || unmountedRef.current || finishedRef.current) return;
     const svez = (Array.isArray(data) ? data[0] : data) as DayFull | null;
     // Prazan odgovor (greska u mrezi, RLS) NE sme da obrise plan pod rukama.

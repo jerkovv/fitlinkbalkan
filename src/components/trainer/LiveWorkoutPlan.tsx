@@ -110,11 +110,16 @@ export const LiveWorkoutPlan = ({
   const ucitaj = useCallback(async () => {
     // Isti RPC koji koristi i vezbacev ekran; trener sme da ga zove jer
     // funkcija propusta i p.trainer_id = auth.uid().
-    const { data } = await supabase.rpc("get_workout_day_full" as any, { p_day_id: dayId });
+    // p_session_id: ako je trener danas nesto menjao, trening ima svoj spisak
+    // vezbi i RPC vraca NJEGA umesto sablona dana.
+    const { data } = await supabase.rpc("get_workout_day_full" as any, {
+      p_day_id: dayId,
+      p_session_id: sessionId,
+    });
     const d = (Array.isArray(data) ? data[0] : data) as DayFull | null;
     setDay(d ?? null);
     setLoading(false);
-  }, [dayId]);
+  }, [dayId, sessionId]);
 
   // Serije upisane u OVOM treningu. Trener ih ima pravo da cita ("trainer reads
   // set logs" RLS politika). set_logs nije u realtime objavi, pa se osvezava kad
