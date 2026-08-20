@@ -15,7 +15,19 @@ const DESKTOP_BREAKPOINT = 1024;
 const DASHBOARD_HOSTNAMES = new Set(["fitlink.rs", "www.fitlink.rs"]);
 
 export function isDashboardHost(): boolean {
-  return typeof window !== "undefined" && DASHBOARD_HOSTNAMES.has(window.location.hostname);
+  if (typeof window === "undefined") return false;
+  const host = window.location.hostname;
+  if (DASHBOARD_HOSTNAMES.has(host)) return true;
+
+  // Lokalni razvoj: inace se desktop dashboard NE moze isprobati pre objave,
+  // jer zavisi od imena domena. Na localhost-u su dostupne obe verzije, po
+  // putanji: /dashboard/* daje desktop raspored (kao fitlink.rs/dashboard),
+  // sve ostalo mobilni (kao app.fitlink.rs). Nikad ne pogadja produkciju -
+  // localhost tamo ne postoji.
+  if (host === "localhost" || host === "127.0.0.1") {
+    return window.location.pathname.startsWith("/dashboard");
+  }
+  return false;
 }
 
 // Posle odjave (ili brisanja naloga) treba stici na login. Na app.fitlink.rs
