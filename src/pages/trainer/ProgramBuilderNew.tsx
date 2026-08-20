@@ -32,6 +32,8 @@ import { toast } from "sonner";
 import { ExercisePickerSheet } from "@/components/exercises/ExercisePickerSheet";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { LockMark } from "@/components/pretplata/LockMark";
+import { useLastPerformance } from "@/hooks/useLastPerformance";
+import { LastPerformanceHint } from "@/components/trainer/LastPerformanceHint";
 
 type Day = { id: string; day_number: number; name: string; notes: string | null };
 type Exercise = {
@@ -140,6 +142,12 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
   const [openExId, setOpenExId] = useState<string | null>(null);
   const [advancedByEx, setAdvancedByEx] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
+
+  // "Prosli put" po vezbi - samo u rezimu dodeljenog plana, gde postoji
+  // konkretan vezbac. Sablon se pravi unapred i nije ni za koga, pa tamo
+  // nema ciju istoriju da pokaze (athleteId je undefined -> hook ne salje nista).
+  const sveVezbeUPlanu = Object.values(exByDay).flat().map((e) => e.exercise_id);
+  const { byExercise: prosliPut } = useLastPerformance(athleteId, sveVezbeUPlanu);
 
   // Add day dialog
   const [addDayOpen, setAddDayOpen] = useState(false);
@@ -531,6 +539,10 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
 
                           {open && (
                             <div className="border-t border-hairline px-3 py-3">
+                              {/* Sta je vezbac poslednji put digao za bas ovu vezbu -
+                                  stoji IZNAD polja za ciljeve, da se danasnji broj
+                                  upisuje gledajuci u prosli. */}
+                              <LastPerformanceHint data={prosliPut[ex.exercise_id]} />
                               {isDuration ? (
                                 // Vezba na minute (trcanje/hodanje): jedno polje "Minuti".
                                 <div>
