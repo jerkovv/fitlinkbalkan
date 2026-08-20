@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Check, Dumbbell, History, Loader2, Pencil, Plus, Repeat2, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, Dumbbell, History, Loader2, Pencil, Plus, Repeat2, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
@@ -107,6 +107,9 @@ export const LiveWorkoutPlan = ({
   // Rukom otkucane vrednosti po celiji mreze, kljuc "apeId:brojSerije".
   // Drzi se odvojeno od upisanog, da kucanje ne bude pregazeno osvezavanjem.
   const [unos, setUnos] = useState<Record<string, { kg?: string; reps?: string }>>({});
+  // Otvorena vezba (mreza se vidi samo za nju). null = prati trenutnu vezbu
+  // vezbaca, "" = sve sklopljeno, inace id bas te vezbe.
+  const [otvorena, setOtvorena] = useState<string | null>(null);
   // Vezba ciji se CILJ menja (koliko serija/ponavljanja/kg treba da uradi).
   const [cilj, setCilj] = useState<{ apeId: string; sets: string; reps: string; kg: string } | null>(null);
 
@@ -362,6 +365,9 @@ export const LiveWorkoutPlan = ({
         const kardio = !!ex.exercise.is_duration_based;
         const brojSerija = Math.max(ex.sets ?? 0, ex.set_details?.length ?? 0) || 1;
         const menjamCilj = cilj?.apeId === ex.id;
+        const otvorenaId = otvorena ?? (currentIdx != null ? vezbe[currentIdx]?.id : undefined);
+        const razvijena = otvorenaId === ex.id;
+        const upisanih = danasnje.length;
 
         return (
           <div
@@ -427,7 +433,16 @@ export const LiveWorkoutPlan = ({
                 </div>
               )}
 
-              <div className="flex-1 min-w-0">
+              {/* Ceo blok sa imenom je prekidac: tap otvara mrezu bas te vezbe.
+                  Cilj se ODAVDE ne menja - dugme u dugmetu nije ispravan HTML,
+                  pa "Cilj" stoji dole uz mrezu, gde se ionako i koristi. */}
+              <button
+                type="button"
+                disabled={uOznacavanju}
+                onClick={() => setOtvorena(razvijena ? "" : ex.id)}
+                aria-expanded={razvijena}
+                className="flex-1 min-w-0 text-left disabled:cursor-default"
+              >
                 <div
                   className={cn(
                     "text-[13.5px] font-semibold truncate",
@@ -436,48 +451,33 @@ export const LiveWorkoutPlan = ({
                 >
                   {ime}
                 </div>
-                {/* Sam red cilja je dugme: pise tacno ono sto menja ("3 x 10 ·
-                    50 kg"), pa ne treba jos jedno dugme koje bi jelo ime vezbe.
-                    Olovka stoji uz tekst da se vidi da je tapljiv. */}
-                {uOznacavanju ? (
-                  <div className="text-[11.5px] text-muted-foreground truncate tnum">
-                    {ciljTekst(ex)}
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={salje}
-                    onClick={() =>
-                      setCilj(
-                        menjamCilj
-                          ? null
-                          : {
-                              apeId: ex.id,
-                              sets: String(brojSerija),
-                              reps: ex.set_details?.[0]?.reps ?? (ex.reps != null ? String(ex.reps) : ""),
-                              kg: ex.set_details?.[0]?.weight_kg != null
-                                ? String(Number(ex.set_details[0].weight_kg))
-                                : ex.weight_kg != null ? String(Number(ex.weight_kg)) : "",
-                            },
-                      )
-                    }
-                    aria-label={`Promeni cilj za ${ime}`}
-                    className={cn(
-                      "flex items-center gap-1 text-[11.5px] tnum transition disabled:opacity-50",
-                      menjamCilj ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    <span className="truncate">{ciljTekst(ex)}</span>
-                    <Pencil className="h-3 w-3 shrink-0 opacity-70" strokeWidth={2.4} />
-                  </button>
-                )}
-              </div>
+                <div className="text-[11.5px] text-muted-foreground truncate tnum">
+                  {ciljTekst(ex)}
+                  {/* Samo kad je sklopljena - otvorena vezba brojac ima u mrezi,
+                      a ovde bi samo odsekao cilj sa tri tackice. */}
+                  {!razvijena && !kardio && upisanih > 0 && (
+                    <span className="text-success-soft-foreground font-semibold">
+                      {" · "}{upisanih}/{brojSerija} upisano
+                    </span>
+                  )}
+                </div>
+              </button>
+
+              {!uOznacavanju && (
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform",
+                    razvijena && "rotate-180",
+                  )}
+                  strokeWidth={2.4}
+                />
+              )}
 
               {/* Zamena se nudi samo za vezbe koje jos nisu odradjene - menjanje
                   zavrsene vezbe bi prepisalo ono sto je vezbac vec uradio.
                   Dugme nosi i rec, ne samo ikonicu: gola strelica se ne cita kao
                   "zameni vezbu" i trener je ne prepozna. */}
-              {!odradjena && !uOznacavanju && (
+              {razvijena && !odradjena && !uOznacavanju && (
                 <button
                   type="button"
                   onClick={() => setMenjam(ex.id)}
@@ -511,10 +511,10 @@ export const LiveWorkoutPlan = ({
                 zavrsetka treninga; cekiranje ne dira vezbacev tempo.
                 Kardio se meri minutima i po okidacu ima tacno jednu seriju, pa
                 za njega mreza nema smisla - ostaje samo cilj. */}
-            {!uOznacavanju && !kardio && (
-              <div className="mt-2 pl-[38px]">
+            {razvijena && !uOznacavanju && !kardio && (
+              <div className="mt-2.5 pl-[38px]">
                 <div className={cn(KOLONE, "pb-1 text-[9.5px] uppercase tracking-wider font-semibold text-muted-foreground")}>
-                  <span>Ser.</span>
+                  <span />
                   <span>Prošli put</span>
                   <span className="text-center">Kg</span>
                   <span className="text-center">Pon.</span>
@@ -577,21 +577,50 @@ export const LiveWorkoutPlan = ({
                   );
                 })}
 
-                <button
-                  type="button"
-                  disabled={salje}
-                  onClick={() => void sacuvajCilj(ex, brojSerija + 1, null, null)}
-                  className="mt-1.5 h-8 w-full rounded-lg bg-surface-2 text-[12px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 transition disabled:opacity-50"
-                >
-                  <Plus className="h-3.5 w-3.5" strokeWidth={2.6} />
-                  Dodaj seriju
-                </button>
+                <div className="mt-2 flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={salje}
+                    onClick={() => void sacuvajCilj(ex, brojSerija + 1, null, null)}
+                    className="h-9 flex-1 rounded-lg bg-surface-2 text-[12px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 transition disabled:opacity-50"
+                  >
+                    <Plus className="h-3.5 w-3.5" strokeWidth={2.6} />
+                    Dodaj seriju
+                  </button>
+                  <button
+                    type="button"
+                    disabled={salje}
+                    onClick={() =>
+                      setCilj(
+                        menjamCilj
+                          ? null
+                          : {
+                              apeId: ex.id,
+                              sets: String(brojSerija),
+                              reps: ex.set_details?.[0]?.reps ?? (ex.reps != null ? String(ex.reps) : ""),
+                              kg: ex.set_details?.[0]?.weight_kg != null
+                                ? String(Number(ex.set_details[0].weight_kg))
+                                : ex.weight_kg != null ? String(Number(ex.weight_kg)) : "",
+                            },
+                      )
+                    }
+                    className={cn(
+                      "h-9 flex-1 rounded-lg text-[12px] font-semibold inline-flex items-center justify-center gap-1.5 transition disabled:opacity-50",
+                      menjamCilj
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-surface-2 text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <Pencil className="h-3.5 w-3.5" strokeWidth={2.4} />
+                    Promeni cilj
+                  </button>
+                </div>
               </div>
             )}
 
             {/* Izmena CILJA: koliko serija, ponavljanja i kila TREBA da uradi.
                 Odvojeno od mreze namerno - mreza je sta JESTE odradjeno. */}
-            {menjamCilj && (
+            {razvijena && menjamCilj && (
               <div className="mt-2 ml-[38px] rounded-lg border border-primary/30 bg-primary-soft/40 p-2">
                 <div className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground pb-1.5">
                   Cilj za danas
