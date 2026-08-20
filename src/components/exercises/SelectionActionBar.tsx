@@ -6,9 +6,11 @@ type Props = {
   dayName: string;
   loading: boolean;
   onConfirm: () => void;
+  /** Rezim zamene (1:1) - drugi nazivi na dugmetu i u podnaslovu. */
+  replaceMode?: boolean;
 };
 
-export const SelectionActionBar = ({ count, dayName, loading, onConfirm }: Props) => {
+export const SelectionActionBar = ({ count, dayName, loading, onConfirm, replaceMode }: Props) => {
   const disabled = count === 0 || loading;
   return (
     <div className="absolute bottom-0 inset-x-0 z-10 bg-gradient-to-t from-background via-background/95 to-transparent pt-6 pb-7 px-5 flex items-end justify-between gap-3">
@@ -18,7 +20,7 @@ export const SelectionActionBar = ({ count, dayName, loading, onConfirm }: Props
           <span className="text-foreground">izabrano</span>
         </div>
         <div className="text-xs text-muted-foreground truncate">
-          Dan: {dayName || "-"}
+          {replaceMode ? dayName || "-" : `Dan: ${dayName || "-"}`}
         </div>
       </div>
       <button
@@ -35,7 +37,9 @@ export const SelectionActionBar = ({ count, dayName, loading, onConfirm }: Props
           <Loader2 size={16} className="animate-spin" />
         ) : (
           <>
-            {count === 0 ? "Izaberi vežbe" : "Dodaj u trening"}
+            {count === 0
+              ? (replaceMode ? "Izaberi vežbu" : "Izaberi vežbe")
+              : (replaceMode ? "Zameni" : "Dodaj u trening")}
             {count > 0 && <ArrowRight size={16} />}
           </>
         )}

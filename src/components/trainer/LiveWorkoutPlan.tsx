@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
-import { Check, Dumbbell, History, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Check, Dumbbell, History, Loader2, Repeat2 } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
+import { porukaGreske } from "@/lib/errorMessage";
 import { useLastPerformance } from "@/hooks/useLastPerformance";
+import { ExercisePickerSheet } from "@/components/exercises/ExercisePickerSheet";
 
 type SetDetail = {
   set_number: number;
@@ -64,31 +67,56 @@ const ciljTekst = (ex: DayExercise): string => {
  * pa se komponenta tada uopste ne montira; roditelj prikazuje svoje stanje.
  */
 export const LiveWorkoutPlan = ({
+  sessionId,
   dayId,
   athleteId,
   currentIdx,
 }: {
+  sessionId: string;
   dayId: string;
   athleteId: string;
   currentIdx: number | null;
 }) => {
   const [day, setDay] = useState<DayFull | null>(null);
   const [loading, setLoading] = useState(true);
+  // Vezba koju trener menja (assigned_program_exercises.id), null = sheet zatvoren.
+  const [menjam, setMenjam] = useState<string | null>(null);
+  const [salje, setSalje] = useState(false);
+
+  const ucitaj = useCallback(async () => {
+    // Isti RPC koji koristi i vezbacev ekran; trener sme da ga zove jer
+    // funkcija propusta i p.trainer_id = auth.uid().
+    const { data } = await supabase.rpc("get_workout_day_full" as any, { p_day_id: dayId });
+    const d = (Array.isArray(data) ? data[0] : data) as DayFull | null;
+    setDay(d ?? null);
+    setLoading(false);
+  }, [dayId]);
 
   useEffect(() => {
-    let otkazano = false;
     setLoading(true);
-    (async () => {
-      // Isti RPC koji koristi i vezbacev ekran; trener sme da ga zove jer
-      // funkcija propusta i p.trainer_id = auth.uid().
-      const { data } = await supabase.rpc("get_workout_day_full" as any, { p_day_id: dayId });
-      if (otkazano) return;
-      const d = (Array.isArray(data) ? data[0] : data) as DayFull | null;
-      setDay(d ?? null);
-      setLoading(false);
-    })();
-    return () => { otkazano = true; };
-  }, [dayId]);
+    void ucitaj();
+  }, [ucitaj]);
+
+  // Zamena vezbe usred treninga. Server proverava da je sesija ziva, da je vezbac
+  // bas ovog trenera i da vezba pripada BAS ovom danu, pa podigne plan_version -
+  // sto je signal vezbacevom telefonu da ponovo ucita plan.
+  const zameni = async (noviExerciseId: string) => {
+    if (!menjam) return;
+    setSalje(true);
+    const { data, error } = await supabase.rpc("trainer_replace_exercise" as any, {
+      p_session_id: sessionId,
+      p_assigned_exercise_id: menjam,
+      p_new_exercise_id: noviExerciseId,
+    });
+    setSalje(false);
+    setMenjam(null);
+    if (error) {
+      toast.error(porukaGreske(error));
+      return;
+    }
+    toast.success(`Zamenjeno: ${(data as any)?.name ?? "vežba"}`);
+    await ucitaj();
+  };
 
   const vezbe = day?.exercises ?? [];
   const { byExercise: prosliPut } = useLastPerformance(
@@ -168,6 +196,20 @@ export const LiveWorkoutPlan = ({
                   {ciljTekst(ex)}
                 </div>
               </div>
+
+              {/* Zamena se nudi samo za vezbe koje jos nisu odradjene - menjanje
+                  zavrsene vezbe bi prepisalo ono sto je vezbac vec uradio. */}
+              {!odradjena && (
+                <button
+                  type="button"
+                  onClick={() => setMenjam(ex.id)}
+                  disabled={salje}
+                  aria-label={`Zameni vežbu ${ime}`}
+                  className="h-8 w-8 rounded-lg bg-surface-2 hover:bg-surface flex items-center justify-center shrink-0 transition disabled:opacity-50"
+                >
+                  <Repeat2 className="h-4 w-4 text-muted-foreground" strokeWidth={2.2} />
+                </button>
+              )}
             </div>
 
             {/* Sta je digao poslednji put za bas ovu vezbu - da trener zna
@@ -193,6 +235,18 @@ export const LiveWorkoutPlan = ({
           </div>
         );
       })}
+
+      {/* Isti birac vezbi kao u builderu, u rezimu zamene (onPick) - bira se
+          jedna vezba i vraca ovamo umesto da se dodaje u dan. */}
+      <ExercisePickerSheet
+        open={menjam !== null}
+        dayId={dayId}
+        dayName="Zameni vežbu"
+        table="assigned_program_exercises"
+        onClose={() => setMenjam(null)}
+        onAdded={() => setMenjam(null)}
+        onPick={(exerciseId) => void zameni(exerciseId)}
+      />
     </div>
   );
 };

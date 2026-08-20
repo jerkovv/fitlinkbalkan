@@ -312,6 +312,11 @@ const ActiveWorkout = () => {
   const unmountedRef = useRef(false);
   // Ref na poziciju za stabilne handlere (watch eventi).
   const posRef = useRef<WorkoutPos | null>(null);
+  // Poslednji vidjeni workout_live_state.plan_version. Trener koji usred treninga
+  // zameni vezbu (zauzeta sprava) podigne taj brojac na serveru; kad se ovde
+  // razlikuje, plan se ponovo ucita. null = jos nismo videli nijednu vrednost,
+  // pa se prva samo zapamti (nije izmena).
+  const planVersionRef = useRef<number | null>(null);
   // Fallback sinhronizacija (defense-in-depth): ako neki buduci setPos poziv zaobidje
   // setPosSynced ispod, ovaj efekt ipak na kraju uskladi posRef - samo sa jednim render
   // zakasnjenjem umesto nikad.
@@ -729,6 +734,45 @@ const ActiveWorkout = () => {
     []
   );
 
+  /* ------------------------- Trener promenio plan usred treninga ------------------------- */
+  // Plan se inace ucita TACNO jednom (init effect). Kad trener zameni vezbu, server
+  // podigne workout_live_state.plan_version; ovo je jedini put kojim izmena stigne
+  // do vezbaca dok trenira.
+  //
+  // Primenjuje se SAMO ako je broj vezbi ostao isti: pos.exerciseIdx je indeks u nizu,
+  // pa bi promenjena duzina znacila da pokazuje na drugu vezbu (ili van niza). Zamena
+  // (trainer_replace_exercise) nikad ne menja broj vezbi, pa je poklapanje ocekivano;
+  // ako se ipak ne poklopi, bolje je zadrzati stari plan nego pomeriti vezbaca usred serije.
+  const reloadPlan = useCallback(async () => {
+    if (!dayId || finishedRef.current || unmountedRef.current) return;
+    const { data, error } = await supabase.rpc("get_workout_day_full", { p_day_id: dayId } as any);
+    if (error || unmountedRef.current || finishedRef.current) return;
+    const svez = (Array.isArray(data) ? data[0] : data) as DayFull | null;
+    if (!svez?.exercises?.length) return;
+    setDay((stari) => {
+      if (!stari) return stari;
+      if (stari.exercises.length !== svez.exercises.length) return stari;
+      return svez;
+    });
+  }, [dayId]);
+
+  // Zajednicko za poll i realtime: prva vidjena vrednost se samo pamti, svaka
+  // sledeca razlicita znaci da je trener nesto promenio.
+  const notePlanVersion = useCallback(
+    (pv: unknown) => {
+      if (typeof pv !== "number") return;
+      if (planVersionRef.current == null) {
+        planVersionRef.current = pv;
+        return;
+      }
+      if (pv !== planVersionRef.current) {
+        planVersionRef.current = pv;
+        void reloadPlan();
+      }
+    },
+    [reloadPlan],
+  );
+
   /* ------------------------- Poll: athlete_poll_state (render iz servera) ------------------------- */
   const applyPoll = useCallback(
     (workout: any, serverNowMs: number | null | undefined, requestStartedTs?: number) => {
@@ -784,6 +828,10 @@ const ActiveWorkout = () => {
       const pollHr = workout?.current_hr;
       if (typeof pollHr === "number" && pollHr > 0) setWatchHr(pollHr);
 
+      // Rezerva za realtime: ako je dogadjaj o promeni plana promasio, poll (2s)
+      // ga uhvati, pa vezbac ne ostane sa starom vezbom do kraja treninga.
+      notePlanVersion(workout?.plan_version);
+
       const serverRestMs =
         typeof workout.rest_ends_at_ms === "number" ? workout.rest_ends_at_ms : null;
       // Preostalo vreme = CISTA serverska razlika (rest_ends_at_ms - server_now_ms, oba broja
@@ -808,7 +856,7 @@ const ActiveWorkout = () => {
         currentHr: typeof workout.current_hr === "number" ? workout.current_hr : null,
       });
     },
-    [goToSummary, applyPosition]
+    [goToSummary, applyPosition, notePlanVersion]
   );
 
   useEffect(() => {
@@ -918,6 +966,11 @@ const ActiveWorkout = () => {
       const chr = row?.current_hr;
       if (typeof chr === "number" && chr > 0) setWatchHr(chr);
 
+      // Trenerova izmena plana. NAMERNO iznad guardova za poziciju ispod (staleness,
+      // freshLocalRest, nedostajuci baseline) - oni stite POZICIJU i cesto izlaze ranije,
+      // a promena plana sa pozicijom nema veze i ne sme da se izgubi zbog njih.
+      notePlanVersion(row?.plan_version);
+
       // POZICIJA iz realtime-a (instant; poll na 2s ostaje rezerva/korektor). Ista
       // logika kao applyPoll preko deljene applyPosition.
       // - finishedRef: posle kraja ne diramo poziciju.
@@ -1000,7 +1053,7 @@ const ActiveWorkout = () => {
       )
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(channel); };
-  }, [sessionId, finished, realtimeEpoch, applyPosition]);
+  }, [sessionId, finished, realtimeEpoch, applyPosition, notePlanVersion]);
 
   // Sinhroni lockedRef (za handler guard) - racuna se na `now` tik (1s) I na promenu mreze.
   // Lock kad: (a) sat nestao (tisina > WATCH_GRACE_MS 40s) ILI (b) telefon offline a sat prisutan (sat vozi

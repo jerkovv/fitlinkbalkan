@@ -484,6 +484,7 @@ const LiveWorkoutView = () => {
                 Trening
               </div>
               <LiveWorkoutPlan
+                sessionId={session.id}
                 dayId={session.day_id}
                 athleteId={athleteId}
                 currentIdx={state?.current_exercise_idx ?? null}

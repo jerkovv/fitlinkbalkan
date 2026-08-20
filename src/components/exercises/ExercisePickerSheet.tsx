@@ -21,9 +21,15 @@ type Props = {
   table?: "program_template_exercises" | "assigned_program_exercises";
   onClose: () => void;
   onAdded: () => void;
+  /**
+   * Rezim ZAMENE: umesto dodavanja u dan, sheet samo vrati izabranu vezbu.
+   * Kad je prosledjen, izbor je jednostruk (zamena je 1:1) i onAdded se ne zove.
+   * Koristi ga trener kad usred treninga menja vezbu (zauzeta sprava).
+   */
+  onPick?: (exerciseId: string) => void;
 };
 
-export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAdded }: Props) => {
+export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAdded, onPick }: Props) => {
   const [muscle, setMuscle] = useState<MuscleGroupId>("grudi");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [searchOpen, setSearchOpen] = useState(false);
@@ -88,6 +94,11 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAd
   }, [showFavorites, muscle]);
 
   const handleToggleSelect = (id: string) => {
+    // Zamena je 1:1 - drugi tap menja izbor umesto da ga doda.
+    if (onPick) {
+      setSelected((s) => (s.has(id) ? new Set() : new Set([id])));
+      return;
+    }
     setSelected((s) => {
       const n = new Set(s);
       if (n.has(id)) n.delete(id);
@@ -98,6 +109,12 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAd
 
   const handleConfirm = () => {
     if (selected.size === 0) return;
+    if (onPick) {
+      const [id] = [...selected];
+      setSelected(new Set());
+      onPick(id);
+      return;
+    }
     addExercises([...selected]);
   };
 
@@ -118,9 +135,11 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAd
         side="bottom"
         className="h-[100dvh] w-full max-w-[440px] mx-auto rounded-t-3xl p-0 flex flex-col [&>button]:hidden"
       >
-        <SheetTitle className="sr-only">Dodaj vežbe</SheetTitle>
+        <SheetTitle className="sr-only">{onPick ? "Zameni vežbu" : "Dodaj vežbe"}</SheetTitle>
         <SheetDescription className="sr-only">
-          Izaberi vežbe iz biblioteke i dodaj ih u trening dan
+          {onPick
+            ? "Izaberi vežbu kojom menjaš postojeću"
+            : "Izaberi vežbe iz biblioteke i dodaj ih u trening dan"}
         </SheetDescription>
         {/* Header */}
         <div
@@ -135,7 +154,7 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAd
             <X size={20} />
           </button>
           <h2 className="flex-1 text-center font-display text-base font-bold tracking-tighter">
-            Dodaj vežbe
+            {onPick ? "Zameni vežbu" : "Dodaj vežbe"}
           </h2>
           <button
             onClick={() => setSearchOpen(true)}
@@ -254,6 +273,7 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAd
           dayName={dayName}
           loading={isPending}
           onConfirm={handleConfirm}
+          replaceMode={!!onPick}
         />
 
         <ExerciseSearchSheet
