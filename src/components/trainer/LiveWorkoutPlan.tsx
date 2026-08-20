@@ -284,16 +284,19 @@ export const LiveWorkoutPlan = ({
               </div>
 
               {/* Zamena se nudi samo za vezbe koje jos nisu odradjene - menjanje
-                  zavrsene vezbe bi prepisalo ono sto je vezbac vec uradio. */}
+                  zavrsene vezbe bi prepisalo ono sto je vezbac vec uradio.
+                  Dugme nosi i rec, ne samo ikonicu: gola strelica se ne cita kao
+                  "zameni vezbu" i trener je ne prepozna. */}
               {!odradjena && (
                 <button
                   type="button"
                   onClick={() => setMenjam(ex.id)}
                   disabled={salje}
                   aria-label={`Zameni vežbu ${ime}`}
-                  className="h-8 w-8 rounded-lg bg-surface-2 hover:bg-surface flex items-center justify-center shrink-0 transition disabled:opacity-50"
+                  className="h-8 shrink-0 rounded-lg border border-hairline bg-surface-2 px-2.5 inline-flex items-center gap-1.5 text-[12px] font-semibold text-muted-foreground hover:text-foreground hover:border-primary/40 transition disabled:opacity-50"
                 >
-                  <Repeat2 className="h-4 w-4 text-muted-foreground" strokeWidth={2.2} />
+                  <Repeat2 className="h-3.5 w-3.5" strokeWidth={2.4} />
+                  Zameni
                 </button>
               )}
             </div>
