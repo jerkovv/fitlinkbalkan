@@ -4,6 +4,7 @@ import {
   Dumbbell, TrendingUp, IdCard, CalendarPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 
 interface BottomNavProps {
   role: "trainer" | "athlete";
@@ -26,6 +27,11 @@ const athleteLinks = [
 
 export const BottomNav = ({ role }: BottomNavProps) => {
   const links = role === "trainer" ? trainerLinks : athleteLinks;
+
+  // fitlink.rs/dashboard ima TrainerWebSidebar umesto donje trake - ne
+  // dupliraj navigaciju. app.fitlink.rs (native i web) ovo ne pogađa.
+  const desktop = useDesktopWeb();
+  if (desktop && role === "trainer") return null;
 
   return (
     <nav

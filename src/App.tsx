@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,6 +8,8 @@ import { ConfirmProvider } from "@/hooks/useConfirm";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AthleteLayout } from "@/components/AthleteLayout";
 import { TrainerLayout } from "@/components/TrainerLayout";
+import { TrainerDesktopChrome } from "@/components/trainer/web/TrainerDesktopChrome";
+import { isDashboardHost } from "@/hooks/useDesktopWeb";
 
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -60,17 +62,31 @@ const queryClient = new QueryClient();
 const trainer = (el: JSX.Element) => <ProtectedRoute requireRole="trainer">{el}</ProtectedRoute>;
 const athlete = (el: JSX.Element) => <ProtectedRoute requireRole="athlete">{el}</ProtectedRoute>;
 
+// fitlink.rs/dashboard proksira ISTI bundle preko Vercel rewrite-a (vidi
+// fitlink-landing/vercel.json) - browser stvarno veruje da je jedan origin,
+// pa deljena Supabase sesija (isti storageKey, ista localStorage domena)
+// radi bez ikakvog dodatnog logovanja. Basename pomera sve rute za "/dashboard"
+// BEZ da se ijedna od njih preimenuje; app.fitlink.rs (native i web) i dalje
+// vidi basename=undefined, dakle nula promena tamo.
+const dashboardHost = isDashboardHost();
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter basename={dashboardHost ? "/dashboard" : undefined}>
         <AuthProvider>
           <ConfirmProvider>
           <div vaul-drawer-wrapper="" className="h-full bg-background">
           <Routes>
-            <Route path="/" element={<Index />} />
+            {/* Na fitlink.rs/dashboard je "/" (posle basename-a) trenerska
+                pocetna, ne marketinska Index stranica - bare /dashboard
+                odmah odlazi na /trener. */}
+            <Route
+              path="/"
+              element={dashboardHost ? <Navigate to="/trener" replace /> : <Index />}
+            />
             <Route path="/auth" element={<Auth />} />
             <Route path="/invite/:code" element={<Invite />} />
             <Route path="/poziv" element={<InviteCode />} />
@@ -78,9 +94,11 @@ const App = () => (
             <Route path="/spremno" element={<Spremno />} />
             <Route path="/t/:slug" element={<TrainerPublic />} />
 
-            {/* Trener - protected, umotano u TrainerLayout (tvrdi gating: bez aktivne
-                FitLink pretplate ceo trenerski deo je zakljucan lock ekranom, sa
-                auto-otkljucavanjem cim pretplata postane aktivna). */}
+            {/* Trener - TrainerDesktopChrome (sidebar na fitlink.rs/dashboard, no-op
+                svuda drugde) omotava TrainerLayout (nedirnut: isti soft-lock gating
+                kao u appu - bez aktivne pretplate se moze razgledati, izmene su
+                zakljucane, auto-otkljucavanje cim pretplata postane aktivna). */}
+            <Route element={<TrainerDesktopChrome />}>
             <Route element={<TrainerLayout />}>
             <Route path="/trener" element={trainer(<TrainerDashboard />)} />
             <Route path="/trener/uzivo" element={trainer(<TrainerLiveAthletes />)} />
@@ -104,6 +122,7 @@ const App = () => (
             <Route path="/trener/chat" element={trainer(<TrainerChatList />)} />
             <Route path="/trener/chat/:athleteId" element={trainer(<TrainerChatThread />)} />
             <Route path="/trener/vezbac/:athleteId/live" element={trainer(<TrainerLiveWorkout />)} />
+            </Route>
             </Route>
 
             {/* Vežbač - protected, umotano u AthleteLayout (deljen lock sheet preko
