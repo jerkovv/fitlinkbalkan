@@ -7,8 +7,15 @@ const DESKTOP_BREAKPOINT = 1024;
 // fitlink-landing/vercel.json). Sidebar/desktop raspored se pali SAMO na
 // fitlink.rs, nikad na app.fitlink.rs, cak ni na sirokom ekranu - korisnik je
 // izricito trazio da app.fitlink.rs ostane netaknut.
+// "fitlink.rs" i "www.fitlink.rs" oba zive bez preusmerenja jednog na drugo
+// (Vercel ih drzi kao odvojene aliase istog projekta) - provera mora da
+// pogodi oba, inace basename ostaje undefined na www. varijanti i SVE rute
+// pod /dashboard/* promasuju u NotFound ("not found" na telefonu koji je
+// otvorio bas www. link).
+const DASHBOARD_HOSTNAMES = new Set(["fitlink.rs", "www.fitlink.rs"]);
+
 export function isDashboardHost(): boolean {
-  return typeof window !== "undefined" && window.location.hostname === "fitlink.rs";
+  return typeof window !== "undefined" && DASHBOARD_HOSTNAMES.has(window.location.hostname);
 }
 
 export function useDesktopWeb(): boolean {
