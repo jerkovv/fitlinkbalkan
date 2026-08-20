@@ -458,7 +458,17 @@ const AthleteFreeWorkout = () => {
         className="mx-auto w-full max-w-[440px] min-h-screen flex flex-col px-6 pt-5"
       >
 
-        {/* Zivi dashboard (Apple stil): trajanje -> puls+zona -> kalorije -> avg/max */}
+        {/* Kad trener doda vezbe, glavna stvar na ekranu vise nije stoperica nego
+            vezba koja se radi - isto kao u klasicnom treningu. Zato se ceo zivi
+            dashboard skuplja u jedan red, a vezba ide gore. Bez vezbi (obicna
+            stoperica) ostaje sve kako je i bilo. */}
+        {imaVezbe ? (
+          <div className="grid grid-cols-3 gap-2 py-3">
+            <MiniTile label="Trajanje" value={formatHMS(elapsedS)} />
+            <MiniTile label="Puls" value={hr ? `${hr}` : "-"} />
+            <MiniTile label="Kalorije" value={activeCalories != null ? `${Math.round(activeCalories)}` : "-"} />
+          </div>
+        ) : (
         <div className="flex-1 flex flex-col items-center justify-center gap-7 py-6">
           {/* Trajanje (hero) */}
           <div className="text-center">
@@ -527,6 +537,8 @@ const AthleteFreeWorkout = () => {
             </div>
           )}
         </div>
+
+        )}
 
         {/* Vezbe koje je trener dodao usred treninga. Dok ih nema, komponenta
             vraca null i ekran ostaje isti kakav je i bio - cista stoperica. */}

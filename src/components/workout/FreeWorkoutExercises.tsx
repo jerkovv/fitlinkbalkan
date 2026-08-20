@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, Dumbbell, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
-import { cn } from "@/lib/utils";
 import { porukaGreske } from "@/lib/errorMessage";
 import { SetLogger } from "@/components/workout/SetLogger";
 import { ExerciseHeader } from "@/components/workout/ExerciseHeader";
+import { RestOfWorkout } from "@/components/workout/RestOfWorkout";
 
 type SetDetail = {
   set_number: number;
@@ -19,6 +19,7 @@ type PlanExercise = {
   sets: number;
   reps: number | null;
   weight_kg: number | null;
+  duration_minutes: number | null;
   set_details: SetDetail[] | null;
   exercise_id: string;
   exercise: {
@@ -122,93 +123,20 @@ export const FreeWorkoutExercises = ({
   };
 
   return (
-    <div className="w-full pb-6">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground mb-2.5">
-        Vežbe koje ti je trener dodao
-      </div>
-
-      <div className="rounded-xl border border-hairline bg-surface divide-y divide-hairline mb-4">
-        {vezbe.map((ex, i) => {
-          // Vezbacu SRPSKI naziv. Engleski se ovde namerno ne prikazuje: red je
-          // zbijen, a spisak ide i do 10 vezbi - drugi red imena bi ga izduzio.
-          // U pregledu pre treninga, gde ima mesta, stoje oba.
-          const ime = ex.exercise.name;
-          const aktivna = i === idx;
-          const gotova = i < idx;
-          return (
-            <div
-              key={ex.id}
-              className={cn(
-                "flex items-center gap-2.5 px-3 py-2.5",
-                aktivna && "bg-primary-soft",
-                gotova && "opacity-55",
-              )}
-            >
-              <div
-                className={cn(
-                  "h-7 w-7 rounded-lg flex items-center justify-center shrink-0 text-[11px] font-bold tnum",
-                  aktivna
-                    ? "bg-gradient-brand text-white shadow-brand"
-                    : "bg-surface-2 text-muted-foreground",
-                )}
-              >
-                {gotova ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : i + 1}
-              </div>
-
-              {ex.exercise.thumbnail_url ? (
-                <img
-                  src={ex.exercise.thumbnail_url}
-                  alt=""
-                  loading="lazy"
-                  className="h-9 w-9 rounded-lg object-cover bg-surface-2 shrink-0"
-                />
-              ) : (
-                <div className="h-9 w-9 rounded-lg bg-surface-2 flex items-center justify-center shrink-0">
-                  <Dumbbell className="h-4 w-4 text-muted-foreground/60" />
-                </div>
-              )}
-
-              <div className="flex-1 min-w-0">
-                {/* Bez truncate: nazivi vezbi su dugi ("Potisak sa klupe sa
-                    sipkom na kosoj klupi") i sa sasecanjem se ne razlikuju.
-                    Prelama se u najvise dva reda. */}
-                <div className={cn("text-[13.5px] font-semibold leading-snug line-clamp-2",
-                                   aktivna && "text-primary-soft-foreground")}>
-                  {ime}
-                </div>
-                <div className="text-[11.5px] text-muted-foreground tnum">
-                  {ex.sets} x {ciljSerije(ex, 1).repsTekst ?? "-"}
-                  {ciljSerije(ex, 1).weight != null && ciljSerije(ex, 1).weight! > 0
-                    ? ` · ${ciljSerije(ex, 1).weight} kg`
-                    : ""}
-                </div>
-              </div>
-
-              {aktivna && (
-                <div className="text-[11.5px] font-semibold text-primary tnum shrink-0">
-                  {Math.min(setNumber, ex.sets)}/{ex.sets}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Video i uputstvo TRENUTNE vezbe - isto sto vezbac ima u klasicnom
-          treningu. Bez ovoga trener doda vezbu, a vezbac nema gde da vidi kako
-          se radi. */}
+    <div className="w-full pb-6 space-y-4">
+      {/* Prvo VEZBA koja se radi - video, naziv, uputstvo. Isto sto vezbac ima u
+          klasicnom treningu; bez ovoga trener doda vezbu, a vezbac nema gde da
+          vidi kako se radi. */}
       {trenutna && (
-        <div className="mb-4">
-          <ExerciseHeader
-            exerciseId={trenutna.exercise_id}
-            name={trenutna.exercise.name}
-            nameEn={trenutna.exercise.name_en}
-            primaryMuscle={trenutna.exercise.primary_muscle}
-            thumbnailUrl={trenutna.exercise.thumbnail_url}
-            videoUrl={trenutna.exercise.video_url}
-            instructions={trenutna.exercise.instructions}
-          />
-        </div>
+        <ExerciseHeader
+          exerciseId={trenutna.exercise_id}
+          name={trenutna.exercise.name}
+          nameEn={trenutna.exercise.name_en}
+          primaryMuscle={trenutna.exercise.primary_muscle}
+          thumbnailUrl={trenutna.exercise.thumbnail_url}
+          videoUrl={trenutna.exercise.video_url}
+          instructions={trenutna.exercise.instructions}
+        />
       )}
 
       {trenutna && cilj && (
@@ -228,6 +156,10 @@ export const FreeWorkoutExercises = ({
           />
         )
       )}
+
+      {/* Ceo spisak ISPOD i sklopljen, isti obrazac kao u klasicnom treningu:
+          usred serije se gleda serija, a spisak je tu kad zatreba. */}
+      <RestOfWorkout vezbe={vezbe} currentIdx={idx} />
     </div>
   );
 };
