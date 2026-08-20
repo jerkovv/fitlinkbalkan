@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { porukaGreske } from "@/lib/errorMessage";
@@ -67,6 +67,10 @@ const EQUIPMENT = [
   { value: "ostalo", label: "Ostalo" },
 ];
 
+/** Kolone koje kartica u listi stvarno koristi. Ceo red ide tek na otvaranje vezbe. */
+const KOLONE_LISTE = "id, name, name_en, primary_muscle, equipment, is_global, created_by";
+const STRANA = 60;
+
 const muscleLabel = (v: string) => MUSCLE_GROUPS.find((m) => m.value === v)?.label ?? v;
 const equipLabel = (v: string) => EQUIPMENT.find((e) => e.value === v)?.label ?? v;
 
@@ -74,6 +78,12 @@ const ExerciseLibrary = () => {
   const { locked, openLock, guard } = usePretplataLock();
   const { user } = useAuth();
   const [items, setItems] = useState<Exercise[]>([]);
+  const [ukupno, setUkupno] = useState<number | null>(null);
+  const [imaJos, setImaJos] = useState(false);
+  const [ucitavamJos, setUcitavamJos] = useState(false);
+  // Brojac za rucno osvezavanje (posle dodavanja vezbe): filteri se nisu promenili,
+  // pa efekat treba drugi razlog da se ponovo pokrene.
+  const [osvezi, setOsvezi] = useState(0);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [muscleFilter, setMuscleFilter] = useState("all");
@@ -91,35 +101,96 @@ const ExerciseLibrary = () => {
   const [submitting, setSubmitting] = useState(false);
   const [videoOpenFor, setVideoOpenFor] = useState<Exercise | null>(null);
 
-  const load = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("exercises")
-      .select("*")
-      .order("is_global", { ascending: false })
-      .order("name", { ascending: true });
-    if (error) {
-      toast.error(porukaGreske(error));
-    } else {
-      setItems((data as any) ?? []);
-    }
-    setLoading(false);
+  /**
+   * Lista je do sada bila `select("*")` bez opsega, pa je PostgREST vracao svojih
+   * najvise 1000 redova - od 4699 vezbi. Broj "1000 vezbi ukupno" je bio samo
+   * vidljivi simptom; teze je bilo to sto se pretraga radila NAD tih 1000, pa
+   * 3699 vezbi sa ovog ekrana nije moglo da se nadje.
+   *
+   * Zato filter, pretraga, sortiranje i opseg idu na SERVER, a ukupan broj se
+   * dobija zasebnim count upitom - dakle tacan i kad je lista jos nedovucena.
+   *
+   * Kartica trazi malo kolona, pa lista vuce samo njih; ceo red (uputstvo, video,
+   * sekundarni misici) dovlaci se tek kad se vezba otvori.
+   */
+  const upit = useCallback(
+    (zaBrojanje: boolean) => {
+      let q = zaBrojanje
+        ? supabase.from("exercises").select("*", { count: "exact", head: true })
+        : supabase.from("exercises").select(KOLONE_LISTE);
+
+      if (user?.id) q = q.or(`is_global.eq.true,created_by.eq.${user.id}`);
+      else q = q.eq("is_global", true);
+
+      if (muscleFilter !== "all") q = q.eq("primary_muscle", muscleFilter as any);
+      if (scopeFilter === "global") q = q.eq("is_global", true);
+      if (scopeFilter === "mine" && user?.id) {
+        q = q.eq("is_global", false).eq("created_by", user.id);
+      }
+      const s = query.trim().replace(/[%,]/g, "");
+      if (s) q = q.or(`name.ilike.%${s}%,name_en.ilike.%${s}%`);
+      return q;
+    },
+    [muscleFilter, scopeFilter, query, user?.id],
+  );
+
+  const ucitajStranu = useCallback(
+    async (od: number) => {
+      const { data, error } = await upit(false)
+        .order("is_global", { ascending: false })
+        .order("name", { ascending: true })
+        .range(od, od + STRANA - 1);
+      if (error) {
+        toast.error(porukaGreske(error));
+        return [] as Exercise[];
+      }
+      const red = (data as any as Exercise[]) ?? [];
+      setImaJos(red.length === STRANA);
+      return red;
+    },
+    [upit],
+  );
+
+  // Pretraga se ne salje na svaki otkucani znak.
+  useEffect(() => {
+    let otkazano = false;
+    const t = setTimeout(async () => {
+      setLoading(true);
+      const [red, { count }] = await Promise.all([
+        ucitajStranu(0),
+        upit(true).then((r) => r as { count: number | null }),
+      ]);
+      if (otkazano) return;
+      setItems(red);
+      setUkupno(count ?? null);
+      setLoading(false);
+    }, query ? 250 : 0);
+    return () => { otkazano = true; clearTimeout(t); };
+  }, [ucitajStranu, upit, query, osvezi]);
+
+  /**
+   * Otvaranje vezbe. Lista nosi samo kolone koje kartica koristi, pa se za
+   * detalje (uputstvo, opis, sekundarni misici, video) dovlaci ceo red - jedan
+   * red po kliku umesto 4699 redova unapred.
+   *
+   * Ono sto je vec stiglo se prikaze odmah, pa se dopuni kad odgovor stigne;
+   * dijalog se ne otvara u prazno.
+   */
+  const otvori = async (ex: Exercise) => {
+    setSelected(ex);
+    const { data } = await supabase.from("exercises").select("*").eq("id", ex.id).maybeSingle();
+    if (data) setSelected((tren) => (tren?.id === ex.id ? (data as any as Exercise) : tren));
   };
 
-  useEffect(() => { load(); }, []);
+  const ucitajJos = async () => {
+    setUcitavamJos(true);
+    const red = await ucitajStranu(items.length);
+    setItems((stari) => [...stari, ...red]);
+    setUcitavamJos(false);
+  };
 
-  const filtered = useMemo(() => {
-    return items.filter((ex) => {
-      if (muscleFilter !== "all" && ex.primary_muscle !== muscleFilter) return false;
-      if (scopeFilter === "global" && !ex.is_global) return false;
-      if (scopeFilter === "mine" && (ex.is_global || ex.created_by !== user?.id)) return false;
-      if (query) {
-        const q = query.toLowerCase();
-        if (!ex.name.toLowerCase().includes(q) && !(ex.name_en?.toLowerCase().includes(q))) return false;
-      }
-      return true;
-    });
-  }, [items, muscleFilter, scopeFilter, query, user?.id]);
+  // Server je vec filtrirao - lista se prikazuje kakva je stigla.
+  const filtered = items;
 
   const handleCreate = async (e: React.FormEvent) => {
     if (locked) return openLock();
@@ -152,7 +223,7 @@ const ExerciseLibrary = () => {
     setOpen(false);
     setName(""); setDescription(""); setInstructions(""); setVideoUrl("");
     setPrimaryMuscle("grudi"); setEquipment("bucice");
-    load();
+    setOsvezi((n) => n + 1);
   };
 
   return (
@@ -235,7 +306,10 @@ const ExerciseLibrary = () => {
       </FullScreenSheet>
 
       <h1 className="font-display text-[28px] font-bold tracking-tightest mb-1">Biblioteka vežbi</h1>
-      <p className="text-sm text-muted-foreground mb-4">{items.length} vežbi ukupno</p>
+      <p className="text-sm text-muted-foreground mb-4">
+        {ukupno != null ? `${ukupno} vežbi` : "Učitavam..."}
+        {ukupno != null && items.length < ukupno && ` · prikazano ${items.length}`}
+      </p>
 
       {/* Search */}
       <div className="relative mb-3">
@@ -303,7 +377,7 @@ const ExerciseLibrary = () => {
           {filtered.map((ex) => (
             <button
               key={ex.id}
-              onClick={() => setSelected(ex)}
+              onClick={() => void otvori(ex)}
               className="card-premium-hover w-full text-left p-4 flex items-center gap-3"
             >
               <div className="h-11 w-11 rounded-lg bg-gradient-brand-soft flex items-center justify-center shrink-0">
@@ -327,6 +401,17 @@ const ExerciseLibrary = () => {
               )}
             </button>
           ))}
+
+          {imaJos && (
+            <button
+              type="button"
+              onClick={() => void ucitajJos()}
+              disabled={ucitavamJos}
+              className="w-full h-11 rounded-xl bg-surface-2 text-[13px] font-semibold text-muted-foreground hover:text-foreground transition disabled:opacity-50"
+            >
+              {ucitavamJos ? "Učitavam..." : "Učitaj još"}
+            </button>
+          )}
         </div>
       )}
 
