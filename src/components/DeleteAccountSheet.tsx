@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { redirectToAuth } from "@/hooks/useDesktopWeb";
 import {
   FullScreenSheet,
   FullScreenSheetScroll,
@@ -74,7 +75,7 @@ export const DeleteAccountSheet = ({ open, onClose, userEmail, role }: DeleteAcc
       if (res?.success) {
         onClose();
         await signOut();
-        navigate("/auth", { replace: true });
+        redirectToAuth(navigate);
         return;
       }
       if (res?.error === "confirm_mismatch") {

@@ -18,6 +18,20 @@ export function isDashboardHost(): boolean {
   return typeof window !== "undefined" && DASHBOARD_HOSTNAMES.has(window.location.hostname);
 }
 
+// Posle odjave (ili brisanja naloga) treba stici na login. Na app.fitlink.rs
+// to je React-ova sopstvena /auth forma - jedina koja tamo postoji. Na
+// fitlink.rs/dashboard bi navigate("/auth") (basename-relativno) zavrsio na
+// /dashboard/auth, unutrasnjoj rezervnoj formi umesto na lepoj, zvanicnoj
+// /login stranici sa sajta - zato ide PRAVA navigacija van React Router-a
+// (druga je to statička stranica, ne ruta u ovom app-u).
+export function redirectToAuth(navigate: (path: string, opts?: { replace?: boolean }) => void) {
+  if (isDashboardHost()) {
+    window.location.href = "https://fitlink.rs/login";
+    return;
+  }
+  navigate("/auth", { replace: true });
+}
+
 export function useDesktopWeb(): boolean {
   const dashboardHost = isDashboardHost();
   const [wide, setWide] = useState(

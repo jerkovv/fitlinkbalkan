@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { redirectToAuth } from "@/hooks/useDesktopWeb";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,7 +44,7 @@ export const UserMenu = () => {
     try {
       await signOut();
       toast.success("Odjavljen si");
-      navigate("/auth", { replace: true });
+      redirectToAuth(navigate);
     } catch (e: any) {
       toast.error(porukaGreske(e));
     } finally {
