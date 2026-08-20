@@ -1,27 +1,6 @@
 import { History, Trophy } from "lucide-react";
 import type { LastPerformance } from "@/hooks/useLastPerformance";
 
-const MESECI = [
-  "jan", "feb", "mart", "apr", "maj", "jun",
-  "jul", "avg", "sep", "okt", "nov", "dec",
-];
-
-function kadaTekst(iso: string): string {
-  const d = new Date(iso);
-  const danas = new Date();
-  const dan = 24 * 60 * 60 * 1000;
-  // Poredimo kalendarske dane, ne 24h razmake - trening od sinoc u 23h i danas
-  // u 7h nisu "pre 0 dana".
-  const razlika = Math.round(
-    (new Date(danas.getFullYear(), danas.getMonth(), danas.getDate()).getTime() -
-      new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()) / dan,
-  );
-  if (razlika <= 0) return "danas";
-  if (razlika === 1) return "juče";
-  if (razlika < 7) return `pre ${razlika} dana`;
-  return `${d.getDate()}. ${MESECI[d.getMonth()]}`;
-}
-
 /** "40 kg x 10" ili samo "x 10" za vezbe sa sopstvenom tezinom. */
 function setTekst(s: { reps: number | null; weight_kg: number | null }): string {
   const kg = s.weight_kg != null && Number(s.weight_kg) > 0 ? `${Number(s.weight_kg)} kg` : null;
@@ -33,6 +12,11 @@ function setTekst(s: { reps: number | null; weight_kg: number | null }): string 
  * "Prosli put" red - sta je vezbac poslednji put odradio za ovu vezbu.
  * Stoji u builderu iznad polja za ciljeve, da trener upisuje danasnji broj
  * gledajuci u prosli, a ne napamet.
+ *
+ * Namerno BEZ datuma: treneru treba kilaza i ponavljanja da odredi danasnji
+ * cilj, a "pre 3 dana" samo dodaje sum u red koji se ponavlja uz svaku vezbu.
+ * RPC i dalje vraca performed_at (koristi se da se zna da istorija POSTOJI),
+ * samo se ne prikazuje.
  *
  * Kad vezbac vezbu jos nije radio, komponenta se NE renderuje (vraca null) -
  * prazan red "nema podataka" bi samo trosio prostor na svakoj novoj vezbi.
@@ -49,7 +33,7 @@ export const LastPerformanceHint = ({ data }: { data: LastPerformance | undefine
       <div className="flex items-center gap-1.5 mb-1">
         <History className="h-3 w-3 text-muted-foreground shrink-0" strokeWidth={2.2} />
         <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-          Prošli put · {kadaTekst(data.performed_at)}
+          Prošli put
         </span>
         {rekord != null && (
           <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-semibold text-muted-foreground">
