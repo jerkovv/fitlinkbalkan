@@ -215,6 +215,44 @@ export const LiveWorkoutPlan = ({
     setUnos((u) => ({ ...u, [kljuc]: { ...u[kljuc], [polje]: v } }));
 
   /**
+   * Kacenje i skidanje zelenog.
+   *
+   * Asimetricno, i to je namerno: trener SME da oznaci seriju (vezbac cesto
+   * ostavi telefon u torbi, a trening mora da se zabelezi), ali SME da skine
+   * samo ono sto je sam stavio. Vezbacev zapis mu je nedodirljiv - server to
+   * odbija, ovde se dugme samo iskljuci da ne obecava nemoguce.
+   */
+  const prebaciSeriju = async (
+    ex: DayExercise,
+    setNumber: number,
+    upisana: DanasnjiSet | undefined,
+  ) => {
+    if (upisana && !upisana.logged_by_trainer) return;
+    const kljuc = `${ex.id}:${setNumber}`;
+    setSalje(true);
+
+    if (upisana) {
+      const { error } = await supabase.rpc("trainer_unmark_set" as any, {
+        p_session_id: sessionId, p_ape_id: ex.id, p_set_number: setNumber,
+      });
+      setSalje(false);
+      if (error) { toast.error(porukaGreske(error)); return; }
+      setUnos((u) => { const n = { ...u }; delete n[kljuc]; return n; });
+    } else {
+      // Prazna polja se salju kao null: server tada sam uzme CILJ te serije,
+      // i to ispravno - cilj ume da bude raspon ("6-10"), koji ovde nije broj.
+      const { error } = await supabase.rpc("trainer_mark_set_done" as any, {
+        p_session_id: sessionId, p_ape_id: ex.id, p_set_number: setNumber,
+        p_reps: broj(unos[kljuc]?.reps ?? ""),
+        p_weight: broj(unos[kljuc]?.kg ?? ""),
+      });
+      setSalje(false);
+      if (error) { toast.error(porukaGreske(error)); return; }
+    }
+    await ucitajDanas();
+  };
+
+  /**
    * Izlazak iz polja u mrezi. Isto polje znaci dve stvari, po stanju serije:
    *
    * - serija JOS NIJE cekirana -> to je CILJ te serije. Trener upise 50 kg i
@@ -540,26 +578,33 @@ export const LiveWorkoutPlan = ({
                         aria-label={`Ponavljanja, serija ${sn}`}
                         className="h-8 px-1 text-[12.5px] text-center tnum"
                       />
-                      {/* Zeleno je VEZBACEVO stanje - pali se kad on zavrsi tu
-                          seriju. Namerno nije dugme: trener ga ne sme ni skinuti
-                          ni staviti (server to i odbija), pa lazno tapljiv
-                          element samo obecava sto ne moze da ispuni.
-                          Tackica znaci da je brojeve uneo trener. */}
-                      <div
-                        role="img"
-                        aria-label={upisana ? `Serija ${sn} odrađena` : `Serija ${sn} nije odrađena`}
+                      {/* Tri stanja: prazno (tap kaci), zeleno sa tackicom
+                          (trenerovo - tap skida), zeleno bez tackice (vezbacevo -
+                          zakljucano, njegov zapis se ne dira). */}
+                      <button
+                        type="button"
+                        disabled={salje || (!!upisana && !upisana.logged_by_trainer)}
+                        onClick={() => void prebaciSeriju(ex, sn, upisana)}
+                        aria-pressed={!!upisana}
+                        aria-label={
+                          !upisana
+                            ? `Označi seriju ${sn} kao odrađenu`
+                            : upisana.logged_by_trainer
+                              ? `Skini oznaku sa serije ${sn}`
+                              : `Seriju ${sn} je završio vežbač`
+                        }
                         className={cn(
-                          "relative h-8 w-8 rounded-lg flex items-center justify-center",
+                          "relative h-8 w-8 rounded-lg flex items-center justify-center transition",
                           upisana
-                            ? "bg-success text-success-foreground"
-                            : "bg-surface-2 text-muted-foreground/30",
+                            ? "bg-success text-success-foreground disabled:opacity-100"
+                            : "bg-surface-2 text-muted-foreground/40 hover:text-foreground disabled:opacity-50",
                         )}
                       >
                         <Check className="h-4 w-4" strokeWidth={3} />
                         {upisana?.logged_by_trainer && (
                           <span className="absolute h-1.5 w-1.5 rounded-full bg-current opacity-70 translate-x-[11px] -translate-y-[11px]" />
                         )}
-                      </div>
+                      </button>
                     </div>
                   );
                 })}
