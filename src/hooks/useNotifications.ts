@@ -76,8 +76,12 @@ export const useNotifications = () => {
   useEffect(() => {
     if (!enabled || !user) return;
 
+    // Topic mora biti jedinstven PO MONTIRANJU, ne samo po korisniku: na
+    // fitlink.rs/dashboard NotificationBell u TrainerWebShell traci ostaje
+    // montiran dok se Notifications.tsx (puna lista) montira preko njega -
+    // dve pretplate na isti topic ("notif:<uid>") su rusile stranicu.
     const channel = supabase
-      .channel(`notif:${user.id}`)
+      .channel(`notif:${user.id}:${crypto.randomUUID()}`)
       .on(
         "postgres_changes",
         {

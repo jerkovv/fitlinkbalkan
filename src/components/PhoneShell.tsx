@@ -41,8 +41,14 @@ export const PhoneShell = ({
       )}
     >
       <div className={desktop ? undefined : "phone-shell-sticky"}>
-        {/* Top bar - back + right action */}
-        {(back || rightSlot) && (
+        {/* Top bar - back + right action. Na desktopu se rightSlot NE renderuje:
+            TrainerWebShell vec ima stalnu traku sa ChatBell/NotificationBell/
+            UserMenu, a te komponente drze sopstvene Realtime kanale imenovane
+            po korisniku (chat-bell:<uid>, notif:<uid>) - dve istovremene
+            instance se sudaraju na isti kanal i ruse stranicu (belo posle
+            ucitavanja). Nekoliko stranica (Dashboard, Notifications) prosledjuje
+            bas te komponente kao rightSlot, pa se ovde iskljucuju u celini. */}
+        {(back || (!desktop && rightSlot)) && (
           <div className={cn("flex items-center justify-between", desktop ? "pt-1" : "px-6 pt-1")}>
             {back ? (
               <Link
@@ -53,7 +59,7 @@ export const PhoneShell = ({
                 <ChevronLeft className="h-5 w-5" strokeWidth={2.25} />
               </Link>
             ) : <span />}
-            {rightSlot}
+            {!desktop && rightSlot}
           </div>
         )}
 

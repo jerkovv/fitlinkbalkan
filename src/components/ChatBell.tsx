@@ -27,8 +27,10 @@ export const ChatBell = () => {
     refresh();
     const filter =
       role === "trainer" ? `trainer_id=eq.${user.id}` : `athlete_id=eq.${user.id}`;
+    // Jedinstven topic po montiranju (ne samo po korisniku) - vidi isti
+    // razlog u useNotifications.ts.
     const ch = supabase
-      .channel(`chat-bell:${user.id}`)
+      .channel(`chat-bell:${user.id}:${crypto.randomUUID()}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "messages", filter }, () =>
         refresh(),
       )
