@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { Card } from "@/components/ui-bits";
 import { QuickMessagePanel } from "@/components/trainer/QuickMessagePanel";
+import { LiveWorkoutPlan } from "@/components/trainer/LiveWorkoutPlan";
 import { WatchSlash } from "@/components/trainer/WatchSlash";
 import { getHrColor, getZoneVar } from "@/lib/workout/hrZone";
 import { isWatchConnected } from "@/lib/liveWorkout";
@@ -31,6 +32,8 @@ type SessionRow = {
   started_at: string;
   is_active: boolean;
   hr_series: { ts: string; bpm: number }[] | null;
+  // null = slobodan trening (nema plan ni vezbe, vidi _start_free_workout_session).
+  day_id: string | null;
 };
 
 const HrMiniChart = ({ points }: { points: { ts: string; bpm: number }[] }) => {
@@ -113,7 +116,7 @@ const LiveWorkoutView = () => {
     if (!athleteId) return;
     const { data } = await supabase
       .from("workout_session_logs")
-      .select("id, athlete_id, started_at, is_active, hr_series")
+      .select("id, athlete_id, started_at, is_active, hr_series, day_id")
       .eq("athlete_id", athleteId)
       .eq("is_active", true)
       .order("started_at", { ascending: false })
@@ -472,6 +475,21 @@ const LiveWorkoutView = () => {
 
           {/* HR mini chart - sakriven kad nema sata (stanje iznad ga pokriva) */}
           {watchConnected && <HrMiniChart points={(session.hr_series as any) ?? []} />}
+
+          {/* Plan treninga koji vezbac upravo radi, sa istorijom po vezbi.
+              Slobodan trening nema day_id (ni vezbe), pa se kartica preskace. */}
+          {session.day_id && athleteId && (
+            <Card className="p-4">
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3">
+                Trening
+              </div>
+              <LiveWorkoutPlan
+                dayId={session.day_id}
+                athleteId={athleteId}
+                currentIdx={state?.current_exercise_idx ?? null}
+              />
+            </Card>
+          )}
 
           {/* Quick messages */}
           <Card className="p-4">
