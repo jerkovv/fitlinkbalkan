@@ -84,6 +84,10 @@ struct PlanExercise: Codable, Equatable {
     // Per-set ciljevi (izvor istine). Optional/prazno za stare programe pre per-set -> fallback
     // na repsText/plannedReps/plannedWeight.
     let setDetails: [PlannedSet]?
+    // Superset: NULL = obicna vezba, isti broj = jedan krug. MORA da bude Optional -
+    // FailablePlanExercise na obaveznom polju koje nedostaje odbacuje CELU vezbu, a
+    // planovi u kesu (UserDefaults) su upisani pre nego sto je polje postojalo.
+    let supersetGroup: Int?
 
     enum CodingKeys: String, CodingKey {
         case apeId = "ape_id"
@@ -99,6 +103,7 @@ struct PlanExercise: Codable, Equatable {
         case isDurationBased = "is_duration_based"
         case durationMinutes = "duration_minutes"
         case setDetails = "set_details"
+        case supersetGroup = "superset_group"
     }
 }
 

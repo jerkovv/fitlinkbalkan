@@ -15,6 +15,10 @@ struct ActiveWorkout: Codable, Equatable {
     var durationMinutes: Int? = nil
     // Cilj reps kao tekst za TEKUCI set (npr "8-12"); per-set iz plana. nil -> koristi targetReps.
     var targetRepsText: String? = nil
+    // Superset: koje mesto u krugu i koliko clanova krug ima. 1 od 1 = obicna vezba.
+    // Default vrednosti drze stari server-driven prikaz (bez plana) netaknutim.
+    var supersetStep: Int = 1
+    var supersetSize: Int = 1
 
     static let mock = ActiveWorkout(
         workoutId: "test-123",

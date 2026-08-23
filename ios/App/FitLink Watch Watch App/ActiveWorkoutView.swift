@@ -148,6 +148,16 @@ struct ActiveWorkoutView: View {
 
     private var exerciseHeader: some View {
         VStack(spacing: 2) {
+            // Superset: covek mora da zna da posle ove vezbe NEMA pauze, nego odmah ide
+            // sledeca. Bez ovoga bi izostanak odbrojavanja izgledao kao kvar.
+            if workout.supersetSize > 1 {
+                Text("SUPERSET \(workout.supersetStep) / \(workout.supersetSize)")
+                    .font(.zoneNum(10, .bold))
+                    .tracking(1.5)
+                    .monospacedDigit()
+                    .foregroundColor(.brandMagenta)
+            }
+
             // Kardio: bez "SET X / Y" (prikazuje se samo naziv vezbe).
             if !workout.isDurationBased {
                 Text("SET \(workout.currentSet) / \(workout.totalSets)")

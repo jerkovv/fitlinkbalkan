@@ -60,6 +60,30 @@ struct LocalPosition {
     // Kardio: trenutna vezba se izvodi na minute (is_duration_based) + cilj minuta.
     let isDurationBased: Bool
     let durationMinutes: Int?
+    // Superset: koji krug i koje mesto u njemu. supersetSize == 1 -> obicna vezba.
+    // Mesto i velicina NISU svojstva vezbe nego KORAKA: clan sa manje serija ispadne
+    // iz kasnijih krugova, pa se krug od kruga do kruga smanjuje.
+    let supersetGroup: Int?
+    let supersetStep: Int
+    let supersetSize: Int
+    // Redni broj koraka u CELOM treningu. Monotonost se meri po njemu, ne po
+    // (exerciseIdx, setNumber): u supersetu indeks vezbe ide unazad (A1, B1, A2), pa
+    // bi poredjenje po indeksu tacnu serversku poziciju proglasilo zaostalom.
+    let stepIndex: Int
+}
+
+// Jedan KORAK treninga: jedna serija jedne vezbe, na svom mestu u redosledu.
+// Superset menja redosled sa "vezba po vezba" na "korak po korak" (A1, B1, A2, B2),
+// pa se sve sto zavisi od redosleda racuna nad koracima, ne nad vezbama.
+private struct PlanStep {
+    let exercise: PlanExercise
+    /// Koji krug (za obicnu vezbu = redni broj serije).
+    let round: Int
+    /// Mesto u krugu i broj clanova BAS tog kruga (obicna vezba: 1 od 1).
+    let place: Int
+    let size: Int
+    /// Redni broj koraka u celom treningu, od 1.
+    let index: Int
 }
 
 struct ContentView: View {
@@ -110,6 +134,9 @@ struct ContentView: View {
     // KORAK B - lokalni model treninga (plan + doneCount po vezbi). Prazno = nema plana
     // -> fallback na server-driven prikaz (kao do sad). Server ostaje autoritet (sync).
     @State private var planExercises: [PlanExercise] = []
+    // Poslednji exercise_idx koji je server poslao. Naziv vezbe nije dovoljan kljuc:
+    // u supersetu se ista vezba pojavljuje u vise krugova.
+    @State private var lastServerExerciseIdx: Int? = nil
     @State private var doneCounts: [String: Int] = [:]
     @State private var planSessionId: String? = nil
     // KORAK C: guard da replay reda set-akcija ide jedan-po-jedan (FIFO), bez paralele.
@@ -353,6 +380,7 @@ struct ContentView: View {
         // Nema plana - ocisti lokalni model i spreci povlacenje plana za ovu sesiju.
         planExercises = []
         doneCounts = [:]
+        lastServerExerciseIdx = nil
         planSessionId = sessionId
         isStarting = false
         setConnectionOK(true)
@@ -1475,9 +1503,12 @@ struct ContentView: View {
         }
         
         // Sloj 2: dedup mora da ukljuci rest_ends_at_ms da promena tajmera
-        // (npr. +30 sa telefona) ne bude tiho odbacena.
+        // (npr. +30 sa telefona) ne bude tiho odbacena, i exercise_idx jer u supersetu
+        // dva clana kruga umeju da nose isti naziv - bez indeksa bi prelazak sa jednog
+        // na drugog izgledao kao "nista se nije promenilo" i bio odbacen.
         let restKey = row.restEndsAtMs.map { String($0) } ?? "nil"
-        let signature = "\(exerciseName)|\(setNumber)|\(state)|\(restKey)"
+        let idxKey = row.currentExerciseIdx.map { String($0) } ?? "nil"
+        let signature = "\(exerciseName)|\(idxKey)|\(setNumber)|\(state)|\(restKey)"
         if signature == lastServerSignature {
             return
         }
@@ -1500,43 +1531,94 @@ struct ContentView: View {
 
     // MARK: - KORAK B: lokalni model treninga (server ostaje autoritet)
 
-    // Ista logika kao server watch_compute_position: prva vezba (po exercise_idx/position)
-    // gde doneCount < sets; set_number = doneCount + 1; ako su sve done -> complete.
-    private func computeLocalPosition() -> LocalPosition? {
-        guard !planExercises.isEmpty else { return nil }
-        let ordered = planExercises.sorted {
-            ($0.exerciseIdx, $0.position) < ($1.exerciseIdx, $1.position)
+    // Svi koraci treninga, redom kojim se rade. Ista logika kao server
+    // watch_compute_position (STEP-MAJOR): blok, pa krug, pa mesto u bloku.
+    //
+    // Blok je superset krug; vezba bez grupe je sama svoj blok. Kljuc bloka za nju je
+    // -position: uvek negativan, pa se ne moze sudariti sa stvarnom grupom (pozitivne).
+    //
+    // KLJUCNO SVOJSTVO: bez ijednog superseta redosled je BIT PO BIT isti kao pre.
+    // Svaka vezba je tada svoj blok sa blokPoz = position, pa je poredak
+    // (position, krug) - tacno stara "vezba po vezba" logika.
+    private func orderedSteps() -> [PlanStep] {
+        guard !planExercises.isEmpty else { return [] }
+        let blockKey: (PlanExercise) -> Int = { $0.supersetGroup ?? -$0.position }
+
+        var blockPos: [Int: Int] = [:]
+        for ex in planExercises {
+            let k = blockKey(ex)
+            blockPos[k] = min(blockPos[k] ?? ex.position, ex.position)
         }
-        for ex in ordered {
-            let done = doneCounts[ex.apeId] ?? ex.doneCount
-            if done < ex.sets {
-                // Cilj BAS tekuceg seta iz set_details; fallback na parent (jedna vrednost).
-                let sd = ex.setDetails?.first(where: { $0.setNumber == done + 1 })
-                let repsText = sd?.reps ?? ex.repsText
-                let repsNum = sd != nil
-                    ? Int(String((sd?.reps ?? "").prefix(while: { $0.isNumber })))   // "8-12" -> 8
-                    : ex.plannedReps
-                let weight = sd != nil ? sd?.weightKg : ex.plannedWeight
-                return LocalPosition(
-                    complete: false,
-                    apeId: ex.apeId,
-                    exerciseIdx: ex.exerciseIdx,
-                    exerciseName: ex.exerciseName,
-                    setNumber: done + 1,
-                    totalSets: ex.sets,
-                    restSeconds: sd?.restSeconds ?? ex.restSeconds,
-                    plannedReps: repsNum,
-                    plannedWeight: weight,
-                    plannedRepsText: repsText,
-                    isDurationBased: ex.isDurationBased ?? false,
-                    durationMinutes: ex.durationMinutes
-                )
+
+        // (blok, krug) -> clanovi tog kruga, po position. Clan sa manje serija
+        // jednostavno nema korak u kasnijim krugovima, pa krug postaje manji.
+        var rounds: [Int: [Int: [PlanExercise]]] = [:]
+        for ex in planExercises where ex.sets > 0 {
+            let k = blockKey(ex)
+            for n in 1...ex.sets { rounds[k, default: [:]][n, default: []].append(ex) }
+        }
+
+        var steps: [(blokPoz: Int, krug: Int, position: Int, ex: PlanExercise, place: Int, size: Int)] = []
+        for (k, perRound) in rounds {
+            for (n, clanovi) in perRound {
+                let sorted = clanovi.sorted { $0.position < $1.position }
+                for (i, ex) in sorted.enumerated() {
+                    steps.append((blockPos[k] ?? ex.position, n, ex.position, ex, i + 1, sorted.count))
+                }
             }
         }
-        return LocalPosition(complete: true, apeId: "", exerciseIdx: 0, exerciseName: "",
-                             setNumber: 0, totalSets: 0, restSeconds: 0,
-                             plannedReps: nil, plannedWeight: nil, plannedRepsText: nil,
-                             isDurationBased: false, durationMinutes: nil)
+        steps.sort { ($0.blokPoz, $0.krug, $0.position) < ($1.blokPoz, $1.krug, $1.position) }
+        return steps.enumerated().map {
+            PlanStep(exercise: $0.element.ex, round: $0.element.krug,
+                     place: $0.element.place, size: $0.element.size, index: $0.offset + 1)
+        }
+    }
+
+    /// Prvi korak koji jos nije odradjen. doneCounts drzi PREFIKS odradjenih serija po
+    /// vezbi, pa je korak gotov kad je done >= krug.
+    private func firstPendingStep(_ steps: [PlanStep]) -> PlanStep? {
+        steps.first { (doneCounts[$0.exercise.apeId] ?? $0.exercise.doneCount) < $0.round }
+    }
+
+    private func computeLocalPosition() -> LocalPosition? {
+        guard !planExercises.isEmpty else { return nil }
+        let steps = orderedSteps()
+        guard let step = firstPendingStep(steps) else {
+            return LocalPosition(complete: true, apeId: "", exerciseIdx: 0, exerciseName: "",
+                                 setNumber: 0, totalSets: 0, restSeconds: 0,
+                                 plannedReps: nil, plannedWeight: nil, plannedRepsText: nil,
+                                 isDurationBased: false, durationMinutes: nil,
+                                 supersetGroup: nil, supersetStep: 1, supersetSize: 1, stepIndex: 0)
+        }
+        let ex = step.exercise
+        // Cilj BAS tekuceg seta iz set_details; fallback na parent (jedna vrednost).
+        let sd = ex.setDetails?.first(where: { $0.setNumber == step.round })
+        let repsText = sd?.reps ?? ex.repsText
+        let repsNum = sd != nil
+            ? Int(String((sd?.reps ?? "").prefix(while: { $0.isNumber })))   // "8-12" -> 8
+            : ex.plannedReps
+        let weight = sd != nil ? sd?.weightKg : ex.plannedWeight
+        // Unutar kruga se ne odmara: pauza tek posle POSLEDNJEG clana. Obicna vezba je
+        // uvek sama u svom krugu, pa joj pauza ostaje netaknuta.
+        let rest = step.place < step.size ? 0 : (sd?.restSeconds ?? ex.restSeconds)
+        return LocalPosition(
+            complete: false,
+            apeId: ex.apeId,
+            exerciseIdx: ex.exerciseIdx,
+            exerciseName: ex.exerciseName,
+            setNumber: step.round,
+            totalSets: ex.sets,
+            restSeconds: rest,
+            plannedReps: repsNum,
+            plannedWeight: weight,
+            plannedRepsText: repsText,
+            isDurationBased: ex.isDurationBased ?? false,
+            durationMinutes: ex.durationMinutes,
+            supersetGroup: ex.supersetGroup,
+            supersetStep: step.place,
+            supersetSize: step.size,
+            stepIndex: step.index
+        )
     }
 
     // Pozicija koju UI prikazuje. Renderuje iz LOKALNOG modela SAMO kad se slaze sa serverom
@@ -1558,7 +1640,9 @@ struct ContentView: View {
                 restSeconds: pos.restSeconds > 0 ? pos.restSeconds : currentWorkout.restSeconds,
                 isDurationBased: pos.isDurationBased,
                 durationMinutes: pos.durationMinutes,
-                targetRepsText: pos.plannedRepsText
+                targetRepsText: pos.plannedRepsText,
+                supersetStep: pos.supersetStep,
+                supersetSize: pos.supersetSize
             )
         }
         return currentWorkout
@@ -1590,7 +1674,8 @@ struct ContentView: View {
         doneCounts = counts
         planSessionId = sessionId
         // Uskladi sa trenutnom serverskom pozicijom (ako je vec stigla preko realtime-a).
-        syncLocalToServer(exerciseName: currentWorkout.exerciseName, setNumber: currentWorkout.currentSet)
+        syncLocalToServer(exerciseIdx: lastServerExerciseIdx,
+                          exerciseName: currentWorkout.exerciseName, setNumber: currentWorkout.currentSet)
         persistPlan()
         print("Watch plan loaded: \(plan.exercises.count) vezbi [session \(sessionId)]")
     }
@@ -1608,20 +1693,35 @@ struct ContentView: View {
         WorkoutPlanStore.shared.save(PersistedPlan(sessionId: sid, exercises: planExercises, doneCounts: doneCounts))
     }
 
-    // SERVER JE AUTORITET: izvedi doneCount-ove iz serverove pozicije (linearno: vezbe pre
-    // trenutne = pune, trenutna = setNumber-1, posle = 0). Ako naziv nije u planu, ne diraj
-    // (displayedWorkout tada padne na server-driven prikaz).
-    private func syncLocalToServer(exerciseName: String, setNumber: Int) {
-        guard !planExercises.isEmpty else { return }
-        let ordered = planExercises.sorted {
-            ($0.exerciseIdx, $0.position) < ($1.exerciseIdx, $1.position)
+    /// Korak koji odgovara serverskoj poziciji. Trazi se po exercise_idx kad ga server
+    /// posalje, a po nazivu samo kao rezerva: u supersetu se ista vezba pojavljuje u vise
+    /// krugova, a dva razlicita dana ume da nose isto ime, pa je naziv slabiji kljuc.
+    private func serverStep(_ steps: [PlanStep], exerciseIdx: Int?, exerciseName: String, setNumber: Int) -> PlanStep? {
+        if let idx = exerciseIdx,
+           let s = steps.first(where: { $0.exercise.exerciseIdx == idx && $0.round == setNumber }) {
+            return s
         }
-        guard let i = ordered.firstIndex(where: { $0.exerciseName == exerciseName }) else { return }
+        return steps.first { $0.exercise.exerciseName == exerciseName && $0.round == setNumber }
+    }
+
+    // SERVER JE AUTORITET: izvedi doneCount-ove iz serverove pozicije.
+    //
+    // Ranije se racunalo linearno - "vezbe pre trenutne su pune". U supersetu to nije
+    // tacno: kad server stoji na B, krugu 2, vezba A ima dve serije, ne sve tri. Zato se
+    // broji po KORACIMA: odradjeno je tacno ono sto stoji PRE serverskog koraka.
+    // Bez superseta ovo daje iste brojeve kao stara linearna pravila.
+    //
+    // Pozicija koja nije u planu -> ne diraj nista (displayedWorkout tada padne na
+    // server-driven prikaz).
+    private func syncLocalToServer(exerciseIdx: Int? = nil, exerciseName: String, setNumber: Int) {
+        guard !planExercises.isEmpty else { return }
+        let steps = orderedSteps()
+        guard let cur = serverStep(steps, exerciseIdx: exerciseIdx,
+                                   exerciseName: exerciseName, setNumber: setNumber) else { return }
         var counts: [String: Int] = [:]
-        for (j, ex) in ordered.enumerated() {
-            if j < i { counts[ex.apeId] = ex.sets }
-            else if j == i { counts[ex.apeId] = max(0, setNumber - 1) }
-            else { counts[ex.apeId] = 0 }
+        for ex in planExercises { counts[ex.apeId] = 0 }
+        for st in steps where st.index < cur.index {
+            counts[st.exercise.apeId] = max(counts[st.exercise.apeId] ?? 0, st.round)
         }
         if counts != doneCounts {
             doneCounts = counts
@@ -1715,6 +1815,7 @@ struct ContentView: View {
                 planExercises = []
                 doneCounts = [:]
                 planSessionId = nil
+                lastServerExerciseIdx = nil
             }
             currentSessionId = sessionId
             loadWorkoutPlanIfNeeded(sessionId)   // KORAK B: ucitaj lokalni plan jednom po sesiji
@@ -1723,9 +1824,15 @@ struct ContentView: View {
         // KORAK C reconciliation: DOK red NIJE prazan, lokalni model je autoritet. Ako je server
         // pozicija IZA lokalne (jos nije obradio nase akcije) -> ignorisi (ne vuci UI unazad).
         if let sid = sessionId ?? currentSessionId, !PendingActionStore.shared.isEmpty(sessionId: sid) {
-            let serverIdx = exerciseIdx ?? planExercises.first(where: { $0.exerciseName == exerciseName })?.exerciseIdx
-            if let local = computeLocalPosition(), !local.complete, let sIdx = serverIdx {
-                if (sIdx, setNumber) < (local.exerciseIdx, local.setNumber) {
+            // Poredi se po REDNOM BROJU KORAKA. Po (exerciseIdx, setNumber) bi u supersetu
+            // padalo: posle A2 dolazi B2, a B ima manji indeks vezbe od A kad je A drugi
+            // clan kruga - tacna serverska pozicija bi izgledala kao zaostala i bila
+            // odbacena, pa bi sat ostao na starom koraku dok red ne opadne.
+            let steps = orderedSteps()
+            if let local = computeLocalPosition(), !local.complete,
+               let sStep = serverStep(steps, exerciseIdx: exerciseIdx,
+                                      exerciseName: exerciseName, setNumber: setNumber) {
+                if sStep.index < local.stepIndex {
                     if let serverNowMs = serverNowMs {
                         serverClockOffset = Date(timeIntervalSince1970: serverNowMs / 1000.0).timeIntervalSince(Date())
                     }
@@ -1748,7 +1855,8 @@ struct ContentView: View {
         )
 
         // KORAK B: server pomera lokalni model (uskladi doneCount-ove sa serverskom pozicijom).
-        syncLocalToServer(exerciseName: exerciseName, setNumber: setNumber)
+        lastServerExerciseIdx = exerciseIdx
+        syncLocalToServer(exerciseIdx: exerciseIdx, exerciseName: exerciseName, setNumber: setNumber)
 
         // Offset serverskog sata: serverNow - Date(). Display koristi Date() + offset.
         if let serverNowMs = serverNowMs {
@@ -1820,8 +1928,16 @@ struct ContentView: View {
             // protiv serverNow(), pa lokalni okvir bez offseta prikazuje pogresnu sekundu
             // dok poll ne stigne. Ovako prikaz odmah pokazuje istu sekundu kao telefon i
             // serverska vrednost iz polla legne bez skoka.
-            restEndsAt = Date().addingTimeInterval(Double(max(pos.restSeconds, 1)) + serverClockOffset)
-            currentState = .rest
+            if pos.restSeconds > 0 {
+                restEndsAt = Date().addingTimeInterval(Double(pos.restSeconds) + serverClockOffset)
+                currentState = .rest
+            } else {
+                // Pauza 0 = unutar superset kruga. Ide se PRAVO na sledeceg clana; prazno
+                // odbrojavanje bi ovde bilo samo prepreka. Server radi isto
+                // (_engine_complete_set: rest 0 -> current_state 'active').
+                restEndsAt = nil
+                currentState = .activeWorkout
+            }
         }
         flushQueue()
         realtimeClient.forceRefresh()   // odmah povuci serversko stanje (sledeca serija ili kraj)
@@ -1864,8 +1980,16 @@ struct ContentView: View {
             // protiv serverNow(), pa lokalni okvir bez offseta prikazuje pogresnu sekundu
             // dok poll ne stigne. Ovako prikaz odmah pokazuje istu sekundu kao telefon i
             // serverska vrednost iz polla legne bez skoka.
-            restEndsAt = Date().addingTimeInterval(Double(max(pos.restSeconds, 1)) + serverClockOffset)
-            currentState = .rest
+            if pos.restSeconds > 0 {
+                restEndsAt = Date().addingTimeInterval(Double(pos.restSeconds) + serverClockOffset)
+                currentState = .rest
+            } else {
+                // Pauza 0 = unutar superset kruga. Ide se PRAVO na sledeceg clana; prazno
+                // odbrojavanje bi ovde bilo samo prepreka. Server radi isto
+                // (_engine_complete_set: rest 0 -> current_state 'active').
+                restEndsAt = nil
+                currentState = .activeWorkout
+            }
         }
         flushQueue()
         realtimeClient.forceRefresh()

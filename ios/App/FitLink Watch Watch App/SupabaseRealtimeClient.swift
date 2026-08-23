@@ -361,9 +361,11 @@ final class SupabaseRealtimeClient: ObservableObject {
         }
 
         // Sloj 2: dedup kljuc mora da ukljuci rest_ends_at_ms, da promena tajmera
-        // unutar istog rest-a (npr. +30 na telefonu) ne bude odbacena.
+        // unutar istog rest-a (npr. +30 na telefonu) ne bude odbacena, i exercise_idx
+        // jer u supersetu dva clana kruga umeju da nose isti naziv.
         let restKey = workout.restEndsAtMs.map { String($0) } ?? "nil"
-        let signature = "\(exerciseName)|\(setNumber)|\(state)|\(restKey)"
+        let idxKey = workout.currentExerciseIdx.map { String($0) } ?? "nil"
+        let signature = "\(exerciseName)|\(idxKey)|\(setNumber)|\(state)|\(restKey)"
 
         // Dedup - ne baljaj UI ako se nista nije promenilo
         if signature == lastWorkoutSignature {
