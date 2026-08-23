@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Check, ChevronDown, Dumbbell, History, Loader2, Pencil, Plus, Repeat2, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, Dumbbell, History, Link2, Loader2, Pencil, Plus, Repeat2, Trash2, Unlink, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,8 @@ type DayExercise = {
   weight_kg: number | null;
   duration_minutes: number | null;
   set_details: SetDetail[] | null;
+  /** NULL = obicna vezba. Isti broj = jedan superset krug. */
+  superset_group: number | null;
   exercise_id: string;
   exercise: {
     name: string;
@@ -179,6 +181,38 @@ export const LiveWorkoutPlan = ({
     if (!v) return null;
     const n = Number(v);
     return Number.isFinite(n) ? n : null;
+  };
+
+  /**
+   * Spajanje oznacenih vezbi u superset (krug koji se radi naizmenicno, bez
+   * pauze izmedju). Server ih premesta da budu uzastopne i odbija vezbu koja
+   * vec ima upisanu seriju - spajanje menja redosled, a odradjeno se ne
+   * prerasporedjuje unazad.
+   */
+  const spojiSuperset = async () => {
+    if (!oznaceno || oznaceno.size < 2) return;
+    setSalje(true);
+    const { error } = await supabase.rpc("trainer_set_superset" as any, {
+      p_session_id: sessionId,
+      p_ape_ids: [...oznaceno],
+    });
+    setSalje(false);
+    if (error) { toast.error(porukaGreske(error)); return; }
+    toast.success("Superset napravljen");
+    setOznaceno(null);
+    await ucitaj();
+    await ucitajDanas();
+  };
+
+  const razdvojSuperset = async (apeId: string) => {
+    setSalje(true);
+    const { error } = await supabase.rpc("trainer_clear_superset" as any, {
+      p_session_id: sessionId, p_ape_id: apeId,
+    });
+    setSalje(false);
+    if (error) { toast.error(porukaGreske(error)); return; }
+    toast.success("Superset razdvojen");
+    await ucitaj();
   };
 
   // Brisanje vise vezbi odjednom. Server odbija vezbu koja vec ima upisanu
@@ -341,6 +375,18 @@ export const LiveWorkoutPlan = ({
                      : <Trash2 className="h-3.5 w-3.5" strokeWidth={2.4} />}
               Obriši {oznaceno.size > 0 ? oznaceno.size : ""}
             </button>
+            {/* Superset trazi bar dve vezbe, pa se dugme i pojavljuje tek tada. */}
+            {oznaceno.size >= 2 && (
+              <button
+                type="button"
+                disabled={salje}
+                onClick={() => void spojiSuperset()}
+                className="h-8 flex-1 rounded-lg bg-primary text-primary-foreground text-[12.5px] font-semibold inline-flex items-center justify-center gap-1.5 disabled:opacity-40 transition"
+              >
+                <Link2 className="h-3.5 w-3.5" strokeWidth={2.4} />
+                Superset {oznaceno.size}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setOznaceno(null)}
@@ -382,8 +428,46 @@ export const LiveWorkoutPlan = ({
         const otvorenaId = otvorena ?? (currentIdx != null ? vezbe[currentIdx]?.id : undefined);
         const razvijena = otvorenaId === ex.id;
         const upisanih = danasnje.length;
+        // Superset se crta kao JEDAN blok: oznaka stoji samo na prvoj vezbi kruga,
+        // a clanovi se vezuju bocnom linijom.
+        const ss = ex.superset_group ?? null;
+        const prethodna = i > 0 ? vezbe[i - 1] : null;
+        const sledeca = i + 1 < vezbe.length ? vezbe[i + 1] : null;
+        const prviUKrugu = ss != null && prethodna?.superset_group !== ss;
+        const poslednjiUKrugu = ss != null && sledeca?.superset_group !== ss;
 
         return (
+          <div key={`w-${ex.id}`} className={cn(ss != null && "relative pl-3")}>
+          {/* Bocna linija spaja clanove kruga u jednu celinu. */}
+          {ss != null && (
+            <span
+              aria-hidden
+              className={cn(
+                "absolute left-0 w-[3px] bg-primary/40",
+                prviUKrugu ? "top-6 rounded-t-full" : "top-0",
+                poslednjiUKrugu ? "bottom-1 rounded-b-full" : "bottom-0",
+              )}
+            />
+          )}
+          {prviUKrugu && (
+            <div className="flex items-center gap-1.5 pb-1 pt-0.5">
+              <Link2 className="h-3 w-3 text-primary shrink-0" strokeWidth={2.6} />
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+                Superset
+              </span>
+              {!uOznacavanju && (
+                <button
+                  type="button"
+                  disabled={salje}
+                  onClick={() => void razdvojSuperset(ex.id)}
+                  className="ml-auto inline-flex items-center gap-1 text-[10.5px] font-semibold text-muted-foreground hover:text-foreground disabled:opacity-50"
+                >
+                  <Unlink className="h-3 w-3" strokeWidth={2.4} />
+                  Razdvoji
+                </button>
+              )}
+            </div>
+          )}
           <div
             key={ex.id}
             className={cn(
@@ -607,6 +691,7 @@ export const LiveWorkoutPlan = ({
               </div>
             )}
 
+          </div>
           </div>
         );
       })}
