@@ -33,13 +33,20 @@ export const AthleteLayout = () => {
     [nav],
   );
 
-  // Nadji aktivnu sesiju i udji (idempotentno). Auth user se uzima SVEZE (getUser) - app se
-  // otvara pre nego auth vrati sesiju; ne zavisi od `user` konteksta -> stabilan callback.
+  // Nadji aktivnu sesiju i udji (idempotentno). Korisnik se cita iz LOKALNE sesije
+  // (getSession), ne sa servera (getUser).
+  //
+  // Ovaj callback se vrti na SVAKE TRI SEKUNDE. getUser je mrezni poziv na
+  // /auth/v1/user, pa je to bilo dvadeset zahteva u minutu po uredjaju, samo da
+  // se sazna id koji vec stoji u memoriji. Gore od trosenja: auth operacije idu
+  // kroz jednu bravu, pa jedan spor odgovor zaustavlja SVE upite aplikacije - a
+  // kad auth servis posustane, ovakvo bockanje ga jos i gura nizbrdo.
+  // getSession cita iz lokalnog skladista i ne dodiruje mrezu.
   const enterActiveSessionIfAny = useCallback(async () => {
     if (!aliveRef.current) return;
     try {
-      const { data: authData } = await supabase.auth.getUser();
-      const uid = authData?.user?.id ?? null;
+      const { data: authData } = await supabase.auth.getSession();
+      const uid = authData?.session?.user?.id ?? null;
       if (!aliveRef.current) return;
       if (!uid) return;
       const { data } = await supabase

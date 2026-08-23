@@ -56,8 +56,11 @@ export const TrainerLayout = () => {
   const checkAccess = useCallback(async () => {
     if (!aliveRef.current) return;
     try {
-      const { data: authData } = await supabase.auth.getUser();
-      const uid = authData?.user?.id ?? null;
+      // getSession (lokalno) umesto getUser (mrezni poziv): ovo se vrti na
+      // tajmeru i na svaki povratak u prvi plan, a treba mu samo sopstveni id.
+      // Auth pozivi idu kroz jednu bravu, pa spor odgovor zamrzne ceo ekran.
+      const { data: authData } = await supabase.auth.getSession();
+      const uid = authData?.session?.user?.id ?? null;
       if (!aliveRef.current) return;
       if (!uid) return; // bez sesije: ProtectedRoute preusmerava na /auth
 
