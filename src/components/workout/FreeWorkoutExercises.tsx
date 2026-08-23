@@ -99,6 +99,10 @@ export const FreeWorkoutExercises = ({
   // (inace se efekat vrti na svakoj promeni pozicije).
   const idxRef = useRef(0);
   idxRef.current = currentIdx ?? 0;
+  // Roditelj prosledjuje inline funkciju, pa bi kao zavisnost ucitaj-a menjala
+  // identitet na svaki render i vrtela citanje plana u krug.
+  const onPlanRef = useRef(onPlan);
+  onPlanRef.current = onPlan;
   // Kraj pauze u LOKALNIM ms. Racuna se iz rest_seconds koje vrati sam RPC, pa
   // nema poredjenja serverskog sata sa telefonskim - to je u WKWebView-u vec
   // pravilo probleme. Serverski rest_ends_at je samo rezerva za povratak u
@@ -116,21 +120,25 @@ export const FreeWorkoutExercises = ({
   const lastActionAtRef = useRef(0);
 
   const ucitaj = useCallback(async () => {
-    const { data } = await supabase.rpc("get_session_plan_full" as any, {
+    const { data, error } = await supabase.rpc("get_session_plan_full" as any, {
       p_session_id: sessionId,
     });
     const p = (Array.isArray(data) ? data[0] : data) as SessionPlan | null;
-    // Prazan odgovor (mreza, RLS) NE sme da obrise vezbe pod rukama.
-    if (p) {
-      setPlan((stari) => (p.exercises?.length || !stari ? p : stari));
-      const n = p.exercises?.length ?? 0;
-      if (n) onPlan?.({
-        ukupno: n,
-        totalSets: p.exercises[Math.min(idxRef.current, n - 1)]?.sets ?? null,
-        zavrseno: p.plan_complete === true,
-      });
-    }
-  }, [sessionId, onPlan]);
+    // Greska ili neispravan odgovor (mreza, RLS) NE sme da obrise vezbe pod rukama.
+    // Ali PRAZAN spisak iz uspesnog odgovora je legitimno stanje: trener sme da
+    // skloni sve vezbe usred treninga. Ranije se cuvao stari plan, pa je vezbac
+    // i dalje gledao vezbe kojih vise nema i pritiskao "Završio set" u prazno.
+    if (error || !p || !Array.isArray(p.exercises)) return;
+    setPlan(p);
+    const n = p.exercises.length;
+    // Roditelj se obavestava UVEK, i kad vezbi nema: on iz toga zna da li da
+    // ponudi "završi ili nastavi". Bez ovoga bi ostajao na starom broju.
+    onPlanRef.current?.({
+      ukupno: n,
+      totalSets: n ? p.exercises[Math.min(idxRef.current, n - 1)]?.sets ?? null : null,
+      zavrseno: p.plan_complete === true,
+    });
+  }, [sessionId]);
 
   useEffect(() => {
     void ucitaj();

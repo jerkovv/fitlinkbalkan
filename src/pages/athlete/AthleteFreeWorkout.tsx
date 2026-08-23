@@ -131,6 +131,10 @@ const AthleteFreeWorkout = () => {
   // Vezbac je na pitanje "zavrsi ili nastavi" odgovorio "nastavi". Pitanje se ne
   // vraca dok trener ne doda jos vezbi (tada plan_complete opet postane false).
   const [nastavljam, setNastavljam] = useState(false);
+  // Da li je ovaj trening IKAD imao zadate vezbe. Bez toga bi cist slobodan
+  // trening odmah dobio pitanje "završi ili nastavi": motor za sesiju bez ijedne
+  // vezbe uredno kaze da je spisak gotov, jer spiska i nema.
+  const [imaoVezbe, setImaoVezbe] = useState(false);
   // X u zaglavlju: prekid treninga (isto kao u klasicnom treningu).
   const [closeOpen, setCloseOpen] = useState(false);
   // Pauza posle serije: motor je upisuje u zivi red, odavde stize do tajmera.
@@ -562,6 +566,7 @@ const AthleteFreeWorkout = () => {
             disabled={finishing}
             onPlan={(info) => {
               setPlanInfo(info);
+              if (info.ukupno > 0) setImaoVezbe(true);
               if (!info.zavrseno) setNastavljam(false);
             }}
             liveState={liveState}
@@ -570,10 +575,12 @@ const AthleteFreeWorkout = () => {
         )}
 
         {/* Spisak zadatih vezbi je gotov, ali trening TRAJE. Ranije se sesija
-            ovde sama zatvarala i izbacivala coveka na rezime, i usred trcanja. */}
-        {planInfo?.zavrseno && !nastavljam && (
+            ovde sama zatvarala i izbacivala coveka na rezime, i usred trcanja.
+            Pitanje stize i kad trener skloni ostatak spiska, ne samo kad ga
+            vezbac odradi do kraja - u oba slucaja vezbi vise nema. */}
+        {planInfo?.zavrseno && imaoVezbe && !nastavljam && (
           <div className="rounded-2xl border border-primary/30 bg-primary-soft/40 p-4 mb-2">
-            <div className="text-[14px] font-semibold">Sve zadate vežbe su odrađene</div>
+            <div className="text-[14px] font-semibold">Nemaš više zadatih vežbi</div>
             <div className="text-[12.5px] text-muted-foreground mt-1">
               Možeš da završiš trening ili da nastaviš slobodno - štoperica i puls i dalje rade.
             </div>

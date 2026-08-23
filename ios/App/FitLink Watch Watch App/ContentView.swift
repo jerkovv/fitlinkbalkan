@@ -1479,11 +1479,17 @@ struct ContentView: View {
     
     private func handleRealtimeUpdate(_ row: WorkoutLiveStateRow) {
         // Slobodan trening (bez plana): red ima state ali NEMA vezbu/seriju. Postojeci guard
-        // ispod bi ga odbacio, pa ga hvatamo ovde. Udji samo iz idle-a ili ako smo vec u
-        // slobodnom treningu (ne prekidaj normalan trening). Zavrsetak ide kroz HR
+        // ispod bi ga odbacio, pa ga hvatamo ovde. Zavrsetak ide kroz HR
         // session_ended / poll-null putanju (kao i inace).
+        //
+        // Ulazi se iz idle-a, iz vec zapocetog slobodnog treninga, ILI iz ISTE sesije
+        // kojoj je spisak vezbi upravo nestao - vezbac ga je odradio do kraja, ili mu
+        // je trener sklonio ostatak. Bez te trece grane sat je ostajao da crta vezbu
+        // koje vise nema i nudi "Završio set" u prazno, dok telefon vec pita
+        // "završi ili nastavi". Tudji, nov trening se i dalje ne prekida.
         if row.currentExerciseName == nil {
-            if (currentState == .idle || isFreeWorkout),
+            let istaSesija = row.sessionLogId != nil && row.sessionLogId == currentSessionId
+            if (currentState == .idle || isFreeWorkout || istaSesija),
                let sid = row.sessionLogId,
                let state = row.currentState, state == "active" || state == "rest" {
                 // Timer anchor se zamrzava JEDNOM iz serverskog started_at (workoutStartedAtMs stize
