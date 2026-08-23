@@ -167,20 +167,32 @@ const WorkoutSummary = () => {
       } catch (e: any) {
       }
 
-      // 3) EXERCISES (best-effort)
-      if (sessionRow.day_id) {
-        try {
-          const exRes: any = await fetchWithRetry(() =>
-            supabase
-              .from("assigned_program_exercises")
-              .select("id, position, sets, duration_minutes, exercises(name, primary_muscle, is_duration_based)")
-              .eq("day_id", sessionRow.day_id)
-              .order("position", { ascending: true }),
-            2
-          );
-          if (!cancelled) setExercises(((exRes.data as any[]) ?? []) as ExRow[]);
-        } catch (e: any) {
-        }
+      // 3) VEZBE (best-effort). Kroz get_session_plan_full, ne citanjem tabele po
+      // day_id. Citanje po danu je iz vremena pre nego sto je sesija dobila svoje
+      // vezbe, pa je za svaki trening koji je trener menjao davalo tri pogresne
+      // stvari odjednom: obrisana vezba je i dalje na spisku, DODATA ne postoji
+      // (njen red ima day_id NULL), a spajanje serija nize promasi sve jer
+      // _fork_session_plan preusmeri set_logs na nove id-jeve - pa svaka vezba
+      // ispadne 0/N, 0 ponavljanja, 0 kg. RPC vraca bas te forkovane id-jeve, i
+      // sam filtrira deleted_at.
+      try {
+        const planRes: any = await fetchWithRetry(
+          () => supabase.rpc("get_session_plan_full" as any, { p_session_id: sessionId }),
+          2,
+        );
+        const plan = (Array.isArray(planRes.data) ? planRes.data[0] : planRes.data) as
+          | { exercises?: Array<{ id: string; position: number; sets: number; duration_minutes: number | null;
+                                 exercise: { name: string; primary_muscle: string | null; is_duration_based: boolean | null } | null }> }
+          | null;
+        const red: ExRow[] = (plan?.exercises ?? []).map((e) => ({
+          id: e.id,
+          position: e.position,
+          sets: e.sets,
+          duration_minutes: e.duration_minutes,
+          exercises: e.exercise,
+        }));
+        if (!cancelled) setExercises(red);
+      } catch (e: any) {
       }
 
       setTimeout(() => setShowCheck(true), 60);
@@ -454,8 +466,11 @@ const WorkoutSummary = () => {
           </section>
         )}
 
-        {/* Exercises summary (sakriveno za slobodan trening - nema vezbi) */}
-        {!isFree && (
+        {/* Spisak vezbi. Vise se ne krije za slobodan trening: on SME da ima vezbe
+            (trener ih dodaje usred treninga), pa ih je rezime bezveze skrivao dok
+            ih istorija prikazuje. Kad ih nema, exercises je prazan pa se sekcija
+            ionako ne iscrtava. */}
+        {exercises.length > 0 && (
         <section className="mt-7">
           <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground mb-3">
             Po vežbi
