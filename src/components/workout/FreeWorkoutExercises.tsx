@@ -7,6 +7,7 @@ import { pgTsToMs } from "@/lib/time";
 import { SetLogger } from "@/components/workout/SetLogger";
 import { ExerciseHeader } from "@/components/workout/ExerciseHeader";
 import { RestOfWorkout } from "@/components/workout/RestOfWorkout";
+import { SupersetHint } from "@/components/workout/SupersetHint";
 import { RestTimer } from "@/components/workout/RestTimer";
 
 type SetDetail = {
@@ -22,6 +23,8 @@ type PlanExercise = {
   reps: number | null;
   weight_kg: number | null;
   duration_minutes: number | null;
+  /** NULL = obicna vezba. Isti broj = jedan superset krug (radi se naizmenicno). */
+  superset_group: number | null;
   set_details: SetDetail[] | null;
   exercise_id: string;
   exercise: {
@@ -210,6 +213,21 @@ export const FreeWorkoutExercises = ({
       {/* Prvo VEZBA koja se radi - video, naziv, uputstvo. Isto sto vezbac ima u
           klasicnom treningu; bez ovoga trener doda vezbu, a vezbac nema gde da
           vidi kako se radi. */}
+      {/* Superset: sledeca vezba u krugu ide ODMAH, bez pauze. Slobodan trening
+          sme da dobije vezbe od trenera, pa sme i krug - i mora da ga pokaze isto
+          kao planirani, inace izostanak odbrojavanja izgleda kao kvar. */}
+      {trenutna && !zavrseno && (
+        <SupersetHint
+          supersetGroup={trenutna.superset_group}
+          sledecaUKrugu={
+            trenutna.superset_group != null &&
+            (vezbe[idx + 1]?.superset_group ?? null) === trenutna.superset_group
+              ? vezbe[idx + 1].exercise.name
+              : null
+          }
+        />
+      )}
+
       {trenutna && !zavrseno && (
         <ExerciseHeader
           exerciseId={trenutna.exercise_id}
