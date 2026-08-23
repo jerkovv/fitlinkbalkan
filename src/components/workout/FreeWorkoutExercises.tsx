@@ -37,6 +37,8 @@ type PlanExercise = {
 
 type SessionPlan = {
   is_free?: boolean;
+  /** true = sve zadate serije su odradjene. Trening i dalje traje. */
+  plan_complete?: boolean;
   exercises: PlanExercise[];
 };
 
@@ -82,7 +84,7 @@ export const FreeWorkoutExercises = ({
   currentSetNumber: number | null;
   disabled?: boolean;
   /** Roditelju treba broj vezbi za zaglavlje ("Vezba 2 od 5"), a plan se cita ovde. */
-  onPlan?: (info: { ukupno: number; totalSets: number | null }) => void;
+  onPlan?: (info: { ukupno: number; totalSets: number | null; zavrseno: boolean }) => void;
   /** current_state iz zivog reda: 'rest' znaci da traje pauza. */
   liveState?: string | null;
   /** rest_ends_at iz zivog reda (ISO), rezerva kad nemamo lokalni kraj. */
@@ -119,7 +121,11 @@ export const FreeWorkoutExercises = ({
     if (p) {
       setPlan((stari) => (p.exercises?.length || !stari ? p : stari));
       const n = p.exercises?.length ?? 0;
-      if (n) onPlan?.({ ukupno: n, totalSets: p.exercises[Math.min(idxRef.current, n - 1)]?.sets ?? null });
+      if (n) onPlan?.({
+        ukupno: n,
+        totalSets: p.exercises[Math.min(idxRef.current, n - 1)]?.sets ?? null,
+        zavrseno: p.plan_complete === true,
+      });
     }
   }, [sessionId, onPlan]);
 
@@ -153,6 +159,9 @@ export const FreeWorkoutExercises = ({
 
   const vezbe = plan?.exercises ?? [];
   if (!vezbe.length) return null;
+  // Spisak gotov: sklanja se i vezba i upis, da vezbac ne moze da klikne seriju
+  // koje nema (server bi vratio already_done, a ekran bi izgledao zaglavljeno).
+  const zavrseno = plan?.plan_complete === true;
 
   const idx = currentIdx ?? 0;
   const trenutna = vezbe[idx];
@@ -186,6 +195,8 @@ export const FreeWorkoutExercises = ({
     });
     setSalje(false);
     if (error) { toast.error(porukaGreske(error)); return; }
+    // 'free_plan_done' = spisak je gotov, ali trening TRAJE. Nema pauze, nema
+    // rezimea; ucitaj() ispod donese plan_complete pa roditelj postavi pitanje.
     const r = data as { state?: string; rest_seconds?: number } | null;
     if (r?.state === "rest" && typeof r.rest_seconds === "number" && r.rest_seconds > 0) {
       setRestEndsAtMs(Date.now() + r.rest_seconds * 1000);
@@ -199,7 +210,7 @@ export const FreeWorkoutExercises = ({
       {/* Prvo VEZBA koja se radi - video, naziv, uputstvo. Isto sto vezbac ima u
           klasicnom treningu; bez ovoga trener doda vezbu, a vezbac nema gde da
           vidi kako se radi. */}
-      {trenutna && (
+      {trenutna && !zavrseno && (
         <ExerciseHeader
           exerciseId={trenutna.exercise_id}
           name={trenutna.exercise.name}
@@ -211,7 +222,7 @@ export const FreeWorkoutExercises = ({
         />
       )}
 
-      {trenutna && cilj && (
+      {trenutna && cilj && !zavrseno && (
         salje ? (
           <div className="flex items-center justify-center py-4">
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />

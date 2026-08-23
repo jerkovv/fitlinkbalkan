@@ -127,7 +127,10 @@ const AthleteFreeWorkout = () => {
   const [planVersion, setPlanVersion] = useState<number | null>(null);
   const [exIdx, setExIdx] = useState<number | null>(null);
   const [setNo, setSetNo] = useState<number | null>(null);
-  const [planInfo, setPlanInfo] = useState<{ ukupno: number; totalSets: number | null } | null>(null);
+  const [planInfo, setPlanInfo] = useState<{ ukupno: number; totalSets: number | null; zavrseno: boolean } | null>(null);
+  // Vezbac je na pitanje "zavrsi ili nastavi" odgovorio "nastavi". Pitanje se ne
+  // vraca dok trener ne doda jos vezbi (tada plan_complete opet postane false).
+  const [nastavljam, setNastavljam] = useState(false);
   // X u zaglavlju: prekid treninga (isto kao u klasicnom treningu).
   const [closeOpen, setCloseOpen] = useState(false);
   // Pauza posle serije: motor je upisuje u zivi red, odavde stize do tajmera.
@@ -211,8 +214,11 @@ const AthleteFreeWorkout = () => {
       if (typeof row.current_state === "string") setLiveState(row.current_state);
       setRestEndsAtIso((row.rest_ends_at as string | null) ?? null);
       if (typeof row.plan_version === "number") setPlanVersion(row.plan_version);
-      if (typeof row.current_exercise_idx === "number") setExIdx(row.current_exercise_idx);
-      if (typeof row.current_set_number === "number") setSetNo(row.current_set_number);
+      // NULL je legitimno: kad se spisak zavrsi, zivi red se vrati u slobodan
+      // oblik bez tekuce vezbe. Stara provera "if typeof === number" bi tiho
+      // zadrzala poslednju vrednost i zaglavila zaglavlje na "Vezba 1 od 1".
+      setExIdx(typeof row.current_exercise_idx === "number" ? row.current_exercise_idx : null);
+      setSetNo(typeof row.current_set_number === "number" ? row.current_set_number : null);
       if (row.current_state === "completed") goToSummary();
     };
 
@@ -554,10 +560,40 @@ const AthleteFreeWorkout = () => {
             currentIdx={exIdx}
             currentSetNumber={setNo}
             disabled={finishing}
-            onPlan={setPlanInfo}
+            onPlan={(info) => {
+              setPlanInfo(info);
+              if (!info.zavrseno) setNastavljam(false);
+            }}
             liveState={liveState}
             restEndsAtIso={restEndsAtIso}
           />
+        )}
+
+        {/* Spisak zadatih vezbi je gotov, ali trening TRAJE. Ranije se sesija
+            ovde sama zatvarala i izbacivala coveka na rezime, i usred trcanja. */}
+        {planInfo?.zavrseno && !nastavljam && (
+          <div className="rounded-2xl border border-primary/30 bg-primary-soft/40 p-4 mb-2">
+            <div className="text-[14px] font-semibold">Sve zadate vežbe su odrađene</div>
+            <div className="text-[12.5px] text-muted-foreground mt-1">
+              Možeš da završiš trening ili da nastaviš slobodno - štoperica i puls i dalje rade.
+            </div>
+            <div className="flex items-center gap-2 mt-3">
+              <button
+                onClick={finish}
+                disabled={finishing}
+                className="h-11 flex-1 rounded-xl bg-gradient-brand text-white text-[13.5px] font-semibold shadow-brand disabled:opacity-60 inline-flex items-center justify-center gap-2"
+              >
+                {finishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" strokeWidth={3} />}
+                Završi trening
+              </button>
+              <button
+                onClick={() => setNastavljam(true)}
+                className="h-11 flex-1 rounded-xl bg-surface-2 text-[13.5px] font-semibold text-muted-foreground hover:text-foreground transition"
+              >
+                Nastavi slobodno
+              </button>
+            </div>
+          </div>
         )}
 
         {/* Zavrsi */}
