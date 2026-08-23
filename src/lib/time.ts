@@ -10,3 +10,16 @@ export function formatHMS(totalSeconds: number): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
 }
+
+// Postgres timestamptz preko realtime-a zna da stigne kao "2026-06-22 13:05:57.12+00"
+// (razmak umesto 'T', offset "+00" umesto "+00:00"). Safari/WKWebView Date.parse je
+// strog i to ume da vrati NaN -> normalizujemo u ISO pre parsiranja. Vraca server
+// epoch ms (NE klijent - pozivalac oduzme clockOffset), ili null ako ne uspe.
+export function pgTsToMs(raw: string | null | undefined): number | null {
+  if (!raw) return null;
+  let s = raw.trim().replace(" ", "T");
+  const off = s.match(/([+-])(\d{2})(?::?(\d{2}))?$/);   // "+00" / "+0000" / "+02:00"
+  if (off) s = s.slice(0, off.index) + `${off[1]}${off[2]}:${off[3] ?? "00"}`;
+  const ms = Date.parse(s);
+  return Number.isFinite(ms) ? ms : null;
+}

@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { porukaGreske } from "@/lib/errorMessage";
+import { pgTsToMs } from "@/lib/time";
 import { SetLogger } from "@/components/workout/SetLogger";
 import { ExerciseHeader } from "@/components/workout/ExerciseHeader";
 import { RestOfWorkout } from "@/components/workout/RestOfWorkout";
@@ -38,6 +39,9 @@ type SessionPlan = {
   is_free?: boolean;
   exercises: PlanExercise[];
 };
+
+/** Isti prag kao RT_POS_GUARD_MS u ActiveWorkout.tsx - jedan mozak, jedna vrednost. */
+const RT_POS_GUARD_MS = 1500;
 
 /** Cilj bas te serije: per-set red je izvor istine, parent je rezerva. */
 const ciljSerije = (ex: PlanExercise, setNumber: number) => {
@@ -95,6 +99,16 @@ export const FreeWorkoutExercises = ({
   // pravilo probleme. Serverski rest_ends_at je samo rezerva za povratak u
   // trening (osvezena stranica, pauzu pokrenuo sat).
   const [restEndsAtMs, setRestEndsAtMs] = useState<number | null>(null);
+  // Kraj pauze i kroz ref: efekat ga CITA, a ne sme da mu bude u zavisnostima.
+  // Sa restEndsAtMs u deps efekat se ponovo pokrene cim zavrsiSeriju postavi
+  // lokalno sidro, a prop liveState je tada jos uvek 'active' (realtime i poll
+  // nisu stigli) - pa linija koja gasi tajmer obrise tek upaljenu pauzu. Isti
+  // simptom je vec resen u ActiveWorkout.tsx (vidi komentar uz RT_POS_GUARD_MS).
+  const restRef = useRef<number | null>(null);
+  restRef.current = restEndsAtMs;
+  // Vreme poslednje SOPSTVENE akcije. Dok traje, zaostali dogadjaj sa starim
+  // stanjem se ignorise. Ista vrednost i ime kao RT_POS_GUARD_MS u ActiveWorkout.
+  const lastActionAtRef = useRef(0);
 
   const ucitaj = useCallback(async () => {
     const { data } = await supabase.rpc("get_session_plan_full" as any, {
@@ -113,20 +127,29 @@ export const FreeWorkoutExercises = ({
     void ucitaj();
   }, [ucitaj, planVersion]);
 
-  // Zivi red je izvor istine za "da li pauza traje": ako je sat preskocio pauzu
-  // ili je serija zavrsena drugde, state prestaje da bude 'rest' i tajmer se gasi.
+  // Zivi red je izvor istine za "da li pauza traje", ali sa dve brane koje su u
+  // klasicnom treningu vec dokazane:
+  //  1) posle SOPSTVENE akcije 1.5s se ignorise zaostali dogadjaj sa starim stanjem;
+  //  2) dok je lokalna pauza SVEZA (kraj u buducnosti), dogadjaj koji nije 'rest' se
+  //     odbacuje umesto da gasi tajmer - inace zakasneli 'active' izbaci coveka iz
+  //     pauze pa mu sledeci klik potrosi SLEDECU seriju.
+  // Tajmer gasi istek odbrojavanja ili legitiman izlazak koji stigne posle brane.
   useEffect(() => {
-    if (liveState !== "rest") { setRestEndsAtMs(null); return; }
-    if (restEndsAtMs != null) return;
-    // Nemamo lokalni kraj (povratak u trening) -> uzmi serverski, ali samo ako je
-    // razuman. Iskrivljen sat telefona bi inace dao tajmer od par sati ili odmah 0.
-    if (!restEndsAtIso) return;
-    const kraj = new Date(restEndsAtIso).getTime();
-    const preostalo = kraj - Date.now();
-    if (Number.isFinite(kraj) && preostalo > 0 && preostalo < 60 * 60 * 1000) {
-      setRestEndsAtMs(kraj);
+    const svezaPauza = restRef.current != null && restRef.current > Date.now();
+    if (liveState !== "rest") {
+      if (Date.now() - lastActionAtRef.current < RT_POS_GUARD_MS) return;
+      if (svezaPauza) return;
+      setRestEndsAtMs(null);
+      return;
     }
-  }, [liveState, restEndsAtIso, restEndsAtMs]);
+    // Serverski kraj sme samo da PRODUZI, nikad da skrati - lokalno sidro iz
+    // rest_seconds je tacnije od parsiranja tudjeg sata.
+    const kraj = pgTsToMs(restEndsAtIso);
+    if (kraj == null) return;
+    const preostalo = kraj - Date.now();
+    if (preostalo <= 0 || preostalo > 60 * 60 * 1000) return;
+    setRestEndsAtMs((stari) => (stari == null ? kraj : Math.max(stari, kraj)));
+  }, [liveState, restEndsAtIso]);
 
   const vezbe = plan?.exercises ?? [];
   if (!vezbe.length) return null;
@@ -137,12 +160,14 @@ export const FreeWorkoutExercises = ({
   const cilj = trenutna ? ciljSerije(trenutna, setNumber) : null;
 
   const preskociPauzu = async () => {
+    lastActionAtRef.current = Date.now();
     setRestEndsAtMs(null);
     const { error } = await supabase.rpc("athlete_skip_rest" as any, { p_session_id: sessionId });
     if (error) toast.error(porukaGreske(error));
   };
 
   const produziPauzu = async (sekundi: number) => {
+    lastActionAtRef.current = Date.now();
     setRestEndsAtMs((k) => (k != null ? k + sekundi * 1000 : k));
     const { error } = await supabase.rpc("athlete_extend_rest" as any, {
       p_session_id: sessionId, p_seconds: sekundi,
@@ -151,6 +176,7 @@ export const FreeWorkoutExercises = ({
   };
 
   const zavrsiSeriju = async (d: { reps: number; weight_kg: number; rpe: number | null }) => {
+    lastActionAtRef.current = Date.now();
     setSalje(true);
     const { data, error } = await supabase.rpc("athlete_complete_set" as any, {
       p_session_id: sessionId,
@@ -163,6 +189,7 @@ export const FreeWorkoutExercises = ({
     const r = data as { state?: string; rest_seconds?: number } | null;
     if (r?.state === "rest" && typeof r.rest_seconds === "number" && r.rest_seconds > 0) {
       setRestEndsAtMs(Date.now() + r.rest_seconds * 1000);
+      lastActionAtRef.current = Date.now();
     }
     await ucitaj();
   };

@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/lib/supabase";
+import { pgTsToMs } from "@/lib/time";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { porukaGreske } from "@/lib/errorMessage";
@@ -195,18 +196,6 @@ function withTimeout<T>(p: PromiseLike<T>, ms: number): Promise<T> {
   ]);
 }
 
-// Postgres timestamptz preko realtime-a zna da stigne kao "2026-06-22 13:05:57.12+00"
-// (razmak umesto 'T', offset "+00" umesto "+00:00"). Safari/WKWebView Date.parse je
-// strog i to ume da vrati NaN -> normalizujemo u ISO pre parsiranja. Vraca server
-// epoch ms (NE klijent - pozivalac oduzme clockOffset), ili null ako ne uspe.
-function pgTsToMs(raw: string | null | undefined): number | null {
-  if (!raw) return null;
-  let s = raw.trim().replace(" ", "T");
-  const off = s.match(/([+-])(\d{2})(?::?(\d{2}))?$/);   // "+00" / "+0000" / "+02:00"
-  if (off) s = s.slice(0, off.index) + `${off[1]}${off[2]}:${off[3] ?? "00"}`;
-  const ms = Date.parse(s);
-  return Number.isFinite(ms) ? ms : null;
-}
 
 // Watch presence (FAZA 1): sat upisuje watch_last_hr_at svakih ~5s dok radi. "Izgubljen" =
 // odrzana tisina lokalnog signala preko DELJENE grace (isFreshWithinGrace / WATCH_GRACE_MS 40s)
