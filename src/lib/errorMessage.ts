@@ -128,13 +128,20 @@ const looksTechnical = (text: string): boolean => {
 };
 
 export function porukaGreske(error: unknown): string {
-  // Original uvek ide u konzolu - korisnik dobija samo prevod, debug trag se ne gubi.
-  console.error(error);
-
   const e = toErrorLike(error);
   const haystack = `${e?.message ?? ""} ${e?.details ?? ""} ${e?.hint ?? ""}`;
   const code = e?.code != null ? String(e.code) : null;
   const status = e?.status;
+
+  // Original uvek ide u konzolu - korisnik dobija samo prevod, debug trag se ne
+  // gubi. Prvo JEDNA linija teksta: Capacitor u Xcode konzoli stampa objekte kao
+  // "[object Object]", pa bi bez nje na telefonu ostalo samo da je greska bila.
+  console.error(
+    `[greska] code=${code ?? "-"} status=${status ?? "-"} onLine=${
+      typeof navigator !== "undefined" ? navigator.onLine : "?"
+    } msg=${haystack.trim() || "(prazno)"}`,
+  );
+  console.error(error);
 
   for (const known of KNOWN_CONSTRAINTS) {
     if (haystack.includes(known.match)) return known.message;
@@ -159,7 +166,15 @@ export function porukaGreske(error: unknown): string {
 
   if (code && CODE_MESSAGES[code]) return CODE_MESSAGES[code];
 
-  const isOffline = typeof navigator !== "undefined" && navigator.onLine === false;
+  // navigator.onLine je NEPOUZDAN u WKWebView-u (isti razlog zbog kog ActiveWorkout
+  // koristi @capacitor/network). Zato sam po sebi vise ne proglasava gresku mreznom:
+  // ako greska nosi code ili status, zahtev je STIGAO do servera i internet ocito
+  // radi - reci coveku "nema internet" tu znaci poslati ga da proverava wifi zbog
+  // greske koja sa mrezom nema veze. Bez koda i statusa, onLine=false je i dalje
+  // najbolji nagovestaj koji imamo.
+  const stigloDoServera = code != null || status != null;
+  const isOffline =
+    !stigloDoServera && typeof navigator !== "undefined" && navigator.onLine === false;
   if (
     isOffline ||
     haystack.includes("Failed to fetch") ||
