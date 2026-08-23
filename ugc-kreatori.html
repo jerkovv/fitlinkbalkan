@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="sr">
+<html lang="sr" class="ugc-page">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -33,6 +33,18 @@
     <meta name="twitter:title" content="Tražimo UGC fitness kreatore | FitLink" />
     <meta name="twitter:description" content="Snimaš i montiraš Reels i TikTok, a teretana ti je druga kuća? Plaćena saradnja po klipu ili po paketu. Prijavi se." />
     <meta name="twitter:image" content="https://app.fitlink.rs/og-ugc-kreatori.jpg" />
+
+    <!-- index.css zakljucava dokument (html/body/#root overflow:hidden) zbog
+         WKWebView-a u appu. Javna stranica mora da skroluje kao obican sajt,
+         inace Safari na telefonu ne sklanja traku i skrol nije nativan. -->
+    <style>
+      html.ugc-page, html.ugc-page body, html.ugc-page #root {
+        height: auto;
+        min-height: 100%;
+        overflow: visible;
+        overscroll-behavior: auto;
+      }
+    </style>
   </head>
 
   <body>

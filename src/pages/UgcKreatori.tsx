@@ -284,7 +284,7 @@ const UgcKreatori = () => {
   const inv = (k: keyof FormInput) => (errors[k] ? true : undefined);
 
   return (
-    <div className="h-full overflow-y-auto bg-background text-foreground">
+    <div className="min-h-full bg-background text-foreground">
       {/* HERO */}
       <header
         className="relative overflow-hidden text-white"
@@ -296,7 +296,7 @@ const UgcKreatori = () => {
           className="absolute inset-0 opacity-[0.16] mix-blend-overlay"
           style={{ backgroundImage: GRAIN }}
         />
-        <div className="relative mx-auto max-w-3xl px-5 pb-16 pt-[calc(env(safe-area-inset-top)+1.5rem)] sm:px-8 sm:pb-24 sm:pt-10">
+        <div className="relative mx-auto max-w-3xl px-5 pb-14 pt-[calc(env(safe-area-inset-top)+1.5rem)] sm:px-8 sm:pb-24 sm:pt-10">
           <a href={SITE_BASE} className="inline-flex items-center text-white/90" aria-label="FitLink početna">
             <BrandWordmark className="h-5 sm:h-6" />
           </a>
@@ -318,9 +318,9 @@ const UgcKreatori = () => {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-5 pb-[calc(env(safe-area-inset-bottom)+3rem)] sm:px-8">
+      <main className="relative z-10 mx-auto max-w-3xl px-5 pb-[calc(env(safe-area-inset-bottom)+3rem)] sm:px-8">
         {/* STA RADIMO */}
-        <section className="-mt-8 sm:-mt-12" aria-labelledby="sta-radimo">
+        <section className="-mt-6 sm:-mt-12" aria-labelledby="sta-radimo">
           <h2 id="sta-radimo" className="sr-only">
             Šta radimo
           </h2>
