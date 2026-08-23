@@ -29,6 +29,7 @@ import {
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { InAppWorkoutsList } from "@/components/InAppWorkoutsList";
+import { UpisTreninga } from "@/components/trainer/UpisTreninga";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { assignProgramToAthlete } from "@/lib/programAssignment";
 import { ProgressPhotos } from "@/components/ProgressPhotos";
@@ -174,6 +175,9 @@ const AthleteProfile = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const confirm = useConfirm();
+  const [upisujem, setUpisujem] = useState(false);
+  // Menja se posle upisa, da se spisak treninga ponovo ucita.
+  const [upisKey, setUpisKey] = useState(0);
   const [removeOpen, setRemoveOpen] = useState(false);
   const [removing, setRemoving] = useState(false);
 
@@ -681,6 +685,16 @@ const AthleteProfile = () => {
         <div className="flex justify-center py-10">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
+        {id && (
+          <UpisTreninga
+            open={upisujem}
+            onClose={() => setUpisujem(false)}
+            athleteId={id}
+            athleteName={athlete?.full_name ?? null}
+            onSaved={() => setUpisKey((n) => n + 1)}
+          />
+        )}
+
       </PhoneShell>
     );
   }
@@ -1099,7 +1113,17 @@ const AthleteProfile = () => {
             <p className="text-xs text-muted-foreground mt-2 mb-3">
               Treninzi koje je vežbač radio kroz FitLink. Ako je nosio sat, puls i kalorije su vec ovde.
             </p>
-            {id && <InAppWorkoutsList athleteId={id} limit={10} />}
+            {/* Za trening odradjen bez telefona. Sesija koju ovo pravi je zavrsena
+                od rodjenja i nema zivi red, pa ne moze da dotakne trening u toku. */}
+            <button
+              type="button"
+              onClick={guard(() => setUpisujem(true))}
+              className="mb-3 h-10 w-full rounded-xl border border-hairline bg-surface-2 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 transition"
+            >
+              <Plus className="h-3.5 w-3.5" strokeWidth={2.4} />
+              Upiši trening bez telefona
+            </button>
+            {id && <InAppWorkoutsList key={upisKey} athleteId={id} limit={10} />}
           </TabsContent>
           <TabsContent value="watch">
             <p className="text-xs text-muted-foreground mt-2 mb-3">

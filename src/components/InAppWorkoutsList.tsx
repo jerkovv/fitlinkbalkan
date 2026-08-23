@@ -29,6 +29,10 @@ interface Row {
   program_name: string | null;
   day_name: string | null;
   sets_done: number | null;
+  /** Naziv koji je trener dao treningu koji je upisao umesto vezbaca. */
+  entry_title: string | null;
+  /** Popunjeno = trener je upisao ovaj trening naknadno (vezbac nije nosio telefon). */
+  entered_by_trainer: string | null;
 }
 
 const formatRelativeDay = (iso: string): string => {
@@ -43,6 +47,9 @@ const formatRelativeDay = (iso: string): string => {
 };
 
 const titleFor = (w: Row): string => {
+  // Trening koji je upisao trener nema dan iz programa, ali NIJE slobodan trening -
+  // odradjen je u sali, samo bez telefona. Ide pod nazivom koji je trener dao.
+  if (w.entered_by_trainer) return w.entry_title?.trim() || "Trening sa trenerom";
   // Slobodan trening (bez plana): nema dana ni broja -> "Slobodan trening" (nikad "Dan null").
   if (!w.day_name && w.day_number == null) return "Slobodan trening";
   const day = w.day_name ?? `Dan ${w.day_number}`;
