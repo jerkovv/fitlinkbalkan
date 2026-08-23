@@ -17,6 +17,27 @@ import { BrandGlyph } from "@/components/BrandMark";
 // zakljucan trenerski deo. Mora biti u Supabase Auth -> Redirect URLs listi.
 const POTVRDA_URL = "https://fitlink.rs/nalog-potvrdjen";
 
+/**
+ * Dugme koje se vrti zauvek nije greska koju korisnik moze da razume.
+ *
+ * signInWithPassword ume da NIKAD ne zavrsi: auth-js pre svake operacije uzima
+ * bravu i na vecini poziva ceka bez roka, pa zaglavljena brava znaci vecno
+ * cekanje - bez zahteva, bez greske, bez traga u serverskim logovima. Posle
+ * ovoga covek bar dobije poruku i moze da pokusa ponovo.
+ */
+const PRIJAVA_ROK_MS = 20_000;
+
+const saCekanjem = <T,>(posao: Promise<T>): Promise<T> =>
+  Promise.race([
+    posao,
+    new Promise<T>((_, odbij) =>
+      setTimeout(
+        () => odbij(new Error("Prijava predugo traje. Proveri vezu pa pokušaj ponovo.")),
+        PRIJAVA_ROK_MS,
+      ),
+    ),
+  ]);
+
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -127,7 +148,9 @@ const Auth = () => {
           setMode("login");
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await saCekanjem(
+          supabase.auth.signInWithPassword({ email, password }),
+        );
         if (error) throw error;
         toast.success("Dobrodošao nazad!");
       }
