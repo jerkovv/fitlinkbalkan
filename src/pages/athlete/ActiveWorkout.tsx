@@ -450,6 +450,19 @@ const ActiveWorkout = () => {
     }
   }, [isOnline, sessionId, finished, navIfSessionDone]);
 
+  // Cuvar od vecnog vrtenja: init ispod izlazi na prvom koraku dok dayId ili user
+  // jos nisu tu, a loading je true od pocetka - covek bi gledao spiner bez kraja,
+  // bez zahteva i bez greske. Isti cuvar stoji i na pregledu pre treninga.
+  useEffect(() => {
+    if (!loading || loadError) return;
+    const t = setTimeout(() => {
+      if (initRef.current) return;   // init je krenuo, on ce sam postaviti stanje
+      setLoadError("Trening se ne učitava. Vrati se i pokušaj ponovo.");
+      setLoading(false);
+    }, 15000);
+    return () => clearTimeout(t);
+  }, [loading, loadError]);
+
   /* ------------------------- Init: start session + load day ------------------------- */
   useEffect(() => {
     if (!dayId || !user) return;

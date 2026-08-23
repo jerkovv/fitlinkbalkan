@@ -80,10 +80,28 @@ export default function WorkoutPreview() {
   const [day, setDay] = useState<DayFull | null>(null);
   const [loading, setLoading] = useState(true);
   const [greska, setGreska] = useState<string | null>(null);
+  // Brojac ponovnih pokusaja: menja se na "Pokušaj ponovo" i time PONOVO pokrece
+  // efekat koji cita dan. Bez njega bi dugme samo vratilo spiner, jer se ostale
+  // zavisnosti efekta nisu promenile.
+  const [pokusaj, setPokusaj] = useState(0);
 
   const uTrening = useCallback(() => {
     if (dayId) nav(`/vezbac/trening/aktivan/${dayId}`, { replace: true });
   }, [dayId, nav]);
+
+  // Cuvar od vecnog vrtenja. Efekat ispod izlazi na prvom koraku dok dayId ili
+  // user jos nisu tu - a loading je true od pocetka, pa ako se to stanje iz bilo
+  // kog razloga ne razresi (sesija se osvezava, ruta bez parametra), covek gleda
+  // spiner do kraja sveta: bez zahteva, bez greske, bez dugmeta. Posle ovoga bar
+  // dobije poruku i moze da se vrati ili proba ponovo.
+  useEffect(() => {
+    if (!loading) return;
+    const t = setTimeout(() => {
+      setGreska("Trening se ne učitava. Proveri vezu pa pokušaj ponovo.");
+      setLoading(false);
+    }, 15000);
+    return () => clearTimeout(t);
+  }, [loading]);
 
   useEffect(() => {
     if (!dayId || !user) return;
@@ -116,7 +134,7 @@ export default function WorkoutPreview() {
     })();
 
     return () => { otkazano = true; };
-  }, [dayId, user, uTrening]);
+  }, [dayId, user, uTrening, pokusaj]);
 
   const vezbe = day?.exercises ?? [];
   const { byExercise: prosliPut } = useLastPerformance(
@@ -141,12 +159,20 @@ export default function WorkoutPreview() {
     return (
       <div className="px-5 py-10 text-center">
         <div className="text-[14px] text-muted-foreground">{greska}</div>
-        <button
-          onClick={() => nav("/vezbac/trening", { replace: true })}
-          className="mt-4 h-11 px-5 rounded-xl bg-surface-2 text-[13.5px] font-semibold"
-        >
-          Nazad
-        </button>
+        <div className="mt-4 flex items-center justify-center gap-2">
+          <button
+            onClick={() => { setGreska(null); setLoading(true); setPokusaj((n) => n + 1); }}
+            className="h-11 px-5 rounded-xl bg-gradient-brand text-white text-[13.5px] font-semibold shadow-brand"
+          >
+            Pokušaj ponovo
+          </button>
+          <button
+            onClick={() => nav("/vezbac/trening", { replace: true })}
+            className="h-11 px-5 rounded-xl bg-surface-2 text-[13.5px] font-semibold"
+          >
+            Nazad
+          </button>
+        </div>
       </div>
     );
   }
