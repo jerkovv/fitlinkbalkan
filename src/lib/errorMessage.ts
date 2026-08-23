@@ -50,6 +50,7 @@ const KNOWN_CONSTRAINTS: { match: string; message: string }[] = [
   { match: "izmedju 1 i 12 serija", message: "Svaka vežba mora imati između 1 i 12 serija." },
   { match: "Kardio vezba se upisuje", message: "Kardio vežba se upisuje kao jedna stavka sa minutima." },
   { match: "Minuti kardio vezbe", message: "Minuti kardio vežbe moraju biti između 1 i 600." },
+  { match: "jednu uz drugu", message: "Superset mora imati bar dve vežbe, jednu uz drugu." },
   { match: "Nepoznata vezba", message: "Jedna od izabranih vežbi više ne postoji." },
   { match: "Nije tvoj vezbac", message: "Nemaš dozvolu za ovu radnju." },
 ];

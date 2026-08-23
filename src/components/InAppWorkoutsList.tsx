@@ -118,7 +118,9 @@ export const InAppWorkoutsList = ({ athleteId, limit = 10 }: Props) => {
                       </div>
                     </div>
                     <div className="mt-0.5 flex items-center gap-3 text-[12px] text-muted-foreground">
-                      <span>{formatDuration(w.duration_seconds ?? 0)}</span>
+                      {/* Trenerom upisan trening nema mereno trajanje - "0 min"
+                          bi bio izmisljen podatak, pa se cip izostavlja. */}
+                      {w.duration_seconds != null && <span>{formatDuration(w.duration_seconds)}</span>}
                       {w.active_calories != null && (
                         <span className="inline-flex items-center gap-1">
                           <Flame className="h-3 w-3" /> {Math.round(w.active_calories)} kcal

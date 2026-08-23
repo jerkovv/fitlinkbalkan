@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Dumbbell, Flame, Clock, Heart, Minus, TrendingUp, TrendingDown } from "lucide-react";
+import { Dumbbell, Flame, Clock, Heart, Link2, Minus, TrendingUp, TrendingDown } from "lucide-react";
 import {
   Dialog, DialogContent, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -33,6 +33,8 @@ interface InAppSet {
 
 interface InAppExercise {
   exercise_name: string;
+  /** NULL = obicna vezba. Isti broj = jedan superset krug. */
+  superset_group: number | null;
   planned_sets: number;
   planned_reps: string | null;
   planned_weight_kg: number | null;
@@ -177,7 +179,9 @@ export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange }: Prop
                 <Stat
                   icon={<Clock className="h-3.5 w-3.5" />}
                   label="Trajanje"
-                  value={formatDuration(detail.duration_seconds ?? 0)}
+                  // Trenerom upisan trening nema mereno trajanje; "0 min" bi bio
+                  // izmisljen podatak, pa stoji crta.
+                  value={detail.duration_seconds != null ? formatDuration(detail.duration_seconds) : "-"}
                 />
                 <Stat
                   icon={<Flame className="h-3.5 w-3.5" />}
@@ -251,8 +255,33 @@ export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange }: Prop
                   Vežbe
                 </div>
                 <div className="space-y-3">
-                  {detail.exercises.map((ex, i) => (
-                    <div key={i} className="rounded-2xl border border-hairline overflow-hidden">
+                  {detail.exercises.map((ex, i) => {
+                  // Krug se crta kao jedna celina: oznaka samo iznad prvog clana,
+                  // bocna linija spaja ostale.
+                  const ss = ex.superset_group ?? null;
+                  const prviUKrugu = ss != null && (detail.exercises?.[i - 1]?.superset_group ?? null) !== ss;
+                  const poslednjiUKrugu = ss != null && (detail.exercises?.[i + 1]?.superset_group ?? null) !== ss;
+                  return (
+                    <div key={i} className={ss != null ? "relative pl-3" : undefined}>
+                    {ss != null && (
+                      <span
+                        aria-hidden
+                        className={cn(
+                          "absolute left-0 w-[3px] bg-primary/40",
+                          prviUKrugu ? "top-5 rounded-t-full" : "-top-3",
+                          poslednjiUKrugu ? "bottom-0 rounded-b-full" : "-bottom-3",
+                        )}
+                      />
+                    )}
+                    {prviUKrugu && (
+                      <div className="flex items-center gap-1.5 pb-1">
+                        <Link2 className="h-3 w-3 text-primary shrink-0" strokeWidth={2.6} />
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+                          Superset
+                        </span>
+                      </div>
+                    )}
+                    <div className="rounded-2xl border border-hairline overflow-hidden">
                       <div className="px-3.5 py-2.5 bg-surface-2 border-b border-hairline flex items-center justify-between gap-2">
                         <div className="min-w-0">
                           <div className="font-semibold text-[14px] tracking-tight truncate">
@@ -330,7 +359,9 @@ export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange }: Prop
                         })}
                       </div>
                     </div>
-                  ))}
+                    </div>
+                  );
+                  })}
                 </div>
               </Card>
             )}
