@@ -1,0 +1,12 @@
+-- Zatvaranje rupe u pravilu "zeleno pali iskljucivo vezbac".
+--
+-- 20260820230000 je obrisala trainer_mark_set_done i trainer_unmark_set, ali je
+-- trainer_log_next_set ostala ziva, sa EXECUTE za authenticated - a ona i dalje
+-- radi INSERT INTO set_logs sa done = true. Posto je pozicija "prva serija koja
+-- nedostaje", taj upis pomera vezbaca, sto je tacno ono sto je pravilom
+-- zabranjeno. Klijent je vise ne zove (mreza koristi trainer_log_set, koja je
+-- samo UPDATE), ali RPC koji sme da kaci zeleno, ostavljen u semi, je nabijen
+-- okidac uperen u pravilo - isto obrazlozenje kao kod one druge dve.
+--
+-- Ostaje trainer_log_set (samo UPDATE, odbija seriju koju vezbac nije zavrsio).
+DROP FUNCTION IF EXISTS public.trainer_log_next_set(uuid, integer, numeric, numeric, integer);
