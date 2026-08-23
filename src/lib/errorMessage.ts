@@ -37,6 +37,21 @@ const KNOWN_CONSTRAINTS: { match: string; message: string }[] = [
   // pre poziva, pa je ovde samo da poruka ne padne na generican fallback ako
   // nesto ipak prodje (npr. pretplata istekne izmedju provere i slanja).
   { match: "aktivnu FitLink pretplatu", message: "Nalog nema aktivnu pretplatu, izmene su zaključane." },
+  // Upis treninga bez telefona (trainer_create_past_workout i _trainer_offline_guard).
+  // Sve su RAISE EXCEPTION, dakle P0001, a P0001 nije u CODE_MESSAGES - bez ovoga
+  // trener na "vežbač trenutno trenira" dobija "Nešto nije u redu" i tapka u krug.
+  // Podnizovi su bez dijakritike jer su takve i poruke u bazi.
+  { match: "trenutno trenira", message: "Vežbač trenutno trenira. Upiši trening kad završi." },
+  { match: "istim pocetkom je vec upisan", message: "Trening sa istim početkom je već upisan." },
+  { match: "ne moze da bude u buducnosti", message: "Trening ne može da bude u budućnosti." },
+  { match: "stariji od 90 dana", message: "Trening stariji od 90 dana se ne upisuje." },
+  { match: "izmedju 1 i 600 minuta", message: "Trajanje mora biti između 1 i 600 minuta." },
+  { match: "Najvise 30 vezbi", message: "Najviše 30 vežbi po treningu." },
+  { match: "izmedju 1 i 12 serija", message: "Svaka vežba mora imati između 1 i 12 serija." },
+  { match: "Kardio vezba se upisuje", message: "Kardio vežba se upisuje kao jedna stavka sa minutima." },
+  { match: "Minuti kardio vezbe", message: "Minuti kardio vežbe moraju biti između 1 i 600." },
+  { match: "Nepoznata vezba", message: "Jedna od izabranih vežbi više ne postoji." },
+  { match: "Nije tvoj vezbac", message: "Nemaš dozvolu za ovu radnju." },
 ];
 
 // Poznate poruke iz native (Capacitor plugin) grešaka -> konkretna poruka.

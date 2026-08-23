@@ -36,8 +36,15 @@ DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName;
 
 const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
->(({ className, children, style, ...props }, ref) => {
+  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content> & {
+    /**
+     * Klase za zatamnjenje ispod. Postoji samo zbog z-indeksa: overlay se
+     * renderuje ovde unutra, pa se spolja ne moze dohvatiti, a drawer koji se
+     * otvara iznad full-screen sloja (z-100) mora da podigne oba.
+     */
+    overlayClassName?: string;
+  }
+>(({ className, children, style, overlayClassName, ...props }, ref) => {
   // Kad iskoči tastatura, podigni ceo sadržaj sheeta iznad nje (paddingBottom =
   // visina tastature). Sheet zadrži svoju visinu (max-h), a unutrašnji
   // DrawerBody (flex-1 overflow-y-auto) skroluje do svih polja i dugmeta.
@@ -57,7 +64,7 @@ const DrawerContent = React.forwardRef<
 
   return (
     <DrawerPortal>
-      <DrawerOverlay />
+      <DrawerOverlay className={overlayClassName} />
       <DrawerPrimitive.Content
         ref={ref}
         className={cn(

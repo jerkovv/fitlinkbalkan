@@ -8,9 +8,15 @@ type Props = {
   onConfirm: () => void;
   /** Rezim zamene (1:1) - drugi nazivi na dugmetu i u podnaslovu. */
   replaceMode?: boolean;
+  /**
+   * Ispisi dayName bez prefiksa "Dan:". Za pozive gde se ne bira dan nego se
+   * vezbe kace na nesto drugo (upis proslog treninga), gde bi "Dan: ..." lagalo.
+   * Namerno NIJE spojeno sa replaceMode - on menja i natpise na dugmetu.
+   */
+  bareDayName?: boolean;
 };
 
-export const SelectionActionBar = ({ count, dayName, loading, onConfirm, replaceMode }: Props) => {
+export const SelectionActionBar = ({ count, dayName, loading, onConfirm, replaceMode, bareDayName }: Props) => {
   const disabled = count === 0 || loading;
   return (
     <div className="absolute bottom-0 inset-x-0 z-10 bg-gradient-to-t from-background via-background/95 to-transparent pt-6 pb-7 px-5 flex items-end justify-between gap-3">
@@ -20,7 +26,7 @@ export const SelectionActionBar = ({ count, dayName, loading, onConfirm, replace
           <span className="text-foreground">izabrano</span>
         </div>
         <div className="text-xs text-muted-foreground truncate">
-          {replaceMode ? dayName || "-" : `Dan: ${dayName || "-"}`}
+          {replaceMode || bareDayName ? dayName || "-" : `Dan: ${dayName || "-"}`}
         </div>
       </div>
       <button

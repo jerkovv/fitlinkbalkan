@@ -46,9 +46,17 @@ interface FullScreenSheetProps {
   onClose: () => void;
   title: React.ReactNode;
   children: React.ReactNode;
+  /**
+   * Sloj ostaje MONTIRAN ali se ne vidi i ne prima dodire.
+   *
+   * Za slucaj kad se iznad njega otvara nesto sa NIZIM z-indeksom - Radix Sheet je
+   * z-50, ovaj sloj je z-100 i neproziran. Gasenjem kroz open bi to radilo, ali bi
+   * se pri svakom povratku izgubio skrol i ponovo odvrtela ulazna animacija.
+   */
+  hidden?: boolean;
 }
 
-const FullScreenSheet = ({ open, onClose, title, children }: FullScreenSheetProps) => {
+const FullScreenSheet = ({ open, onClose, title, children, hidden }: FullScreenSheetProps) => {
   const keyboardHeight = useKeyboardHeight();
   if (!open) return null;
   return createPortal(
@@ -59,7 +67,11 @@ const FullScreenSheet = ({ open, onClose, title, children }: FullScreenSheetProp
     // paddingBottom = keyboardHeight: ceo stub (i scroll i footer) sedne iznad
     // tastature, pa footer sa vise dugmadi nikad ne zaseca tastatura.
     <div
-      className="fixed inset-0 z-[100] bg-background flex flex-col overflow-hidden pointer-events-auto animate-in slide-in-from-right duration-200"
+      aria-hidden={hidden || undefined}
+      className={cn(
+        "fixed inset-0 z-[100] bg-background flex flex-col overflow-hidden pointer-events-auto animate-in slide-in-from-right duration-200",
+        hidden && "invisible pointer-events-none",
+      )}
       style={{
         paddingBottom: keyboardHeight ? `${keyboardHeight}px` : undefined,
         transition: "padding-bottom 0.25s ease",

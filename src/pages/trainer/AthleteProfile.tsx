@@ -685,16 +685,6 @@ const AthleteProfile = () => {
         <div className="flex justify-center py-10">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
-        {id && (
-          <UpisTreninga
-            open={upisujem}
-            onClose={() => setUpisujem(false)}
-            athleteId={id}
-            athleteName={athlete?.full_name ?? null}
-            onSaved={() => setUpisKey((n) => n + 1)}
-          />
-        )}
-
       </PhoneShell>
     );
   }
@@ -1224,6 +1214,18 @@ const AthleteProfile = () => {
             <Plus className="h-4 w-4 mr-1.5" /> Dodaj članarinu
           </Button>
         </Card>
+      )}
+
+      {/* Upis treninga koji je vezbac odradio bez telefona. Stoji ovde, uz ostale
+          sheet-ove glavnog prikaza - u grani za ucitavanje ga nema ko otvoriti. */}
+      {id && (
+        <UpisTreninga
+          open={upisujem}
+          onClose={() => setUpisujem(false)}
+          athleteId={id}
+          athleteName={athlete?.full_name ?? null}
+          onSaved={() => setUpisKey((n) => n + 1)}
+        />
       )}
 
       <MembershipEditSheet

@@ -29,6 +29,9 @@ type SessionLog = {
   duration_seconds: number | null;
   assigned_programs: { name: string } | null;
   assigned_program_days: { name: string } | null;
+  // Trener upisao trening umesto vezbaca (bez telefona).
+  entered_by_trainer: string | null;
+  entry_title: string | null;
 };
 
 type Metric = {
@@ -80,7 +83,7 @@ const Progress = () => {
 
       const { data: ses } = await supabase
         .from("workout_session_logs")
-        .select("id, day_number, completed_at, duration_seconds, assigned_programs(name), assigned_program_days(name)")
+        .select("id, day_number, completed_at, duration_seconds, entered_by_trainer, entry_title, assigned_programs(name), assigned_program_days(name)")
         .eq("athlete_id", user.id)
         .not("completed_at", "is", null)
         .order("completed_at", { ascending: false })
@@ -448,14 +451,19 @@ const Progress = () => {
                         <Dumbbell className="h-4 w-4" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        {/* Slobodan trening (bez plana): "Slobodan trening" + samo datum (nikad "Dan null"). */}
+                        {/* Trenerom upisan trening nema ni dan ni program, pa bi ga
+                            provera ispod proglasila slobodnim. Isti naziv kao u listi
+                            na pocetnoj. Inace: slobodan trening -> "Slobodan trening"
+                            + samo datum (nikad "Dan null"). */}
                         <div className="font-semibold text-[14px] truncate">
-                          {!s.assigned_program_days?.name && s.day_number == null
-                            ? "Slobodan trening"
-                            : s.assigned_program_days?.name ?? `Dan ${s.day_number}`}
+                          {s.entered_by_trainer
+                            ? s.entry_title?.trim() || "Trening sa trenerom"
+                            : !s.assigned_program_days?.name && s.day_number == null
+                              ? "Slobodan trening"
+                              : s.assigned_program_days?.name ?? `Dan ${s.day_number}`}
                         </div>
                         <div className="text-[12px] text-muted-foreground truncate">
-                          {!s.assigned_program_days?.name && s.day_number == null
+                          {s.entered_by_trainer || (!s.assigned_program_days?.name && s.day_number == null)
                             ? (s.completed_at ? formatDate(s.completed_at) : "-")
                             : `${s.assigned_programs?.name ?? "Program"} · ${s.completed_at ? formatDate(s.completed_at) : "-"}`}
                         </div>

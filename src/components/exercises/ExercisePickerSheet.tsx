@@ -34,9 +34,11 @@ type Props = {
    * telefon - direktan insert bi vezbi dodao, a on ih ne bi video).
    */
   onPickMany?: (exerciseIds: string[]) => void;
+  /** Prosledi dalje: podnaslov bez prefiksa "Dan:" (vidi SelectionActionBar). */
+  bareDayName?: boolean;
 };
 
-export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAdded, onPick, onPickMany }: Props) => {
+export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAdded, onPick, onPickMany, bareDayName }: Props) => {
   const [muscle, setMuscle] = useState<MuscleGroupId>("grudi");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [searchOpen, setSearchOpen] = useState(false);
@@ -287,6 +289,7 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAd
           loading={isPending}
           onConfirm={handleConfirm}
           replaceMode={!!onPick}
+          bareDayName={bareDayName}
         />
 
         <ExerciseSearchSheet

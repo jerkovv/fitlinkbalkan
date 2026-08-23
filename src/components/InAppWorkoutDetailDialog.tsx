@@ -65,6 +65,9 @@ interface InAppDetail {
   day_name: string | null;
   birth_year: number | null;
   sets_done: number | null;
+  // Trener upisao trening umesto vezbaca (bez telefona): id trenera + njegov naziv.
+  entered_by_trainer: string | null;
+  entry_title: string | null;
   exercises: InAppExercise[] | null;
 }
 
@@ -113,13 +116,18 @@ export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange }: Prop
   // Slobodan trening (bez plana): nema day_name ni day_number -> naslov "Slobodan trening"
   // (nikad "Dan null"). Inace postojeci naslov (Program - Dan X / Dan X).
   const isFree = !!detail && !detail.day_name && detail.day_number == null;
+  // Trenerom upisan trening nema ni dan ni plan, pa bi ga isFree proglasio
+  // slobodnim - a u listi stoji trenerov naziv. Isti naslov na oba mesta.
+  const upisaoTrener = !!detail?.entered_by_trainer;
   const title = !detail
     ? "Trening"
-    : isFree
-      ? "Slobodan trening"
-      : detail.program_name && detail.day_name
-        ? `${detail.program_name} - ${detail.day_name}`
-        : detail.day_name ?? `Dan ${detail.day_number}`;
+    : upisaoTrener
+      ? detail.entry_title?.trim() || "Trening sa trenerom"
+      : isFree
+        ? "Slobodan trening"
+        : detail.program_name && detail.day_name
+          ? `${detail.program_name} - ${detail.day_name}`
+          : detail.day_name ?? `Dan ${detail.day_number}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -250,7 +258,10 @@ export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange }: Prop
                           <div className="font-semibold text-[14px] tracking-tight truncate">
                             {ex.exercise_name}
                           </div>
-                          {ex.is_duration_based ? (
+                          {/* Trenerom upisan trening NIJE imao plan - upisano je ono
+                              sto je odradjeno. Red "Plan" bi tu samo ponavljao iste
+                              brojeve (ili ispisivao "3 x 0" za kardio). */}
+                          {upisaoTrener ? null : ex.is_duration_based ? (
                             ex.planned_duration_minutes != null ? (
                               <div className="text-[11.5px] text-muted-foreground mt-0.5">
                                 Plan: {ex.planned_duration_minutes} min

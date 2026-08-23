@@ -20,7 +20,9 @@ interface Props {
 // placanju - kupovina se ne nudi u aplikaciji (vidi TrainerLayout).
 export const PretplataLockSheet = ({ open, onOpenChange, fact }: Props) => (
   <Drawer open={open} onOpenChange={onOpenChange}>
-    <DrawerContent>
+    {/* Iznad full-screen sloja (z-100). Objasnjenje zakljucane akcije se okida i
+        iz sheet-ova, a na z-50 bi ostalo ispod njih - dugme bi izgledalo mrtvo. */}
+    <DrawerContent className="z-[120]" overlayClassName="z-[120]">
       <DrawerHeader>
         <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-soft">
           <Lock className="h-6 w-6 text-primary" strokeWidth={2.2} />
