@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Check, ChevronDown, Dumbbell, History, Link2, Loader2, Pencil, Plus, Repeat2, Trash2, Unlink, X } from "lucide-react";
+import { Check, ChevronDown, Dumbbell, History, Link2, Loader2, Pencil, Plus, Repeat2, Timer, Trash2, Unlink, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ type SetDetail = {
   set_number: number;
   reps: string | null;
   weight_kg: number | null;
+  rest_seconds: number | null;
 };
 
 type DayExercise = {
@@ -21,6 +22,7 @@ type DayExercise = {
   reps: number | null;
   weight_kg: number | null;
   duration_minutes: number | null;
+  rest_seconds: number | null;
   set_details: SetDetail[] | null;
   /** NULL = obicna vezba. Isti broj = jedan superset krug. */
   superset_group: number | null;
@@ -32,6 +34,10 @@ type DayExercise = {
     is_duration_based: boolean | null;
   };
 };
+
+/** Pauza koju motor stvarno koristi: per-set red je izvor istine, vezba je rezerva. */
+const trenutnaPauza = (ex: DayExercise): number | null =>
+  ex.set_details?.[0]?.rest_seconds ?? ex.rest_seconds ?? null;
 
 type DayFull = {
   day_name: string;
@@ -105,8 +111,12 @@ export const LiveWorkoutPlan = ({
   const [salje, setSalje] = useState(false);
   // Serije upisane u ovom treningu, grupisane po vezbi.
   const [danas, setDanas] = useState<Record<string, DanasnjiSet[]>>({});
-  // Rezim oznacavanja vise vezbi za brisanje. null = iskljucen.
-  const [oznaceno, setOznaceno] = useState<Set<string> | null>(null);
+  // Rezim oznacavanja vise vezbi. Nosi i SVRHU: superset je ranije zivio unutar
+  // rezima brisanja, pa se do njega dolazilo samo preko crvenog dugmeta "Obriši
+  // vežbe" - trener ga prakticno nije ni nalazio.
+  const [izbor, setIzbor] = useState<{ svrha: "brisanje" | "superset"; ids: Set<string> } | null>(null);
+  // Rucno otkucana pauza po vezbi, dok se kuca. Kljuc je ape id.
+  const [pauza, setPauza] = useState<Record<string, string>>({});
   // Sheet za dodavanje novih vezbi na kraj treninga.
   const [dodajem, setDodajem] = useState(false);
   // Rukom otkucane vrednosti po celiji mreze, kljuc "apeId:brojSerije".
@@ -190,16 +200,16 @@ export const LiveWorkoutPlan = ({
    * prerasporedjuje unazad.
    */
   const spojiSuperset = async () => {
-    if (!oznaceno || oznaceno.size < 2) return;
+    if (!izbor || izbor.ids.size < 2) return;
     setSalje(true);
     const { error } = await supabase.rpc("trainer_set_superset" as any, {
       p_session_id: sessionId,
-      p_ape_ids: [...oznaceno],
+      p_ape_ids: [...izbor.ids],
     });
     setSalje(false);
     if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Superset napravljen");
-    setOznaceno(null);
+    setIzbor(null);
     await ucitaj();
     await ucitajDanas();
   };
@@ -218,16 +228,16 @@ export const LiveWorkoutPlan = ({
   // Brisanje vise vezbi odjednom. Server odbija vezbu koja vec ima upisanu
   // seriju, i sam preracuna poziciju vezbaca posle brisanja.
   const obrisiOznacene = async () => {
-    if (!oznaceno || oznaceno.size === 0) return;
+    if (!izbor || izbor.ids.size === 0) return;
     setSalje(true);
     const { error } = await supabase.rpc("trainer_remove_exercises" as any, {
       p_session_id: sessionId,
-      p_ids: [...oznaceno],
+      p_ids: [...izbor.ids],
     });
     setSalje(false);
     if (error) { toast.error(porukaGreske(error)); return; }
-    toast.success(`Obrisano ${oznaceno.size}`);
-    setOznaceno(null);
+    toast.success(`Obrisano ${izbor.ids.size}`);
+    setIzbor(null);
     await ucitaj();
     await ucitajDanas();
   };
@@ -293,6 +303,32 @@ export const LiveWorkoutPlan = ({
    * Dodavanje serije vezbi za danas. Menja plan, pa vazi samo za ovaj trening i
    * podize plan_version - vezbacev telefon i sat odmah vide novi broj serija.
    */
+  /**
+   * Pauza za tu vezbu, usred treninga. Vazi od SLEDECE pauze - ona koja tece je
+   * vec usidrena, a menjati odbrojavanje pod nogama coveku bilo bi gore nego
+   * sacekati. Server upisuje i na vezbu i na sve njene serije (motor cita
+   * per-set vrednost, pa bi izmena samo na vezbi izgledala kao da nista nije
+   * uradjeno).
+   */
+  const sacuvajPauzu = async (ex: DayExercise) => {
+    const t = (pauza[ex.id] ?? "").trim();
+    if (t === "") return;
+    const n = Number(t.replace(",", "."));
+    if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0 || n > 600) {
+      toast.error("Pauza mora biti ceo broj sekundi, između 0 i 600");
+      return;
+    }
+    if (n === trenutnaPauza(ex)) return;
+    setSalje(true);
+    const { error } = await supabase.rpc("trainer_set_rest" as any, {
+      p_session_id: sessionId, p_ape_id: ex.id, p_seconds: n,
+    });
+    setSalje(false);
+    if (error) { toast.error(porukaGreske(error)); return; }
+    toast.success(n === 0 ? "Bez pauze posle ove vežbe" : `Pauza ${n}s`);
+    await ucitaj();
+  };
+
   const dodajSeriju = async (ex: DayExercise, sets: number) => {
     setSalje(true);
     const { data, error } = await supabase.rpc("trainer_set_exercise_target" as any, {
@@ -356,40 +392,36 @@ export const LiveWorkoutPlan = ({
     );
   }
 
-  const uOznacavanju = oznaceno !== null;
+  const uOznacavanju = izbor !== null;
+  const uSupersetu = izbor?.svrha === "superset";
 
   return (
     <div className="space-y-1.5">
-      {/* Traka radnji nad celim treningom. U rezimu oznacavanja menja se u
-          "obrisi N / otkazi", da se ne mesa sa radnjama po pojedinacnoj vezbi. */}
+      {/* Traka radnji nad celim treningom. Tri ulaza, svaki svoj: brisanje,
+          superset, dodavanje. Superset je ranije bio unutar rezima brisanja, iza
+          crvenog dugmeta - tehnicki je radio, ali ga niko nije nalazio. */}
       <div className="flex items-center gap-1.5 pb-1">
-        {uOznacavanju ? (
+        {izbor ? (
           <>
             <button
               type="button"
-              disabled={salje || oznaceno.size === 0}
-              onClick={() => void obrisiOznacene()}
-              className="h-8 flex-1 rounded-lg bg-destructive text-destructive-foreground text-[12.5px] font-semibold inline-flex items-center justify-center gap-1.5 disabled:opacity-40 transition"
+              disabled={salje || izbor.ids.size < (uSupersetu ? 2 : 1)}
+              onClick={() => void (uSupersetu ? spojiSuperset() : obrisiOznacene())}
+              className={cn(
+                "h-8 flex-1 rounded-lg text-[12.5px] font-semibold inline-flex items-center justify-center gap-1.5 disabled:opacity-40 transition",
+                uSupersetu
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-destructive text-destructive-foreground",
+              )}
             >
               {salje ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                     : <Trash2 className="h-3.5 w-3.5" strokeWidth={2.4} />}
-              Obriši {oznaceno.size > 0 ? oznaceno.size : ""}
+                     : uSupersetu ? <Link2 className="h-3.5 w-3.5" strokeWidth={2.4} />
+                                  : <Trash2 className="h-3.5 w-3.5" strokeWidth={2.4} />}
+              {uSupersetu ? "Spoji" : "Obriši"} {izbor.ids.size > 0 ? izbor.ids.size : ""}
             </button>
-            {/* Superset trazi bar dve vezbe, pa se dugme i pojavljuje tek tada. */}
-            {oznaceno.size >= 2 && (
-              <button
-                type="button"
-                disabled={salje}
-                onClick={() => void spojiSuperset()}
-                className="h-8 flex-1 rounded-lg bg-primary text-primary-foreground text-[12.5px] font-semibold inline-flex items-center justify-center gap-1.5 disabled:opacity-40 transition"
-              >
-                <Link2 className="h-3.5 w-3.5" strokeWidth={2.4} />
-                Superset {oznaceno.size}
-              </button>
-            )}
             <button
               type="button"
-              onClick={() => setOznaceno(null)}
+              onClick={() => setIzbor(null)}
               className="h-8 px-3 rounded-lg bg-surface-2 text-[12.5px] font-semibold text-muted-foreground"
             >
               Otkaži
@@ -399,23 +431,41 @@ export const LiveWorkoutPlan = ({
           <>
             <button
               type="button"
-              onClick={() => setOznaceno(new Set())}
-              className="h-8 flex-1 rounded-lg border border-hairline bg-surface-2 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 transition"
+              onClick={() => setIzbor({ svrha: "brisanje", ids: new Set() })}
+              className="h-8 flex-1 rounded-lg border border-hairline bg-surface-2 text-[12px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 transition"
             >
               <Trash2 className="h-3.5 w-3.5" strokeWidth={2.2} />
-              Obriši vežbe
+              Obriši
             </button>
+            {/* Superset trazi bar dve vezbe u treningu. */}
+            {vezbe.length >= 2 && (
+              <button
+                type="button"
+                onClick={() => setIzbor({ svrha: "superset", ids: new Set() })}
+                className="h-8 flex-1 rounded-lg border border-hairline bg-surface-2 text-[12px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 transition"
+              >
+                <Link2 className="h-3.5 w-3.5" strokeWidth={2.2} />
+                Superset
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setDodajem(true)}
-              className="h-8 flex-1 rounded-lg border border-hairline bg-surface-2 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 transition"
+              className="h-8 flex-1 rounded-lg border border-hairline bg-surface-2 text-[12px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 transition"
             >
               <Plus className="h-3.5 w-3.5" strokeWidth={2.4} />
-              Dodaj vežbe
+              Dodaj
             </button>
           </>
         )}
       </div>
+      {izbor && (
+        <p className="text-[11.5px] text-muted-foreground pb-1">
+          {uSupersetu
+            ? "Označi dve ili više vežbi koje idu bez pauze između. Vežba u kojoj je serija već upisana ne može u krug."
+            : "Označi vežbe koje sklanjaš iz današnjeg treninga."}
+        </p>
+      )}
 
       {vezbe.map((ex, i) => {
         const trenutna = currentIdx != null && i === currentIdx;
@@ -479,31 +529,37 @@ export const LiveWorkoutPlan = ({
             )}
           >
             <div className="flex items-center gap-2.5">
-              {uOznacavanju ? (
-                // Vezba sa vec upisanom serijom se ne moze obrisati (server je
-                // odbija), pa se ni ne nudi za oznacavanje.
+              {izbor ? (
+                // Vezba sa vec upisanom serijom se ne moze ni obrisati ni ubaciti
+                // u krug (server je u oba slucaja odbija), pa se ne nudi.
                 <button
                   type="button"
                   disabled={danasnje.length > 0}
                   onClick={() =>
-                    setOznaceno((s) => {
-                      const n = new Set(s ?? []);
+                    setIzbor((st) => {
+                      if (!st) return st;
+                      const n = new Set(st.ids);
                       if (n.has(ex.id)) n.delete(ex.id);
                       else n.add(ex.id);
-                      return n;
+                      return { ...st, ids: n };
                     })
                   }
                   aria-label={`Označi ${ime}`}
+                  aria-pressed={izbor.ids.has(ex.id)}
                   className={cn(
                     "h-7 w-7 rounded-lg border-2 flex items-center justify-center shrink-0 transition",
                     danasnje.length > 0
                       ? "border-hairline bg-surface-2 opacity-40"
-                      : oznaceno?.has(ex.id)
-                        ? "border-destructive bg-destructive text-destructive-foreground"
-                        : "border-hairline bg-surface hover:border-destructive/50",
+                      : izbor.ids.has(ex.id)
+                        ? uSupersetu
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-destructive bg-destructive text-destructive-foreground"
+                        : cn("border-hairline bg-surface", uSupersetu
+                            ? "hover:border-primary/50"
+                            : "hover:border-destructive/50"),
                   )}
                 >
-                  {oznaceno?.has(ex.id) && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                  {izbor.ids.has(ex.id) && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
                 </button>
               ) : (
                 <div
@@ -679,15 +735,33 @@ export const LiveWorkoutPlan = ({
                   );
                 })}
 
-                <button
-                  type="button"
-                  disabled={salje}
-                  onClick={() => void dodajSeriju(ex, brojSerija + 1)}
-                  className="mt-2 h-9 w-full rounded-lg bg-surface-2 text-[12px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 transition disabled:opacity-50"
-                >
-                  <Plus className="h-3.5 w-3.5" strokeWidth={2.6} />
-                  Dodaj seriju
-                </button>
+                <div className="mt-2 flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={salje}
+                    onClick={() => void dodajSeriju(ex, brojSerija + 1)}
+                    className="h-9 flex-1 rounded-lg bg-surface-2 text-[12px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 transition disabled:opacity-50"
+                  >
+                    <Plus className="h-3.5 w-3.5" strokeWidth={2.6} />
+                    Dodaj seriju
+                  </button>
+                  {/* Pauza posle ove vezbe. Clan superset kruga koji nije
+                      poslednji svakako ide bez pauze, pa se polje tu ne nudi. */}
+                  {!(ss != null && !poslednjiUKrugu) && (
+                    <label className="h-9 rounded-lg bg-surface-2 px-2 inline-flex items-center gap-1.5 shrink-0">
+                      <Timer className="h-3.5 w-3.5 text-muted-foreground shrink-0" strokeWidth={2.2} />
+                      <Input
+                        value={pauza[ex.id] ?? String(trenutnaPauza(ex) ?? "")}
+                        onChange={(e) => setPauza((s) => ({ ...s, [ex.id]: e.target.value }))}
+                        onBlur={() => void sacuvajPauzu(ex)}
+                        inputMode="numeric"
+                        aria-label={`Pauza posle vežbe ${ime}, u sekundama`}
+                        className="h-7 w-12 px-1 text-[12.5px] text-center tnum border-0 bg-transparent"
+                      />
+                      <span className="text-[11.5px] text-muted-foreground">s</span>
+                    </label>
+                  )}
+                </div>
               </div>
             )}
 
