@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff, Plus, Minus } from "lucide-react";
+import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff, Plus, Minus, Link2 } from "lucide-react";
 import { getHrColor, getHrZone } from "@/lib/workout/hrZone";
 import { isFreshWithinGrace } from "@/lib/liveWorkout";
 import { markWorkoutEntered } from "@/lib/workoutSession";
@@ -95,6 +95,8 @@ type DayExercise = {
   duration_minutes: number | null;
   // Per-set ciljevi (prazno za stare programe pre per-set -> fallback na sets/reps/weight_kg).
   set_details: SetDetail[] | null;
+  /** NULL = obicna vezba. Isti broj = jedan superset krug (radi se naizmenicno). */
+  superset_group?: number | null;
   exercise_id: string;
   exercise: {
     name: string;
@@ -1812,6 +1814,32 @@ const ActiveWorkout = () => {
         )}
 
         <div className="px-4 pt-4 space-y-5">
+          {/* Superset: sledeca vezba u krugu ide ODMAH, bez pauze. Bez ovoga
+              vezbac zavrsi seriju, ne dobije odbrojavanje i ne zna zasto. */}
+          {(() => {
+            const ss = current.superset_group ?? null;
+            if (ss == null) return null;
+            const sledeca = exercises[exerciseIdx + 1];
+            const uKrugu = (sledeca?.superset_group ?? null) === ss;
+            return (
+              <div className="rounded-xl bg-primary-soft px-3 py-2 flex items-center gap-2">
+                <Link2 className="h-3.5 w-3.5 text-primary shrink-0" strokeWidth={2.6} />
+                <span className="text-[12.5px] text-primary-soft-foreground">
+                  {uKrugu ? (
+                    <>
+                      Superset - bez pauze, odmah zatim{" "}
+                      <span className="font-semibold">
+                        {sledeca.exercise.name}
+                      </span>
+                    </>
+                  ) : (
+                    "Superset - posle ove vežbe ide pauza"
+                  )}
+                </span>
+              </div>
+            );
+          })()}
+
           <ExerciseHeader
             exerciseId={current.exercise_id}
             name={current.exercise.name}

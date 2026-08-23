@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, ChevronDown, Dumbbell } from "lucide-react";
+import { Check, ChevronDown, Dumbbell, Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type SetDetail = {
@@ -14,6 +14,8 @@ type Vezba = {
   reps: number | null;
   weight_kg: number | null;
   duration_minutes: number | null;
+  /** NULL = obicna vezba. Isti broj = jedan superset krug. */
+  superset_group?: number | null;
   set_details: SetDetail[] | null;
   exercise: {
     name: string;
@@ -90,11 +92,26 @@ export const RestOfWorkout = ({
             const ime = ex.exercise.name;
             const gotova = i < currentIdx;
             const aktivna = i === currentIdx;
+            // Krug se crta kao jedna celina: oznaka samo iznad prvog clana,
+            // bocna linija spaja ostale.
+            const ss = ex.superset_group ?? null;
+            const prviUKrugu = ss != null && (vezbe[i - 1]?.superset_group ?? null) !== ss;
+            const poslednjiUKrugu = ss != null && (vezbe[i + 1]?.superset_group ?? null) !== ss;
             return (
+              <div key={`w-${ex.id}`}>
+              {prviUKrugu && (
+                <div className="flex items-center gap-1.5 px-4 pt-2 pb-0.5">
+                  <Link2 className="h-3 w-3 text-primary shrink-0" strokeWidth={2.6} />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+                    Superset - bez pauze između
+                  </span>
+                </div>
+              )}
               <div
-                key={ex.id}
                 className={cn(
                   "flex items-center gap-2.5 px-4 py-2.5",
+                  ss != null && "border-l-[3px] border-primary/40 ml-1",
+                  ss != null && poslednjiUKrugu && "mb-1",
                   aktivna && "bg-primary-soft",
                   gotova && "opacity-55",
                 )}
@@ -136,6 +153,7 @@ export const RestOfWorkout = ({
                     {ciljTekst(ex)}
                   </div>
                 </div>
+              </div>
               </div>
             );
           })}

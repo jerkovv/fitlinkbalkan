@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Dumbbell, History, Loader2, Play, Trophy } from "lucide-react";
+import { Dumbbell, History, Link2, Loader2, Play, Trophy } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useLastPerformance } from "@/hooks/useLastPerformance";
@@ -19,6 +19,8 @@ type PreviewExercise = {
   reps: number | null;
   weight_kg: number | null;
   duration_minutes: number | null;
+  /** NULL = obicna vezba. Isti broj = jedan superset krug. */
+  superset_group: number | null;
   set_details: SetDetail[] | null;
   exercise_id: string;
   exercise: {
@@ -167,13 +169,24 @@ export default function WorkoutPreview() {
       ) : (
         <div className="px-6 mt-4 space-y-2">
           {vezbe.map((ex, i) => {
+            const ss = ex.superset_group ?? null;
+            const prviUKrugu = ss != null && (vezbe[i - 1]?.superset_group ?? null) !== ss;
             const istorija = prosliPut[ex.exercise_id];
             const rekord =
               istorija?.best_weight_kg != null && Number(istorija.best_weight_kg) > 0
                 ? Number(istorija.best_weight_kg)
                 : null;
             return (
-              <div key={ex.id} className="rounded-2xl border border-hairline bg-surface p-3">
+              <div key={`w-${ex.id}`} className={ss != null ? "border-l-[3px] border-primary/40 pl-2 -ml-2" : undefined}>
+              {prviUKrugu && (
+                <div className="flex items-center gap-1.5 pb-1.5">
+                  <Link2 className="h-3 w-3 text-primary shrink-0" strokeWidth={2.6} />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+                    Superset - bez pauze između
+                  </span>
+                </div>
+              )}
+              <div className={`rounded-2xl border border-hairline bg-surface p-3 ${ss != null ? "mb-2" : ""}`}>
                 <div className="flex items-start gap-3">
                   {/* Slika je glavni orijentir - po njoj se vezba prepoznaje brze
                       nego po imenu, pa nosi i redni broj u uglu. */}
@@ -253,6 +266,7 @@ export default function WorkoutPreview() {
                     </div>
                   </div>
                 )}
+              </div>
               </div>
             );
           })}
