@@ -24,9 +24,7 @@ import {
   FullScreenSheetScroll,
   FullScreenSheetFooter,
 } from "@/components/ui/full-screen-sheet";
-import {
-  Plus, Loader2, Dumbbell, Trash2, GripVertical, ChevronDown, ChevronUp, UserPlus, Check, Send, X, Settings2,
-} from "lucide-react";
+import { Plus, Loader2, Dumbbell, Trash2, GripVertical, ChevronDown, ChevronUp, UserPlus, Check, Send, X, Settings2, Link2, Unlink } from "lucide-react";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { ExercisePickerSheet } from "@/components/exercises/ExercisePickerSheet";
@@ -47,6 +45,8 @@ type Exercise = {
   duration_minutes: number | null;
   rest_seconds: number | null;
   notes: string | null;
+  /** NULL = obicna vezba. Isti broj = jedan superset krug (unutar istog dana). */
+  superset_group: number | null;
   exercises: { name: string; name_en: string | null; primary_muscle: string; is_duration_based: boolean | null; thumbnail_url: string | null } | null;
 };
 // Per-set cilj (izvor istine). id je DB id ili privremeni (React key); ne salje se u upsert.
@@ -141,6 +141,10 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
   // Otvorena (expand) vezba za per-set editor; "napredno" (Pauza) toggle po vezbi.
   const [openExId, setOpenExId] = useState<string | null>(null);
   const [advancedByEx, setAdvancedByEx] = useState<Record<string, boolean>>({});
+  // Rezim spajanja u superset: null = iskljucen. Vezan je za JEDAN dan, da se
+  // vezbe iz dva razlicita dana ne mogu naci u istom krugu.
+  const [spajam, setSpajam] = useState<{ dayId: string; ids: Set<string> } | null>(null);
+  const [ssSalje, setSsSalje] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // "Prosli put" po vezbi - samo u rezimu dodeljenog plana, gde postoji
@@ -317,13 +321,59 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
     void saveSets(exId, rows);
   };
 
-  const removeExercise = async (exId: string) => {
+  const removeExercise = async (exId: string, dayId?: string) => {
     if (locked) return openLock();
+    // Krug od jednog clana nije krug: ako posle brisanja ostane samo jedan,
+    // grupa se skida. Inace bi trener video oznaku "Superset" nad jednom vezbom.
+    const ostatak = dayId
+      ? (exByDay[dayId] ?? []).filter((e) => e.id !== exId)
+      : [];
+    const brisana = dayId ? (exByDay[dayId] ?? []).find((e) => e.id === exId) : undefined;
+    const grupa = brisana?.superset_group ?? null;
     // Assigned: SOFT delete (set_logs ima CASCADE -> pravi DELETE bi pobrisao istoriju serija).
     const { error } = cfg.softDelete
       ? await supabase.from(cfg.exTable).update({ deleted_at: new Date().toISOString() } as any).eq("id", exId)
       : await supabase.from(cfg.exTable).delete().eq("id", exId);
     if (error) { toast.error(porukaGreske(error)); return; }
+    if (grupa != null && ostatak.filter((e) => e.superset_group === grupa).length < 2) {
+      await supabase.from(cfg.exTable)
+        .update({ superset_group: null } as any)
+        .eq("day_id", dayId!).eq("superset_group", grupa);
+    }
+    load();
+  };
+
+  /**
+   * Spajanje oznacenih vezbi u superset. Server ih premesta da budu uzastopne,
+   * isto kao uzivo ekran - da ista radnja u istoj aplikaciji nema dva ponasanja.
+   */
+  const spojiSuperset = async (dayId: string) => {
+    if (locked) return openLock();
+    if (!spajam || spajam.dayId !== dayId || spajam.ids.size < 2) return;
+    setSsSalje(true);
+    const { error } = await supabase.rpc("builder_set_superset" as any, {
+      p_scope: mode === "assigned" ? "assigned" : "template",
+      p_day_id: dayId,
+      p_ex_ids: [...spajam.ids],
+    });
+    setSsSalje(false);
+    if (error) { toast.error(porukaGreske(error)); return; }
+    toast.success("Vežbe spojene i premeštene jedna uz drugu");
+    setSpajam(null);
+    load();
+  };
+
+  const razdvojSuperset = async (dayId: string, exId: string) => {
+    if (locked) return openLock();
+    setSsSalje(true);
+    const { error } = await supabase.rpc("builder_clear_superset" as any, {
+      p_scope: mode === "assigned" ? "assigned" : "template",
+      p_day_id: dayId,
+      p_ex_id: exId,
+    });
+    setSsSalje(false);
+    if (error) { toast.error(porukaGreske(error)); return; }
+    toast.success("Superset razdvojen");
     load();
   };
 
@@ -338,10 +388,31 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
     const oldIndex = current.findIndex((e) => e.id === active.id);
     const newIndex = current.findIndex((e) => e.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
-    const reordered = arrayMove(current, oldIndex, newIndex).map((e, i) => ({ ...e, position: i + 1 }));
+    let reordered = arrayMove(current, oldIndex, newIndex).map((e, i) => ({ ...e, position: i + 1 }));
+
+    // UZASTOPNOST JE INVARIJANTA. Motor redja blokove po najmanjoj poziciji u
+    // bloku, pa isprekidan krug i dalje "radi" ali izvlaci daleku vezbu napred -
+    // trener bi video jedno a vezbac dobio drugo. Zato krug koji je prevlacenjem
+    // prekinut prestaje da bude krug, i to se vidi odmah.
+    const prekinute = new Set<number>();
+    for (const g of new Set(reordered.map((e) => e.superset_group).filter((x): x is number => x != null))) {
+      const idx = reordered.map((e, i) => (e.superset_group === g ? i : -1)).filter((i) => i >= 0);
+      if (idx[idx.length - 1] - idx[0] !== idx.length - 1) prekinute.add(g);
+    }
+    if (prekinute.size) {
+      reordered = reordered.map((e) =>
+        e.superset_group != null && prekinute.has(e.superset_group) ? { ...e, superset_group: null } : e,
+      );
+      toast.info("Superset je razdvojen jer vežbe više nisu jedna uz drugu");
+    }
+
     setExByDay((prev) => ({ ...prev, [dayId]: reordered }));
     const results = await Promise.all(
-      reordered.map((e) => supabase.from(cfg.exTable).update({ position: e.position } as any).eq("id", e.id)),
+      reordered.map((e) =>
+        supabase.from(cfg.exTable)
+          .update({ position: e.position, superset_group: e.superset_group } as any)
+          .eq("id", e.id),
+      ),
     );
     const failed = results.find((r) => r.error);
     if (failed?.error) {
@@ -476,14 +547,57 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                     {exList.length === 0 && (
                       <p className="text-xs text-muted-foreground text-center py-3">Nema vežbi u ovom danu</p>
                     )}
+                    {/* Superset: trener oznaci dve ili vise vezbi i spoji ih u krug.
+                        Rezim je vezan za JEDAN dan - vezbe iz dva dana ne mogu u
+                        isti krug. U rezimu se hendl za prevlacenje ne renderuje,
+                        pa dnd i oznacavanje ne otimaju iste dodire. */}
+                    {exList.length >= 2 && (
+                      <div className="flex items-center gap-1.5 pb-2">
+                        {spajam?.dayId === d.id ? (
+                          <>
+                            <button
+                              type="button"
+                              disabled={ssSalje || spajam.ids.size < 2}
+                              onClick={() => void spojiSuperset(d.id)}
+                              className="h-8 flex-1 rounded-lg bg-primary text-primary-foreground text-[12px] font-semibold inline-flex items-center justify-center gap-1.5 disabled:opacity-40 transition"
+                            >
+                              <Link2 className="h-3.5 w-3.5" strokeWidth={2.4} />
+                              Spoji {spajam.ids.size >= 2 ? spajam.ids.size : ""}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSpajam(null)}
+                              className="h-8 px-3 rounded-lg bg-surface-2 text-[12px] font-semibold text-muted-foreground"
+                            >
+                              Otkaži
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => { setOpenExId(null); setSpajam({ dayId: d.id, ids: new Set() }); }}
+                            className="h-8 rounded-lg border border-hairline bg-surface-2 px-3 text-[12px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 transition"
+                          >
+                            <Link2 className="h-3.5 w-3.5" strokeWidth={2.2} />
+                            Napravi superset
+                          </button>
+                        )}
+                      </div>
+                    )}
+
                     <DndContext
                       sensors={exerciseDndSensors}
                       collisionDetection={closestCenter}
                       onDragEnd={onExerciseDragEnd(d.id)}
                     >
                     <SortableContext items={exList.map((e) => e.id)} strategy={verticalListSortingStrategy}>
-                    {exList.map((ex) => {
+                    {exList.map((ex, exIdx) => {
                       const rows = setsByEx[ex.id] ?? [];
+                      const ss = ex.superset_group ?? null;
+                      const prviUKrugu = ss != null && (exList[exIdx - 1]?.superset_group ?? null) !== ss;
+                      const poslednjiUKrugu = ss != null && (exList[exIdx + 1]?.superset_group ?? null) !== ss;
+                      const uSpajanju = spajam?.dayId === d.id;
+                      const oznacena = uSpajanju && spajam.ids.has(ex.id);
                       const isDuration = !!ex.exercises?.is_duration_based;
                       const open = openExId === ex.id;
                       const advanced = !!advancedByEx[ex.id];
@@ -497,9 +611,55 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                       return (
                         <SortableExerciseRow key={ex.id} id={ex.id}>
                           {({ setActivatorNodeRef, attributes, listeners }) => (
+                        <div className={ss != null ? "relative pl-3" : undefined}>
+                        {ss != null && (
+                          <span
+                            aria-hidden
+                            className={`absolute left-0 w-[3px] bg-primary/40 ${prviUKrugu ? "top-6 rounded-t-full" : "top-0"} ${poslednjiUKrugu ? "bottom-1 rounded-b-full" : "bottom-0"}`}
+                          />
+                        )}
+                        {prviUKrugu && (
+                          <div className="flex items-center gap-1.5 pb-1 pt-0.5">
+                            <Link2 className="h-3 w-3 text-primary shrink-0" strokeWidth={2.6} />
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+                              Superset
+                            </span>
+                            {!uSpajanju && (
+                              <button
+                                type="button"
+                                disabled={ssSalje}
+                                onClick={() => void razdvojSuperset(d.id, ex.id)}
+                                className="ml-auto inline-flex items-center gap-1 text-[10.5px] font-semibold text-muted-foreground hover:text-foreground disabled:opacity-50"
+                              >
+                                <Unlink className="h-3 w-3" strokeWidth={2.4} />
+                                Razdvoji
+                              </button>
+                            )}
+                          </div>
+                        )}
                         <div className="bg-surface rounded-lg overflow-hidden">
                           {/* Sazeti red: drag hendl + thumbnail iz baze + ime + sazetak + expand; brisanje desno */}
                           <div className="flex items-center gap-2.5 p-2.5">
+                            {uSpajanju ? (
+                              // Hendl se NE renderuje u rezimu spajanja: bez aktivatora
+                              // dnd ne hvata dodire, pa se ne otimaju sa oznacavanjem.
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setSpajam((st) => {
+                                    if (!st) return st;
+                                    const n = new Set(st.ids);
+                                    if (n.has(ex.id)) n.delete(ex.id); else n.add(ex.id);
+                                    return { ...st, ids: n };
+                                  })
+                                }
+                                aria-label={`Označi ${name}`}
+                                aria-pressed={oznacena}
+                                className={`shrink-0 h-7 w-7 rounded-lg border-2 flex items-center justify-center transition ${oznacena ? "border-primary bg-primary text-primary-foreground" : "border-hairline bg-surface hover:border-primary/50"}`}
+                              >
+                                {oznacena && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                              </button>
+                            ) : (
                             <button
                               ref={setActivatorNodeRef}
                               {...attributes}
@@ -511,8 +671,18 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                             >
                               <GripVertical className="h-4 w-4" />
                             </button>
+                            )}
                             <button
-                              onClick={() => setOpenExId(open ? null : ex.id)}
+                              onClick={() =>
+                                uSpajanju
+                                  ? setSpajam((st) => {
+                                      if (!st) return st;
+                                      const n = new Set(st.ids);
+                                      if (n.has(ex.id)) n.delete(ex.id); else n.add(ex.id);
+                                      return { ...st, ids: n };
+                                    })
+                                  : setOpenExId(open ? null : ex.id)
+                              }
                               className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
                             >
                               {thumb ? (
@@ -526,18 +696,20 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                                 <div className="font-display font-semibold text-sm truncate">{name}</div>
                                 <div className="text-[12px] text-muted-foreground truncate">{summary}</div>
                               </div>
-                              {open ? <ChevronUp className="h-4 w-4 text-primary shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
+                              {uSpajanju ? null : open ? <ChevronUp className="h-4 w-4 text-primary shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
                             </button>
+                            {!uSpajanju && (
                             <button
-                              onClick={() => removeExercise(ex.id)}
+                              onClick={() => removeExercise(ex.id, d.id)}
                               aria-label="Ukloni vežbu"
                               className="h-8 w-8 rounded-md hover:bg-destructive-soft flex items-center justify-center transition shrink-0"
                             >
                               <Trash2 className="h-3.5 w-3.5 text-destructive" />
                             </button>
+                            )}
                           </div>
 
-                          {open && (
+                          {open && !uSpajanju && (
                             <div className="border-t border-hairline px-3 py-3">
                               {/* Sta je vezbac poslednji put digao za bas ovu vezbu -
                                   stoji IZNAD polja za ciljeve, da se danasnji broj
@@ -647,6 +819,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                               )}
                             </div>
                           )}
+                        </div>
                         </div>
                           )}
                         </SortableExerciseRow>
