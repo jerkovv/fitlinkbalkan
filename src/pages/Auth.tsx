@@ -74,9 +74,15 @@ const Auth = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
+      // Email se ISPIRA pre slanja. Ko nalepi kredencijale - a recenzenti u
+      // prodavnicama ih uvek nalepe - lako povuce i razmak ili prelom reda sa
+      // sobom. Server tada vrati "invalid_credentials", a covek na ekranu vidi
+      // "Pogrešan email ili lozinka" i nema pojma sta je pogresio, jer izgleda
+      // tacno. Lozinka se NAMERNO ne dira: razmak u njoj sme da bude deo lozinke.
+      const emailCist = email.trim();
       if (mode === "signup") {
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: emailCist,
           password,
           options: {
             // Fiksan javni URL, NE window.location.origin: u native app-u je origin
@@ -107,14 +113,14 @@ const Auth = () => {
       } else if (mode === "forgot") {
         if (forgotStep === "email") {
           // korak 1: posalji kod (OTP) na mejl - bez redirectTo (ne idemo na link)
-          const { error } = await supabase.auth.resetPasswordForEmail(email);
+          const { error } = await supabase.auth.resetPasswordForEmail(emailCist);
           if (error) throw error;
           toast.success("Kod je poslat na tvoj email.");
           setForgotStep("code");
         } else if (forgotStep === "code") {
           // korak 2: provera koda
           const { error } = await supabase.auth.verifyOtp({
-            email,
+            email: emailCist,
             token: resetCode.trim(),
             type: "recovery",
           });
@@ -149,7 +155,7 @@ const Auth = () => {
         }
       } else {
         const { error } = await saCekanjem(
-          supabase.auth.signInWithPassword({ email, password }),
+          supabase.auth.signInWithPassword({ email: emailCist, password }),
         );
         if (error) throw error;
         toast.success("Dobrodošao nazad!");
@@ -229,6 +235,12 @@ const Auth = () => {
               required
               className="mt-1.5"
               autoComplete="email"
+              // Tastature na telefonu vole da podignu prvo slovo i da "poprave"
+              // adresu. Email je osetljiv na to koliko i na razmak.
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              inputMode="email"
             />
           </div>
         )}
