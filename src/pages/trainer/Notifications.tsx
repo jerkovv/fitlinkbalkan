@@ -32,7 +32,7 @@ const Notifications = () => {
         back="/trener"
         eyebrow="Aktivnost"
         title="Notifikacije"
-        rightSlot={
+        action={
           unreadCount > 0 ? (
             <button
               onClick={() => markAllRead()}

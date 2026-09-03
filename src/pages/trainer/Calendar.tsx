@@ -230,7 +230,7 @@ const Calendar = () => {
         hasBottomNav
         title="Kalendar"
         eyebrow={monthLabel}
-        rightSlot={
+        action={
           <Link
             to="/trener/termini"
             className="h-10 w-10 rounded-full bg-surface border border-hairline flex items-center justify-center hover:border-primary/30 active:scale-95 transition"

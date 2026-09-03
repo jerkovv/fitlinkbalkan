@@ -714,7 +714,7 @@ const AthleteProfile = () => {
   return (
     <PhoneShell
       back="/trener/vezbaci"
-      rightSlot={<SendMessageToAthlete athleteId={athlete.id} athleteName={athlete.full_name ?? undefined} variant="icon" />}
+      action={<SendMessageToAthlete athleteId={athlete.id} athleteName={athlete.full_name ?? undefined} variant="icon" />}
       title={
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-1.5">

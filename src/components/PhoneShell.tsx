@@ -11,7 +11,16 @@ interface PhoneShellProps {
   eyebrow?: ReactNode;
   /** Back link target */
   back?: string;
-  /** Right-side action (icon button etc.) */
+  /**
+   * Akcija same stranice (npr. "+ novi program"). Renderuje se i na mobilnom i
+   * na desktopu - za razliku od rightSlot-a, koji desktop namerno gasi.
+   */
+  action?: ReactNode;
+  /**
+   * Traka gore desno koju desktop NE renderuje. Samo za ChatBell/
+   * NotificationBell/UserMenu (vidi objasnjenje kod top bar-a nize).
+   * Za dugmad stranice koristi `action`.
+   */
   rightSlot?: ReactNode;
   /** Whether the page uses the bottom nav (adds bottom padding) */
   hasBottomNav?: boolean;
@@ -22,6 +31,7 @@ export const PhoneShell = ({
   title,
   eyebrow,
   back,
+  action,
   rightSlot,
   hasBottomNav = false,
   children,
@@ -41,14 +51,17 @@ export const PhoneShell = ({
       )}
     >
       <div className={desktop ? undefined : "phone-shell-sticky"}>
-        {/* Top bar - back + right action. Na desktopu se rightSlot NE renderuje:
+        {/* Top bar - back + akcije. Na desktopu se rightSlot NE renderuje:
             TrainerWebShell vec ima stalnu traku sa ChatBell/NotificationBell/
             UserMenu, a te komponente drze sopstvene Realtime kanale imenovane
             po korisniku (chat-bell:<uid>, notif:<uid>) - dve istovremene
             instance se sudaraju na isti kanal i ruse stranicu (belo posle
-            ucitavanja). Nekoliko stranica (Dashboard, Notifications) prosledjuje
-            bas te komponente kao rightSlot, pa se ovde iskljucuju u celini. */}
-        {(back || (!desktop && rightSlot)) && (
+            ucitavanja). Dashboard i athlete Home prosledjuju bas te komponente,
+            pa im je rightSlot na desktopu ugasen. `action` je druga prica:
+            to je dugme same stranice ("+ novi program", "Sve procitano") i
+            desktopu treba isto kao telefonu - bez njega se program, plan
+            ishrane ni dan uopste ne mogu dodati na fitlink.rs/dashboard. */}
+        {(back || action || (!desktop && rightSlot)) && (
           <div className={cn("flex items-center justify-between", desktop ? "pt-1" : "px-6 pt-1")}>
             {back ? (
               <Link
@@ -59,7 +72,10 @@ export const PhoneShell = ({
                 <ChevronLeft className="h-5 w-5" strokeWidth={2.25} />
               </Link>
             ) : <span />}
-            {!desktop && rightSlot}
+            <div className="flex items-center gap-2">
+              {action}
+              {!desktop && rightSlot}
+            </div>
           </div>
         )}
 

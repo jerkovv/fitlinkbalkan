@@ -110,7 +110,7 @@ const ProgramTemplates = () => {
       back="/trener"
       eyebrow="Treninzi"
       title="Programi"
-      rightSlot={
+      action={
         <button
           onClick={guard(() => setOpen(true))}
           className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-brand active:scale-95 transition"
