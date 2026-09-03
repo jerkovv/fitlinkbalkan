@@ -15,7 +15,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { formatHMS } from "@/lib/time";
-import { isHrLive } from "@/lib/liveWorkout";
+import { HR_FRESH_SECONDS, isHrLive } from "@/lib/liveWorkout";
 import { ZONE_DEFS } from "@/lib/wearable/hrZones";
 import { getHrZone } from "@/lib/workout/hrZone";
 import { cn } from "@/lib/utils";
@@ -143,6 +143,13 @@ const AthleteFreeWorkout = () => {
 
   const hrSeriesRef = useRef<HRPoint[]>([]);
   const finishedRef = useRef(false);
+  // Puls sa uparene BLE trake (bez sata). Drzi se odvojeno od watchHr: traka
+  // stize pravo u telefon, sat kroz zivi red iz baze.
+  const [trakaHr, setTrakaHr] = useState<number | null>(null);
+  const trakaPoslednjiPutRef = useRef(0);
+  // Cita ga applyLive da isti otkucaj ne bi dva puta usao u seriju: nas
+  // heartbeat upise current_hr, pa se taj isti broj vrati kroz realtime.
+  const trakaVodiRef = useRef(false);
 
   const goToSummary = useCallback(() => {
     if (finishedRef.current) return;
@@ -211,7 +218,9 @@ const AthleteFreeWorkout = () => {
       const chr = row.current_hr;
       if (typeof chr === "number" && chr > 0) {
         setWatchHr(chr);
-        hrSeriesRef.current.push({ ts: new Date().toISOString(), bpm: chr });
+        if (!trakaVodiRef.current) {
+          hrSeriesRef.current.push({ ts: new Date().toISOString(), bpm: chr });
+        }
       }
       const cal = row.current_active_calories;
       if (typeof cal === "number") setActiveCalories(cal);
@@ -268,6 +277,50 @@ const AthleteFreeWorkout = () => {
     };
   }, [sessionId, goToSummary]);
 
+  // 4b) Puls sa trake: isti izbor izvora kao u klasicnom treningu (traka pa
+  //     HealthKit). Serija se puni ovde, u punoj rezoluciji trake, a na server
+  //     ide na 12s kroz athlete_heartbeat - isto kao sto klasican trening radi.
+  useEffect(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+    let cleanup: (() => void) | null = null;
+
+    (async () => {
+      const { startLiveHrSource } = await import("@/lib/wearable/liveHrSource");
+      if (cancelled) return;
+      cleanup = await startLiveHrSource((bpm, source) => {
+        if (finishedRef.current) return;
+        if (source !== "sensor") return;
+        trakaPoslednjiPutRef.current = Date.now();
+        trakaVodiRef.current = true;
+        setTrakaHr(bpm);
+        hrSeriesRef.current.push({ ts: new Date().toISOString(), bpm });
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+      trakaVodiRef.current = false;
+      if (cleanup) cleanup();
+    };
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    const beat = async () => {
+      if (finishedRef.current) return;
+      if (!trakaVodiRef.current || trakaHr == null) return;
+      try {
+        await supabase.rpc("athlete_heartbeat", { p_session_id: sessionId, p_hr: trakaHr } as any);
+      } catch {
+        /* noop */
+      }
+    };
+    beat();
+    const id = setInterval(beat, 12000);
+    return () => clearInterval(id);
+  }, [sessionId, trakaHr]);
+
   // 5) Zavrsi: ISTA finalize logika kao ActiveWorkout (complete_workout_session sa HR
   //    statistikom + serijom), pa navigacija na rezime. Idempotentno + timeout.
   // Prekid: isti RPC kao u klasicnom treningu. Brise sesiju, pa sa njom i vezbe
@@ -320,9 +373,15 @@ const AthleteFreeWorkout = () => {
     if (!liveActivitySupported) return;
     if (startedAtMs == null || finishedRef.current) return;
 
-    // Isti izvor pulsa kao prikaz: samo svez puls sa sata. Stopericu native broji
-    // sam (Text(timerInterval:)), pa protekle minute NE treba slati.
-    const hr = isHrLive(watchLastHrAt) && watchHr && watchHr > 0 ? watchHr : null;
+    // Isti izvor pulsa kao prikaz: traka dok salje, inace svez puls sa sata.
+    // Stopericu native broji sam (Text(timerInterval:)), pa protekle minute NE treba slati.
+    const trakaZaLa =
+      trakaHr != null && Date.now() - trakaPoslednjiPutRef.current < HR_FRESH_SECONDS * 1000;
+    const hr = trakaZaLa
+      ? trakaHr
+      : isHrLive(watchLastHrAt) && watchHr && watchHr > 0
+        ? watchHr
+        : null;
     const kcal = activeCalories != null ? Math.round(activeCalories) : null;
     const fields = freeLaFields(hr, kcal);
     const nowMs = Date.now();
@@ -348,7 +407,7 @@ const AthleteFreeWorkout = () => {
       laLastSentAtRef.current = nowMs;
       laUpdate(fields);
     }
-  }, [startedAtMs, now, watchHr, watchLastHrAt, activeCalories]);
+  }, [startedAtMs, now, watchHr, watchLastHrAt, trakaHr, activeCalories]);
 
   // END na napustanje ekrana (finish/kraj sa sata oba navigiraju -> unmount). Idempotentno.
   useEffect(() => {
@@ -411,9 +470,11 @@ const AthleteFreeWorkout = () => {
 
   const elapsedS = Math.max(0, Math.floor((now - startedAtMs) / 1000));
 
-  // Puls: samo kad je svez (isHrLive). Zona: samo kad ima pulsa i max pulsa.
-  const live = isHrLive(watchLastHrAt);
-  const hr = live && watchHr && watchHr > 0 ? watchHr : null;
+  // Puls: traka prva dok stvarno salje (15s, isti prag kao za sat), pa sat kad je
+  // svez (isHrLive). Zona: samo kad ima pulsa i max pulsa.
+  const trakaSveza = trakaHr != null && now - trakaPoslednjiPutRef.current < HR_FRESH_SECONDS * 1000;
+  const live = trakaSveza || isHrLive(watchLastHrAt);
+  const hr = trakaSveza ? trakaHr : live && watchHr && watchHr > 0 ? watchHr : null;
   const zoneNum = hr && maxHr && maxHr > 0 ? computeZone(hr, maxHr) : null;
   const zoneName = zoneNum ? ZONE_NAMES[zoneNum] : null;
   const zoneCol = zoneNum ? zoneColorFor(zoneNum) : undefined;
