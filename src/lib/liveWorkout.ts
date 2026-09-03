@@ -39,11 +39,38 @@ export function isFreshWithinGrace(
   return lastFreshAtMs != null && lastFreshAtMs > 0 && nowMs - lastFreshAtMs <= graceMs;
 }
 
+// Serverski timestamp (ISO) kroz isto jezgro: parsiraj pa proveri grace.
+function isServerSignalFresh(iso: string | null, nowMs: number): boolean {
+  if (!iso) return false;
+  const ts = new Date(iso).getTime();
+  if (Number.isNaN(ts)) return false;
+  return isFreshWithinGrace(ts, nowMs);
+}
+
 // Trenerski prikazi (browser, ispravan sat): parsiraju serverski watch_last_hr_at i provere grace.
 // Isto jezgro (isFreshWithinGrace) + isti prag (WATCH_GRACE_MS) kao atleta strana.
 export function isWatchConnected(watchLastHrAt: string | null, nowMs: number = Date.now()): boolean {
-  if (!watchLastHrAt) return false;
-  const ts = new Date(watchLastHrAt).getTime();
-  if (Number.isNaN(ts)) return false;
-  return isFreshWithinGrace(ts, nowMs);
+  return isServerSignalFresh(watchLastHrAt, nowMs);
+}
+
+// ---- "Puls stize" bez obzira odakle ----------------------------------------------------------
+// workout_live_state.hr_last_at pisu OBA izvora (sat kroz watch_update_workout_hr, telefon/BLE
+// traka kroz athlete_heartbeat), dok watch_last_hr_at ostaje iskljucivo satov - da indikator
+// sata ne bi lagao kad vezbac ima samo traku. Prikaz pulsa gleda ovo, status sata i dalje
+// isWatchConnected.
+export type HrSource = "watch" | "sensor" | "phone" | null;
+
+export function isHrSignalLive(
+  hrLastAt: string | null,
+  watchLastHrAt: string | null,
+  nowMs: number = Date.now(),
+): boolean {
+  return isServerSignalFresh(hrLastAt, nowMs) || isWatchConnected(watchLastHrAt, nowMs);
+}
+
+/** Kratka oznaka izvora za trenerski prikaz. Sat se ne ispisuje - on je podrazumevan. */
+export function hrSourceLabel(source: HrSource): string | null {
+  if (source === "sensor") return "traka";
+  if (source === "phone") return "telefon";
+  return null;
 }

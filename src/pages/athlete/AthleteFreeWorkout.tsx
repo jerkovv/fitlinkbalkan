@@ -311,7 +311,11 @@ const AthleteFreeWorkout = () => {
       if (finishedRef.current) return;
       if (!trakaVodiRef.current || trakaHr == null) return;
       try {
-        await supabase.rpc("athlete_heartbeat", { p_session_id: sessionId, p_hr: trakaHr } as any);
+        await supabase.rpc("athlete_heartbeat", {
+          p_session_id: sessionId,
+          p_hr: trakaHr,
+          p_source: "sensor",
+        } as any);
       } catch {
         /* noop */
       }

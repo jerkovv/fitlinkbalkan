@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { getHrZone } from "@/lib/workout/hrZone";
-import { isHrLive } from "@/lib/liveWorkout";
+import { isHrLive, type HrSource } from "@/lib/liveWorkout";
 
 // Jedan red iz RPC get_active_athletes_for_trainer (deljen izvor za pocetnu listu i
 // stranicu "Trenira uzivo").
@@ -18,6 +18,9 @@ export type ActiveAthlete = {
   current_hr: number | null;
   current_active_calories: number;
   watch_last_hr_at: string | null;
+  // Puls stize (bilo koji izvor) + odakle - vidi migraciju hr_source_marker.
+  hr_last_at: string | null;
+  hr_source: HrSource;
   current_state: string | null;
   rest_ends_at: string | null;
   total_completed_sets: number | null;
@@ -28,7 +31,9 @@ const ZONE_RANK: Record<string, number> = { rest: 1, easy: 2, moderate: 3, hard:
 
 // Intenzitet za sortiranje: ziv puls -> rang HR zone (1-5); zastareo/nema -> 0 (na dno).
 const intensity = (a: ActiveAthlete): number =>
-  isHrLive(a.watch_last_hr_at) ? ZONE_RANK[getHrZone(a.current_hr)] : 0;
+  isHrLive(a.watch_last_hr_at) || isHrLive(a.hr_last_at)
+    ? ZONE_RANK[getHrZone(a.current_hr)]
+    : 0;
 
 // Deljeni izvor aktivnih vezbaca: isti fetch (RPC) + 10s poll + realtime na
 // workout_live_state + 1s tik za tacno proteklo vreme. Vraca SORTIRANO:
@@ -119,6 +124,8 @@ export const useActiveAthletes = () => {
                       current_state: (row!.current_state as string | null) ?? null,
                       rest_ends_at: (row!.rest_ends_at as string | null) ?? null,
                       watch_last_hr_at: (row!.watch_last_hr_at as string | null) ?? null,
+                      hr_last_at: (row!.hr_last_at as string | null) ?? null,
+                      hr_source: (row!.hr_source as HrSource) ?? null,
                       current_active_calories:
                         (row!.current_active_calories as number | null) ?? a.current_active_calories,
                     },

@@ -1114,6 +1114,8 @@ const ActiveWorkout = () => {
         await supabase.rpc("athlete_heartbeat", {
           p_session_id: sessionId,
           p_hr: liveHr ?? null,
+          // Trener po ovome zna da puls stize sa trake, a ne sa sata (hr_source).
+          p_source: liveHrSource === "sensor" ? "sensor" : "phone",
         } as any);
       } catch {
         /* noop */
@@ -1125,7 +1127,7 @@ const ActiveWorkout = () => {
       stopped = true;
       clearInterval(id);
     };
-  }, [sessionId, liveHr, finished]);
+  }, [sessionId, liveHr, liveHrSource, finished]);
 
   /* ------------------------- Live Activity (iOS lock screen) ------------------------- */
   // START kad postoji aktivna sesija + pozicija (jednom), UPDATE na promenu

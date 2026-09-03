@@ -8,7 +8,7 @@ import { QuickMessagePanel } from "@/components/trainer/QuickMessagePanel";
 import { LiveWorkoutPlan } from "@/components/trainer/LiveWorkoutPlan";
 import { WatchSlash } from "@/components/trainer/WatchSlash";
 import { getHrColor, getZoneVar } from "@/lib/workout/hrZone";
-import { isWatchConnected } from "@/lib/liveWorkout";
+import { hrSourceLabel, isHrSignalLive, isWatchConnected, type HrSource } from "@/lib/liveWorkout";
 
 type LiveState = {
   session_log_id: string;
@@ -20,6 +20,9 @@ type LiveState = {
   current_hr: number | null;
   // Vreme poslednjeg HR upisa sa sata (workout_live_state.watch_last_hr_at) - prag svezine.
   watch_last_hr_at: string | null;
+  // Poslednji puls sa BILO kog izvora + koji je to izvor (sat, BLE traka, telefon).
+  hr_last_at: string | null;
+  hr_source: HrSource;
   total_completed_sets: number | null;
   last_heartbeat: string | null;
   current_state: string | null;
@@ -271,6 +274,10 @@ const LiveWorkoutView = () => {
   // svuda (lista + detalj + atleta). `now` tika 1s pa se re-evaluira bez novog fetch-a; status
   // pada tek kad grace istekne (transijentni prazan trenutak pri re-subscribe ne flipuje).
   const watchConnected = isWatchConnected(state?.watch_last_hr_at ?? null, now);
+  // Puls se prikazuje cim stize - sa sata ili sa trake. Kalorije ostaju vezane za
+  // sat: traka ih nema, pa bi nula bila laz.
+  const hrLive = isHrSignalLive(state?.hr_last_at ?? null, state?.watch_last_hr_at ?? null, now);
+  const izvorOznaka = watchConnected ? null : hrSourceLabel(state?.hr_source ?? null);
   // Boja iz FitLink rampe (brand tokeni) kad imamo serversku zonu; inace
   // fallback na puls-baziranu boju. Bez hardkodiranog hex-a.
   const zoneVar = getZoneVar(hrZone);
@@ -418,8 +425,8 @@ const LiveWorkoutView = () => {
             className="card-premium p-5 transition-colors"
             style={{ background: hrColorSoft }}
           >
-            {watchConnected ? (
-            <div className="grid grid-cols-2 gap-4">
+            {hrLive ? (
+            <div className={watchConnected ? "grid grid-cols-2 gap-4" : "grid grid-cols-1 gap-4"}>
               {/* PULS */}
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -427,16 +434,21 @@ const LiveWorkoutView = () => {
                     className="h-4 w-4"
                     strokeWidth={2.4}
                     fill="currentColor"
-                    style={{ color: hr != null && hr > 0 && watchConnected ? hrColor : "hsl(var(--muted-foreground))" }}
+                    style={{ color: hr != null && hr > 0 && hrLive ? hrColor : "hsl(var(--muted-foreground))" }}
                   />
                   Puls
+                  {izvorOznaka && (
+                    <span className="text-[10px] font-semibold text-muted-foreground normal-case">
+                      ({izvorOznaka})
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-baseline gap-1">
                   <span
                     className="font-display text-4xl font-bold tracking-tightest leading-none tnum"
-                    style={{ color: hr != null && hr > 0 && watchConnected ? hrColor : "hsl(var(--muted-foreground))" }}
+                    style={{ color: hr != null && hr > 0 && hrLive ? hrColor : "hsl(var(--muted-foreground))" }}
                   >
-                    {hr != null && hr > 0 && watchConnected ? hr : "-"}
+                    {hr != null && hr > 0 && hrLive ? hr : "-"}
                   </span>
                   <span className="text-sm font-semibold text-muted-foreground">bpm</span>
                 </div>
@@ -450,7 +462,8 @@ const LiveWorkoutView = () => {
                 )}
               </div>
 
-              {/* KALORIJE - ista forma kao PULS (uvek vidljivo, 0 kad nema podatka) */}
+              {/* KALORIJE - ista forma kao PULS. Samo uz sat: traka meri puls, ne i potrosnju. */}
+              {watchConnected && (
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   <Flame className="h-4 w-4 text-muted-foreground" strokeWidth={2.4} />
@@ -463,18 +476,19 @@ const LiveWorkoutView = () => {
                   <span className="text-sm font-semibold text-muted-foreground">kcal</span>
                 </div>
               </div>
+              )}
             </div>
             ) : (
-              // Nema sata -> jedno cisto stanje (kao precrtan sat na listama).
+              // Nista ne stize - ni sat ni traka.
               <div className="flex flex-col items-center justify-center gap-2 py-3">
                 <WatchSlash size={30} />
-                <span className="text-sm font-medium text-muted-foreground">Sat nije povezan</span>
+                <span className="text-sm font-medium text-muted-foreground">Puls ne stiže</span>
               </div>
             )}
           </div>
 
           {/* HR mini chart - sakriven kad nema sata (stanje iznad ga pokriva) */}
-          {watchConnected && <HrMiniChart points={(session.hr_series as any) ?? []} />}
+          {hrLive && <HrMiniChart points={(session.hr_series as any) ?? []} />}
 
           {/* Plan treninga koji vezbac upravo radi, sa istorijom po vezbi.
               Prikazuje se i za SLOBODAN trening: on nema day_id, ali sme da

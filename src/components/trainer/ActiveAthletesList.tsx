@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Avatar, Card, SectionTitle } from "@/components/ui-bits";
 import { Heart, ChevronRight, Activity, Flame, ArrowRight } from "lucide-react";
 import { getHrColor, formatDuration } from "@/lib/workout/hrZone";
-import { isWatchConnected } from "@/lib/liveWorkout";
+import { hrSourceLabel, isHrSignalLive, isWatchConnected } from "@/lib/liveWorkout";
 import { useActiveAthletes } from "@/hooks/useActiveAthletes";
 import { WatchSlash } from "@/components/trainer/WatchSlash";
 
@@ -80,16 +80,23 @@ export const ActiveAthletesList = () => {
                   {/* Metrike: pilule-blizanci (ista visina/padding/radius/font). Jedina razlika
                       je boja: puls nosi boju zone (brzo citanje), kcal neutralna. */}
                   <div className="flex items-center gap-2 mt-2">
-                    {isWatchConnected(a.watch_last_hr_at, now) ? (
+                    {isHrSignalLive(a.hr_last_at, a.watch_last_hr_at, now) ? (
                       <div
                         className="inline-flex w-fit shrink-0 items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-semibold tnum whitespace-nowrap bg-muted"
                         style={{ color: hrColor }}
                       >
                         <Heart className="h-3.5 w-3.5" strokeWidth={2.4} />
                         {a.current_hr ?? "-"}
+                        {/* Odakle puls stize - samo kad NIJE sat, da se ne pomisli
+                            da vezbac ima sat kad ima traku na ruci. */}
+                        {hrSourceLabel(a.hr_source) && (
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            {hrSourceLabel(a.hr_source)}
+                          </span>
+                        )}
                       </div>
                     ) : (
-                      // Bez sata -> precrtan sat (kao LA kartica), na mestu pulsa.
+                      // Nista ne stize (ni sat ni traka) -> precrtan sat, na mestu pulsa.
                       <WatchSlash size={16} />
                     )}
                     {/* Kcal samo kad ima sat (isti uslov kao puls/precrtan sat). */}
