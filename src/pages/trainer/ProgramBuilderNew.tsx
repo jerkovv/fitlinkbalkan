@@ -24,7 +24,7 @@ import {
   FullScreenSheetScroll,
   FullScreenSheetFooter,
 } from "@/components/ui/full-screen-sheet";
-import { Plus, Loader2, Dumbbell, Trash2, GripVertical, ChevronDown, ChevronUp, UserPlus, Check, Send, X, Settings2, Link2, Unlink } from "lucide-react";
+import { Plus, Loader2, Dumbbell, Trash2, GripVertical, ChevronDown, ChevronUp, UserPlus, Check, Send, X, Settings2, Link2, Unlink, Pencil } from "lucide-react";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { ExercisePickerSheet } from "@/components/exercises/ExercisePickerSheet";
@@ -157,6 +157,10 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
   const [addDayOpen, setAddDayOpen] = useState(false);
   const [newDayName, setNewDayName] = useState("");
 
+  // Preimenovanje: isti sheet za program i za dan - razlikuju se samo tabela i natpis.
+  const [preimenuj, setPreimenuj] = useState<{ kind: "program" | "day"; id: string; name: string } | null>(null);
+  const [novoIme, setNovoIme] = useState("");
+
   // Add exercise picker
   const [pickerDayId, setPickerDayId] = useState<string | null>(null);
 
@@ -260,6 +264,32 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
       : await supabase.from(cfg.daysTable).delete().eq("id", dayId);
     if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Dan obrisan");
+    load();
+  };
+
+  const otvoriPreimenovanje = (kind: "program" | "day", id: string, name: string) => {
+    setPreimenuj({ kind, id, name });
+    setNovoIme(name);
+  };
+
+  // RLS pusta izmenu samo vlasniku (uz can_trainer_write), a red koji politika
+  // odbije NE vraca gresku - update samo ne pogodi nijedan red. Zato .select():
+  // bez njega bi "Ime promenjeno" moglo da se ispise a da se nista nije upisalo.
+  const sacuvajIme = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (locked) return openLock();
+    if (!preimenuj) return;
+    const ime = novoIme.trim();
+    if (!ime) return;
+    const upit = preimenuj.kind === "day"
+      ? supabase.from(cfg.daysTable).update({ name: ime } as any).eq("id", preimenuj.id)
+      : supabase.from(cfg.parentTable).update({ name: ime } as any).eq("id", preimenuj.id);
+    const { data, error } = await upit.select("id");
+    if (error) { toast.error(porukaGreske(error)); return; }
+    if (!data?.length) { toast.error("Ime nije promenjeno"); return; }
+    const bioDan = preimenuj.kind === "day";
+    setPreimenuj(null);
+    toast.success(bioDan ? "Ime dana promenjeno" : "Ime programa promenjeno");
     load();
   };
 
@@ -492,7 +522,21 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
     <PhoneShell
       back={mode === "assigned" && athleteId ? `/trener/vezbaci/${athleteId}` : "/trener/programi"}
       eyebrow={mode === "assigned" ? templateName : "Program"}
-      title={mode === "assigned" ? "Izmeni plan" : templateName}
+      title={
+        mode === "assigned" ? (
+          "Izmeni plan"
+        ) : (
+          <button
+            onClick={guard(() => parentId && otvoriPreimenovanje("program", parentId, templateName))}
+            className="flex items-center gap-2 text-left"
+          >
+            <span className="font-display text-[34px] leading-[1.1] font-bold tracking-tightest">
+              {templateName}
+            </span>
+            <Pencil className="h-4 w-4 text-muted-foreground shrink-0" />
+          </button>
+        )
+      }
     >
       {loading ? (
         <div className="flex justify-center py-10">
@@ -518,21 +562,39 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
             const isOpen = openDay === d.id;
             return (
               <div key={d.id} className="card-premium overflow-hidden">
-                <button
-                  onClick={() => setOpenDay(isOpen ? null : d.id)}
-                  className="w-full flex items-center gap-3 p-4 text-left"
-                >
-                  <div className="h-10 w-10 rounded-lg bg-gradient-brand text-primary-foreground flex items-center justify-center font-bold text-sm shrink-0">
-                    {d.day_number}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-[15px] truncate">{d.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {exList.length} {exList.length === 1 ? "vežba" : "vežbi"}
+                {/* Zaglavlje je red od tri dugmeta, ne jedno: olovka ne sme da bude
+                    ugnezdena u dugme za otvaranje dana (nevalidan HTML, a tap bi
+                    okinuo oba). Strelica ostaje sopstveni cilj za tap. */}
+                <div className="flex items-center">
+                  <button
+                    onClick={() => setOpenDay(isOpen ? null : d.id)}
+                    className="flex-1 min-w-0 flex items-center gap-3 p-4 text-left"
+                  >
+                    <div className="h-10 w-10 rounded-lg bg-gradient-brand text-primary-foreground flex items-center justify-center font-bold text-sm shrink-0">
+                      {d.day_number}
                     </div>
-                  </div>
-                  {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-                </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-[15px] truncate">{d.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {exList.length} {exList.length === 1 ? "vežba" : "vežbi"}
+                      </div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={guard(() => otvoriPreimenovanje("day", d.id, d.name))}
+                    aria-label="Preimenuj dan"
+                    className="h-9 w-9 rounded-full hover:bg-surface-2 flex items-center justify-center text-muted-foreground hover:text-foreground transition shrink-0"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setOpenDay(isOpen ? null : d.id)}
+                    aria-label={isOpen ? "Zatvori dan" : "Otvori dan"}
+                    className="h-9 w-9 mr-3 rounded-full hover:bg-surface-2 flex items-center justify-center text-muted-foreground shrink-0"
+                  >
+                    {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </button>
+                </div>
 
                 {isOpen && (
                   <div className="border-t border-hairline px-4 py-3 space-y-2 bg-surface-2/50">
@@ -871,6 +933,36 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
           <div className="h-24" />
         </>
       )}
+
+      {/* Preimenovanje programa/dana - ista forma za oba */}
+      <FullScreenSheet
+        open={!!preimenuj}
+        onClose={() => setPreimenuj(null)}
+        title={preimenuj?.kind === "day" ? "Preimenuj dan" : "Preimenuj program"}
+      >
+        <form onSubmit={sacuvajIme} className="flex flex-1 min-h-0 flex-col">
+          <FullScreenSheetScroll className="pt-5 space-y-3">
+            <div>
+              <Label htmlFor="rename-name">
+                {preimenuj?.kind === "day" ? "Naziv dana" : "Naziv programa"}
+              </Label>
+              <Input
+                id="rename-name"
+                value={novoIme}
+                onChange={(e) => setNovoIme(e.target.value)}
+                required
+                className="mt-1.5 h-14 text-base rounded-2xl"
+                autoFocus
+              />
+            </div>
+          </FullScreenSheetScroll>
+          <FullScreenSheetFooter>
+            <Button type="submit" className="w-full bg-gradient-brand text-white shadow-brand">
+              Sačuvaj
+            </Button>
+          </FullScreenSheetFooter>
+        </form>
+      </FullScreenSheet>
 
       {/* Add Day - full-screen (Wolt-style) */}
       <FullScreenSheet open={addDayOpen} onClose={() => setAddDayOpen(false)} title="Novi dan">
