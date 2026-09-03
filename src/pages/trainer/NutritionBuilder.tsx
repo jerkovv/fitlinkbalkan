@@ -711,6 +711,15 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
               </div>
             );
           })}
+
+          {/* Dodavanje dana i sa dna liste: plus gore je lako promasiti kad se
+              lista dana produzi, a na desktopu je jos i dalje od pogleda. */}
+          <button
+            onClick={guard(() => setAddDayOpen(true))}
+            className="w-full py-3 rounded-xl border-2 border-dashed border-hairline text-sm font-semibold text-muted-foreground hover:border-primary hover:text-primary transition flex items-center justify-center gap-1.5"
+          >
+            <Plus className="h-4 w-4" /> Dodaj dan
+          </button>
         </div>
       )}
 
