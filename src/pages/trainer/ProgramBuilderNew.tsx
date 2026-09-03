@@ -493,14 +493,6 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
       back={mode === "assigned" && athleteId ? `/trener/vezbaci/${athleteId}` : "/trener/programi"}
       eyebrow={mode === "assigned" ? templateName : "Program"}
       title={mode === "assigned" ? "Izmeni plan" : templateName}
-      action={
-        <button
-          onClick={guard(() => setAddDayOpen(true))}
-          className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-brand active:scale-95 transition"
-        >
-          <Plus className="h-4 w-4" strokeWidth={2.5} />
-        </button>
-      }
     >
       {loading ? (
         <div className="flex justify-center py-10">
