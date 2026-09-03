@@ -28,6 +28,7 @@ import { RestOfWorkout } from "@/components/workout/RestOfWorkout";
 import { RestTimer } from "@/components/workout/RestTimer";
 import { Network } from "@capacitor/network";
 import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor/core";
+import { createCalorieMeter } from "@/lib/wearable/hrCalories";
 
 // ---- Nativni Live Activity plugin (iOS-only: lock screen / Dynamic Island) ----
 // Most ka nativnom LiveActivityPlugin-u ("LiveActivity": start/update/end). Na
@@ -212,6 +213,8 @@ const WATCH_ESCAPE_MS = 60000;
 // akcije; watch-driven izmene (telefon zakljucan, bez akcija) prolaze instant.
 const RT_POS_GUARD_MS = 1500;
 
+type AthleteMere = { birth_year: number | null; gender: string | null; weight_kg: number | null };
+
 const ActiveWorkout = () => {
   const { dayId } = useParams<{ dayId: string }>();
   const { user } = useAuth();
@@ -247,6 +250,10 @@ const ActiveWorkout = () => {
   // izricit izbor vezbaca i tacnija je, pa u prikazu ide i ispred sata.
   const [liveHrSource, setLiveHrSource] = useState<"sensor" | "healthkit" | null>(null);
   const [sensorConnected, setSensorConnected] = useState(false);
+  // Traka meri puls ali ne i potrosnju - procenjuje se iz pulsa (Keytel), da
+  // trening bez sata ne zavrsi sa nula kalorija u rezimeu.
+  const meracKcalRef = useRef<ReturnType<typeof createCalorieMeter> | null>(null);
+  const [sensorKcal, setSensorKcal] = useState<number | null>(null);
   // Kad je stigao poslednji otkucaj sa trake. Sama veza ume da ostane otvorena i
   // posto traka spadne sa ruke, pa "povezana" nije dokaz da puls jos stize.
   const trakaPoslednjiPutRef = useRef(0);
@@ -590,6 +597,18 @@ const ActiveWorkout = () => {
     let cancelled = false;
 
     (async () => {
+      const { data } = await supabase
+        .from("athletes")
+        .select("birth_year, gender, weight_kg")
+        .eq("id", (await supabase.auth.getUser()).data.user?.id ?? "")
+        .maybeSingle();
+      const mere = data as AthleteMere | null;
+      meracKcalRef.current = createCalorieMeter({
+        birthYear: mere?.birth_year ?? null,
+        gender: mere?.gender ?? null,
+        weightKg: mere?.weight_kg != null ? Number(mere.weight_kg) : null,
+      });
+
       const { startLiveHrSource } = await import("@/lib/wearable/liveHrSource");
       if (cancelled) return;
 
@@ -597,7 +616,11 @@ const ActiveWorkout = () => {
         (bpm, source) => {
           setLiveHr(bpm);
           setLiveHrSource(source);
-          if (source === "sensor") trakaPoslednjiPutRef.current = Date.now();
+          if (source === "sensor") {
+            trakaPoslednjiPutRef.current = Date.now();
+            const kcal = meracKcalRef.current?.add(bpm) ?? null;
+            if (kcal != null) setSensorKcal(kcal);
+          }
           hrSeriesRef.current.push({ ts: new Date().toISOString(), bpm });
         },
         (povezana) => setSensorConnected(povezana),
@@ -726,7 +749,11 @@ const ActiveWorkout = () => {
         p_hr_avg: avg,
         p_hr_max: max,
         p_hr_min: min,
-        p_active_calories: null,
+        // Sat sam upisuje izmerene kalorije; sa trakom ide procena iz pulsa.
+        // Cita se iz meraca (ref), da zavrsetak ne posalje zastarelu vrednost.
+        p_active_calories: meracKcalRef.current?.total
+          ? Math.round(meracKcalRef.current.total)
+          : null,
         p_hr_series: series.length ? (series as any) : null,
       } as any);
       if (error) throw error;
@@ -1116,6 +1143,7 @@ const ActiveWorkout = () => {
           p_hr: liveHr ?? null,
           // Trener po ovome zna da puls stize sa trake, a ne sa sata (hr_source).
           p_source: liveHrSource === "sensor" ? "sensor" : "phone",
+          p_calories: trakaDaje && sensorKcal != null ? Math.round(sensorKcal) : null,
         } as any);
       } catch {
         /* noop */
@@ -1127,7 +1155,7 @@ const ActiveWorkout = () => {
       stopped = true;
       clearInterval(id);
     };
-  }, [sessionId, liveHr, liveHrSource, finished]);
+  }, [sessionId, liveHr, liveHrSource, trakaDaje, sensorKcal, finished]);
 
   /* ------------------------- Live Activity (iOS lock screen) ------------------------- */
   // START kad postoji aktivna sesija + pozicija (jednom), UPDATE na promenu

@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { formatHMS } from "@/lib/time";
 import { HR_FRESH_SECONDS, isHrLive } from "@/lib/liveWorkout";
 import { ZONE_DEFS } from "@/lib/wearable/hrZones";
+import { createCalorieMeter } from "@/lib/wearable/hrCalories";
 import { getHrZone } from "@/lib/workout/hrZone";
 import { cn } from "@/lib/utils";
 import { FreeWorkoutExercises } from "@/components/workout/FreeWorkoutExercises";
@@ -91,6 +92,8 @@ const freeLaFields = (
 // complete_workout_session RPC. Bez vezbi/serija (volumen 0 na rezimeu).
 type HRPoint = { ts: string; bpm: number };
 
+type AthleteMere = { birth_year: number | null; gender: string | null; weight_kg: number | null };
+
 // Nazivi zona za zivi ekran (task-spec). Boje se uzimaju iz ZONE_DEFS po BROJU zone da se
 // poklope sa finish ekranom (HRZonesChart koristi iste ZONE_DEFS boje po broju zone).
 const ZONE_NAMES: Record<number, string> = {
@@ -150,6 +153,9 @@ const AthleteFreeWorkout = () => {
   // Cita ga applyLive da isti otkucaj ne bi dva puta usao u seriju: nas
   // heartbeat upise current_hr, pa se taj isti broj vrati kroz realtime.
   const trakaVodiRef = useRef(false);
+  // Procena potrosnje iz pulsa - traka je ne meri, a bez ovoga bi kcal stajao na 0.
+  const meracRef = useRef<ReturnType<typeof createCalorieMeter> | null>(null);
+  const [trakaKcal, setTrakaKcal] = useState<number | null>(null);
 
   const goToSummary = useCallback(() => {
     if (finishedRef.current) return;
@@ -286,6 +292,20 @@ const AthleteFreeWorkout = () => {
     let cleanup: (() => void) | null = null;
 
     (async () => {
+      // Tezina/godine/pol za procenu potrosnje. Ko ih nema u profilu, dobija
+      // trening bez kalorija umesto izmisljenog broja.
+      const { data } = await supabase
+        .from("athletes")
+        .select("birth_year, gender, weight_kg")
+        .eq("id", (await supabase.auth.getUser()).data.user?.id ?? "")
+        .maybeSingle();
+      const mere = data as AthleteMere | null;
+      meracRef.current = createCalorieMeter({
+        birthYear: mere?.birth_year ?? null,
+        gender: mere?.gender ?? null,
+        weightKg: mere?.weight_kg != null ? Number(mere.weight_kg) : null,
+      });
+
       const { startLiveHrSource } = await import("@/lib/wearable/liveHrSource");
       if (cancelled) return;
       cleanup = await startLiveHrSource((bpm, source) => {
@@ -295,6 +315,8 @@ const AthleteFreeWorkout = () => {
         trakaVodiRef.current = true;
         setTrakaHr(bpm);
         hrSeriesRef.current.push({ ts: new Date().toISOString(), bpm });
+        const kcal = meracRef.current?.add(bpm) ?? null;
+        if (kcal != null) setTrakaKcal(kcal);
       });
     })();
 
@@ -315,6 +337,7 @@ const AthleteFreeWorkout = () => {
           p_session_id: sessionId,
           p_hr: trakaHr,
           p_source: "sensor",
+          p_calories: trakaKcal != null ? Math.round(trakaKcal) : null,
         } as any);
       } catch {
         /* noop */
@@ -323,7 +346,7 @@ const AthleteFreeWorkout = () => {
     beat();
     const id = setInterval(beat, 12000);
     return () => clearInterval(id);
-  }, [sessionId, trakaHr]);
+  }, [sessionId, trakaHr, trakaKcal]);
 
   // 5) Zavrsi: ISTA finalize logika kao ActiveWorkout (complete_workout_session sa HR
   //    statistikom + serijom), pa navigacija na rezime. Idempotentno + timeout.
@@ -354,7 +377,9 @@ const AthleteFreeWorkout = () => {
         p_hr_avg: avg,
         p_hr_max: max,
         p_hr_min: min,
-        p_active_calories: null,
+        // Sat kalorije meri i upisuje ih sam; sa trakom ide nasa procena.
+        // Cita se iz meraca (ref), da zavrsetak ne posalje zastarelu vrednost.
+        p_active_calories: meracRef.current?.total ? Math.round(meracRef.current.total) : null,
         p_hr_series: series.length ? (series as any) : null,
       } as any);
       if (error) throw error;
@@ -363,6 +388,12 @@ const AthleteFreeWorkout = () => {
     try { await Promise.race([rpc, timeout]); } catch { /* svejedno idi na rezime */ }
     goToSummary();
   }, [sessionId, finishing, goToSummary]);
+
+  // Puls: traka prva dok stvarno salje (15s, isti prag kao za sat), pa sat kad je
+  // svez (isHrLive). Zona: samo kad ima pulsa i max pulsa.
+  const trakaSveza = trakaHr != null && now - trakaPoslednjiPutRef.current < HR_FRESH_SECONDS * 1000;
+  // Sa trakom kalorije nisu merene nego procenjene iz pulsa; sat ih meri sam.
+  const kcalPrikaz = trakaSveza && trakaKcal != null ? trakaKcal : activeCalories;
 
   /* ------------------------- Live Activity (iOS lock screen) ------------------------- */
   // START jednom kad znamo pocetak sesije, UPDATE na promenu pulsa/zone/minuta,
@@ -379,14 +410,12 @@ const AthleteFreeWorkout = () => {
 
     // Isti izvor pulsa kao prikaz: traka dok salje, inace svez puls sa sata.
     // Stopericu native broji sam (Text(timerInterval:)), pa protekle minute NE treba slati.
-    const trakaZaLa =
-      trakaHr != null && Date.now() - trakaPoslednjiPutRef.current < HR_FRESH_SECONDS * 1000;
-    const hr = trakaZaLa
+    const hr = trakaSveza
       ? trakaHr
       : isHrLive(watchLastHrAt) && watchHr && watchHr > 0
         ? watchHr
         : null;
-    const kcal = activeCalories != null ? Math.round(activeCalories) : null;
+    const kcal = kcalPrikaz != null ? Math.round(kcalPrikaz) : null;
     const fields = freeLaFields(hr, kcal);
     const nowMs = Date.now();
 
@@ -411,7 +440,7 @@ const AthleteFreeWorkout = () => {
       laLastSentAtRef.current = nowMs;
       laUpdate(fields);
     }
-  }, [startedAtMs, now, watchHr, watchLastHrAt, trakaHr, activeCalories]);
+  }, [startedAtMs, now, watchHr, watchLastHrAt, trakaHr, trakaSveza, kcalPrikaz]);
 
   // END na napustanje ekrana (finish/kraj sa sata oba navigiraju -> unmount). Idempotentno.
   useEffect(() => {
@@ -474,9 +503,6 @@ const AthleteFreeWorkout = () => {
 
   const elapsedS = Math.max(0, Math.floor((now - startedAtMs) / 1000));
 
-  // Puls: traka prva dok stvarno salje (15s, isti prag kao za sat), pa sat kad je
-  // svez (isHrLive). Zona: samo kad ima pulsa i max pulsa.
-  const trakaSveza = trakaHr != null && now - trakaPoslednjiPutRef.current < HR_FRESH_SECONDS * 1000;
   const live = trakaSveza || isHrLive(watchLastHrAt);
   const hr = trakaSveza ? trakaHr : live && watchHr && watchHr > 0 ? watchHr : null;
   const zoneNum = hr && maxHr && maxHr > 0 ? computeZone(hr, maxHr) : null;
@@ -546,7 +572,7 @@ const AthleteFreeWorkout = () => {
           <div className="grid grid-cols-3 gap-2 py-3">
             <MiniTile label="Trajanje" value={formatHMS(elapsedS)} />
             <MiniTile label="Puls" value={hr ? `${hr}` : "-"} />
-            <MiniTile label="Kalorije" value={activeCalories != null ? `${Math.round(activeCalories)}` : "-"} />
+            <MiniTile label="Kalorije" value={kcalPrikaz != null ? `${Math.round(kcalPrikaz)}` : "-"} />
           </div>
         ) : (
         <div className="flex-1 flex flex-col items-center justify-center gap-7 py-6">
@@ -604,7 +630,7 @@ const AthleteFreeWorkout = () => {
           <div className="inline-flex items-center gap-2 h-12 px-5 rounded-full bg-surface border border-hairline">
             <Flame className="h-5 w-5" style={{ color: "hsl(24 90% 55%)" }} fill="currentColor" strokeWidth={2} />
             <span className="font-display text-[22px] font-bold tnum leading-none">
-              {Math.round(activeCalories ?? 0)}
+              {Math.round(kcalPrikaz ?? 0)}
             </span>
             <span className="text-[13px] font-semibold text-muted-foreground">kcal</span>
           </div>

@@ -99,8 +99,10 @@ export const ActiveAthletesList = () => {
                       // Nista ne stize (ni sat ni traka) -> precrtan sat, na mestu pulsa.
                       <WatchSlash size={16} />
                     )}
-                    {/* Kcal samo kad ima sat (isti uslov kao puls/precrtan sat). */}
-                    {isWatchConnected(a.watch_last_hr_at, now) && (
+                    {/* Kcal uz sat uvek (i na nuli), uz traku tek kad procena postoji. */}
+                    {(isWatchConnected(a.watch_last_hr_at, now) ||
+                      (isHrSignalLive(a.hr_last_at, a.watch_last_hr_at, now) &&
+                        (a.current_active_calories ?? 0) > 0)) && (
                       <div className="inline-flex w-fit shrink-0 items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-semibold tnum whitespace-nowrap bg-muted text-foreground">
                         <Flame className="h-3.5 w-3.5" strokeWidth={2.4} />
                         {Math.round(a.current_active_calories ?? 0)} kcal

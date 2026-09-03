@@ -274,10 +274,14 @@ const LiveWorkoutView = () => {
   // svuda (lista + detalj + atleta). `now` tika 1s pa se re-evaluira bez novog fetch-a; status
   // pada tek kad grace istekne (transijentni prazan trenutak pri re-subscribe ne flipuje).
   const watchConnected = isWatchConnected(state?.watch_last_hr_at ?? null, now);
-  // Puls se prikazuje cim stize - sa sata ili sa trake. Kalorije ostaju vezane za
-  // sat: traka ih nema, pa bi nula bila laz.
+  // Puls se prikazuje cim stize - sa sata ili sa trake. Kalorije takodje: sat ih
+  // meri, a uz traku ih telefon procenjuje iz pulsa i salje istim putem, pa vise
+  // nema slucaja u kom bi prikazana nula bila laz.
   const hrLive = isHrSignalLive(state?.hr_last_at ?? null, state?.watch_last_hr_at ?? null, now);
   const izvorOznaka = watchConnected ? null : hrSourceLabel(state?.hr_source ?? null);
+  // Uz sat ostaje kako je bilo (prikaz i na nuli, da polje ne iskoci kroz trening);
+  // uz traku tek kad procena zaista postoji.
+  const imaKcal = watchConnected || (hrLive && liveCalories > 0);
   // Boja iz FitLink rampe (brand tokeni) kad imamo serversku zonu; inace
   // fallback na puls-baziranu boju. Bez hardkodiranog hex-a.
   const zoneVar = getZoneVar(hrZone);
@@ -426,7 +430,7 @@ const LiveWorkoutView = () => {
             style={{ background: hrColorSoft }}
           >
             {hrLive ? (
-            <div className={watchConnected ? "grid grid-cols-2 gap-4" : "grid grid-cols-1 gap-4"}>
+            <div className={imaKcal ? "grid grid-cols-2 gap-4" : "grid grid-cols-1 gap-4"}>
               {/* PULS */}
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -462,8 +466,9 @@ const LiveWorkoutView = () => {
                 )}
               </div>
 
-              {/* KALORIJE - ista forma kao PULS. Samo uz sat: traka meri puls, ne i potrosnju. */}
-              {watchConnected && (
+              {/* KALORIJE - ista forma kao PULS. Skrivene dok ih nema (sat ih jos nije
+                  poslao, ili vezbac nema tezinu/godine u profilu pa procena ne postoji). */}
+              {imaKcal && (
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   <Flame className="h-4 w-4 text-muted-foreground" strokeWidth={2.4} />
