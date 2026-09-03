@@ -3,6 +3,7 @@ import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { WearableProviderCard, type ProviderStatus } from "@/components/wearables/WearableProviderCard";
 import { useWearableConnections } from "@/hooks/useWearableConnections";
+import { HrSensorCard } from "@/components/wearables/HrSensorCard";
 import {
   detectPlatform,
   getAvailableProviders,
@@ -43,6 +44,15 @@ const Integracije = () => {
         <p className="text-[13px] text-muted-foreground -mt-2">
           Poveži svoj sat ili narukvicu i podeli napredak sa trenerom.
         </p>
+
+        {/* Traka ide na vrh i van liste provajdera: ne povezuje se na nalog nego
+            na OVAJ telefon, i jedina je koja daje puls u toku treninga bez sata. */}
+        <section className="space-y-3">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            Senzor pulsa
+          </div>
+          <HrSensorCard />
+        </section>
 
         {available.length > 0 && (
           <section className="space-y-3">

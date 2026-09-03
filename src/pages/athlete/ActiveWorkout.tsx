@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff, Plus, Minus } from "lucide-react";
 import { getHrColor, getHrZone } from "@/lib/workout/hrZone";
-import { isFreshWithinGrace } from "@/lib/liveWorkout";
+import { HR_FRESH_SECONDS, isFreshWithinGrace } from "@/lib/liveWorkout";
 import { markWorkoutEntered } from "@/lib/workoutSession";
 import { WatchSync, isNativeIOS } from "@/lib/watchSync";
 import {
@@ -243,6 +243,13 @@ const ActiveWorkout = () => {
 
   // Live HR (lokalni HealthKit stream na telefonu)
   const [liveHr, setLiveHr] = useState<number | null>(null);
+  // Odakle stize liveHr: uparena BLE traka ili telefonov HealthKit. Traka je
+  // izricit izbor vezbaca i tacnija je, pa u prikazu ide i ispred sata.
+  const [liveHrSource, setLiveHrSource] = useState<"sensor" | "healthkit" | null>(null);
+  const [sensorConnected, setSensorConnected] = useState(false);
+  // Kad je stigao poslednji otkucaj sa trake. Sama veza ume da ostane otvorena i
+  // posto traka spadne sa ruke, pa "povezana" nije dokaz da puls jos stize.
+  const trakaPoslednjiPutRef = useRef(0);
   // Zivi HR sa SATA preko realtime live-state (workout_live_state.current_hr). Instant izvor
   // kad sat vozi trening - bez cekanja 2s poll-a. Poll (pos.currentHr) ostaje fallback.
   const [watchHr, setWatchHr] = useState<number | null>(null);
@@ -567,6 +574,14 @@ const ActiveWorkout = () => {
     };
   }, []);
 
+  // Traka vodi samo dok stvarno salje. Cim utihne (15s, isto kao HR_FRESH_SECONDS
+  // za sat), puls se vraca na sat/HealthKit umesto da stoji zamrznut broj.
+  const trakaDaje =
+    liveHrSource === "sensor" &&
+    sensorConnected &&
+    liveHr != null &&
+    Date.now() - trakaPoslednjiPutRef.current < HR_FRESH_SECONDS * 1000;
+
   /* ------------------------- Live HR (push/subscribe) ------------------------- */
   useEffect(() => {
     if (!sessionId) return;
@@ -575,13 +590,18 @@ const ActiveWorkout = () => {
     let cancelled = false;
 
     (async () => {
-      const { startLiveHRMonitoring } = await import("@/lib/wearable/healthkit");
+      const { startLiveHrSource } = await import("@/lib/wearable/liveHrSource");
       if (cancelled) return;
 
-      cleanup = await startLiveHRMonitoring((bpm) => {
-        setLiveHr(bpm);
-        hrSeriesRef.current.push({ ts: new Date().toISOString(), bpm });
-      });
+      cleanup = await startLiveHrSource(
+        (bpm, source) => {
+          setLiveHr(bpm);
+          setLiveHrSource(source);
+          if (source === "sensor") trakaPoslednjiPutRef.current = Date.now();
+          hrSeriesRef.current.push({ ts: new Date().toISOString(), bpm });
+        },
+        (povezana) => setSensorConnected(povezana),
+      );
     })();
 
     return () => {
@@ -1121,11 +1141,12 @@ const ActiveWorkout = () => {
     if (!ex) return;
 
     const isResting = pos.state === "rest";
-    // Isti izvor HR kao prikaz: sat (watchHr) instant kad je prisutan, poll fallback;
-    // SOLO -> telefonov HealthKit (liveHr).
-    const hrRaw = watchEverPresent
-      ? (watchHr ?? pos.currentHr ?? liveHr)
-      : (liveHr ?? pos.currentHr);
+    // Isti izvor HR kao prikaz (vidi hrIzvor nize): traka pre svega, pa sat, pa poll.
+    const hrRaw = trakaDaje
+      ? liveHr
+      : watchEverPresent
+        ? (watchHr ?? pos.currentHr ?? liveHr)
+        : (liveHr ?? pos.currentHr);
     const hr = typeof hrRaw === "number" && hrRaw > 0 ? hrRaw : null;
 
     // weightText tekuceg seta (samo snaga). Kardio -> izostavi (vec ide "n min").
@@ -1192,7 +1213,7 @@ const ActiveWorkout = () => {
       laLastSentAtRef.current = nowMs;
       laUpdate(fields);
     }
-  }, [sessionId, pos, day, watchHr, liveHr, watchEverPresent, finished]);
+  }, [sessionId, pos, day, watchHr, liveHr, watchEverPresent, trakaDaje, finished]);
 
   // END: kraj treninga (finish / cancel / poll-disappeared -> svi setuju `finished`).
   useEffect(() => {
@@ -1687,11 +1708,16 @@ const ActiveWorkout = () => {
   // Cilj TRENUTNOG seta (per-set iz set_details, fallback na parent) - za prikaz i prefil.
   const curTarget = targetForSet(current, setNumber);
   const progressPct = totalSetsAll > 0 ? (completedTotal / totalSetsAll) * 100 : 0;
-  // Sat prisutan: realtime current_hr sa sata (watchHr) je najsvezi (instant), poll
-  // (pos.currentHr) fallback. SOLO: telefonov HealthKit (liveHr) direktno, kao do sad.
-  const hr = watchEverPresent
-    ? (watchHr ?? pos.currentHr ?? liveHr)
-    : (liveHr ?? pos.currentHr);
+  // Uparena traka koja salje puls ide PRVA - ona je izricit izbor vezbaca i tacnija
+  // je od opticke procene. Bez trake ostaje kao i do sad: sat prisutan -> realtime
+  // current_hr sa sata (watchHr) je najsvezi, poll (pos.currentHr) fallback; SOLO ->
+  // telefonov HealthKit (liveHr). Kontrola treninga (grace, zakljucavanje) se NE
+  // menja - ona i dalje visi samo o signalu sa sata.
+  const hr = trakaDaje
+    ? liveHr
+    : watchEverPresent
+      ? (watchHr ?? pos.currentHr ?? liveHr)
+      : (liveHr ?? pos.currentHr);
   const isResting = pos.state === "rest" && pos.restEndsAtMs != null;
   const restSubtitle =
     setNumber <= 1

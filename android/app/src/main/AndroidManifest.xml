@@ -52,6 +52,16 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Puls traka preko Bluetooth-a. neverForLocation je izjava da se skeniranje
+         NE koristi za odredjivanje lokacije - bez toga bi Android 12+ uz traku
+         trazio i dozvolu za lokaciju, koju nemamo zasto da trazimo. Stare verzije
+         (do Androida 11) nemaju SCAN/CONNECT nego BLUETOOTH + BLUETOOTH_ADMIN. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+
     <!-- capacitor-health uvlaci sedam Health Connect dozvola samim tim sto je
          u projektu, iako Health Connect jos nije povezan ni u jednom ekranu.
          Trazenje dozvola koje se ne koriste je razlog za odbijanje na Play-u, a
