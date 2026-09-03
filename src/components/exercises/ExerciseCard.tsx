@@ -22,6 +22,8 @@ type Props = {
   onToggleBookmark: (id: string) => void;
   index?: number;
   variant?: "grid" | "row";
+  /** Prikazi misicnu grupu ispod naziva. Iskljuci kad je cela lista ionako ta grupa. */
+  showMuscle?: boolean;
 };
 
 const Placeholder = forwardRef<HTMLDivElement, { muscle: string }>(
@@ -46,6 +48,7 @@ export const ExerciseCard = ({
   onToggleBookmark,
   index = 0,
   variant = "grid",
+  showMuscle = true,
 }: Props) => {
   const [imgFailed, setImgFailed] = useState(false);
   const primaryName = exercise.name_en?.trim() || exercise.name;
@@ -100,19 +103,19 @@ export const ExerciseCard = ({
     <button
       onClick={() => onToggleSelect(exercise.id)}
       className={cn(
-        "card-premium-hover rounded-xl overflow-hidden relative text-left animate-fade-in active:scale-[0.98] transition-transform block w-full",
+        "card-premium-hover rounded-xl overflow-hidden relative text-left animate-fade-in active:scale-[0.98] transition-transform flex flex-col w-full h-full",
         selected && "ring-2 ring-primary"
       )}
       style={{ animationDelay: `${Math.min(index * 20, 200)}ms` }}
     >
-      <div className="aspect-[3/2] w-full bg-surface-2 relative overflow-hidden">
+      <div className="aspect-[4/3] w-full bg-surface-2 relative overflow-hidden shrink-0">
         {showImage ? (
           <img
             src={exercise.thumbnail_url!}
             alt={primaryName}
             loading="lazy"
             onError={() => setImgFailed(true)}
-            className="w-full h-full object-contain"
+            className="w-full h-full object-contain p-1.5"
           />
         ) : (
           <Placeholder muscle={exercise.primary_muscle} />
@@ -143,18 +146,20 @@ export const ExerciseCard = ({
           </div>
         )}
       </div>
-      <div className="p-3 space-y-1">
-        <div className="text-sm font-semibold tracking-tight line-clamp-2 leading-snug">
+      {/* Fiksne visine teksta: bez njih kartica sa naslovom u dva reda razvuce
+          ceo red i mreza izgleda krivo. */}
+      <div className="p-3">
+        <div className="text-sm font-semibold tracking-tight leading-snug line-clamp-2 min-h-[2.4rem]">
           {exercise.name}
         </div>
-        {exercise.name_en && (
-          <div className="text-xs text-muted-foreground line-clamp-1">
-            {exercise.name_en}
+        <div className="h-4 mt-0.5 text-xs text-muted-foreground line-clamp-1">
+          {exercise.name_en}
+        </div>
+        {showMuscle && (
+          <div className="text-[11px] text-muted-foreground/70 font-medium pt-1 capitalize">
+            {MUSCLE_LABELS[exercise.primary_muscle as MuscleGroupId] || exercise.primary_muscle}
           </div>
         )}
-        <div className="text-[11px] text-muted-foreground/70 font-medium pt-0.5 capitalize">
-          {MUSCLE_LABELS[exercise.primary_muscle as MuscleGroupId] || exercise.primary_muscle}
-        </div>
       </div>
     </button>
   );

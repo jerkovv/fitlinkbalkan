@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { AlertCircle, Dumbbell, Loader2, Search, SlidersHorizontal, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { MUSCLE_GROUPS, MUSCLE_LABELS, type MuscleGroupId } from "@/lib/muscleGroups";
+import { MUSCLE_GROUPS, type MuscleGroupId } from "@/lib/muscleGroups";
 import { MuscleGroupStrip } from "./MuscleGroupStrip";
 import { ExerciseCard } from "./ExerciseCard";
 import { SelectionActionBar } from "./SelectionActionBar";
@@ -208,7 +208,7 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAd
           </div>
 
           {/* Grid */}
-          <div className="grid grid-cols-2 gap-3 px-4 pb-32">
+          <div className="grid grid-cols-2 gap-3 px-4 pb-6 items-stretch">
             {isLoading &&
               Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="rounded-xl overflow-hidden">
@@ -259,6 +259,7 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAd
                   onToggleSelect={handleToggleSelect}
                   onToggleBookmark={toggleBookmark}
                   index={i}
+                  showMuscle={showFavorites}
                 />
               ))}
 

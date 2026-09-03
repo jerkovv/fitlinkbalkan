@@ -19,7 +19,9 @@ type Props = {
 export const SelectionActionBar = ({ count, dayName, loading, onConfirm, replaceMode, bareDayName }: Props) => {
   const disabled = count === 0 || loading;
   return (
-    <div className="absolute bottom-0 inset-x-0 z-10 bg-gradient-to-t from-background via-background/95 to-transparent pt-6 pb-7 px-5 flex items-end justify-between gap-3">
+    // Neprozirna traka u toku layouta (ne absolute overlay): providan gradijent je
+    // presecao poslednji red kartica napola, pa je lista izgledala odsecena.
+    <div className="shrink-0 z-10 bg-background border-t border-hairline px-5 pt-3 pb-[max(env(safe-area-inset-bottom),16px)] flex items-center justify-between gap-3">
       <div className="min-w-0">
         <div className="text-sm font-semibold">
           <span className="text-primary font-bold tnum">{count}</span>{" "}
