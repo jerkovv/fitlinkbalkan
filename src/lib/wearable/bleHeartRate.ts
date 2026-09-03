@@ -189,6 +189,17 @@ export const startSensorHrMonitoring = async (
 
   const BleClient = await initialize();
 
+  // iOS zna za uredjaj samo ako ga je video u OVOM pokretanju aplikacije: connect
+  // na zapamcen id inace puca ("Device not found"). getDevices vraca peripheral
+  // po UUID-u (retrievePeripherals) i time ga vraca pluginu u opticaj. Zato je
+  // uparivanje radilo (pre njega ide skeniranje), a trening nije - tamo se ide
+  // pravo na zapamcenu traku. Na Androidu je bezopasno, id je MAC.
+  try {
+    await BleClient.getDevices([sensor.deviceId]);
+  } catch {
+    /* nije kriticno - connect ispod ce reci pravu gresku */
+  }
+
   const subscribe = async () => {
     await BleClient.startNotifications(sensor.deviceId, HR_SERVICE, HR_MEASUREMENT, (value) => {
       const bpm = parseHeartRate(value);
