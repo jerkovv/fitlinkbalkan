@@ -42,8 +42,9 @@ export const HrSensorCard = () => {
   const [proba, setProba] = useState<ScannedSensor | null>(null);
   const [probaBpm, setProbaBpm] = useState<number | null>(null);
   const [probaVeza, setProbaVeza] = useState<"spajam" | "ok" | "pao">("spajam");
+  const [probaRazlog, setProbaRazlog] = useState<string | null>(null);
 
-  const stopScanRef = useRef<(() => void) | null>(null);
+  const stopScanRef = useRef<(() => Promise<void>) | null>(null);
   const stopProbeRef = useRef<(() => void) | null>(null);
 
   const ocistiProbu = () => {
@@ -52,12 +53,15 @@ export const HrSensorCard = () => {
     setProba(null);
     setProbaBpm(null);
     setProbaVeza("spajam");
+    setProbaRazlog(null);
   };
 
-  const ocistiSkeniranje = () => {
-    stopScanRef.current?.();
+  // iOS ume da odbije connect dok skeniranje jos traje, pa se stop CEKA.
+  const ocistiSkeniranje = async () => {
+    const stop = stopScanRef.current;
     stopScanRef.current = null;
     setSkeniram(false);
+    if (stop) await stop();
   };
 
   // Sve veze se raskidaju kad kartica nestane - traka koja ostane povezana
@@ -71,6 +75,7 @@ export const HrSensorCard = () => {
     setGreska(null);
     setNadjeni([]);
     ocistiProbu();
+    await ocistiSkeniranje();
     setSkeniram(true);
     try {
       const stop = await scanForHrSensors((lista) => setNadjeni(lista));
@@ -91,26 +96,27 @@ export const HrSensorCard = () => {
   };
 
   const zatvoriSheet = () => {
-    ocistiSkeniranje();
+    void ocistiSkeniranje();
     ocistiProbu();
     setSheetOpen(false);
   };
 
   const probaj = async (kandidat: ScannedSensor) => {
-    ocistiSkeniranje();
     ocistiProbu();
     setProba(kandidat);
     setProbaVeza("spajam");
-    const stop = await startSensorHrMonitoring(
+    await ocistiSkeniranje();
+    const rezultat = await startSensorHrMonitoring(
       kandidat,
       (bpm) => setProbaBpm(bpm),
       (povezana) => setProbaVeza(povezana ? "ok" : "pao"),
     );
-    if (!stop) {
+    if (!rezultat.stop) {
       setProbaVeza("pao");
+      setProbaRazlog(rezultat.razlog);
       return;
     }
-    stopProbeRef.current = stop;
+    stopProbeRef.current = rezultat.stop;
   };
 
   const sacuvaj = async () => {
@@ -236,9 +242,19 @@ export const HrSensorCard = () => {
                 </div>
               )}
               {probaVeza === "pao" && (
-                <div className="mt-3 text-[12px] text-destructive leading-snug">
-                  Traka se ne javlja. Proveri da li je na telu i da nije povezana sa drugim
-                  uređajem, pa probaj ponovo.
+                <div className="mt-3 space-y-2">
+                  <div className="text-[12px] text-destructive leading-snug">
+                    Traka se ne javlja. Proveri da li je na telu i da nije povezana sa satom ili
+                    drugom aplikacijom, pa probaj ponovo.
+                  </div>
+                  {probaRazlog && (
+                    <div className="text-[11px] text-muted-foreground leading-snug break-words">
+                      {probaRazlog}
+                    </div>
+                  )}
+                  <Button size="sm" variant="outline" onClick={() => void probaj(proba)}>
+                    Probaj ponovo
+                  </Button>
                 </div>
               )}
               {probaVeza === "ok" && (

@@ -91,7 +91,7 @@ export const clearSavedSensor = () => {
 export const scanForHrSensors = async (
   onFound: (found: ScannedSensor[]) => void,
   seconds = 12,
-): Promise<() => void> => {
+): Promise<() => Promise<void>> => {
   const BleClient = await initialize();
   const nadjeni = new Map<string, ScannedSensor>();
 
@@ -120,7 +120,7 @@ export const scanForHrSensors = async (
   };
 
   setTimeout(() => void stop(), seconds * 1000);
-  return () => void stop();
+  return stop;
 };
 
 export const readBattery = async (deviceId: string): Promise<number | null> => {
@@ -135,20 +135,54 @@ export const readBattery = async (deviceId: string): Promise<number | null> => {
   }
 };
 
+const poruka = (e: unknown): string => {
+  const m = e instanceof Error ? e.message : String(e ?? "");
+  return m.trim() || "nepoznata greška";
+};
+
+/**
+ * Kratko skeniranje pred ponovni pokusaj: traka koja spava se time probudi, a
+ * iOS-u vrati u vidno polje uredjaj cije UUID-e ne pamti izmedju pokretanja
+ * aplikacije (connect na "nepoznat" id tamo puca odmah).
+ */
+const probudiTraku = async (deviceId: string, seconds = 6): Promise<void> => {
+  try {
+    const BleClient = await client();
+    let vidjena = false;
+    await BleClient.requestLEScan({ services: [HR_SERVICE] }, (r) => {
+      if (r.device?.deviceId === deviceId) vidjena = true;
+    });
+    const kraj = Date.now() + seconds * 1000;
+    while (!vidjena && Date.now() < kraj) {
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    await BleClient.stopLEScan();
+  } catch {
+    /* ako ni skeniranje ne prolazi, connect ispod ce dati pravu gresku */
+  }
+};
+
+/**
+ * Ishod pokusaja: stop (prekid) kad je traka progovorila, inace razlog.
+ * Namerno JEDAN oblik umesto diskriminisane unije - projekat je na
+ * `strict: false`, gde TS ne suzava uniju po `ok` polju.
+ */
+export type SensorStart = { stop: (() => void) | null; razlog: string | null };
+
 /**
  * Poveze se na traku i salje svaki novi otkucaj u onUpdate.
  *
- * Vraca funkciju za prekid, ili null ako se traka nije javila (ugasena, van
- * dometa, na tudjem telefonu) - pozivalac tada moze da padne na drugi izvor.
- * Dok je aktivna, sama se vraca na traku posle prekida veze (traka ume da
- * zaspi kad se skine sa ruke).
+ * Ako se traka ne javi, vraca RAZLOG (ne samo "nije uspelo") - bez toga se na
+ * telefonu ne vidi da li je problem u dometu, u tudjoj vezi ili u tome sto
+ * traka nema HR servis. Dok je aktivna, sama se vraca na traku posle prekida
+ * veze (traka ume da zaspi kad se skine sa ruke).
  */
 export const startSensorHrMonitoring = async (
   sensor: HrSensor,
   onUpdate: (bpm: number) => void,
   onConnectionChange?: (povezana: boolean) => void,
-): Promise<(() => void) | null> => {
-  if (!isHrSensorSupported()) return null;
+): Promise<SensorStart> => {
+  if (!isHrSensorSupported()) return { stop: null, razlog: "Bluetooth radi samo u aplikaciji." };
 
   let stopped = false;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -162,18 +196,34 @@ export const startSensorHrMonitoring = async (
     });
   };
 
-  const connect = async (): Promise<boolean> => {
+  // Rok je duzi od podrazumevanih 10s: traka koja tek izlazi iz sna ume da se
+  // javi na drugi ili treci pokusaj CoreBluetooth-a.
+  const connect = async (): Promise<string | null> => {
     try {
-      await BleClient.connect(sensor.deviceId, () => {
-        onConnectionChange?.(false);
-        if (!stopped) planirajPonovniPokusaj();
-      });
-      await subscribe();
-      onConnectionChange?.(true);
-      return true;
-    } catch {
-      return false;
+      await BleClient.connect(
+        sensor.deviceId,
+        () => {
+          onConnectionChange?.(false);
+          if (!stopped) planirajPonovniPokusaj();
+        },
+        { timeout: 20000 },
+      );
+    } catch (e) {
+      return `veza: ${poruka(e)}`;
     }
+    try {
+      await subscribe();
+    } catch (e) {
+      // Povezala se, ali puls ne salje - druga prica od "nema je".
+      try {
+        await BleClient.disconnect(sensor.deviceId);
+      } catch {
+        /* noop */
+      }
+      return `puls servis: ${poruka(e)}`;
+    }
+    onConnectionChange?.(true);
+    return null;
   };
 
   const planirajPonovniPokusaj = () => {
@@ -181,15 +231,27 @@ export const startSensorHrMonitoring = async (
     reconnectTimer = setTimeout(async () => {
       reconnectTimer = null;
       if (stopped) return;
-      const ok = await connect();
-      if (!ok && !stopped) planirajPonovniPokusaj();
+      const greska = await connect();
+      if (greska && !stopped) planirajPonovniPokusaj();
     }, 5000);
   };
 
-  const povezana = await connect();
-  if (!povezana) return null;
+  let greska = await connect();
+  if (greska) {
+    // Neuspeo pokusaj ostaje da visi u CoreBluetooth-u i sledeci connect na isti
+    // uredjaj pada dok se ne otkaze - zato prvo disconnect, pa budjenje.
+    try {
+      await BleClient.disconnect(sensor.deviceId);
+    } catch {
+      /* nije ni bio povezan */
+    }
+    await probudiTraku(sensor.deviceId);
+    if (stopped) return { stop: null, razlog: greska };
+    greska = await connect();
+  }
+  if (greska) return { stop: null, razlog: greska };
 
-  return () => {
+  const stop = () => {
     stopped = true;
     if (reconnectTimer) clearTimeout(reconnectTimer);
     void (async () => {
@@ -206,4 +268,6 @@ export const startSensorHrMonitoring = async (
       onConnectionChange?.(false);
     })();
   };
+
+  return { stop, razlog: null };
 };

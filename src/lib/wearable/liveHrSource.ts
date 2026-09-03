@@ -20,12 +20,13 @@ export const startLiveHrSource = async (
   const sensor = getSavedSensor();
 
   if (sensor) {
-    const stop = await startSensorHrMonitoring(
+    const rezultat = await startSensorHrMonitoring(
       sensor,
       (bpm) => onUpdate(bpm, "sensor"),
       onSensorConnectionChange,
     );
-    if (stop) return stop;
+    if (rezultat.stop) return rezultat.stop;
+    console.warn("[HR] traka se nije javila:", rezultat.razlog);
   }
 
   const { startLiveHRMonitoring } = await import("./healthkit");
