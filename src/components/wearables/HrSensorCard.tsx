@@ -15,6 +15,7 @@ import {
   saveSensor,
   scanForHrSensors,
   startSensorHrMonitoring,
+  type HrReading,
   type HrSensor,
   type ScannedSensor,
 } from "@/lib/wearable/bleHeartRate";
@@ -43,6 +44,9 @@ export const HrSensorCard = () => {
   const [probaBpm, setProbaBpm] = useState<number | null>(null);
   const [probaVeza, setProbaVeza] = useState<"spajam" | "ok" | "pao">("spajam");
   const [probaRazlog, setProbaRazlog] = useState<string | null>(null);
+  // Poslednje ocitavanje kakvo je traka poslala, i ono odbaceno - da se na
+  // telefonu vidi da li broj fali zbog nas ili zato sto traka ne oseca kozu.
+  const [probaOcitavanje, setProbaOcitavanje] = useState<HrReading | null>(null);
 
   const stopScanRef = useRef<(() => Promise<void>) | null>(null);
   const stopProbeRef = useRef<(() => void) | null>(null);
@@ -54,6 +58,7 @@ export const HrSensorCard = () => {
     setProbaBpm(null);
     setProbaVeza("spajam");
     setProbaRazlog(null);
+    setProbaOcitavanje(null);
   };
 
   // iOS ume da odbije connect dok skeniranje jos traje, pa se stop CEKA.
@@ -110,6 +115,7 @@ export const HrSensorCard = () => {
       kandidat,
       (bpm) => setProbaBpm(bpm),
       (povezana) => setProbaVeza(povezana ? "ok" : "pao"),
+      (ocitavanje) => setProbaOcitavanje(ocitavanje),
     );
     if (!rezultat.stop) {
       setProbaVeza("pao");
@@ -260,11 +266,28 @@ export const HrSensorCard = () => {
               {probaVeza === "ok" && (
                 <>
                   <div className="mt-2 font-display text-[44px] leading-none font-bold tracking-tightest tnum">
-                    {probaBpm ?? "--"}
+                    {probaOcitavanje?.contact === false ? "--" : probaBpm ?? "--"}
                   </div>
                   <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground mt-1">
                     bpm uživo
                   </div>
+                  {probaOcitavanje?.contact === false && (
+                    <div className="mt-2 text-[12px] text-destructive leading-snug">
+                      Traka ne oseća kožu. Zategni je i navlaži kontakte - dok javlja da nema
+                      kontakt, broj koji šalje nije merenje.
+                    </div>
+                  )}
+                  {probaOcitavanje?.contact === null && (
+                    <div className="mt-2 text-[11px] text-muted-foreground leading-snug">
+                      Traka ne javlja da li oseća kožu, pa se broj ne može proveriti softverski.
+                      Uporedi ga sa satom ili aplikacijom proizvođača.
+                    </div>
+                  )}
+                  {probaOcitavanje && (
+                    <div className="mt-2 text-[10px] text-muted-foreground/70 tnum">
+                      {probaOcitavanje.raw}
+                    </div>
+                  )}
                 </>
               )}
               <Button variant="ghost" size="sm" className="mt-3" onClick={() => { ocistiProbu(); void pokreniSkeniranje(); }}>

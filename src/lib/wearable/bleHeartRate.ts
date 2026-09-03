@@ -47,14 +47,40 @@ const initialize = async () => {
   return BleClient;
 };
 
-/** 0x2A37: prvi bajt su flegovi, bit 0 kaze da li je bpm u jednom bajtu ili u dva (LE). */
-export const parseHeartRate = (value: DataView): number | null => {
-  if (!value || value.byteLength < 2) return null;
+/**
+ * Ocitavanje iz 0x2A37.
+ *
+ * contact: da li traka OSECA kozu. Bitovi 1 i 2 flegova: bit 2 kaze da traka
+ * uopste ume da javi kontakt, bit 1 da ga trenutno ima. Kad traka ume a kaze da
+ * kontakta nema, broj koji uz to posalje NIJE merenje - to je zadnja poznata ili
+ * izracunata vrednost i tu nastaju "nasumicni" otkucaji dok traka visi na ruci
+ * ili stoji na stolu. Takav uzorak se odbacuje.
+ *
+ * bpm: bit 0 kaze da li je vrednost u jednom bajtu ili u dva (LE).
+ */
+export type HrReading = { bpm: number | null; contact: boolean | null; raw: string };
+
+export const parseHrReading = (value: DataView): HrReading => {
+  const bajtovi: string[] = [];
+  for (let i = 0; i < (value?.byteLength ?? 0) && i < 6; i += 1) {
+    bajtovi.push(value.getUint8(i).toString(16).padStart(2, "0"));
+  }
+  const raw = bajtovi.join(" ");
+
+  if (!value || value.byteLength < 2) return { bpm: null, contact: null, raw };
+
   const flags = value.getUint8(0);
-  const bpm = flags & 0x01 ? value.getUint16(1, true) : value.getUint8(1);
-  if (!Number.isFinite(bpm) || bpm < 25 || bpm > 250) return null;
-  return bpm;
+  const contactPodrzan = (flags & 0x04) !== 0;
+  const contact = contactPodrzan ? (flags & 0x02) !== 0 : null;
+
+  const sirovBpm = flags & 0x01 ? value.getUint16(1, true) : value.getUint8(1);
+  const validan = Number.isFinite(sirovBpm) && sirovBpm >= 25 && sirovBpm <= 250;
+
+  return { bpm: validan && contact !== false ? sirovBpm : null, contact, raw };
 };
+
+/** Samo broj - kad pozivaocu kontakt nije bitan. */
+export const parseHeartRate = (value: DataView): number | null => parseHrReading(value).bpm;
 
 export const getSavedSensor = (): HrSensor | null => {
   try {
@@ -181,6 +207,8 @@ export const startSensorHrMonitoring = async (
   sensor: HrSensor,
   onUpdate: (bpm: number) => void,
   onConnectionChange?: (povezana: boolean) => void,
+  /** Svako ocitavanje, i ono odbaceno - za ekran uparivanja (kontakt, sirovi bajtovi). */
+  onReading?: (ocitavanje: HrReading) => void,
 ): Promise<SensorStart> => {
   if (!isHrSensorSupported()) return { stop: null, razlog: "Bluetooth radi samo u aplikaciji." };
 
@@ -202,8 +230,9 @@ export const startSensorHrMonitoring = async (
 
   const subscribe = async () => {
     await BleClient.startNotifications(sensor.deviceId, HR_SERVICE, HR_MEASUREMENT, (value) => {
-      const bpm = parseHeartRate(value);
-      if (bpm != null) onUpdate(bpm);
+      const ocitavanje = parseHrReading(value);
+      onReading?.(ocitavanje);
+      if (ocitavanje.bpm != null) onUpdate(ocitavanje.bpm);
     });
   };
 
