@@ -188,6 +188,13 @@ export const HrSensorCard = () => {
                 : "Bluetooth traka za grudi ili nadlakticu - puls tokom treninga bez sata"}
             </div>
 
+            {povezana && (
+              <div className="text-[11px] text-muted-foreground mt-1 leading-snug">
+                Povezuje se sama na početku treninga. Samo je upali i stavi na sebe - ovde se
+                vraćaš jedino da je zameniš.
+              </div>
+            )}
+
             {povezana && baterija != null && (
               <div className="text-[11px] text-muted-foreground mt-1.5">
                 Baterija trake: {baterija}%
