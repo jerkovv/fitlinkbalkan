@@ -58,6 +58,16 @@
          (do Androida 11) nemaju SCAN/CONNECT nego BLUETOOTH + BLUETOOTH_ADMIN. -->
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation" />
+
+    <!-- Plugin za Bluetooth uvlaci i lokaciju, jer je do Androida 11 ona bila
+         uslov za BLE skeniranje. Od Androida 12 nije (gore stoji neverForLocation),
+         a FitLink lokaciju ne koristi ni za sta drugo - zato se ogranicava na
+         stare verzije umesto da stoji na svakom telefonu. Trazenje dozvole koja
+         se ne koristi je razlog za odbijanje na Play-u i lose stoji u Data Safety. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="30" tools:node="replace" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"
+        android:maxSdkVersion="30" tools:node="replace" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
