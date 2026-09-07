@@ -29,6 +29,7 @@ import { RestTimer } from "@/components/workout/RestTimer";
 import { Network } from "@capacitor/network";
 import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor/core";
 import { createCalorieMeter } from "@/lib/wearable/hrCalories";
+import type { SensorStatus } from "@/lib/wearable/liveHrSource";
 
 // ---- Nativni Live Activity plugin (iOS-only: lock screen / Dynamic Island) ----
 // Most ka nativnom LiveActivityPlugin-u ("LiveActivity": start/update/end). Na
@@ -254,6 +255,7 @@ const ActiveWorkout = () => {
   // trening bez sata ne zavrsi sa nula kalorija u rezimeu.
   const meracKcalRef = useRef<ReturnType<typeof createCalorieMeter> | null>(null);
   const [sensorKcal, setSensorKcal] = useState<number | null>(null);
+  const [trakaStatus, setTrakaStatus] = useState<SensorStatus | null>(null);
   // Kad je stigao poslednji otkucaj sa trake. Sama veza ume da ostane otvorena i
   // posto traka spadne sa ruke, pa "povezana" nije dokaz da puls jos stize.
   const trakaPoslednjiPutRef = useRef(0);
@@ -597,6 +599,7 @@ const ActiveWorkout = () => {
     let cancelled = false;
 
     (async () => {
+      try {
       const { data } = await supabase
         .from("athletes")
         .select("birth_year, gender, weight_kg")
@@ -624,7 +627,13 @@ const ActiveWorkout = () => {
           hrSeriesRef.current.push({ ts: new Date().toISOString(), bpm });
         },
         (povezana) => setSensorConnected(povezana),
+        (status) => setTrakaStatus(status),
       );
+      } catch (e) {
+        // Bez ovoga jedna greska u BLE sloju ostavi trening i bez trake i bez
+        // HealthKit-a, i to nemo.
+        setTrakaStatus({ stanje: "pala", razlog: e instanceof Error ? e.message : String(e) });
+      }
     })();
 
     return () => {
@@ -1819,6 +1828,15 @@ const ActiveWorkout = () => {
               </span>
             </div>
           </div>
+          {/* Stanje uparene trake, samo dok NIJE povezana: prazan puls inace ne kaze
+              da li traka nije nadjena, nije na telu ili je aplikacija u kvaru. */}
+          {trakaStatus && trakaStatus.stanje !== "nema" && trakaStatus.stanje !== "povezana" && (
+            <div className="px-4 pb-1.5 text-[11px] text-muted-foreground leading-snug">
+              {trakaStatus.stanje === "trazim"
+                ? "Tražim puls traku..."
+                : `Traka se ne javlja, pokušavam ponovo${trakaStatus.razlog ? ` (${trakaStatus.razlog})` : ""}`}
+            </div>
+          )}
           <div className="h-1 bg-surface-2">
             <div
               className="h-full bg-gradient-brand transition-all"

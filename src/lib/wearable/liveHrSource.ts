@@ -4,6 +4,13 @@ import { getSavedSensor, startSensorHrMonitoring } from "./bleHeartRate";
 
 export type LiveHrSource = "sensor" | "healthkit";
 
+/** Stanje trake za prikaz na ekranu treninga. */
+export type SensorStatus =
+  | { stanje: "nema" }
+  | { stanje: "trazim" }
+  | { stanje: "povezana" }
+  | { stanje: "pala"; razlog: string | null };
+
 // Prvi ponovni pokusaj brzo, pa sve redje do minuta. Traka koja je ugasena ne
 // odgovara na connect dok se ne upali, pa cesto kucanje nista ne dobija - a
 // svaki neuspeo pokusaj usput kratko skenira, sto trosi bateriju telefona.
@@ -29,6 +36,8 @@ const NAJVECI_RAZMAK_MS = 60000;
 export const startLiveHrSource = async (
   onUpdate: (bpm: number, source: LiveHrSource) => void,
   onSensorConnectionChange?: (povezana: boolean) => void,
+  /** Stanje trake sa razlogom - da vezbac na ekranu vidi zasto pulsa nema. */
+  onStatus?: (status: SensorStatus) => void,
 ): Promise<() => void> => {
   const sensor = getSavedSensor();
 
@@ -70,6 +79,7 @@ export const startLiveHrSource = async (
   const probajTraku = async () => {
     if (ugasen || stopTrake || pokusajUToku || !sensor) return;
     pokusajUToku = true;
+    onStatus?.({ stanje: "trazim" });
     try {
       const rezultat = await startSensorHrMonitoring(
         sensor,
@@ -77,6 +87,7 @@ export const startLiveHrSource = async (
         (povezana) => {
           trakaPovezana = povezana;
           onSensorConnectionChange?.(povezana);
+          onStatus?.(povezana ? { stanje: "povezana" } : { stanje: "trazim" });
           if (povezana) {
             ugasiHk();
           } else if (!ugasen) {
@@ -100,6 +111,16 @@ export const startLiveHrSource = async (
       }
 
       console.warn("[HR] traka se nije javila:", rezultat.razlog);
+      onStatus?.({ stanje: "pala", razlog: rezultat.razlog });
+      void pokreniHk();
+      zakaziPokusaj(razmak);
+      razmak = Math.min(razmak * 2, NAJVECI_RAZMAK_MS);
+    } catch (e) {
+      // Nadzor mora da prezivi svaku gresku: bez ovoga jedan izuzetak ubije
+      // pokusaje do kraja treninga, a vezbac ne vidi ni zasto.
+      const poruka = e instanceof Error ? e.message : String(e ?? "");
+      console.warn("[HR] pokusaj puknuo:", poruka);
+      onStatus?.({ stanje: "pala", razlog: poruka || "nepoznata greška" });
       void pokreniHk();
       zakaziPokusaj(razmak);
       razmak = Math.min(razmak * 2, NAJVECI_RAZMAK_MS);
@@ -123,6 +144,7 @@ export const startLiveHrSource = async (
     void probajTraku();
     await pokreniHk();
   } else {
+    onStatus?.({ stanje: "nema" });
     await pokreniHk();
   }
 

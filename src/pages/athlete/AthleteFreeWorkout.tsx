@@ -18,6 +18,7 @@ import { formatHMS } from "@/lib/time";
 import { HR_FRESH_SECONDS, isHrLive } from "@/lib/liveWorkout";
 import { ZONE_DEFS } from "@/lib/wearable/hrZones";
 import { createCalorieMeter } from "@/lib/wearable/hrCalories";
+import type { SensorStatus } from "@/lib/wearable/liveHrSource";
 import { getHrZone } from "@/lib/workout/hrZone";
 import { cn } from "@/lib/utils";
 import { FreeWorkoutExercises } from "@/components/workout/FreeWorkoutExercises";
@@ -156,6 +157,7 @@ const AthleteFreeWorkout = () => {
   // Procena potrosnje iz pulsa - traka je ne meri, a bez ovoga bi kcal stajao na 0.
   const meracRef = useRef<ReturnType<typeof createCalorieMeter> | null>(null);
   const [trakaKcal, setTrakaKcal] = useState<number | null>(null);
+  const [trakaStatus, setTrakaStatus] = useState<SensorStatus | null>(null);
 
   const goToSummary = useCallback(() => {
     if (finishedRef.current) return;
@@ -292,6 +294,7 @@ const AthleteFreeWorkout = () => {
     let cleanup: (() => void) | null = null;
 
     (async () => {
+      try {
       // Tezina/godine/pol za procenu potrosnje. Ko ih nema u profilu, dobija
       // trening bez kalorija umesto izmisljenog broja.
       const { data } = await supabase
@@ -308,16 +311,23 @@ const AthleteFreeWorkout = () => {
 
       const { startLiveHrSource } = await import("@/lib/wearable/liveHrSource");
       if (cancelled) return;
-      cleanup = await startLiveHrSource((bpm, source) => {
-        if (finishedRef.current) return;
-        if (source !== "sensor") return;
-        trakaPoslednjiPutRef.current = Date.now();
-        trakaVodiRef.current = true;
-        setTrakaHr(bpm);
-        hrSeriesRef.current.push({ ts: new Date().toISOString(), bpm });
-        const kcal = meracRef.current?.add(bpm) ?? null;
-        if (kcal != null) setTrakaKcal(kcal);
-      });
+      cleanup = await startLiveHrSource(
+        (bpm, source) => {
+          if (finishedRef.current) return;
+          if (source !== "sensor") return;
+          trakaPoslednjiPutRef.current = Date.now();
+          trakaVodiRef.current = true;
+          setTrakaHr(bpm);
+          hrSeriesRef.current.push({ ts: new Date().toISOString(), bpm });
+          const kcal = meracRef.current?.add(bpm) ?? null;
+          if (kcal != null) setTrakaKcal(kcal);
+        },
+        undefined,
+        (status) => setTrakaStatus(status),
+      );
+      } catch (e) {
+        setTrakaStatus({ stanje: "pala", razlog: e instanceof Error ? e.message : String(e) });
+      }
     })();
 
     return () => {
@@ -606,6 +616,21 @@ const AthleteFreeWorkout = () => {
             {zoneName && (
               <div className="text-[15px] font-bold leading-none" style={{ color: zoneCol }}>
                 {zoneName}
+              </div>
+            )}
+
+            {/* Stanje uparene trake. Bez ovoga vezbac vidi samo prazan puls i ne zna
+                da li traka nije nadjena, nije na telu ili je aplikacija u kvaru. */}
+            {trakaStatus && trakaStatus.stanje !== "nema" && (
+              <div className="text-[11px] text-muted-foreground text-center leading-snug px-6">
+                {trakaStatus.stanje === "povezana" && "Traka povezana"}
+                {trakaStatus.stanje === "trazim" && "Tražim traku..."}
+                {trakaStatus.stanje === "pala" && (
+                  <>
+                    Traka se ne javlja, pokušavam ponovo
+                    {trakaStatus.razlog ? ` (${trakaStatus.razlog})` : ""}
+                  </>
+                )}
               </div>
             )}
             {/* 5-segmentni zona bar: pun rasterni ramp (svaki slot u svojoj zona-boji),

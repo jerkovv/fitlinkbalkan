@@ -215,18 +215,31 @@ export const startSensorHrMonitoring = async (
   let stopped = false;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
-  const BleClient = await initialize();
+  // Ni jedna greska odavde ne sme da izleti kao izuzetak: pozivalac po razlogu
+  // odlucuje da li da pokusa ponovo, a bacen izuzetak mu ubije ceo nadzor nad
+  // trakom do kraja treninga.
+  let BleClient: Awaited<ReturnType<typeof initialize>>;
+  try {
+    BleClient = await initialize();
+  } catch (e) {
+    return { stop: null, razlog: `bluetooth: ${poruka(e)}` };
+  }
 
   // iOS zna za uredjaj samo ako ga je video u OVOM pokretanju aplikacije: connect
   // na zapamcen id inace puca ("Device not found"). getDevices vraca peripheral
-  // po UUID-u (retrievePeripherals) i time ga vraca pluginu u opticaj. Zato je
-  // uparivanje radilo (pre njega ide skeniranje), a trening nije - tamo se ide
-  // pravo na zapamcenu traku. Na Androidu je bezopasno, id je MAC.
+  // po UUID-u (retrievePeripherals) i time ga vraca pluginu u opticaj. Na
+  // Androidu je bezopasno, id je MAC.
   try {
     await BleClient.getDevices([sensor.deviceId]);
   } catch {
-    /* nije kriticno - connect ispod ce reci pravu gresku */
+    /* nije kriticno - skeniranje ispod svakako vraca uredjaj u opticaj */
   }
+
+  // Skeniranje PRE prvog povezivanja, ne tek posle neuspeha. Rucno uparivanje
+  // (skeniraj pa izaberi) je jedini put koji je na terenu radio iz prve, a
+  // razlika je bila bas u tome. Stane cim traku vidi, pa uz upaljenu traku ovo
+  // traje manje od sekunde; ugasena traka kosta 8s pre nego sto se odustane.
+  await probudiTraku(sensor.deviceId, 8);
 
   const subscribe = async () => {
     await BleClient.startNotifications(sensor.deviceId, HR_SERVICE, HR_MEASUREMENT, (value) => {
@@ -279,7 +292,7 @@ export const startSensorHrMonitoring = async (
   let greska = await connect();
   if (greska) {
     // Neuspeo pokusaj ostaje da visi u CoreBluetooth-u i sledeci connect na isti
-    // uredjaj pada dok se ne otkaze - zato prvo disconnect, pa budjenje.
+    // uredjaj pada dok se ne otkaze - zato prvo disconnect, pa jos jedno budjenje.
     try {
       await BleClient.disconnect(sensor.deviceId);
     } catch {
