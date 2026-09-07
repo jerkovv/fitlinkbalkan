@@ -623,11 +623,11 @@ const AthleteFreeWorkout = () => {
                 da li traka nije nadjena, nije na telu ili je aplikacija u kvaru. */}
             {trakaStatus && trakaStatus.stanje !== "nema" && (
               <div className="text-[11px] text-muted-foreground text-center leading-snug px-6">
-                {trakaStatus.stanje === "povezana" && "Traka povezana"}
-                {trakaStatus.stanje === "trazim" && "Tražim traku..."}
+                {trakaStatus.stanje === "povezana" && "Senzor pulsa povezan"}
+                {trakaStatus.stanje === "trazim" && "Tražim senzor pulsa..."}
                 {trakaStatus.stanje === "pala" && (
                   <>
-                    Traka se ne javlja, pokušavam ponovo
+                    Senzor se ne javlja, pokušavam ponovo
                     {trakaStatus.razlog ? ` (${trakaStatus.razlog})` : ""}
                   </>
                 )}

@@ -134,14 +134,14 @@ export const HrSensorCard = () => {
     setBaterija(pct);
     ocistiProbu();
     setSheetOpen(false);
-    toast.success("Traka je uparena");
+    toast.success("Senzor je uparen");
   };
 
   const zaboravi = () => {
     clearSavedSensor();
     setSensor(null);
     setBaterija(null);
-    toast.success("Traka je uklonjena");
+    toast.success("Senzor je uklonjen");
   };
 
   const povezana = !!sensor;
@@ -169,7 +169,7 @@ export const HrSensorCard = () => {
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <div className="font-display text-[15px] font-bold tracking-tight">Puls traka</div>
+              <div className="font-display text-[15px] font-bold tracking-tight">Senzor pulsa</div>
               {povezana && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[10px] font-semibold text-success-soft-foreground">
                   <Check className="h-3 w-3" /> Uparena
@@ -185,13 +185,13 @@ export const HrSensorCard = () => {
             <div className="text-[12px] text-muted-foreground mt-0.5 leading-snug">
               {povezana
                 ? sensor!.name
-                : "Bluetooth traka za grudi ili nadlakticu - puls tokom treninga bez sata"}
+                : "Bilo koji Bluetooth senzor pulsa: pojas za grudi, traka za ruku ili sat koji emituje puls"}
             </div>
 
             {povezana && (
               <div className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                Povezuje se sama na početku treninga. Samo je upali i stavi na sebe - ovde se
-                vraćaš jedino da je zameniš.
+                Povezuje se sam na početku treninga. Samo ga upali i stavi na sebe - ovde se
+                vraćaš jedino da ga zameniš.
               </div>
             )}
 
@@ -217,7 +217,7 @@ export const HrSensorCard = () => {
               onClick={otvoriSheet}
             >
               <Bluetooth className="h-3.5 w-3.5 mr-1.5" />
-              {povezana ? "Promeni traku" : "Poveži"}
+              {povezana ? "Promeni senzor" : "Poveži"}
             </Button>
             {povezana && (
               <Button
@@ -225,7 +225,7 @@ export const HrSensorCard = () => {
                 variant="ghost"
                 className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                 onClick={zaboravi}
-                aria-label="Ukloni traku"
+                aria-label="Ukloni senzor"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -234,10 +234,11 @@ export const HrSensorCard = () => {
         )}
       </Card>
 
-      <FullScreenSheet open={sheetOpen} onClose={zatvoriSheet} title="Poveži puls traku">
+      <FullScreenSheet open={sheetOpen} onClose={zatvoriSheet} title="Poveži senzor pulsa">
         <FullScreenSheetScroll className="pt-4 space-y-3">
           <p className="text-[13px] text-muted-foreground">
-            Stavi traku na sebe da bi se probudila, pa je izaberi sa spiska.
+            Stavi senzor na sebe da bi se probudio, pa ga izaberi sa spiska. Sat koji ume da
+            emituje puls uključi u tom režimu pre skeniranja.
           </p>
 
           {greska && (
@@ -342,7 +343,7 @@ export const HrSensorCard = () => {
               className="w-full bg-gradient-brand text-white shadow-brand"
               onClick={() => void sacuvaj()}
             >
-              Sačuvaj ovu traku
+              Sačuvaj ovaj senzor
             </Button>
           ) : (
             <Button

@@ -1833,8 +1833,8 @@ const ActiveWorkout = () => {
           {trakaStatus && trakaStatus.stanje !== "nema" && trakaStatus.stanje !== "povezana" && (
             <div className="px-4 pb-1.5 text-[11px] text-muted-foreground leading-snug">
               {trakaStatus.stanje === "trazim"
-                ? "Tražim puls traku..."
-                : `Traka se ne javlja, pokušavam ponovo${trakaStatus.razlog ? ` (${trakaStatus.razlog})` : ""}`}
+                ? "Tražim senzor pulsa..."
+                : `Senzor se ne javlja, pokušavam ponovo${trakaStatus.razlog ? ` (${trakaStatus.razlog})` : ""}`}
             </div>
           )}
           <div className="h-1 bg-surface-2">
