@@ -44,13 +44,16 @@ let laTxtDim = Color(white: 0.66)
 let laTxtFaint = Color(white: 0.46)
 let laKcalColor = Color(hue: 24.0 / 360.0, saturation: 0.85, brightness: 0.62)      // kalorije (isto kao Flame u app-u)
 
+// Apple sistemske boje zona, iste kao u Workout aplikaciji i u FitLink-u na
+// telefonu (--hr-zone-N) i satu. Kartica na zakljucanom ekranu stoji odmah do
+// Apple-ovih, pa svoja rampa tu najvise bode oci.
 func hrZoneColor(_ zone: String) -> Color {
     switch zone {
-    case "easy":     return Color(hue: 195.0 / 360.0, saturation: 0.75, brightness: 0.60)
-    case "moderate": return Color(hue: 150.0 / 360.0, saturation: 0.62, brightness: 0.52)
-    case "hard":     return Color(hue:  45.0 / 360.0, saturation: 0.90, brightness: 0.55)
-    case "max":      return Color(hue:   0.0,         saturation: 0.84, brightness: 0.60)
-    default:         return Color(white: 0.52) // rest / nepoznato (siva)
+    case "easy":     return .blue     // systemBlue
+    case "moderate": return .green    // systemGreen
+    case "hard":     return .orange   // systemOrange
+    case "max":      return .red      // systemRed
+    default:         return .gray     // rest / nepoznato
     }
 }
 

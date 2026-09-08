@@ -11,12 +11,15 @@ export interface ZoneDef {
   color: string;
 }
 
+// Boje su Apple sistemske (systemBlue/Green/Yellow/Orange/Red) - iste kao zone
+// pulsa u Workout aplikaciji na satu. Stoje kao literali jer zavrsavaju i u SVG
+// atributima grafikona, gde CSS var() ne radi; isti brojevi su i u --hr-zone-N.
 export const ZONE_DEFS: ZoneDef[] = [
-  { zone: 1, name: "Lagano",      minPct: 0.50, maxPct: 0.60, color: "hsl(195 70% 60%)" },
-  { zone: 2, name: "Aerobno",     minPct: 0.60, maxPct: 0.70, color: "hsl(150 60% 50%)" },
-  { zone: 3, name: "Tempo",       minPct: 0.70, maxPct: 0.80, color: "hsl(45 90% 55%)"  },
-  { zone: 4, name: "Anaerobno",   minPct: 0.80, maxPct: 0.90, color: "hsl(20 85% 55%)"  },
-  { zone: 5, name: "Maksimalno",  minPct: 0.90, maxPct: 1.00, color: "hsl(0 80% 55%)"   },
+  { zone: 1, name: "Lagano",      minPct: 0.50, maxPct: 0.60, color: "hsl(211 100% 50%)" },
+  { zone: 2, name: "Aerobno",     minPct: 0.60, maxPct: 0.70, color: "hsl(135 59% 49%)"  },
+  { zone: 3, name: "Tempo",       minPct: 0.70, maxPct: 0.80, color: "hsl(48 100% 50%)"  },
+  { zone: 4, name: "Anaerobno",   minPct: 0.80, maxPct: 0.90, color: "hsl(35 100% 50%)"  },
+  { zone: 5, name: "Maksimalno",  minPct: 0.90, maxPct: 1.00, color: "hsl(4 100% 59%)"   },
 ];
 
 export function computeMaxHR(birthYear: number | null | undefined): number {

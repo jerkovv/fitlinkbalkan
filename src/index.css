@@ -59,6 +59,15 @@
     --destructive-soft: 0 90% 96%;
     --destructive-soft-foreground: 0 70% 42%;
 
+    /* Zone pulsa - Apple sistemske boje, iste kao u Workout aplikaciji na satu
+       (plava, zelena, zuta, narandzasta, crvena). Vezbaci ih citaju sa sata i
+       ocekuju isto znacenje ovde; markina rampa je za brend, ne za merenje. */
+    --hr-zone-1: 211 100% 50%;   /* systemBlue   #007AFF */
+    --hr-zone-2: 135 59% 49%;    /* systemGreen  #34C759 */
+    --hr-zone-3: 48 100% 50%;    /* systemYellow #FFCC00 */
+    --hr-zone-4: 35 100% 50%;    /* systemOrange #FF9500 */
+    --hr-zone-5: 4 100% 59%;     /* systemRed    #FF3B30 */
+
     /* Neutrals */
     --secondary: 240 14% 95%;
     --secondary-foreground: 240 18% 18%;
@@ -127,6 +136,13 @@
     --input: 240 14% 18%;
     --muted: 240 14% 16%;
     --muted-foreground: 240 10% 64%;
+
+    /* Apple na tamnoj temi koristi svetlije varijante istih boja. */
+    --hr-zone-1: 211 100% 52%;   /* #0A84FF */
+    --hr-zone-2: 135 64% 50%;    /* #30D158 */
+    --hr-zone-3: 50 100% 52%;    /* #FFD60A */
+    --hr-zone-4: 37 100% 52%;    /* #FF9F0A */
+    --hr-zone-5: 3 100% 61%;     /* #FF453A */
   }
 }
 

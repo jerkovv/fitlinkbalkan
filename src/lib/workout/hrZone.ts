@@ -3,12 +3,15 @@
 
 export type HrZone = "rest" | "easy" | "moderate" | "hard" | "max";
 
+// Apple sistemske boje (systemGray/Blue/Green/Orange/Red), iste rampe kao zone
+// na satu. Ovde stoje kao literali, ne kao CSS promenljive: deo prikaza zavrsava
+// u SVG atributima (recharts Cell fill), gde var() ne moze da se razresi.
 export const HR_ZONE_COLOR: Record<HrZone, string> = {
-  rest: "hsl(220 12% 60%)",
-  easy: "hsl(195 70% 60%)",
-  moderate: "hsl(150 60% 50%)",
-  hard: "hsl(45 90% 55%)",
-  max: "hsl(0 80% 55%)",
+  rest: "hsl(240 6% 57%)",       /* systemGray  #8E8E93 */
+  easy: "hsl(211 100% 50%)",     /* systemBlue  #007AFF */
+  moderate: "hsl(135 59% 49%)",  /* systemGreen #34C759 */
+  hard: "hsl(35 100% 50%)",      /* systemOrange #FF9500 */
+  max: "hsl(4 100% 59%)",        /* systemRed   #FF3B30 */
 };
 
 export const getHrZone = (bpm: number | null | undefined): HrZone => {
@@ -21,15 +24,16 @@ export const getHrZone = (bpm: number | null | undefined): HrZone => {
 
 export const getHrColor = (bpm: number | null | undefined) => HR_ZONE_COLOR[getHrZone(bpm)];
 
-// FitLink zone ramp iz brand tokena (NE hardkodirani hex). Mapira serversku
-// zonu pulsa 1-5 na CSS varijable, ista rampa kao na satu:
-// Z1 indigo, Z2 brand violet, Z3 magenta, Z4 amber, Z5 crvena.
+// Serverska zona 1-5 -> CSS token. Rampa je Apple-ova (plava, zelena, zuta,
+// narandzasta, crvena), a ne brend rampa: vezbac istu skalu vidi na satu, pa bi
+// violet za "lagano" znacio jedno na satu a drugo ovde. Tokeni imaju i tamnu
+// varijantu (vidi index.css).
 export const HR_ZONE_VAR: Record<number, string> = {
-  1: "--brand-2",      // indigo
-  2: "--brand-1",      // brand violet
-  3: "--brand-3",      // magenta
-  4: "--warning",      // amber
-  5: "--destructive",  // crvena
+  1: "--hr-zone-1",
+  2: "--hr-zone-2",
+  3: "--hr-zone-3",
+  4: "--hr-zone-4",
+  5: "--hr-zone-5",
 };
 
 // Vraca naziv CSS varijable za datu zonu (1-5) ili null ako zona nije validna.
