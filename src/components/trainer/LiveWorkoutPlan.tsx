@@ -269,6 +269,32 @@ export const LiveWorkoutPlan = ({
    *
    * Zato nema zasebnog dugmeta za cilj: polje je vec na pravom mestu.
    */
+  /**
+   * Trener potvrdjuje da je serija (ili cela vezba) odradjena, umesto vezbaca.
+   *
+   * Pozicija vezbaca se racuna iz zavrsenih serija, pa ga ovo POMERA napred -
+   * to je i smisao radnje, ali zato ide kroz RPC koji odmah pomeri i zivo
+   * stanje, bez pokretanja pauze. Skidanje potvrde radi samo na onome sto je
+   * trener sam obelezio; sto je vezbac odradio, trenerov tap ne moze da obrise.
+   */
+  const potvrdiOdradjeno = async (
+    ex: DayExercise,
+    setNumber: number | null,
+    odradjeno: boolean,
+  ) => {
+    if (salje) return;
+    setSalje(true);
+    const { error } = await supabase.rpc("trainer_mark_set_done" as any, {
+      p_session_id: sessionId,
+      p_ape_id: ex.id,
+      p_set_number: setNumber,
+      p_done: odradjeno,
+    });
+    setSalje(false);
+    if (error) { toast.error(porukaGreske(error)); return; }
+    await Promise.all([ucitajDanas(), ucitaj()]);
+  };
+
   const sacuvajCeliju = async (
     ex: DayExercise,
     setNumber: number,
@@ -712,28 +738,64 @@ export const LiveWorkoutPlan = ({
                         aria-label={`Ponavljanja, serija ${sn}`}
                         className="h-8 px-1 text-[12.5px] text-center tnum"
                       />
-                      {/* Zeleno pali ISKLJUCIVO vezbac svojim klikom. Namerno
-                          nije dugme: trenerov tap bi mu pomerio ekran na sledecu
-                          seriju, a to je diranje njegovog treninga. Tackica znaci
-                          da je brojeve ispravio trener. */}
-                      <div
-                        role="img"
-                        aria-label={upisana ? `Serija ${sn} odrađena` : `Serija ${sn} nije odrađena`}
+                      {/* Zeleno pali vezbac svojim klikom, a trener sme da potvrdi
+                          umesto njega kad zaboravi. Tap POMERA vezbaca na sledecu
+                          seriju - pozicija se racuna iz zavrsenih serija - pa se
+                          skida samo ono sto je trener sam obelezio. Tackica znaci
+                          da je iza serije stao trener (obelezio je ili ispravio
+                          brojeve). */}
+                      <button
+                        type="button"
+                        disabled={salje || (!!upisana && !upisana.logged_by_trainer)}
+                        onClick={() => void potvrdiOdradjeno(ex, sn, !upisana)}
+                        aria-label={
+                          upisana
+                            ? `Serija ${sn} odrađena${upisana.logged_by_trainer ? ", skini potvrdu" : ""}`
+                            : `Potvrdi da je serija ${sn} odrađena`
+                        }
+                        aria-pressed={!!upisana}
                         className={cn(
-                          "relative h-8 w-8 rounded-lg flex items-center justify-center",
+                          "relative h-8 w-8 rounded-lg flex items-center justify-center transition",
                           upisana
                             ? "bg-success text-success-foreground"
-                            : "bg-surface-2 text-muted-foreground/30",
+                            : "bg-surface-2 text-muted-foreground/30 hover:text-success hover:bg-success-soft",
+                          "disabled:cursor-default",
                         )}
                       >
                         <Check className="h-4 w-4" strokeWidth={3} />
                         {upisana?.logged_by_trainer && (
                           <span className="absolute h-1.5 w-1.5 rounded-full bg-current opacity-70 translate-x-[11px] -translate-y-[11px]" />
                         )}
-                      </div>
+                      </button>
                     </div>
                   );
                 })}
+
+                {/* Cela vezba odjednom - za slucaj kad vezbac zaboravi da klikne,
+                    a trener stoji pored njega. Skidanje se nudi samo ako je sve
+                    zeleno stavio trener; vezbacev rad se odavde ne brise. */}
+                {(() => {
+                  const sveUpisane = brojSerija > 0 && danasnje.length >= brojSerija;
+                  const sveTrenerove =
+                    danasnje.length > 0 && danasnje.every((d) => d.logged_by_trainer);
+                  if (sveUpisane && !sveTrenerove) return null;
+                  return (
+                    <button
+                      type="button"
+                      disabled={salje}
+                      onClick={() => void potvrdiOdradjeno(ex, null, !sveUpisane)}
+                      className={cn(
+                        "mt-2 h-9 w-full rounded-lg text-[12px] font-semibold inline-flex items-center justify-center gap-1.5 transition disabled:opacity-50",
+                        sveUpisane
+                          ? "bg-surface-2 text-muted-foreground hover:text-foreground"
+                          : "bg-success-soft text-success-soft-foreground hover:opacity-90",
+                      )}
+                    >
+                      <Check className="h-3.5 w-3.5" strokeWidth={2.8} />
+                      {sveUpisane ? "Skini potvrdu za celu vežbu" : "Cela vežba je urađena"}
+                    </button>
+                  );
+                })()}
 
                 <div className="mt-2 flex items-center gap-1.5">
                   <button
