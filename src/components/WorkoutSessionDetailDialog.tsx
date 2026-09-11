@@ -17,10 +17,12 @@ type SessionMeta = {
   completed_at: string | null;
   duration_seconds: number | null;
   notes: string | null;
-  day_id: string;
-  assigned_program_id: string;
+  day_id: string | null;
+  assigned_program_id: string | null;
   day_name: string;
   program_name: string;
+  /** Slobodan trening: nema dana ni programa, pa ni "Dan N" u zaglavlju. */
+  is_free: boolean;
 };
 
 type ExerciseRow = {
@@ -34,6 +36,8 @@ type ExerciseRow = {
   duration_minutes: number | null;
   exercise_name: string;
   primary_muscle: string | null;
+  /** Cilj kilaze po seriji (per-set red). Serija bez reda pada na planned_weight. */
+  set_targets: Record<number, number | null>;
   set_logs: Array<{
     set_number: number;
     reps: number | null;
@@ -71,14 +75,29 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
       setMeta(null);
       setExercises([]);
 
-      // 1. Sesija + dan + program
-      const { data: sessionData } = await supabase
-        .from("workout_session_logs")
-        .select(
-          "id, day_number, started_at, completed_at, duration_seconds, notes, day_id, assigned_program_id"
-        )
-        .eq("id", sessionId)
-        .maybeSingle();
+      // 1. Sesija (datum, trajanje, beleska) i plan SESIJE.
+      //    Plan se cita kroz get_session_plan_full, a ne iz dana: kad je trener
+      //    usred treninga menjao vezbe, serije pokazuju na sesijske kopije
+      //    (_fork_session_plan), pa bi citanje dana dalo istu vezbu dvaput -
+      //    praznu iz dana i punu iz serija. RPC vraca bas vezbe ove sesije i
+      //    pusta i vezbaca i njegovog trenera.
+      const [{ data: sessionData }, { data: planData }, { data: logs, error: logsErr }] =
+        await Promise.all([
+          supabase
+            .from("workout_session_logs")
+            .select(
+              "id, day_number, started_at, completed_at, duration_seconds, notes, day_id, assigned_program_id"
+            )
+            .eq("id", sessionId)
+            .maybeSingle(),
+          supabase.rpc("get_session_plan_full" as any, { p_session_id: sessionId }),
+          supabase
+            .from("set_logs")
+            .select(
+              "exercise_id, set_number, reps, weight_kg, rpe, done, assigned_program_exercises(id, position, sets, reps, weight_kg, duration_minutes, exercises(name, primary_muscle, is_duration_based))"
+            )
+            .eq("session_log_id", sessionId),
+        ]);
 
       if (!sessionData) {
         setLoading(false);
@@ -86,42 +105,23 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
       }
 
       const s: any = sessionData;
+      const plan: any = Array.isArray(planData) ? planData[0] : planData;
+      const slobodan = s.day_id == null;
 
-      const [{ data: dayData }, { data: progData }] = await Promise.all([
-        supabase
-          .from("assigned_program_days")
-          .select("name")
-          .eq("id", s.day_id)
-          .maybeSingle(),
-        supabase
-          .from("assigned_programs")
-          .select("name")
-          .eq("id", s.assigned_program_id)
-          .maybeSingle(),
-      ]);
+      const { data: progData } = s.assigned_program_id
+        ? await supabase
+            .from("assigned_programs")
+            .select("name")
+            .eq("id", s.assigned_program_id)
+            .maybeSingle()
+        : { data: null };
 
       setMeta({
         ...s,
-        day_name: (dayData as any)?.name ?? `Dan ${s.day_number}`,
+        is_free: slobodan,
+        day_name: plan?.day_name ?? (slobodan ? "Slobodan trening" : `Dan ${s.day_number}`),
         program_name: (progData as any)?.name ?? "-",
       });
-
-      // 2. Vežbe iz dana (planirano)
-      const { data: exData } = await supabase
-        .from("assigned_program_exercises")
-        .select(
-          "id, position, sets, reps, weight_kg, duration_minutes, exercise_id, exercises(name, primary_muscle, is_duration_based)"
-        )
-        .eq("day_id", s.day_id)
-        .order("position", { ascending: true });
-
-      // 3. Set logs za sesiju - uključi i exercise meta preko relacije
-      const { data: logs, error: logsErr } = await supabase
-        .from("set_logs")
-        .select(
-          "exercise_id, set_number, reps, weight_kg, rpe, done, assigned_program_exercises(id, position, sets, reps, weight_kg, duration_minutes, exercises(name, primary_muscle, is_duration_based))"
-        )
-        .eq("session_log_id", sessionId);
 
       if (logsErr) console.error("set_logs fetch error:", logsErr);
 
@@ -131,21 +131,26 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
         logsByEx[l.exercise_id].push(l);
       }
 
-      // Spoji: prvo vežbe iz dana (planirano), zatim DODAJ vežbe iz logova
-      // koje više nisu u danu (npr. trener ih je obrisao posle treninga).
+      // Prvo vezbe plana sesije, pa vezbe iz serija kojih u planu vise nema
+      // (trener ih je obrisao posle treninga) - da odradjeno ne nestane.
       const seen = new Set<string>();
-      const planned: ExerciseRow[] = ((exData as any[]) ?? []).map((ex) => {
+      const planned: ExerciseRow[] = ((plan?.exercises as any[]) ?? []).map((ex) => {
         seen.add(ex.id);
+        const ciljevi: Record<number, number | null> = {};
+        for (const sd of (ex.set_details as any[]) ?? []) {
+          ciljevi[sd.set_number] = sd.weight_kg != null ? Number(sd.weight_kg) : null;
+        }
         return {
           id: ex.id,
           position: ex.position,
           sets: ex.sets,
-          planned_reps: ex.reps,
+          planned_reps: ex.reps != null ? String(ex.reps) : null,
           planned_weight: ex.weight_kg,
-          is_duration_based: ex.exercises?.is_duration_based ?? null,
+          is_duration_based: ex.exercise?.is_duration_based ?? null,
           duration_minutes: ex.duration_minutes ?? null,
-          exercise_name: ex.exercises?.name ?? "Vežba",
-          primary_muscle: ex.exercises?.primary_muscle ?? null,
+          exercise_name: ex.exercise?.name ?? "Vežba",
+          primary_muscle: ex.exercise?.primary_muscle ?? null,
+          set_targets: ciljevi,
           set_logs: (logsByEx[ex.id] ?? []).sort((a, b) => a.set_number - b.set_number),
         };
       });
@@ -157,13 +162,14 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
         orphans.push({
           id: exId,
           position: sample?.position ?? 999,
-          sets: sample?.sets ?? logsByEx[exId].length,
+          sets: Math.max(sample?.sets ?? 0, logsByEx[exId].length),
           planned_reps: sample?.reps ?? null,
           planned_weight: sample?.weight_kg ?? null,
           is_duration_based: sample?.exercises?.is_duration_based ?? null,
           duration_minutes: sample?.duration_minutes ?? null,
           exercise_name: sample?.exercises?.name ?? "Vežba (uklonjena iz plana)",
           primary_muscle: sample?.exercises?.primary_muscle ?? null,
+          set_targets: {},
           set_logs: logsByEx[exId].sort((a, b) => a.set_number - b.set_number),
         });
       }
@@ -202,7 +208,9 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
           </DialogTitle>
           {meta && (
             <div className="text-[12px] text-muted-foreground mt-0.5">
-              {meta.program_name} · Dan {meta.day_number}
+              {meta.is_free
+                ? formatDate(meta.completed_at ?? meta.started_at)
+                : `${meta.program_name} · Dan ${meta.day_number}`}
             </div>
           )}
           {/* Lokalni X iznad sticky headera (wrapperov X je z-10 pa ga header prekrije). */}
@@ -313,7 +321,10 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
                         const log = ex.set_logs.find((l) => l.set_number === setNum);
                         const done = log?.done;
 
-                        const planW = ex.planned_weight;
+                        // Cilj te serije (per-set), a ne jedan broj za celu vezbu -
+                        // inace bi strelica napretka lagala kad trener zada
+                        // razlicite kilaze po serijama.
+                        const planW = ex.set_targets[setNum] ?? ex.planned_weight;
                         const actW = log?.weight_kg != null ? Number(log.weight_kg) : null;
                         const wDelta = razlikaKg(actW, planW);
 

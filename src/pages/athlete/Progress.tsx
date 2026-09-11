@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { PhoneShell } from "@/components/PhoneShell";
+import { WorkoutSessionDetailDialog } from "@/components/WorkoutSessionDetailDialog";
 import { BottomNav } from "@/components/BottomNav";
 import { Card, SectionTitle } from "@/components/ui-bits";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import {
   FullScreenSheetFooter,
 } from "@/components/ui/full-screen-sheet";
 import { cn } from "@/lib/utils";
-import { TrendingUp, TrendingDown, Plus, Loader2, Dumbbell, Scale, Flame, CalendarCheck, Target, Sparkles, Lock } from "lucide-react";
+import { TrendingUp, TrendingDown, Plus, Loader2, Dumbbell, Scale, Flame, CalendarCheck, Target, Sparkles, Lock, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { porukaGreske } from "@/lib/errorMessage";
@@ -52,6 +53,10 @@ const Progress = () => {
   const [loading, setLoading] = useState(true);
 
   const [sessions, setSessions] = useState<SessionLog[]>([]);
+
+  // Trening otvoren u detalju (serije, kilaze). null = zatvoreno.
+
+  const [otvorenTrening, setOtvorenTrening] = useState<string | null>(null);
   const [monthCount, setMonthCount] = useState(0);
   const [weekCount, setWeekCount] = useState(0);
 
@@ -446,7 +451,12 @@ const Progress = () => {
               ) : (
                 <Card className="divide-y divide-hairline">
                   {sessions.map((s) => (
-                    <div key={s.id} className="p-4 flex items-center gap-3">
+                    <button
+                      type="button"
+                      key={s.id}
+                      onClick={() => setOtvorenTrening(s.id)}
+                      className="w-full p-4 flex items-center gap-3 text-left hover:bg-surface-2 transition active:scale-[0.99]"
+                    >
                       <div className="h-10 w-10 rounded-2xl bg-gradient-brand-soft text-primary flex items-center justify-center shrink-0">
                         <Dumbbell className="h-4 w-4" />
                       </div>
@@ -468,11 +478,20 @@ const Progress = () => {
                             : `${s.assigned_programs?.name ?? "Program"} · ${s.completed_at ? formatDate(s.completed_at) : "-"}`}
                         </div>
                       </div>
-                    </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                    </button>
                   ))}
                 </Card>
               )}
             </section>
+
+            {/* Vezbac vidi svoje serije - kilaze i ponavljanja po seriji, uz cilj
+                koji mu je trener zadao. Do sada je to video samo trener. */}
+            <WorkoutSessionDetailDialog
+              sessionId={otvorenTrening}
+              open={otvorenTrening != null}
+              onOpenChange={(o) => { if (!o) setOtvorenTrening(null); }}
+            />
           </>
         ) : (
           <>
