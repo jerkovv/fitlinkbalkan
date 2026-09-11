@@ -337,26 +337,32 @@ const AthleteFreeWorkout = () => {
     };
   }, [sessionId]);
 
+  // Vrednosti u ref-u, jedan interval od 5s: ranije je efekat zavisio od trakaHr i
+  // slao RPC na svaki otkucaj (svake sekunde). 5s drzi puls trake svezim na serveru,
+  // gde tad ima prednost nad satom (sat ga ne gazi 20s).
+  const hbTrakaRef = useRef<{ hr: number | null; kcal: number | null }>({ hr: null, kcal: null });
+  hbTrakaRef.current = { hr: trakaHr, kcal: trakaKcal != null ? Math.round(trakaKcal) : null };
   useEffect(() => {
     if (!sessionId) return;
     const beat = async () => {
-      if (finishedRef.current) return;
-      if (!trakaVodiRef.current || trakaHr == null) return;
+      if (finishedRef.current || !trakaVodiRef.current) return;
+      const { hr, kcal } = hbTrakaRef.current;
+      if (hr == null) return;
       try {
         await supabase.rpc("athlete_heartbeat", {
           p_session_id: sessionId,
-          p_hr: trakaHr,
+          p_hr: hr,
           p_source: "sensor",
-          p_calories: trakaKcal != null ? Math.round(trakaKcal) : null,
+          p_calories: kcal,
         } as any);
       } catch {
         /* noop */
       }
     };
     beat();
-    const id = setInterval(beat, 12000);
+    const id = setInterval(beat, 5000);
     return () => clearInterval(id);
-  }, [sessionId, trakaHr, trakaKcal]);
+  }, [sessionId]);
 
   // 5) Zavrsi: ISTA finalize logika kao ActiveWorkout (complete_workout_session sa HR
   //    statistikom + serijom), pa navigacija na rezime. Idempotentno + timeout.

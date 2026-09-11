@@ -1141,30 +1141,47 @@ const ActiveWorkout = () => {
   /* ------------------------- Heartbeat: athlete_heartbeat (samo HR + svežina) ------------------------- */
   // Dira SAMO last_heartbeat i current_hr - nikad poziciju. Drži živi red svežim
   // (poll filtrira last_heartbeat > now - 5min).
+  // Poslednje vrednosti stoje u ref-u, a salje ih JEDAN interval. Ranije je efekat
+  // zavisio od liveHr, pa se sa trakom (otkucaj svake sekunde) ponovo pokretao i
+  // slao RPC skoro svake sekunde. Traka ide na 5s: server tad drzi njen puls ispred
+  // sata (sat ga ne gazi dok je traka sveza, 20s), a telefonov HealthKit ostaje na
+  // starih 12s.
+  const hbRef = useRef<{ hr: number | null; source: "sensor" | "phone"; kcal: number | null }>({
+    hr: null, source: "phone", kcal: null,
+  });
+  hbRef.current = {
+    hr: liveHr ?? null,
+    source: liveHrSource === "sensor" ? "sensor" : "phone",
+    kcal: trakaDaje && sensorKcal != null ? Math.round(sensorKcal) : null,
+  };
   useEffect(() => {
     if (!sessionId || finished) return;
     let stopped = false;
+    let poslednjeSlanje = 0;
     const beat = async () => {
       if (stopped || finishedRef.current) return;
+      const { hr, source, kcal } = hbRef.current;
+      if (source !== "sensor" && Date.now() - poslednjeSlanje < 12000) return;
+      poslednjeSlanje = Date.now();
       try {
         await supabase.rpc("athlete_heartbeat", {
           p_session_id: sessionId,
-          p_hr: liveHr ?? null,
+          p_hr: hr,
           // Trener po ovome zna da puls stize sa trake, a ne sa sata (hr_source).
-          p_source: liveHrSource === "sensor" ? "sensor" : "phone",
-          p_calories: trakaDaje && sensorKcal != null ? Math.round(sensorKcal) : null,
+          p_source: source,
+          p_calories: kcal,
         } as any);
       } catch {
         /* noop */
       }
     };
     beat();
-    const id = setInterval(beat, 12000);
+    const id = setInterval(beat, 5000);
     return () => {
       stopped = true;
       clearInterval(id);
     };
-  }, [sessionId, liveHr, liveHrSource, trakaDaje, sensorKcal, finished]);
+  }, [sessionId, finished]);
 
   /* ------------------------- Live Activity (iOS lock screen) ------------------------- */
   // START kad postoji aktivna sesija + pozicija (jednom), UPDATE na promenu
