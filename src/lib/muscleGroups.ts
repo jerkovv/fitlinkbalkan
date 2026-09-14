@@ -11,6 +11,7 @@ export type MuscleGroupId =
   | "zadnja_loza"
   | "glutei"
   | "listovi"
+  | "vrat"
   | "kardio";
 
 export type MuscleGroupItem = {
@@ -32,6 +33,7 @@ export const MUSCLE_GROUPS: MuscleGroupItem[] = [
   { id: "zadnja_loza", label: "Zadnja loža", type: "muscle" },
   { id: "glutei", label: "Glutei", type: "muscle" },
   { id: "listovi", label: "Listovi", type: "muscle" },
+  { id: "vrat", label: "Vrat", type: "muscle" },
   { id: "kardio", label: "Kardio", type: "cardio" },
 ];
 
@@ -47,5 +49,6 @@ export const MUSCLE_LABELS: Record<string, string> = {
   zadnja_loza: "Zadnja loža",
   glutei: "Glutei",
   listovi: "Listovi",
+  vrat: "Vrat",
   kardio: "Kardio",
 };

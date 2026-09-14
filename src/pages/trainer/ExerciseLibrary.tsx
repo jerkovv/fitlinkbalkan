@@ -51,6 +51,7 @@ const MUSCLE_GROUPS = [
   { value: "glutei", label: "Glutei" },
   { value: "listovi", label: "Listovi" },
   { value: "core", label: "Core" },
+  { value: "vrat", label: "Vrat" },
   { value: "celo_telo", label: "Celo telo" },
   { value: "kardio", label: "Kardio" },
 ];

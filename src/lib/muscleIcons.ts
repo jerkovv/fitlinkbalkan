@@ -11,11 +11,12 @@ import zadnja_loza from "@/assets/muscle-chips/chip_hamstrings_b.svg";
 import glutei from "@/assets/muscle-chips/ic_chip_hips_b.svg";
 import listovi from "@/assets/muscle-chips/ic_chip_calves_b.svg";
 import core from "@/assets/muscle-chips/chip_abs_b.svg";
+import vrat from "@/assets/muscle-chips/ic_chip_neck_b.svg";
 import kardio from "@/assets/muscle-chips/chip_cardio.svg";
 
 export const MUSCLE_ICON: Record<string, string> = {
   grudi, ledja, ramena, biceps, triceps, podlaktice,
-  kvadriceps, zadnja_loza, glutei, listovi, core, kardio,
+  kvadriceps, zadnja_loza, glutei, listovi, core, vrat, kardio,
 };
 
 export function muscleIcon(primaryMuscle?: string | null): string | null {
