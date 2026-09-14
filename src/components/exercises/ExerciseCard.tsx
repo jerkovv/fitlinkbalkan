@@ -1,7 +1,8 @@
 import { forwardRef, useState } from "react";
-import { Bookmark, Check } from "lucide-react";
+import { Bookmark, Check, Maximize2, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MUSCLE_LABELS, type MuscleGroupId } from "@/lib/muscleGroups";
+import { hasExerciseVideo } from "@/lib/exerciseMedia";
 import { MuscleGroupIcon } from "./MuscleGroupIcon";
 
 export type PickerExercise = {
@@ -24,6 +25,8 @@ type Props = {
   variant?: "grid" | "row";
   /** Prikazi misicnu grupu ispod naziva. Iskljuci kad je cela lista ionako ta grupa. */
   showMuscle?: boolean;
+  /** Otvori pregled vezbe (snimak). Bez njega se dugme ne prikazuje. */
+  onPreview?: (exercise: PickerExercise) => void;
 };
 
 const Placeholder = forwardRef<HTMLDivElement, { muscle: string }>(
@@ -49,8 +52,13 @@ export const ExerciseCard = ({
   index = 0,
   variant = "grid",
   showMuscle = true,
+  onPreview,
 }: Props) => {
   const [imgFailed, setImgFailed] = useState(false);
+  // "Video" samo kad snimak stvarno postoji - deo vezbi ima samo sliku, pa one
+  // dobijaju dugme za uvecanje, da "Video" ne otvori sliku.
+  const video = hasExerciseVideo(exercise);
+  const pregledLabel = video ? "Pogledaj snimak vežbe" : "Uvećaj sliku vežbe";
   const primaryName = exercise.name_en?.trim() || exercise.name;
   const subtitle =
     exercise.description?.trim() ||
@@ -90,6 +98,19 @@ export const ExerciseCard = ({
             {subtitle}
           </div>
         </div>
+        {onPreview && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPreview(exercise);
+            }}
+            aria-label={pregledLabel}
+            className="h-9 w-9 rounded-full bg-surface-2 hover:bg-surface-3 flex items-center justify-center shrink-0 transition"
+          >
+            {video ? <Play size={14} fill="currentColor" strokeWidth={0} /> : <Maximize2 size={14} />}
+          </button>
+        )}
         {selected && (
           <div className="h-7 w-7 rounded-full bg-gradient-brand flex items-center justify-center shrink-0">
             <Check size={14} className="text-primary-foreground" strokeWidth={3} />
@@ -144,6 +165,30 @@ export const ExerciseCard = ({
           <div className="absolute top-2 right-2 h-7 w-7 rounded-full bg-gradient-brand flex items-center justify-center animate-scale-in">
             <Check size={14} className="text-primary-foreground" strokeWidth={3} />
           </div>
+        )}
+
+        {onPreview && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPreview(exercise);
+            }}
+            aria-label={pregledLabel}
+            className={cn(
+              "absolute bottom-2 right-2 h-7 rounded-full bg-black/60 text-white backdrop-blur-md flex items-center justify-center gap-1 text-[11px] font-semibold hover:bg-black/75 transition",
+              video ? "px-2.5" : "w-7",
+            )}
+          >
+            {video ? (
+              <>
+                <Play size={10} fill="currentColor" strokeWidth={0} />
+                Video
+              </>
+            ) : (
+              <Maximize2 size={12} />
+            )}
+          </button>
         )}
       </div>
       {/* Fiksne visine teksta: bez njih kartica sa naslovom u dva reda razvuce

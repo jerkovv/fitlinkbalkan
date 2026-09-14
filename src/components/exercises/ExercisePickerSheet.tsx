@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { MUSCLE_GROUPS, type MuscleGroupId } from "@/lib/muscleGroups";
 import { MuscleGroupStrip } from "./MuscleGroupStrip";
 import { MuscleGroupRail } from "./MuscleGroupRail";
-import { ExerciseCard } from "./ExerciseCard";
+import { ExerciseCard, type PickerExercise } from "./ExerciseCard";
+import { ExercisePreview } from "./ExercisePreview";
 import { SelectionActionBar } from "./SelectionActionBar";
 import { ExerciseSearchSheet } from "./ExerciseSearchSheet";
 import { ExerciseFilterSheet, type FilterState } from "./ExerciseFilterSheet";
@@ -49,6 +50,8 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAd
   const desktop = useDesktopWeb();
   const [muscle, setMuscle] = useState<MuscleGroupId>("grudi");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // Vezba otvorena u pregledu (snimak); null = pregled zatvoren.
+  const [pregled, setPregled] = useState<PickerExercise | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
@@ -169,6 +172,7 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAd
   const handleClose = (next: boolean) => {
     if (!next) {
       setSelected(new Set());
+      setPregled(null);
       ocistiPretragu();
       onClose();
     }
@@ -257,6 +261,7 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAd
               onToggleBookmark={toggleBookmark}
               index={i}
               showMuscle={showFavorites || searching}
+              onPreview={setPregled}
             />
           ))}
 
@@ -299,6 +304,20 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAd
       onOpenChange={setFilterOpen}
       value={filters}
       onApply={setFilters}
+    />
+  );
+
+  // U React stablu birača (ne pored njega): Radix onda klik u pregledu ne racuna
+  // kao klik "van" birača, pa se birac ne zatvori ispod pregleda.
+  const pregledEl = (
+    <ExercisePreview
+      exercise={pregled}
+      onClose={() => setPregled(null)}
+      selected={pregled ? selected.has(pregled.id) : false}
+      bookmarked={pregled ? isBookmarked(pregled.id) : false}
+      onToggleSelect={handleToggleSelect}
+      onToggleBookmark={toggleBookmark}
+      replaceMode={!!onPick}
     />
   );
 
@@ -381,6 +400,7 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAd
 
             {actionBar}
             {filterSheet}
+            {pregledEl}
           </DialogPrimitive.Content>
         </SheetPortal>
       </Sheet>
@@ -450,6 +470,7 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAd
           onToggleSelect={handleToggleSelect}
         />
         {filterSheet}
+        {pregledEl}
       </SheetContent>
     </Sheet>
   );

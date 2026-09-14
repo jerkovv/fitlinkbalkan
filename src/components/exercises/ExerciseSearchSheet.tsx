@@ -8,7 +8,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { useExercises } from "@/hooks/useExercises";
 import { useExerciseBookmarks } from "@/hooks/useExerciseBookmarks";
-import { ExerciseCard } from "./ExerciseCard";
+import { ExerciseCard, type PickerExercise } from "./ExerciseCard";
+import { ExercisePreview } from "./ExercisePreview";
 
 const SUGGESTIONS = ["Bench Press", "Squat", "Deadlift", "Pull-Up"];
 
@@ -22,6 +23,7 @@ type Props = {
 export const ExerciseSearchSheet = ({ open, onOpenChange, selected, onToggleSelect }: Props) => {
   const [input, setInput] = useState("");
   const [debounced, setDebounced] = useState("");
+  const [pregled, setPregled] = useState<PickerExercise | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -100,10 +102,19 @@ export const ExerciseSearchSheet = ({ open, onOpenChange, selected, onToggleSele
               onToggleSelect={onToggleSelect}
               onToggleBookmark={toggle}
               variant="row"
+              onPreview={setPregled}
             />
           ))}
         </FullScreenSheetScroll>
       )}
+      <ExercisePreview
+        exercise={pregled}
+        onClose={() => setPregled(null)}
+        selected={pregled ? selected.has(pregled.id) : false}
+        bookmarked={pregled ? isBookmarked(pregled.id) : false}
+        onToggleSelect={onToggleSelect}
+        onToggleBookmark={toggle}
+      />
     </FullScreenSheet>
   );
 };
