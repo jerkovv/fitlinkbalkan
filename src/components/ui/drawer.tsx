@@ -1,9 +1,15 @@
 import * as React from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Drawer as DrawerPrimitive } from "vaul";
 import { Keyboard } from "@capacitor/keyboard";
 
 import { cn } from "@/lib/utils";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 
+// Racunar (fitlink.rs/dashboard): fioka koja se prevlaci prstom nema smisla uz mis,
+// a zalepljena za dno monitora izgleda kao greska - postaje obican prozor na sredini
+// (Radix Dialog). Trigger/Close/Title/Description iz vaul-a su isti Radix delovi pa
+// rade u obe grane; Root/Portal/Overlay/Content traze vaul kontekst i biraju granu.
 const Drawer = ({
   shouldScaleBackground = true,
   // Vaul po defaultu "reposicionira" sheet uz visual viewport kad iskoči
@@ -11,27 +17,57 @@ const Drawer = ({
   // gasimo i sami podižemo sadržaj iznad tastature (DrawerContent paddingBottom).
   repositionInputs = false,
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
-  <DrawerPrimitive.Root
-    shouldScaleBackground={shouldScaleBackground}
-    repositionInputs={repositionInputs}
-    {...props}
-  />
-);
+}: React.ComponentProps<typeof DrawerPrimitive.Root>) => {
+  const desktop = useDesktopWeb();
+  if (desktop) {
+    return (
+      <DialogPrimitive.Root
+        open={props.open}
+        onOpenChange={props.onOpenChange}
+        defaultOpen={props.defaultOpen}
+        modal={props.modal}
+      >
+        {props.children}
+      </DialogPrimitive.Root>
+    );
+  }
+  return (
+    <DrawerPrimitive.Root
+      shouldScaleBackground={shouldScaleBackground}
+      repositionInputs={repositionInputs}
+      {...props}
+    />
+  );
+};
 Drawer.displayName = "Drawer";
 
 const DrawerTrigger = DrawerPrimitive.Trigger;
 
-const DrawerPortal = DrawerPrimitive.Portal;
+const DrawerPortal = (props: React.ComponentProps<typeof DrawerPrimitive.Portal>) => {
+  const desktop = useDesktopWeb();
+  return desktop ? <DialogPrimitive.Portal {...props} /> : <DrawerPrimitive.Portal {...props} />;
+};
 
 const DrawerClose = DrawerPrimitive.Close;
 
 const DrawerOverlay = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Overlay>
->(({ className, ...props }, ref) => (
-  <DrawerPrimitive.Overlay ref={ref} className={cn("fixed inset-0 z-50 bg-black/80", className)} {...props} />
-));
+>(({ className, ...props }, ref) => {
+  const desktop = useDesktopWeb();
+  return desktop ? (
+    <DialogPrimitive.Overlay
+      ref={ref}
+      className={cn(
+        "fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=open]:fade-in-0",
+        className,
+      )}
+      {...props}
+    />
+  ) : (
+    <DrawerPrimitive.Overlay ref={ref} className={cn("fixed inset-0 z-50 bg-black/80", className)} {...props} />
+  );
+});
 DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName;
 
 const DrawerContent = React.forwardRef<
@@ -45,6 +81,7 @@ const DrawerContent = React.forwardRef<
     overlayClassName?: string;
   }
 >(({ className, children, style, overlayClassName, ...props }, ref) => {
+  const desktop = useDesktopWeb();
   // Kad iskoči tastatura, podigni ceo sadržaj sheeta iznad nje (paddingBottom =
   // visina tastature). Sheet zadrži svoju visinu (max-h), a unutrašnji
   // DrawerBody (flex-1 overflow-y-auto) skroluje do svih polja i dugmeta.
@@ -61,6 +98,35 @@ const DrawerContent = React.forwardRef<
       hidePromise.then((h) => h.remove());
     };
   }, []);
+
+  if (desktop) {
+    // Omotac centrira flex-om (ne transform-om, da ga zoom animacija ne pomeri).
+    // overlayClassName nosi samo z-indeks, pa ga dobija i omotac - inace bi prozor
+    // otvoren iznad full-screen sloja (z-100) ostao ispod svoje pozadine.
+    return (
+      <DrawerPortal>
+        <DrawerOverlay className={overlayClassName} />
+        <div
+          className={cn(
+            "fixed inset-0 z-50 flex items-center justify-center p-6 pointer-events-none",
+            overlayClassName,
+          )}
+        >
+          <DialogPrimitive.Content
+            ref={ref}
+            className={cn(
+              "relative pointer-events-auto flex w-full max-w-md max-h-[min(820px,calc(100dvh-48px))] flex-col overflow-hidden rounded-2xl border bg-background pt-2 shadow-2xl duration-200 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
+              className,
+            )}
+            style={style}
+            {...props}
+          >
+            {children}
+          </DialogPrimitive.Content>
+        </div>
+      </DrawerPortal>
+    );
+  }
 
   return (
     <DrawerPortal>

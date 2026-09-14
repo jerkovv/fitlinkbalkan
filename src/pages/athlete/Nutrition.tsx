@@ -386,6 +386,7 @@ const Nutrition = () => {
         open={logOpen}
         onClose={() => setLogOpen(false)}
         title={pickedFood ? "Količina" : "Loguj namirnicu"}
+        size="list"
       >
         {!pickedFood ? (
           <>

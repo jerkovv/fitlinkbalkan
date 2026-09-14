@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { Keyboard } from "@capacitor/keyboard";
 
 import { cn } from "@/lib/utils";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 
 /**
  * FullScreenSheet - full-screen overlay stranica (Wolt-stil), deljena izmedju
@@ -54,11 +55,83 @@ interface FullScreenSheetProps {
    * se pri svakom povratku izgubio skrol i ponovo odvrtela ulazna animacija.
    */
   hidden?: boolean;
+  /**
+   * Samo za racunar (fitlink.rs/dashboard), gde sloj postaje prozor na sredini.
+   * "form" (default): uzak, visok koliko sadrzaj. "list": sirok i stalne visine,
+   * za pretragu i duge liste - da prozor ne skace dok se lista filtrira.
+   */
+  size?: "form" | "list";
 }
 
-const FullScreenSheet = ({ open, onClose, title, children, hidden }: FullScreenSheetProps) => {
+const FullScreenSheet = ({ open, onClose, title, children, hidden, size = "form" }: FullScreenSheetProps) => {
   const keyboardHeight = useKeyboardHeight();
+  const desktop = useDesktopWeb();
+
+  // Esc zatvara prozor na racunaru. Preskace se dok je iznad otvoren padajuci meni
+  // ili drugi Radix prozor - Esc tada zatvara samo njega.
+  React.useEffect(() => {
+    if (!open || !desktop || hidden) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      if (
+        document.querySelector(
+          '[data-radix-popper-content-wrapper], [role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]',
+        )
+      ) return;
+      onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, desktop, hidden, onClose]);
+
   if (!open) return null;
+
+  // Racunar: forma razvucena preko celog monitora (polje od ivice do ivice, dugme
+  // preko cele sirine) izgleda amaterski. Isti sadrzaj ide u prozor na sredini sa
+  // zatamnjenom pozadinom; Header/Scroll/Footer delovi rade isto kao na telefonu.
+  if (desktop) {
+    return createPortal(
+      <div
+        aria-hidden={hidden || undefined}
+        className={cn(
+          "fixed inset-0 z-[100] flex items-center justify-center p-6 pointer-events-auto",
+          hidden && "invisible pointer-events-none",
+        )}
+      >
+        <div
+          className="absolute inset-0 bg-black/40 backdrop-blur-[2px] animate-in fade-in-0 duration-200"
+          onClick={onClose}
+        />
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={typeof title === "string" ? title : undefined}
+          className={cn(
+            "relative flex w-full flex-col overflow-hidden rounded-2xl border border-hairline bg-background shadow-2xl animate-in fade-in-0 zoom-in-95 duration-200",
+            size === "list"
+              ? "h-[min(820px,calc(100dvh-48px))] max-w-[720px]"
+              : "max-h-[min(820px,calc(100dvh-48px))] max-w-[520px]",
+          )}
+        >
+          <div className="shrink-0 h-14 flex items-center justify-between gap-3 border-b border-hairline pl-5 pr-3">
+            <h2 className="font-display text-base font-bold truncate">{title}</h2>
+            <button
+              onClick={onClose}
+              aria-label="Zatvori"
+              className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center hover:bg-surface-2 transition"
+            >
+              <X className="h-5 w-5" strokeWidth={2.25} />
+            </button>
+          </div>
+          <KeyboardHeightContext.Provider value={0}>
+            {children}
+          </KeyboardHeightContext.Provider>
+        </div>
+      </div>,
+      document.body,
+    );
+  }
+
   return createPortal(
     // pointer-events-auto: kad je full screen otvoren UNUTAR Radix modala (npr
     // ExerciseSearchSheet u ExercisePickerSheet), Radix postavi body

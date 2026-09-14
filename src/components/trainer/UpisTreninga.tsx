@@ -278,6 +278,7 @@ export const UpisTreninga = ({
       hidden={biram}
       onClose={onClose}
       title={athleteName ? `Upiši trening - ${athleteName}` : "Upiši trening"}
+      size="list"
     >
       <FullScreenSheetScroll className="pt-5 space-y-4">
         <p className="text-[12.5px] text-muted-foreground">

@@ -765,6 +765,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
         open={!!pickerMealId}
         onClose={() => setPickerMealId(null)}
         title={pickedFood ? "Količina" : "Izaberi namirnicu"}
+        size="list"
       >
         {!pickedFood ? (
           <>

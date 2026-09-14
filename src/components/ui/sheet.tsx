@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 
 const Sheet = SheetPrimitive.Root;
 
@@ -52,7 +53,39 @@ interface SheetContentProps
     VariantProps<typeof sheetVariants> {}
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
-  ({ side = "right", className, children, ...props }, ref) => (
+  ({ side = "right", className, children, ...props }, ref) => {
+    const desktop = useDesktopWeb();
+
+    // Racunar (fitlink.rs/dashboard): donja fioka od 440px zalepljena za dno monitora
+    // izgleda kao greska, pa postaje prozor na sredini. Omotac centrira flex-om, ne
+    // transform-om, da ga ulazna zoom animacija ne pomeri.
+    if (desktop && side === "bottom") {
+      return (
+        <SheetPortal>
+          <SheetOverlay className="bg-black/40 backdrop-blur-[2px]" />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 pointer-events-none">
+            <SheetPrimitive.Content
+              ref={ref}
+              className={cn(
+                "relative pointer-events-auto grid w-full max-w-lg max-h-[min(820px,calc(100dvh-48px))] gap-4 overflow-hidden border border-hairline bg-background p-6 shadow-2xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95",
+                className,
+                // Posle className: fioke traze rounded-t-3xl, a prozor je zaobljen svuda.
+                "rounded-2xl",
+              )}
+              {...props}
+            >
+              {children}
+              <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity data-[state=open]:bg-secondary hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </SheetPrimitive.Close>
+            </SheetPrimitive.Content>
+          </div>
+        </SheetPortal>
+      );
+    }
+
+    return (
     <SheetPortal>
       <SheetOverlay />
       <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
@@ -63,7 +96,8 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
         </SheetPrimitive.Close>
       </SheetPrimitive.Content>
     </SheetPortal>
-  ),
+    );
+  },
 );
 SheetContent.displayName = SheetPrimitive.Content.displayName;
 
