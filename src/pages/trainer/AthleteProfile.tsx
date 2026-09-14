@@ -39,6 +39,7 @@ import { useWearableConnections } from "@/hooks/useWearableConnections";
 import { WorkoutsList } from "@/components/wearables/WorkoutsList";
 import { MembershipEditSheet } from "@/components/trainer/MembershipEditSheet";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 
 type AthleteData = {
   id: string;
@@ -169,8 +170,36 @@ const StatBox = ({
   </Card>
 );
 
+// Racunar: naslov sekcije (eyebrow + naslov levo, opciona akcija desno).
+const SectionHead = ({
+  eyebrow,
+  title,
+  right,
+}: {
+  eyebrow: string;
+  title: string;
+  right?: ReactNode;
+}) => (
+  <div className="flex items-end justify-between gap-3">
+    <div className="min-w-0">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+        {eyebrow}
+      </div>
+      <h2 className="font-display text-[19px] font-bold tracking-tight">{title}</h2>
+    </div>
+    {right}
+  </div>
+);
+
+// Racunar: oznake u karticama, isti izgled kao u mrezi programa.
+const META_CHIP =
+  "inline-flex items-center rounded-full bg-surface-2 px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground";
+const META_CHIP_PRIMARY =
+  "inline-flex items-center rounded-full bg-primary-soft px-2.5 py-1 text-[11.5px] font-semibold text-primary";
+
 const AthleteProfile = () => {
   const { locked, openLock, guard } = usePretplataLock();
+  const desktop = useDesktopWeb();
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -711,509 +740,1083 @@ const AthleteProfile = () => {
           : "Bez datuma"
     : "";
 
+  // Racunar: iste vrednosti koje telefon racuna u liniji, izdvojene jer ih
+  // raspored u kolonama koristi na drugom mestu.
+  const wearableSyncText = (() => {
+    if (!lastWearableSync) return null;
+    const diff = Date.now() - new Date(lastWearableSync).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 60) return `Sinhronizovano pre ${Math.max(1, m)} min`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `Sinhronizovano pre ${h} h`;
+    return `Sinhronizovano pre ${Math.floor(h / 24)} d`;
+  })();
+  const weightDiff =
+    metricsHistory.length >= 2 && metricsHistory[0].weight_kg && metricsHistory[metricsHistory.length - 1].weight_kg
+      ? metricsHistory[0].weight_kg - metricsHistory[metricsHistory.length - 1].weight_kg
+      : null;
+
   return (
     <PhoneShell
       back="/trener/vezbaci"
-      action={<SendMessageToAthlete athleteId={athlete.id} athleteName={athlete.full_name ?? undefined} variant="icon" />}
-      title={
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-1.5">
-            Profil vežbača
-          </div>
-          <h1 className="font-display text-[28px] leading-[1.1] font-bold tracking-tightest">
-            {athlete.full_name ?? "Bez imena"}
-          </h1>
-        </div>
-      }
-    >
-      {/* Hero */}
-      <Card className="p-5 bg-gradient-brand-soft border-0">
-        <div className="flex items-center gap-4">
-          <Avatar initials={initialsOf(athlete.full_name)} tone="brand" size="xl" />
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap gap-1.5 mb-1.5">
-              <Chip tone="info">{goalLabel[athlete.goal ?? "general"] ?? "Opšte"}</Chip>
-              {athlete.weight_kg && <Chip tone="info">{athlete.weight_kg} kg</Chip>}
-              {athlete.height_cm && <Chip tone="info">{athlete.height_cm} cm</Chip>}
-            </div>
-            <div className="text-[13px] text-muted-foreground">
-              Pridružen {new Date(athlete.joined_at).toLocaleDateString("sr-Latn-RS")}
-            </div>
-          </div>
-        </div>
-
-        {/* Email - zaseban red pune sirine (ne u uskoj koloni pored avatara). Tekst uzima svu
-            sirinu i PRELAMA se ako je dug (nikad iza "..."); copy uvek kopira ceo email. */}
-        {athleteEmail && (
-          <div className="mt-4 flex items-center gap-2 rounded-2xl bg-surface/70 backdrop-blur border border-hairline px-3 py-2.5">
-            <Mail className="h-4 w-4 text-primary shrink-0" strokeWidth={2} />
-            <span className="flex-1 min-w-0 text-[13px] leading-snug text-foreground break-all">
-              {athleteEmail}
-            </span>
-            <button
-              type="button"
-              onClick={copyEmail}
-              className="shrink-0 h-8 w-8 -mr-1 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-primary hover:bg-primary-soft transition active:scale-90"
-              aria-label="Kopiraj email"
-            >
-              <Copy className="h-4 w-4" strokeWidth={2} />
-            </button>
-          </div>
-        )}
-
-        <div className="grid grid-cols-3 gap-2 mt-5">
-          <SendMessageToAthlete athleteId={athlete.id} athleteName={athlete.full_name ?? undefined} variant="stacked" />
-          <button
-            onClick={callAthlete}
-            className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-surface/80 backdrop-blur hover:bg-surface transition"
-          >
-            <Phone className="h-4 w-4 text-foreground" strokeWidth={2} />
-            <span className="text-[11px] font-semibold">Pozovi</span>
-          </button>
-          <button
-            onClick={openProgramAssign}
-            className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-surface/80 backdrop-blur hover:bg-surface transition"
-          >
-            <ClipboardList className="h-4 w-4 text-foreground" strokeWidth={2} />
-            <span className="text-[11px] font-semibold">Program</span>
-          </button>
-        </div>
-      </Card>
-
-      {/* Statisticki blok */}
-      {stats && stats.success === false ? (
-        <Card className="p-6 text-center text-[13px] text-muted-foreground">
-          Nema još podataka
-        </Card>
-      ) : stats ? (
-        <>
-          <div className="grid grid-cols-2 gap-3">
-            <StatBox
-              label="Ukupno treninga"
-              value={String(stats.total_workouts ?? 0)}
-              sub={`Ovaj mesec: ${stats.workouts_this_month ?? 0}`}
-            />
-            <StatBox
-              label="Učestalost"
-              value={String(stats.weekly_avg ?? 0)}
-              unit="nedeljno"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <StatBox
-              label="Poslednji trening"
-              value={stats.days_since_last == null
-                ? "Nikad"
-                : stats.days_since_last <= 0
-                  ? "Danas"
-                  : `Pre ${stats.days_since_last} d`}
-              sub={stats.days_since_last == null ? "Još nije trenirao" : undefined}
-              valueClass={cn("text-[18px]", RISK_TEXT[stats.risk] ?? "text-foreground")}
-            />
-            <StatBox
-              label="PR-ovi"
-              value={String(stats.pr_count ?? 0)}
-              sub={stats.best_e1rm_kg ? `${stats.best_e1rm_kg} kg najjaci` : undefined}
-            />
-          </div>
-
-          {stats.sessions_total != null && stats.sessions_used != null && (
-            <Card className="p-4">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5">
-                Iskorišćenost paketa
-              </div>
-              <div className="flex items-baseline gap-1 mb-2">
-                <span className="font-display text-[22px] font-bold tracking-tightest leading-none tnum">
-                  {stats.sessions_used}/{stats.sessions_total}
-                </span>
-                <span className="text-[11px] text-muted-foreground">sesija</span>
-              </div>
-              <div className="h-2 rounded-full bg-surface-2 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-brand"
-                  style={{
-                    width: `${Math.min(100, Math.round((stats.sessions_used / stats.sessions_total) * 100))}%`,
-                  }}
-                />
-              </div>
-            </Card>
-          )}
-
-          <div className="grid grid-cols-2 gap-3">
-            <StatBox
-              label="Ishrana"
-              value={String(stats.nutrition_days_30 ?? 0)}
-              unit="/ 30 dana"
-            />
-            <StatBox
-              label="Volumen"
-              value={fmtVolume(stats.total_volume_kg ?? 0)}
-              unit="kg ukupno"
-            />
-          </div>
-
-          {stats.kcal_sessions > 0 && (
-            <StatBox
-              icon={<Flame className="h-4 w-4" />}
-              label="Kalorije"
-              value={Math.round(stats.total_kcal ?? 0).toLocaleString("sr-Latn-RS")}
-              unit="kcal ukupno"
-              sub={stats.avg_kcal ? `Prosek po treningu: ${Math.round(stats.avg_kcal)} kcal` : undefined}
-            />
-          )}
-        </>
-      ) : null}
-
-      {/* Training program */}
-      <section>
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Trening</div>
-            <div className="font-display text-lg font-bold">Program</div>
-          </div>
-        </div>
-
-        {activeProgram ? (
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-11 w-11 rounded-2xl bg-gradient-brand-soft flex items-center justify-center shrink-0">
-                <Dumbbell className="h-5 w-5 text-primary" strokeWidth={2.25} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-[15px] truncate">{activeProgram.name}</div>
-                <div className="text-[12px] text-muted-foreground">
-                  {activeProgram.total_days} {activeProgram.total_days === 1 ? "dan" : "dana"} · Dodeljen{" "}
-                  {new Date(activeProgram.assigned_at).toLocaleDateString("sr-Latn-RS")}
-                </div>
-              </div>
-            </div>
-            <div className="mt-3 flex flex-col gap-2">
-              <Button
-                className="w-full bg-gradient-brand text-white shadow-brand"
-                onClick={() => navigate(`/trener/vezbaci/${id}/program/${activeProgram.id}`)}
-              >
-                Izmeni plan
-              </Button>
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" className="w-full" onClick={openProgramAssign}>
-                  Promeni program
-                </Button>
-                <Button variant="outline" className="w-full" onClick={startCustomProgram}>
-                  <Sparkles className="h-4 w-4 mr-1.5" /> Nov plan
-                </Button>
-              </div>
-            </div>
-          </Card>
-        ) : (
-          <div className="space-y-2">
-            <Button
-              className="w-full h-12 bg-gradient-brand text-white shadow-brand"
-              onClick={startCustomProgram}
-            >
-              <Sparkles className="h-4 w-4 mr-1.5" /> Napravi plan od nule
-            </Button>
-            <button
-              onClick={openProgramAssign}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-hairline hover:border-primary/40 hover:bg-primary-soft/40 py-4 text-[14px] font-semibold text-muted-foreground hover:text-primary-soft-foreground transition"
-            >
-              <Plus className="h-4 w-4" /> Dodeli gotov program
-            </button>
-          </div>
-        )}
-      </section>
-
-      {/* Nutrition section */}
-      <section>
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Ishrana</div>
-            <div className="font-display text-lg font-bold">Plan ishrane</div>
-          </div>
-        </div>
-
-        {activePlan ? (
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-11 w-11 rounded-2xl bg-gradient-brand-soft flex items-center justify-center shrink-0">
-                <Apple className="h-5 w-5 text-primary" strokeWidth={2.25} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-[15px] truncate">{activePlan.name}</div>
-                <div className="text-[12px] text-muted-foreground">
-                  {activePlan.target_kcal ? `${activePlan.target_kcal} kcal · ` : ""}
-                  Dodeljeno {new Date(activePlan.assigned_at).toLocaleDateString("sr-Latn-RS")}
-                </div>
-              </div>
-              <button
-                onClick={unassignPlan}
-                className="h-9 w-9 rounded-full hover:bg-destructive-soft flex items-center justify-center"
-                title="Otkaži plan"
-              >
-                <X className="h-4 w-4 text-destructive" />
-              </button>
-            </div>
-            <div className="mt-3 flex flex-col gap-2">
-              <Button
-                className="w-full bg-gradient-brand text-white shadow-brand"
-                onClick={() => navigate(`/trener/vezbaci/${id}/ishrana/${activePlan.id}`)}
-              >
-                Izmeni plan ishrane
-              </Button>
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" className="w-full" onClick={openAssign}>
-                  Promeni plan
-                </Button>
-                <Button variant="outline" className="w-full" onClick={startCustomNutrition}>
-                  <Sparkles className="h-4 w-4 mr-1.5" /> Nov plan
-                </Button>
-              </div>
-            </div>
-          </Card>
-        ) : (
-          <div className="space-y-2">
-            <Button
-              className="w-full h-12 bg-gradient-brand text-white shadow-brand"
-              onClick={startCustomNutrition}
-            >
-              <Sparkles className="h-4 w-4 mr-1.5" /> Napravi plan ishrane od nule
-            </Button>
-            <button
-              onClick={openAssign}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-hairline hover:border-primary/40 hover:bg-primary-soft/40 py-4 text-[14px] font-semibold text-muted-foreground hover:text-primary-soft-foreground transition"
-            >
-              <Plus className="h-4 w-4" /> Dodeli gotov plan
-            </button>
-          </div>
-        )}
-      </section>
-
-      {/* Body metrics */}
-      <section>
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Telo</div>
-            <div className="font-display text-lg font-bold">Merenja</div>
-          </div>
-        </div>
-
-        {latestMetric ? (
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-11 w-11 rounded-2xl bg-info-soft flex items-center justify-center shrink-0">
-                <Scale className="h-5 w-5 text-info-soft-foreground" strokeWidth={2.25} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-[15px]">
-                  {latestMetric.weight_kg ? `${latestMetric.weight_kg} kg` : "-"}
-                  {latestMetric.body_fat_pct ? ` · ${latestMetric.body_fat_pct}% masti` : ""}
-                </div>
-                <div className="text-[12px] text-muted-foreground">
-                  {new Date(latestMetric.recorded_on).toLocaleDateString("sr-Latn-RS")}
-                  {metricsHistory.length > 1 && ` · ${metricsHistory.length} merenja`}
-                </div>
-              </div>
-              {metricsHistory.length >= 2 && metricsHistory[0].weight_kg && metricsHistory[metricsHistory.length - 1].weight_kg && (
-                <Chip tone={
-                  (metricsHistory[0].weight_kg! - metricsHistory[metricsHistory.length - 1].weight_kg!) < 0 ? "success" : "info"
-                }>
-                  {(() => {
-                    const diff = metricsHistory[0].weight_kg! - metricsHistory[metricsHistory.length - 1].weight_kg!;
-                    return `${diff >= 0 ? "+" : ""}${diff.toFixed(1)} kg`;
-                  })()}
-                </Chip>
-              )}
-            </div>
-          </Card>
-        ) : (
-          <Card className="p-4 text-center text-[13px] text-muted-foreground">
-            Vežbač još nije unosio merenja.
-          </Card>
-        )}
-      </section>
-
-      {/* Progress fotke (samo deljene) */}
-      {id && <ProgressPhotos athleteId={id} canManage={false} sharedOnly />}
-
-      {/* Wearable insights */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              Wearable
-            </div>
-            <div className="font-display text-lg font-bold tracking-tightest">
-              Zdravstveni podaci
-            </div>
-          </div>
-          {hasWearable && lastWearableSync && (
-            <div className="text-[11px] text-muted-foreground">
-              {(() => {
-                const diff = Date.now() - new Date(lastWearableSync).getTime();
-                const m = Math.floor(diff / 60000);
-                if (m < 60) return `Sinhronizovano pre ${Math.max(1, m)} min`;
-                const h = Math.floor(m / 60);
-                if (h < 24) return `Sinhronizovano pre ${h} h`;
-                return `Sinhronizovano pre ${Math.floor(h / 24)} d`;
-              })()}
-            </div>
-          )}
-        </div>
-
-        {hasWearable && id ? (
+      desktopWidth="wide"
+      // Racunar: poruka i upis treninga su dugmad sa natpisom u zaglavlju; na
+      // telefonu je poruka ikonica, a brze akcije su u kartici ispod naslova.
+      action={
+        desktop ? (
           <>
-            <HealthMetricsCard userId={id} showConnectCta={false} />
-            <WearableTrendChart userId={id} dataType="heart_rate_avg" days={30} title="Prosečan puls, poslednjih 30 dana" />
-            <WearableTrendChart userId={id} dataType="workout_duration" days={30} title="Trajanje treninga, poslednjih 30 dana" />
+            {/* Deljena komponenta ne prima className, pa se oblik dugmeta podesava
+                preko omotaca (samo direktno dugme, sheet ide kroz portal). */}
+            <span className="[&>button]:h-10 [&>button]:rounded-full [&>button]:px-4">
+              <SendMessageToAthlete athleteId={athlete.id} athleteName={athlete.full_name ?? undefined} />
+            </span>
+            <Button
+              onClick={guard(() => setUpisujem(true))}
+              className="h-10 rounded-full px-4 bg-gradient-brand text-white shadow-brand"
+            >
+              <Plus className="h-4 w-4 mr-1.5" />
+              Upiši trening
+            </Button>
           </>
         ) : (
-          <Card className="p-4 text-center">
-            <div className="text-[12px] text-muted-foreground">
-              Vežbač još nije povezao uređaj
+          <SendMessageToAthlete athleteId={athlete.id} athleteName={athlete.full_name ?? undefined} variant="icon" />
+        )
+      }
+      title={
+        desktop ? (
+          <div className="flex min-w-0 items-center gap-4">
+            <Avatar initials={initialsOf(athlete.full_name)} tone="brand" size="lg" className="ring-0 shadow-brand" />
+            <div className="min-w-0">
+              <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                Profil vežbača
+              </div>
+              <h1 className="truncate font-display text-[30px] leading-[1.1] font-bold tracking-tightest">
+                {athlete.full_name ?? "Bez imena"}
+              </h1>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <span className={META_CHIP_PRIMARY}>{goalLabel[athlete.goal ?? "general"] ?? "Opšte"}</span>
+                {athlete.weight_kg ? <span className={cn(META_CHIP, "tnum")}>{athlete.weight_kg} kg</span> : null}
+                {athlete.height_cm ? <span className={cn(META_CHIP, "tnum")}>{athlete.height_cm} cm</span> : null}
+                <span className="ml-1 text-[12.5px] text-muted-foreground">
+                  Pridružen {new Date(athlete.joined_at).toLocaleDateString("sr-Latn-RS")}
+                </span>
+              </div>
             </div>
-          </Card>
-        )}
-      </section>
-
-      {/* Workout history - tabovi Iz aplikacije / Sa sata */}
-      <section>
-        <div className="flex items-center justify-between mb-2">
+          </div>
+        ) : (
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Aktivnost</div>
-            <div className="font-display text-lg font-bold">Treninzi</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-1.5">
+              Profil vežbača
+            </div>
+            <h1 className="font-display text-[28px] leading-[1.1] font-bold tracking-tightest">
+              {athlete.full_name ?? "Bez imena"}
+            </h1>
+          </div>
+        )
+      }
+    >
+      {desktop ? (
+        // Racunar: statistika u redu plocica preko cele sirine, ispod dve kolone -
+        // levo ono sto trener menja (planovi, treninzi, zdravlje), desno kontakt,
+        // clanarina, merenja i fotke. Na telefonu je sve to jedna duga kolona.
+        <div className="space-y-6">
+          {stats && stats.success === false ? (
+            <Card className="p-6 text-center text-[13px] text-muted-foreground">
+              Nema još podataka
+            </Card>
+          ) : stats ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatBox
+                  label="Ukupno treninga"
+                  value={String(stats.total_workouts ?? 0)}
+                  sub={`Ovaj mesec: ${stats.workouts_this_month ?? 0}`}
+                />
+                <StatBox
+                  label="Učestalost"
+                  value={String(stats.weekly_avg ?? 0)}
+                  unit="nedeljno"
+                />
+                <StatBox
+                  label="Poslednji trening"
+                  value={stats.days_since_last == null
+                    ? "Nikad"
+                    : stats.days_since_last <= 0
+                      ? "Danas"
+                      : `Pre ${stats.days_since_last} d`}
+                  sub={stats.days_since_last == null ? "Još nije trenirao" : undefined}
+                  valueClass={cn("text-[18px]", RISK_TEXT[stats.risk] ?? "text-foreground")}
+                />
+                <StatBox
+                  label="PR-ovi"
+                  value={String(stats.pr_count ?? 0)}
+                  sub={stats.best_e1rm_kg ? `${stats.best_e1rm_kg} kg najjaci` : undefined}
+                />
+              </div>
+              {/* Broj plocica u drugom redu varira (kalorije i paket nisu uvek tu),
+                  pa kolone dele sirinu ravnomerno umesto da ostane prazna rupa. */}
+              <div className="grid grid-cols-2 gap-4 lg:grid-flow-col lg:grid-cols-none lg:auto-cols-fr">
+                <StatBox
+                  label="Ishrana"
+                  value={String(stats.nutrition_days_30 ?? 0)}
+                  unit="/ 30 dana"
+                />
+                <StatBox
+                  label="Volumen"
+                  value={fmtVolume(stats.total_volume_kg ?? 0)}
+                  unit="kg ukupno"
+                />
+                {stats.kcal_sessions > 0 && (
+                  <StatBox
+                    icon={<Flame className="h-4 w-4" />}
+                    label="Kalorije"
+                    value={Math.round(stats.total_kcal ?? 0).toLocaleString("sr-Latn-RS")}
+                    unit="kcal ukupno"
+                    sub={stats.avg_kcal ? `Prosek po treningu: ${Math.round(stats.avg_kcal)} kcal` : undefined}
+                  />
+                )}
+                {stats.sessions_total != null && stats.sessions_used != null && (
+                  <Card className="p-4">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5">
+                      Iskorišćenost paketa
+                    </div>
+                    <div className="flex items-baseline gap-1 mb-2">
+                      <span className="font-display text-[22px] font-bold tracking-tightest leading-none tnum">
+                        {stats.sessions_used}/{stats.sessions_total}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">sesija</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-surface-2 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-brand"
+                        style={{
+                          width: `${Math.min(100, Math.round((stats.sessions_used / stats.sessions_total) * 100))}%`,
+                        }}
+                      />
+                    </div>
+                  </Card>
+                )}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="min-w-0 space-y-8">
+              {/* Program i ishrana jedno pored drugog: to su dve paralelne stvari
+                  koje trener vodi, a kartice iste visine se lako porede. */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="card-premium flex min-h-[236px] flex-col p-5">
+                  <SectionHead eyebrow="Trening" title="Program" />
+                  {activeProgram ? (
+                    <>
+                      <div className="mt-4 flex items-center gap-3">
+                        <div className="h-11 w-11 rounded-xl bg-gradient-brand-soft flex items-center justify-center shrink-0">
+                          <Dumbbell className="h-5 w-5 text-primary" strokeWidth={2.25} />
+                        </div>
+                        <div className="min-w-0 flex-1 font-display text-[17px] font-bold leading-snug tracking-tight line-clamp-2">
+                          {activeProgram.name}
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        <span className={cn(META_CHIP, "tnum")}>
+                          {activeProgram.total_days} {activeProgram.total_days === 1 ? "dan" : "dana"}
+                        </span>
+                        <span className={cn(META_CHIP, "tnum")}>
+                          Dodeljen {new Date(activeProgram.assigned_at).toLocaleDateString("sr-Latn-RS")}
+                        </span>
+                      </div>
+                      <div className="mt-auto space-y-2 pt-5">
+                        <Button
+                          className="h-10 w-full rounded-full bg-gradient-brand text-white shadow-brand"
+                          onClick={() => navigate(`/trener/vezbaci/${id}/program/${activeProgram.id}`)}
+                        >
+                          Izmeni plan
+                        </Button>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button variant="outline" className="h-10 w-full rounded-full px-2 text-[13px]" onClick={openProgramAssign}>
+                            Promeni program
+                          </Button>
+                          <Button variant="outline" className="h-10 w-full rounded-full px-2 text-[13px]" onClick={startCustomProgram}>
+                            <Sparkles className="h-4 w-4 mr-1" /> Nov plan
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="mt-3 text-[13px] text-muted-foreground">
+                        Vežbač još nema program treninga.
+                      </p>
+                      <div className="mt-auto space-y-2 pt-5">
+                        <Button
+                          className="h-10 w-full rounded-full bg-gradient-brand text-white shadow-brand"
+                          onClick={startCustomProgram}
+                        >
+                          <Sparkles className="h-4 w-4 mr-1.5" /> Napravi plan od nule
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="h-10 w-full rounded-full border-dashed"
+                          onClick={openProgramAssign}
+                        >
+                          <Plus className="h-4 w-4 mr-1.5" /> Dodeli gotov program
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="card-premium flex min-h-[236px] flex-col p-5">
+                  <SectionHead
+                    eyebrow="Ishrana"
+                    title="Plan ishrane"
+                    right={
+                      activePlan ? (
+                        <button
+                          onClick={unassignPlan}
+                          className="h-8 w-8 shrink-0 rounded-full flex items-center justify-center text-muted-foreground transition hover:bg-destructive-soft hover:text-destructive"
+                          title="Otkaži plan"
+                          aria-label="Otkaži plan"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      ) : undefined
+                    }
+                  />
+                  {activePlan ? (
+                    <>
+                      <div className="mt-4 flex items-center gap-3">
+                        <div className="h-11 w-11 rounded-xl bg-gradient-brand-soft flex items-center justify-center shrink-0">
+                          <Apple className="h-5 w-5 text-primary" strokeWidth={2.25} />
+                        </div>
+                        <div className="min-w-0 flex-1 font-display text-[17px] font-bold leading-snug tracking-tight line-clamp-2">
+                          {activePlan.name}
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {activePlan.target_kcal ? (
+                          <span className={cn(META_CHIP_PRIMARY, "tnum")}>{activePlan.target_kcal} kcal</span>
+                        ) : null}
+                        <span className={cn(META_CHIP, "tnum")}>
+                          Dodeljeno {new Date(activePlan.assigned_at).toLocaleDateString("sr-Latn-RS")}
+                        </span>
+                      </div>
+                      <div className="mt-auto space-y-2 pt-5">
+                        <Button
+                          className="h-10 w-full rounded-full bg-gradient-brand text-white shadow-brand"
+                          onClick={() => navigate(`/trener/vezbaci/${id}/ishrana/${activePlan.id}`)}
+                        >
+                          Izmeni plan ishrane
+                        </Button>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button variant="outline" className="h-10 w-full rounded-full px-2 text-[13px]" onClick={openAssign}>
+                            Promeni plan
+                          </Button>
+                          <Button variant="outline" className="h-10 w-full rounded-full px-2 text-[13px]" onClick={startCustomNutrition}>
+                            <Sparkles className="h-4 w-4 mr-1" /> Nov plan
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="mt-3 text-[13px] text-muted-foreground">
+                        Vežbač još nema plan ishrane.
+                      </p>
+                      <div className="mt-auto space-y-2 pt-5">
+                        <Button
+                          className="h-10 w-full rounded-full bg-gradient-brand text-white shadow-brand"
+                          onClick={startCustomNutrition}
+                        >
+                          <Sparkles className="h-4 w-4 mr-1.5" /> Napravi plan od nule
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="h-10 w-full rounded-full border-dashed"
+                          onClick={openAssign}
+                        >
+                          <Plus className="h-4 w-4 mr-1.5" /> Dodeli gotov plan
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Treninzi: tabovi stoje u redu sa naslovom; upis treninga je dugme u
+                  zaglavlju stranice, pa ga ovde nema. */}
+              <section>
+                <Tabs defaultValue="app" className="w-full">
+                  <SectionHead
+                    eyebrow="Aktivnost"
+                    title="Treninzi"
+                    right={
+                      <TabsList className="h-10 shrink-0 rounded-full p-1">
+                        <TabsTrigger
+                          value="app"
+                          className="rounded-full px-4 data-[state=active]:bg-gradient-brand data-[state=active]:text-white data-[state=active]:shadow-brand"
+                        >
+                          Iz aplikacije
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="watch"
+                          className="rounded-full px-4 data-[state=active]:bg-gradient-brand data-[state=active]:text-white data-[state=active]:shadow-brand"
+                        >
+                          Sa sata
+                        </TabsTrigger>
+                      </TabsList>
+                    }
+                  />
+                  <TabsContent value="app" className="mt-3">
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Treninzi koje je vežbač radio kroz FitLink. Ako je nosio sat, puls i kalorije su vec ovde.
+                    </p>
+                    {id && <InAppWorkoutsList key={upisKey} athleteId={id} limit={10} />}
+                  </TabsContent>
+                  <TabsContent value="watch" className="mt-3">
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Aktivnosti koje je vežbač radio bez FitLink-a, direktno na satu.
+                    </p>
+                    {hasWearable && id ? (
+                      <WorkoutsList userId={id} limit={10} />
+                    ) : (
+                      <Card className="p-4 text-center text-[13px] text-muted-foreground">
+                        Vežbač nije povezao sat
+                      </Card>
+                    )}
+                  </TabsContent>
+                </Tabs>
+              </section>
+
+              <section className="space-y-3">
+                <SectionHead
+                  eyebrow="Wearable"
+                  title="Zdravstveni podaci"
+                  right={
+                    hasWearable && wearableSyncText ? (
+                      <div className="shrink-0 text-[11px] text-muted-foreground">{wearableSyncText}</div>
+                    ) : undefined
+                  }
+                />
+                {hasWearable && id ? (
+                  <>
+                    <HealthMetricsCard userId={id} showConnectCta={false} />
+                    <div className="grid grid-cols-2 gap-4">
+                      <WearableTrendChart userId={id} dataType="heart_rate_avg" days={30} title="Prosečan puls, poslednjih 30 dana" />
+                      <WearableTrendChart userId={id} dataType="workout_duration" days={30} title="Trajanje treninga, poslednjih 30 dana" />
+                    </div>
+                  </>
+                ) : (
+                  <Card className="p-6 text-center text-[13px] text-muted-foreground">
+                    Vežbač još nije povezao uređaj
+                  </Card>
+                )}
+              </section>
+            </div>
+
+            <div className="min-w-0 space-y-4">
+              <div className="card-premium p-5">
+                <SectionHead eyebrow="Vežbač" title="Kontakt" />
+                <div className="mt-3 divide-y divide-hairline">
+                  {athleteEmail && (
+                    <div className="flex items-center gap-3 py-3">
+                      <div className="h-9 w-9 rounded-xl bg-primary-soft text-primary flex items-center justify-center shrink-0">
+                        <Mail className="h-4 w-4" strokeWidth={2} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[11px] text-muted-foreground">Email</div>
+                        {/* Dug email se prelama, nikad "..."; kopiranje uvek uzima ceo. */}
+                        <div className="text-[13.5px] font-medium leading-snug break-all">{athleteEmail}</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={copyEmail}
+                        className="shrink-0 h-8 w-8 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-primary hover:bg-primary-soft transition active:scale-90"
+                        aria-label="Kopiraj email"
+                        title="Kopiraj email"
+                      >
+                        <Copy className="h-4 w-4" strokeWidth={2} />
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3 py-3">
+                    <div className="h-9 w-9 rounded-xl bg-surface-2 text-foreground flex items-center justify-center shrink-0">
+                      <Phone className="h-4 w-4" strokeWidth={2} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[11px] text-muted-foreground">Telefon</div>
+                      <div className="truncate text-[13.5px] font-medium tnum">{athlete.phone ?? "Nije unet"}</div>
+                    </div>
+                    {athlete.phone && (
+                      <Button variant="outline" onClick={callAthlete} className="h-8 shrink-0 rounded-full px-3 text-[12.5px]">
+                        Pozovi
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="card-premium p-5">
+                <SectionHead
+                  eyebrow="Paket"
+                  title="Članarina"
+                  right={
+                    activeMembership ? (
+                      <Button
+                        variant="outline"
+                        onClick={guard(() => setMembershipEditOpen(true))}
+                        className="h-8 shrink-0 rounded-full px-3 text-[12.5px]"
+                      >
+                        <Pencil className="mr-1" /> Izmeni
+                      </Button>
+                    ) : undefined
+                  }
+                />
+                {activeMembership ? (
+                  <div className="mt-4 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-11 w-11 rounded-xl bg-success-soft text-success-soft-foreground flex items-center justify-center shrink-0">
+                        <Wallet className="h-[18px] w-[18px]" strokeWidth={2} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-display text-[16px] font-bold tracking-tight">
+                          {activeMembership.plan_name}
+                        </div>
+                        <div className="text-[12px] text-muted-foreground tnum">{membershipPeriodText}</div>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      <Chip tone={STATUS_TONE[activeMembership.status] ?? "muted"}>
+                        {STATUS_LABEL[activeMembership.status] ?? activeMembership.status}
+                      </Chip>
+                      <Chip tone={membershipDaysLeftInfo.tone}>{membershipDaysLeftInfo.label}</Chip>
+                    </div>
+                    {activeMembership.sessions_total != null ? (
+                      <div>
+                        <div className="flex items-baseline justify-between text-[12px]">
+                          <span className="text-muted-foreground">Iskorišćeno</span>
+                          <span className="font-semibold tnum">
+                            {activeMembership.sessions_used} / {activeMembership.sessions_total}
+                          </span>
+                        </div>
+                        <div className="mt-1.5 h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-brand rounded-full"
+                            style={{
+                              width: `${Math.min(100, (activeMembership.sessions_used / activeMembership.sessions_total) * 100)}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-[12px] text-muted-foreground">Bez limita treninga</div>
+                    )}
+                    {activeMembership.price != null && (
+                      <div className="flex items-center justify-between border-t border-hairline pt-3">
+                        <span className="text-[12px] text-muted-foreground">Cena</span>
+                        <span className="font-display text-[15px] font-bold tracking-tight tnum">
+                          {activeMembership.price.toLocaleString("sr-Latn-RS")} RSD
+                        </span>
+                      </div>
+                    )}
+                    <Button
+                      variant="outline"
+                      onClick={guard(() => setBonusOpen(true))}
+                      className="h-10 w-full rounded-full"
+                    >
+                      <Plus className="h-4 w-4 mr-1.5" /> Dodaj bonus treninge
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="mt-3 space-y-4">
+                    <p className="text-[13px] text-muted-foreground">
+                      Vežbač nema članarinu. Kad izabere paket, pojaviće se u{" "}
+                      <Link to="/trener/uplate" className="text-primary font-semibold">
+                        Zahtevima za uplatu
+                      </Link>
+                      .
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={guard(() => setMembershipEditOpen(true))}
+                      className="h-10 w-full rounded-full"
+                    >
+                      <Plus className="h-4 w-4 mr-1.5" /> Dodaj članarinu
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="card-premium p-5">
+                <SectionHead
+                  eyebrow="Telo"
+                  title="Merenja"
+                  right={
+                    weightDiff != null ? (
+                      <Chip tone={weightDiff < 0 ? "success" : "info"} className="tnum">
+                        {`${weightDiff >= 0 ? "+" : ""}${weightDiff.toFixed(1)} kg`}
+                      </Chip>
+                    ) : undefined
+                  }
+                />
+                {latestMetric ? (
+                  <>
+                    <div className="mt-4 flex items-center gap-3">
+                      <div className="h-11 w-11 rounded-xl bg-info-soft flex items-center justify-center shrink-0">
+                        <Scale className="h-5 w-5 text-info-soft-foreground" strokeWidth={2.25} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline gap-1">
+                          <span className="font-display text-[24px] font-bold leading-none tracking-tightest tnum">
+                            {latestMetric.weight_kg ?? "-"}
+                          </span>
+                          {latestMetric.weight_kg ? <span className="text-[12px] text-muted-foreground">kg</span> : null}
+                          {latestMetric.body_fat_pct ? (
+                            <span className="ml-2 text-[12px] text-muted-foreground tnum">
+                              {latestMetric.body_fat_pct}% masti
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="mt-1 text-[12px] text-muted-foreground tnum">
+                          {new Date(latestMetric.recorded_on).toLocaleDateString("sr-Latn-RS")}
+                        </div>
+                      </div>
+                    </div>
+                    {metricsHistory.length > 1 && (
+                      <div className="mt-4 border-t border-hairline pt-3">
+                        <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                          Ranije
+                        </div>
+                        <div className="divide-y divide-hairline">
+                          {metricsHistory.slice(1, 6).map((m) => (
+                            <div key={m.id} className="grid grid-cols-[minmax(0,1fr)_72px_56px] items-center py-2 text-[12.5px]">
+                              <span className="text-muted-foreground tnum">
+                                {new Date(m.recorded_on).toLocaleDateString("sr-Latn-RS")}
+                              </span>
+                              <span className="text-right font-semibold tnum">
+                                {m.weight_kg != null ? `${m.weight_kg} kg` : "-"}
+                              </span>
+                              <span className="text-right text-muted-foreground tnum">
+                                {m.body_fat_pct != null ? `${m.body_fat_pct}%` : "-"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="mt-3 text-[13px] text-muted-foreground">
+                    Vežbač još nije unosio merenja.
+                  </p>
+                )}
+              </div>
+
+              {/* Progress fotke (samo deljene) - uska kolona drzi mrezu kompaktnom */}
+              {id && <ProgressPhotos athleteId={id} canManage={false} sharedOnly />}
+
+              <button
+                onClick={guard(() => setRemoveOpen(true))}
+                className="w-full flex items-center justify-center gap-2 rounded-full border border-destructive/30 bg-destructive/5 hover:bg-destructive/10 text-destructive py-2.5 text-[13px] font-semibold transition"
+              >
+                <UserMinus className="h-4 w-4" />
+                Ukloni vežbača
+              </button>
+            </div>
           </div>
         </div>
+      ) : (
+        <>
+          {/* Hero */}
+          <Card className="p-5 bg-gradient-brand-soft border-0">
+            <div className="flex items-center gap-4">
+              <Avatar initials={initialsOf(athlete.full_name)} tone="brand" size="xl" />
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap gap-1.5 mb-1.5">
+                  <Chip tone="info">{goalLabel[athlete.goal ?? "general"] ?? "Opšte"}</Chip>
+                  {athlete.weight_kg && <Chip tone="info">{athlete.weight_kg} kg</Chip>}
+                  {athlete.height_cm && <Chip tone="info">{athlete.height_cm} cm</Chip>}
+                </div>
+                <div className="text-[13px] text-muted-foreground">
+                  Pridružen {new Date(athlete.joined_at).toLocaleDateString("sr-Latn-RS")}
+                </div>
+              </div>
+            </div>
 
-        <Tabs defaultValue="app" className="w-full">
-          <TabsList className="grid grid-cols-2 w-full mb-1">
-            <TabsTrigger
-              value="app"
-              className="data-[state=active]:bg-gradient-brand data-[state=active]:text-white data-[state=active]:shadow-brand"
-            >
-              Iz aplikacije
-            </TabsTrigger>
-            <TabsTrigger
-              value="watch"
-              className="data-[state=active]:bg-gradient-brand data-[state=active]:text-white data-[state=active]:shadow-brand"
-            >
-              Sa sata
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="app">
-            <p className="text-xs text-muted-foreground mt-2 mb-3">
-              Treninzi koje je vežbač radio kroz FitLink. Ako je nosio sat, puls i kalorije su vec ovde.
-            </p>
-            {/* Za trening odradjen bez telefona. Sesija koju ovo pravi je zavrsena
-                od rodjenja i nema zivi red, pa ne moze da dotakne trening u toku. */}
-            <button
-              type="button"
-              onClick={guard(() => setUpisujem(true))}
-              className="mb-3 h-10 w-full rounded-xl border border-hairline bg-surface-2 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 transition"
-            >
-              <Plus className="h-3.5 w-3.5" strokeWidth={2.4} />
-              Upiši trening bez telefona
-            </button>
-            {id && <InAppWorkoutsList key={upisKey} athleteId={id} limit={10} />}
-          </TabsContent>
-          <TabsContent value="watch">
-            <p className="text-xs text-muted-foreground mt-2 mb-3">
-              Aktivnosti koje je vežbač radio bez FitLink-a, direktno na satu.
-            </p>
-            {hasWearable && id ? (
-              <WorkoutsList userId={id} limit={10} />
+            {/* Email - zaseban red pune sirine (ne u uskoj koloni pored avatara). Tekst uzima svu
+                sirinu i PRELAMA se ako je dug (nikad iza "..."); copy uvek kopira ceo email. */}
+            {athleteEmail && (
+              <div className="mt-4 flex items-center gap-2 rounded-2xl bg-surface/70 backdrop-blur border border-hairline px-3 py-2.5">
+                <Mail className="h-4 w-4 text-primary shrink-0" strokeWidth={2} />
+                <span className="flex-1 min-w-0 text-[13px] leading-snug text-foreground break-all">
+                  {athleteEmail}
+                </span>
+                <button
+                  type="button"
+                  onClick={copyEmail}
+                  className="shrink-0 h-8 w-8 -mr-1 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-primary hover:bg-primary-soft transition active:scale-90"
+                  aria-label="Kopiraj email"
+                >
+                  <Copy className="h-4 w-4" strokeWidth={2} />
+                </button>
+              </div>
+            )}
+
+            <div className="grid grid-cols-3 gap-2 mt-5">
+              <SendMessageToAthlete athleteId={athlete.id} athleteName={athlete.full_name ?? undefined} variant="stacked" />
+              <button
+                onClick={callAthlete}
+                className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-surface/80 backdrop-blur hover:bg-surface transition"
+              >
+                <Phone className="h-4 w-4 text-foreground" strokeWidth={2} />
+                <span className="text-[11px] font-semibold">Pozovi</span>
+              </button>
+              <button
+                onClick={openProgramAssign}
+                className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-surface/80 backdrop-blur hover:bg-surface transition"
+              >
+                <ClipboardList className="h-4 w-4 text-foreground" strokeWidth={2} />
+                <span className="text-[11px] font-semibold">Program</span>
+              </button>
+            </div>
+          </Card>
+
+          {/* Statisticki blok */}
+          {stats && stats.success === false ? (
+            <Card className="p-6 text-center text-[13px] text-muted-foreground">
+              Nema još podataka
+            </Card>
+          ) : stats ? (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <StatBox
+                  label="Ukupno treninga"
+                  value={String(stats.total_workouts ?? 0)}
+                  sub={`Ovaj mesec: ${stats.workouts_this_month ?? 0}`}
+                />
+                <StatBox
+                  label="Učestalost"
+                  value={String(stats.weekly_avg ?? 0)}
+                  unit="nedeljno"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <StatBox
+                  label="Poslednji trening"
+                  value={stats.days_since_last == null
+                    ? "Nikad"
+                    : stats.days_since_last <= 0
+                      ? "Danas"
+                      : `Pre ${stats.days_since_last} d`}
+                  sub={stats.days_since_last == null ? "Još nije trenirao" : undefined}
+                  valueClass={cn("text-[18px]", RISK_TEXT[stats.risk] ?? "text-foreground")}
+                />
+                <StatBox
+                  label="PR-ovi"
+                  value={String(stats.pr_count ?? 0)}
+                  sub={stats.best_e1rm_kg ? `${stats.best_e1rm_kg} kg najjaci` : undefined}
+                />
+              </div>
+
+              {stats.sessions_total != null && stats.sessions_used != null && (
+                <Card className="p-4">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5">
+                    Iskorišćenost paketa
+                  </div>
+                  <div className="flex items-baseline gap-1 mb-2">
+                    <span className="font-display text-[22px] font-bold tracking-tightest leading-none tnum">
+                      {stats.sessions_used}/{stats.sessions_total}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">sesija</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-surface-2 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-brand"
+                      style={{
+                        width: `${Math.min(100, Math.round((stats.sessions_used / stats.sessions_total) * 100))}%`,
+                      }}
+                    />
+                  </div>
+                </Card>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <StatBox
+                  label="Ishrana"
+                  value={String(stats.nutrition_days_30 ?? 0)}
+                  unit="/ 30 dana"
+                />
+                <StatBox
+                  label="Volumen"
+                  value={fmtVolume(stats.total_volume_kg ?? 0)}
+                  unit="kg ukupno"
+                />
+              </div>
+
+              {stats.kcal_sessions > 0 && (
+                <StatBox
+                  icon={<Flame className="h-4 w-4" />}
+                  label="Kalorije"
+                  value={Math.round(stats.total_kcal ?? 0).toLocaleString("sr-Latn-RS")}
+                  unit="kcal ukupno"
+                  sub={stats.avg_kcal ? `Prosek po treningu: ${Math.round(stats.avg_kcal)} kcal` : undefined}
+                />
+              )}
+            </>
+          ) : null}
+
+          {/* Training program */}
+          <section>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Trening</div>
+                <div className="font-display text-lg font-bold">Program</div>
+              </div>
+            </div>
+
+            {activeProgram ? (
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-2xl bg-gradient-brand-soft flex items-center justify-center shrink-0">
+                    <Dumbbell className="h-5 w-5 text-primary" strokeWidth={2.25} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-[15px] truncate">{activeProgram.name}</div>
+                    <div className="text-[12px] text-muted-foreground">
+                      {activeProgram.total_days} {activeProgram.total_days === 1 ? "dan" : "dana"} · Dodeljen{" "}
+                      {new Date(activeProgram.assigned_at).toLocaleDateString("sr-Latn-RS")}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-col gap-2">
+                  <Button
+                    className="w-full bg-gradient-brand text-white shadow-brand"
+                    onClick={() => navigate(`/trener/vezbaci/${id}/program/${activeProgram.id}`)}
+                  >
+                    Izmeni plan
+                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button variant="outline" className="w-full" onClick={openProgramAssign}>
+                      Promeni program
+                    </Button>
+                    <Button variant="outline" className="w-full" onClick={startCustomProgram}>
+                      <Sparkles className="h-4 w-4 mr-1.5" /> Nov plan
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ) : (
+              <div className="space-y-2">
+                <Button
+                  className="w-full h-12 bg-gradient-brand text-white shadow-brand"
+                  onClick={startCustomProgram}
+                >
+                  <Sparkles className="h-4 w-4 mr-1.5" /> Napravi plan od nule
+                </Button>
+                <button
+                  onClick={openProgramAssign}
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-hairline hover:border-primary/40 hover:bg-primary-soft/40 py-4 text-[14px] font-semibold text-muted-foreground hover:text-primary-soft-foreground transition"
+                >
+                  <Plus className="h-4 w-4" /> Dodeli gotov program
+                </button>
+              </div>
+            )}
+          </section>
+
+          {/* Nutrition section */}
+          <section>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Ishrana</div>
+                <div className="font-display text-lg font-bold">Plan ishrane</div>
+              </div>
+            </div>
+
+            {activePlan ? (
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-2xl bg-gradient-brand-soft flex items-center justify-center shrink-0">
+                    <Apple className="h-5 w-5 text-primary" strokeWidth={2.25} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-[15px] truncate">{activePlan.name}</div>
+                    <div className="text-[12px] text-muted-foreground">
+                      {activePlan.target_kcal ? `${activePlan.target_kcal} kcal · ` : ""}
+                      Dodeljeno {new Date(activePlan.assigned_at).toLocaleDateString("sr-Latn-RS")}
+                    </div>
+                  </div>
+                  <button
+                    onClick={unassignPlan}
+                    className="h-9 w-9 rounded-full hover:bg-destructive-soft flex items-center justify-center"
+                    title="Otkaži plan"
+                  >
+                    <X className="h-4 w-4 text-destructive" />
+                  </button>
+                </div>
+                <div className="mt-3 flex flex-col gap-2">
+                  <Button
+                    className="w-full bg-gradient-brand text-white shadow-brand"
+                    onClick={() => navigate(`/trener/vezbaci/${id}/ishrana/${activePlan.id}`)}
+                  >
+                    Izmeni plan ishrane
+                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button variant="outline" className="w-full" onClick={openAssign}>
+                      Promeni plan
+                    </Button>
+                    <Button variant="outline" className="w-full" onClick={startCustomNutrition}>
+                      <Sparkles className="h-4 w-4 mr-1.5" /> Nov plan
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ) : (
+              <div className="space-y-2">
+                <Button
+                  className="w-full h-12 bg-gradient-brand text-white shadow-brand"
+                  onClick={startCustomNutrition}
+                >
+                  <Sparkles className="h-4 w-4 mr-1.5" /> Napravi plan ishrane od nule
+                </Button>
+                <button
+                  onClick={openAssign}
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-hairline hover:border-primary/40 hover:bg-primary-soft/40 py-4 text-[14px] font-semibold text-muted-foreground hover:text-primary-soft-foreground transition"
+                >
+                  <Plus className="h-4 w-4" /> Dodeli gotov plan
+                </button>
+              </div>
+            )}
+          </section>
+
+          {/* Body metrics */}
+          <section>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Telo</div>
+                <div className="font-display text-lg font-bold">Merenja</div>
+              </div>
+            </div>
+
+            {latestMetric ? (
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-2xl bg-info-soft flex items-center justify-center shrink-0">
+                    <Scale className="h-5 w-5 text-info-soft-foreground" strokeWidth={2.25} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-[15px]">
+                      {latestMetric.weight_kg ? `${latestMetric.weight_kg} kg` : "-"}
+                      {latestMetric.body_fat_pct ? ` · ${latestMetric.body_fat_pct}% masti` : ""}
+                    </div>
+                    <div className="text-[12px] text-muted-foreground">
+                      {new Date(latestMetric.recorded_on).toLocaleDateString("sr-Latn-RS")}
+                      {metricsHistory.length > 1 && ` · ${metricsHistory.length} merenja`}
+                    </div>
+                  </div>
+                  {metricsHistory.length >= 2 && metricsHistory[0].weight_kg && metricsHistory[metricsHistory.length - 1].weight_kg && (
+                    <Chip tone={
+                      (metricsHistory[0].weight_kg! - metricsHistory[metricsHistory.length - 1].weight_kg!) < 0 ? "success" : "info"
+                    }>
+                      {(() => {
+                        const diff = metricsHistory[0].weight_kg! - metricsHistory[metricsHistory.length - 1].weight_kg!;
+                        return `${diff >= 0 ? "+" : ""}${diff.toFixed(1)} kg`;
+                      })()}
+                    </Chip>
+                  )}
+                </div>
+              </Card>
             ) : (
               <Card className="p-4 text-center text-[13px] text-muted-foreground">
-                Vežbač nije povezao sat
+                Vežbač još nije unosio merenja.
               </Card>
             )}
-          </TabsContent>
-        </Tabs>
-      </section>
+          </section>
 
-      {/* Membership */}
-      {activeMembership ? (
-        <Card className="p-5 space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="h-11 w-11 rounded-2xl bg-success-soft text-success-soft-foreground flex items-center justify-center shrink-0">
-                <Wallet className="h-[18px] w-[18px]" strokeWidth={2} />
-              </div>
-              <div className="min-w-0">
-                <div className="text-[15px] font-semibold tracking-tight truncate">
-                  {activeMembership.plan_name}
+          {/* Progress fotke (samo deljene) */}
+          {id && <ProgressPhotos athleteId={id} canManage={false} sharedOnly />}
+
+          {/* Wearable insights */}
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Wearable
                 </div>
+                <div className="font-display text-lg font-bold tracking-tightest">
+                  Zdravstveni podaci
+                </div>
+              </div>
+              {hasWearable && lastWearableSync && (
+                <div className="text-[11px] text-muted-foreground">
+                  {(() => {
+                    const diff = Date.now() - new Date(lastWearableSync).getTime();
+                    const m = Math.floor(diff / 60000);
+                    if (m < 60) return `Sinhronizovano pre ${Math.max(1, m)} min`;
+                    const h = Math.floor(m / 60);
+                    if (h < 24) return `Sinhronizovano pre ${h} h`;
+                    return `Sinhronizovano pre ${Math.floor(h / 24)} d`;
+                  })()}
+                </div>
+              )}
+            </div>
+
+            {hasWearable && id ? (
+              <>
+                <HealthMetricsCard userId={id} showConnectCta={false} />
+                <WearableTrendChart userId={id} dataType="heart_rate_avg" days={30} title="Prosečan puls, poslednjih 30 dana" />
+                <WearableTrendChart userId={id} dataType="workout_duration" days={30} title="Trajanje treninga, poslednjih 30 dana" />
+              </>
+            ) : (
+              <Card className="p-4 text-center">
                 <div className="text-[12px] text-muted-foreground">
-                  {activeMembership.sessions_total != null
-                    ? `${activeMembership.sessions_used} / ${activeMembership.sessions_total} iskorišćeno`
-                    : "Bez limita treninga"}
+                  Vežbač još nije povezao uređaj
                 </div>
+              </Card>
+            )}
+          </section>
+
+          {/* Workout history - tabovi Iz aplikacije / Sa sata */}
+          <section>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Aktivnost</div>
+                <div className="font-display text-lg font-bold">Treninzi</div>
               </div>
             </div>
-            <div className="flex flex-col items-end gap-1.5 shrink-0">
-              <Chip tone={STATUS_TONE[activeMembership.status] ?? "muted"}>
-                {STATUS_LABEL[activeMembership.status] ?? activeMembership.status}
-              </Chip>
-              <Chip tone={membershipDaysLeftInfo.tone}>{membershipDaysLeftInfo.label}</Chip>
-            </div>
-          </div>
 
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-[12px] text-muted-foreground">{membershipPeriodText}</span>
-            {activeMembership.price != null && (
-              <span className="font-display text-[15px] font-bold tracking-tight text-foreground tnum shrink-0">
-                {activeMembership.price.toLocaleString("sr-Latn-RS")} RSD
-              </span>
-            )}
-          </div>
+            <Tabs defaultValue="app" className="w-full">
+              <TabsList className="grid grid-cols-2 w-full mb-1">
+                <TabsTrigger
+                  value="app"
+                  className="data-[state=active]:bg-gradient-brand data-[state=active]:text-white data-[state=active]:shadow-brand"
+                >
+                  Iz aplikacije
+                </TabsTrigger>
+                <TabsTrigger
+                  value="watch"
+                  className="data-[state=active]:bg-gradient-brand data-[state=active]:text-white data-[state=active]:shadow-brand"
+                >
+                  Sa sata
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="app">
+                <p className="text-xs text-muted-foreground mt-2 mb-3">
+                  Treninzi koje je vežbač radio kroz FitLink. Ako je nosio sat, puls i kalorije su vec ovde.
+                </p>
+                {/* Za trening odradjen bez telefona. Sesija koju ovo pravi je zavrsena
+                    od rodjenja i nema zivi red, pa ne moze da dotakne trening u toku. */}
+                <button
+                  type="button"
+                  onClick={guard(() => setUpisujem(true))}
+                  className="mb-3 h-10 w-full rounded-xl border border-hairline bg-surface-2 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 transition"
+                >
+                  <Plus className="h-3.5 w-3.5" strokeWidth={2.4} />
+                  Upiši trening bez telefona
+                </button>
+                {id && <InAppWorkoutsList key={upisKey} athleteId={id} limit={10} />}
+              </TabsContent>
+              <TabsContent value="watch">
+                <p className="text-xs text-muted-foreground mt-2 mb-3">
+                  Aktivnosti koje je vežbač radio bez FitLink-a, direktno na satu.
+                </p>
+                {hasWearable && id ? (
+                  <WorkoutsList userId={id} limit={10} />
+                ) : (
+                  <Card className="p-4 text-center text-[13px] text-muted-foreground">
+                    Vežbač nije povezao sat
+                  </Card>
+                )}
+              </TabsContent>
+            </Tabs>
+          </section>
 
-          {activeMembership.sessions_total != null && (
-            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-brand rounded-full"
-                style={{
-                  width: `${Math.min(100, (activeMembership.sessions_used / activeMembership.sessions_total) * 100)}%`,
-                }}
-              />
-            </div>
+          {/* Membership */}
+          {activeMembership ? (
+            <Card className="p-5 space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-11 w-11 rounded-2xl bg-success-soft text-success-soft-foreground flex items-center justify-center shrink-0">
+                    <Wallet className="h-[18px] w-[18px]" strokeWidth={2} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[15px] font-semibold tracking-tight truncate">
+                      {activeMembership.plan_name}
+                    </div>
+                    <div className="text-[12px] text-muted-foreground">
+                      {activeMembership.sessions_total != null
+                        ? `${activeMembership.sessions_used} / ${activeMembership.sessions_total} iskorišćeno`
+                        : "Bez limita treninga"}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
+                  <Chip tone={STATUS_TONE[activeMembership.status] ?? "muted"}>
+                    {STATUS_LABEL[activeMembership.status] ?? activeMembership.status}
+                  </Chip>
+                  <Chip tone={membershipDaysLeftInfo.tone}>{membershipDaysLeftInfo.label}</Chip>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[12px] text-muted-foreground">{membershipPeriodText}</span>
+                {activeMembership.price != null && (
+                  <span className="font-display text-[15px] font-bold tracking-tight text-foreground tnum shrink-0">
+                    {activeMembership.price.toLocaleString("sr-Latn-RS")} RSD
+                  </span>
+                )}
+              </div>
+
+              {activeMembership.sessions_total != null && (
+                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-brand rounded-full"
+                    style={{
+                      width: `${Math.min(100, (activeMembership.sessions_used / activeMembership.sessions_total) * 100)}%`,
+                    }}
+                  />
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={guard(() => setBonusOpen(true))}
+                  className="w-full"
+                >
+                  <Plus className="h-4 w-4 mr-1.5" /> Dodaj bonus
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={guard(() => setMembershipEditOpen(true))}
+                  className="w-full"
+                >
+                  <Pencil className="h-4 w-4 mr-1.5" /> Izmeni
+                </Button>
+              </div>
+            </Card>
+          ) : (
+            <Card className="p-5 space-y-3 text-center">
+              <p className="text-[13px] text-muted-foreground">
+                Vežbač nema članarinu. Kad izabere paket, pojaviće se u{" "}
+                <Link to="/trener/uplate" className="text-primary font-semibold">
+                  Zahtevima za uplatu
+                </Link>
+                .
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={guard(() => setMembershipEditOpen(true))}
+                className="w-full"
+              >
+                <Plus className="h-4 w-4 mr-1.5" /> Dodaj članarinu
+              </Button>
+            </Card>
           )}
-
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={guard(() => setBonusOpen(true))}
-              className="w-full"
-            >
-              <Plus className="h-4 w-4 mr-1.5" /> Dodaj bonus
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={guard(() => setMembershipEditOpen(true))}
-              className="w-full"
-            >
-              <Pencil className="h-4 w-4 mr-1.5" /> Izmeni
-            </Button>
-          </div>
-        </Card>
-      ) : (
-        <Card className="p-5 space-y-3 text-center">
-          <p className="text-[13px] text-muted-foreground">
-            Vežbač nema članarinu. Kad izabere paket, pojaviće se u{" "}
-            <Link to="/trener/uplate" className="text-primary font-semibold">
-              Zahtevima za uplatu
-            </Link>
-            .
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={guard(() => setMembershipEditOpen(true))}
-            className="w-full"
-          >
-            <Plus className="h-4 w-4 mr-1.5" /> Dodaj članarinu
-          </Button>
-        </Card>
+        </>
       )}
 
       {/* Upis treninga koji je vezbac odradio bez telefona. Stoji ovde, uz ostale
@@ -1415,15 +2018,17 @@ const AthleteProfile = () => {
         </DialogContent>
       </Dialog>
 
-      <section className="pt-2">
-        <button
-          onClick={guard(() => setRemoveOpen(true))}
-          className="w-full flex items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 hover:bg-destructive/10 text-destructive py-3.5 text-[13.5px] font-semibold transition"
-        >
-          <UserMinus className="h-4 w-4" />
-          Ukloni vežbača
-        </button>
-      </section>
+      {!desktop && (
+        <section className="pt-2">
+          <button
+            onClick={guard(() => setRemoveOpen(true))}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 hover:bg-destructive/10 text-destructive py-3.5 text-[13.5px] font-semibold transition"
+          >
+            <UserMinus className="h-4 w-4" />
+            Ukloni vežbača
+          </button>
+        </section>
+      )}
 
       <AlertDialog open={removeOpen} onOpenChange={setRemoveOpen}>
         <AlertDialogContent>

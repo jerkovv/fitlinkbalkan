@@ -1,10 +1,12 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ChevronLeft, Heart, Activity, Loader2, Pause } from "lucide-react";
+import { ChevronLeft, ChevronRight, Dumbbell, Flame, Heart, Activity, Loader2, Pause } from "lucide-react";
 import { Avatar } from "@/components/ui-bits";
+import { PhoneShell } from "@/components/PhoneShell";
 import { cn } from "@/lib/utils";
 import { getHrColor, formatDuration } from "@/lib/workout/hrZone";
 import { isWatchConnected } from "@/lib/liveWorkout";
 import { useActiveAthletes } from "@/hooks/useActiveAthletes";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 import { WatchSlash } from "@/components/trainer/WatchSlash";
 
 // Puna lista aktivnih vezbaca ("Trenira uzivo"). Isti izvor/sort kao pocetna
@@ -17,6 +19,181 @@ const fmtRest = (ms: number) => {
 const LiveAthletesView = () => {
   const nav = useNavigate();
   const { athletes, now, loading } = useActiveAthletes();
+  const desktop = useDesktopWeb();
+
+  if (desktop) {
+    // Racunar: sazetak u redu plocica pa mreza kartica. Telefonski raspored je
+    // ovde bio sopstveni 100dvh scroll okvir uzak 440px usred TrainerWebShell-a.
+    const naOdmoru = athletes.filter(
+      (a) =>
+        a.current_state === "rest" &&
+        !!a.rest_ends_at &&
+        new Date(a.rest_ends_at).getTime() - now > 0,
+    ).length;
+    const pulsevi = athletes
+      .filter((a) => isWatchConnected(a.watch_last_hr_at, now))
+      .map((a) => a.current_hr)
+      .filter((h): h is number => typeof h === "number" && h > 0);
+    const prosecanPuls = pulsevi.length
+      ? Math.round(pulsevi.reduce((s, h) => s + h, 0) / pulsevi.length)
+      : null;
+
+    const sazetak = [
+      { label: "Trenira sada", value: athletes.length, unit: athletes.length === 1 ? "vežbač" : "vežbača" },
+      { label: "U seriji", value: athletes.length - naOdmoru, unit: "aktivno" },
+      { label: "Na odmoru", value: naOdmoru, unit: "pauza" },
+      { label: "Prosečan puls", value: prosecanPuls ?? "-", unit: prosecanPuls ? "bpm" : "bez sata" },
+    ];
+
+    return (
+      <PhoneShell
+        eyebrow="Pregled"
+        title="Trenira uživo"
+        desktopWidth="wide"
+        action={
+          athletes.length > 0 ? (
+            <span className="inline-flex h-10 items-center gap-2 rounded-full bg-success-soft px-4">
+              <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
+              <span className="text-[13px] font-bold tnum text-success-soft-foreground">
+                {athletes.length} uživo
+              </span>
+            </span>
+          ) : undefined
+        }
+      >
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : athletes.length === 0 ? (
+          <div className="card-premium flex flex-col items-center px-6 py-20 text-center">
+            <div className="h-14 w-14 rounded-2xl bg-surface-2 flex items-center justify-center mb-4">
+              <Activity className="h-6 w-6 text-muted-foreground/60" strokeWidth={1.5} />
+            </div>
+            <div className="font-display text-[17px] font-bold tracking-tight">Niko ne trenira trenutno</div>
+            <div className="text-[13px] text-muted-foreground mt-1 leading-snug max-w-[320px]">
+              Kad vežbač pokrene trening, pojaviće se ovde uživo.
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {sazetak.map((s) => (
+                <div key={s.label} className="card-premium p-5">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    {s.label}
+                  </div>
+                  <div className="mt-3 flex items-baseline gap-1.5">
+                    <span className="font-display text-[30px] leading-none font-bold tracking-tightest tnum">
+                      {s.value}
+                    </span>
+                    <span className="text-[13px] font-medium text-muted-foreground">{s.unit}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <ul className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+              {athletes.map((a) => {
+                const initials = (a.athlete_name ?? "??").slice(0, 2).toUpperCase();
+                const live = isWatchConnected(a.watch_last_hr_at, now);
+                const hrColor = getHrColor(a.current_hr);
+                const timeLabel = formatDuration(a.started_at ? now - new Date(a.started_at).getTime() : 0);
+                const kcal = Math.round(a.current_active_calories ?? 0);
+                const restMs = a.rest_ends_at ? new Date(a.rest_ends_at).getTime() - now : 0;
+                const isResting = a.current_state === "rest" && restMs > 0;
+
+                return (
+                  <li key={a.athlete_id}>
+                    <Link
+                      to={`/trener/vezbac/${a.athlete_id}/live`}
+                      className={cn(
+                        "group card-premium-hover flex h-full min-h-[196px] flex-col p-5",
+                        // Odmor: suptilno sivlja pozadina, kao na telefonu.
+                        isResting && "bg-surface-2",
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="relative shrink-0">
+                          <Avatar initials={initials} tone="brand" />
+                          <span
+                            className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full ring-2 ring-card bg-success animate-pulse"
+                            aria-label="Aktivan"
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-display text-[17px] font-bold leading-tight tracking-tight truncate">
+                            {a.athlete_name ?? "Vežbač"}
+                          </div>
+                          <div className="mt-0.5 text-[12.5px] text-muted-foreground tnum">
+                            trenira {timeLabel}
+                          </div>
+                        </div>
+                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60 transition group-hover:translate-x-0.5 group-hover:text-primary" />
+                      </div>
+
+                      <div
+                        className={cn(
+                          "mt-4 flex min-w-0 items-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium",
+                          isResting ? "bg-surface text-muted-foreground" : "bg-surface-2 text-foreground",
+                        )}
+                      >
+                        {isResting ? (
+                          <>
+                            <Pause className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />
+                            <span className="tnum">Odmor {fmtRest(restMs)}</span>
+                          </>
+                        ) : a.current_exercise_name ? (
+                          <>
+                            <Dumbbell className="h-3.5 w-3.5 shrink-0 text-muted-foreground" strokeWidth={2.4} />
+                            <span className="min-w-0 truncate">{a.current_exercise_name}</span>
+                            <span className="ml-auto shrink-0 text-[12px] text-muted-foreground tnum">
+                              Serija {a.current_set_number ?? 1}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground">Priprema...</span>
+                        )}
+                      </div>
+
+                      <div className="mt-auto flex items-end justify-between gap-3 pt-4">
+                        {live ? (
+                          <div className="flex items-baseline gap-1.5" style={{ color: hrColor }}>
+                            <Heart className="h-4 w-4 self-center" strokeWidth={2.4} fill="currentColor" />
+                            <span className="font-display text-[30px] font-bold leading-none tnum">
+                              {a.current_hr ?? "-"}
+                            </span>
+                            <span className="text-[12px] font-semibold text-muted-foreground">bpm</span>
+                          </div>
+                        ) : (
+                          // Bez sata -> precrtan sat (kao LA kartica), na mestu pulsa.
+                          <div className="flex items-center gap-2 text-[12.5px] text-muted-foreground">
+                            <WatchSlash size={20} />
+                            Bez sata
+                          </div>
+                        )}
+                        {live && (
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground tnum",
+                              isResting ? "bg-surface" : "bg-surface-2",
+                            )}
+                          >
+                            <Flame className="h-3.5 w-3.5" strokeWidth={2.4} />
+                            {kcal} kcal
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+      </PhoneShell>
+    );
+  }
 
   return (
     <div className="h-[100dvh] overflow-y-auto bg-background">

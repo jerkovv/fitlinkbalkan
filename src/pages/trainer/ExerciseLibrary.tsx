@@ -23,6 +23,7 @@ import { ArrowLeft, Plus, Search, Dumbbell, Loader2, User2, Globe2, PlayCircle }
 import { toast } from "sonner";
 import { VideoModal } from "@/components/VideoModal";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { cn } from "@/lib/utils";
 
 type Exercise = {
   id: string;
@@ -72,6 +73,12 @@ const EQUIPMENT = [
 /** Kolone koje kartica u listi stvarno koristi. Ceo red ide tek na otvaranje vezbe. */
 const KOLONE_LISTE = "id, name, name_en, primary_muscle, equipment, is_global, created_by";
 const STRANA = 60;
+
+const OPSEZI = [
+  { v: "all", l: "Sve" },
+  { v: "global", l: "Globalne" },
+  { v: "mine", l: "Moje" },
+] as const;
 
 const muscleLabel = (v: string) => MUSCLE_GROUPS.find((m) => m.value === v)?.label ?? v;
 const equipLabel = (v: string) => EQUIPMENT.find((e) => e.value === v)?.label ?? v;
@@ -233,27 +240,34 @@ const ExerciseLibrary = () => {
   };
 
   return (
-    <div className={desktop ? "w-full max-w-[1100px] mx-auto px-8 py-8" : "phone-shell px-5 py-6"}>
+    // Racunar: TrainerWebShell vec daje px-8 py-8, pa ovde bez sopstvenog
+    // razmaka (ranije je bio dupli). Sirina ista kao "wide" PhoneShell stranice.
+    <div className={desktop ? "w-full max-w-[1120px] mx-auto animate-fade-in" : "phone-shell px-5 py-6"}>
       {/* Header. Na desktopu nema strelice nazad - navigaciju nosi sidebar - a
           "+" dobija rec, jer na sirokom ekranu gola ikonica nema susede da je
-          objasne. */}
+          objasne. Isti oblik zaglavlja kao PhoneShell na racunaru. */}
       {desktop ? (
-        <div className="flex items-center justify-between gap-4 mb-5">
-          <div>
-            <h1 className="font-display text-[28px] font-bold tracking-tightest">Biblioteka vežbi</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
+        <header className="flex items-end justify-between gap-6 pb-6">
+          <div className="min-w-0">
+            <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Treninzi
+            </div>
+            <h1 className="font-display text-[30px] leading-[1.1] font-bold tracking-tightest truncate">
+              Biblioteka vežbi
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground tnum">
               {ukupno != null ? `${ukupno} vežbi` : "Učitavam..."}
               {ukupno != null && items.length < ukupno && ` · prikazano ${items.length}`}
             </p>
           </div>
-          <button
+          <Button
             onClick={guard(() => setOpen(true))}
-            className="h-10 shrink-0 rounded-xl bg-primary text-primary-foreground px-4 inline-flex items-center gap-2 text-sm font-semibold shadow-brand"
+            className="h-10 shrink-0 rounded-full px-4 bg-gradient-brand text-white shadow-brand"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4 mr-1.5" strokeWidth={2.5} />
             Nova vežba
-          </button>
-        </div>
+          </Button>
+        </header>
       ) : (
         <div className="flex items-center justify-between mb-5">
           <Link to="/trener" className="h-9 w-9 rounded-full bg-surface-2 flex items-center justify-center">
@@ -342,54 +356,107 @@ const ExerciseLibrary = () => {
         </>
       )}
 
-      {/* Search */}
-      <div className={`relative mb-3 ${desktop ? "max-w-md" : ""}`}>
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Pretraži vežbe..."
-          className="pl-9"
-        />
-      </div>
+      {desktop ? (
+        // Racunar: pretraga i izvor u jednom redu (izvor kao segmentna kontrola),
+        // misici ispod. Tri reda naslagana jedan na drugi su trosila visinu.
+        <div className="mb-6 space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="relative w-full max-w-md">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Pretraži vežbe..."
+                className="h-10 rounded-full bg-surface pl-10"
+              />
+            </div>
+            <div
+              role="group"
+              aria-label="Izvor vežbi"
+              className="ml-auto inline-flex shrink-0 items-center rounded-full bg-surface-2 p-1"
+            >
+              {OPSEZI.map((p) => (
+                <button
+                  key={p.v}
+                  onClick={() => setScopeFilter(p.v)}
+                  aria-pressed={scopeFilter === p.v}
+                  className={cn(
+                    "rounded-full px-4 py-1.5 text-[12.5px] font-semibold transition",
+                    scopeFilter === p.v
+                      ? "bg-surface text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {p.l}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {MUSCLE_GROUPS.map((m) => (
+              <button
+                key={m.value}
+                onClick={() => setMuscleFilter(m.value)}
+                className={cn(
+                  "pill px-3.5 py-1.5 text-xs whitespace-nowrap",
+                  muscleFilter === m.value
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-surface-2 text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Search */}
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Pretraži vežbe..."
+              className="pl-9"
+            />
+          </div>
 
-      {/* Scope filter pills */}
-      <div className={`flex gap-2 mb-3 ${desktop ? "flex-wrap" : "no-scrollbar overflow-x-auto"}`}>
-        {([
-          { v: "all", l: "Sve" },
-          { v: "global", l: "Globalne" },
-          { v: "mine", l: "Moje" },
-        ] as const).map((p) => (
-          <button
-            key={p.v}
-            onClick={() => setScopeFilter(p.v)}
-            className={`pill px-3.5 py-1.5 text-xs whitespace-nowrap ${
-              scopeFilter === p.v
-                ? "bg-foreground text-background"
-                : "bg-surface-2 text-foreground"
-            }`}
-          >
-            {p.l}
-          </button>
-        ))}
-      </div>
+          {/* Scope filter pills */}
+          <div className="flex gap-2 mb-3 no-scrollbar overflow-x-auto">
+            {OPSEZI.map((p) => (
+              <button
+                key={p.v}
+                onClick={() => setScopeFilter(p.v)}
+                className={`pill px-3.5 py-1.5 text-xs whitespace-nowrap ${
+                  scopeFilter === p.v
+                    ? "bg-foreground text-background"
+                    : "bg-surface-2 text-foreground"
+                }`}
+              >
+                {p.l}
+              </button>
+            ))}
+          </div>
 
-      {/* Muscle filter pills */}
-      <div className={`flex gap-2 mb-5 ${desktop ? "flex-wrap" : "no-scrollbar overflow-x-auto"}`}>
-        {MUSCLE_GROUPS.map((m) => (
-          <button
-            key={m.value}
-            onClick={() => setMuscleFilter(m.value)}
-            className={`pill px-3.5 py-1.5 text-xs whitespace-nowrap ${
-              muscleFilter === m.value
-                ? "bg-primary text-primary-foreground"
-                : "bg-surface-2 text-muted-foreground"
-            }`}
-          >
-            {m.label}
-          </button>
-        ))}
-      </div>
+          {/* Muscle filter pills */}
+          <div className="flex gap-2 mb-5 no-scrollbar overflow-x-auto">
+            {MUSCLE_GROUPS.map((m) => (
+              <button
+                key={m.value}
+                onClick={() => setMuscleFilter(m.value)}
+                className={`pill px-3.5 py-1.5 text-xs whitespace-nowrap ${
+                  muscleFilter === m.value
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-surface-2 text-muted-foreground"
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* List */}
       {loading ? (
@@ -403,8 +470,76 @@ const ExerciseLibrary = () => {
           </div>
           <p className="text-sm text-muted-foreground">Nema rezultata</p>
         </div>
+      ) : desktop ? (
+        // Racunar: mreza kartica iste visine - ime u dva reda, misic i oprema kao
+        // oznake. Tanke trake preko pola ekrana su izgledale razvuceno i prazno.
+        <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+          {filtered.map((ex) => {
+            const ime = ex.name_en?.trim() || ex.name;
+            const drugoIme = !!ex.name_en?.trim() && ex.name_en.trim() !== ex.name;
+            return (
+              <button
+                key={ex.id}
+                onClick={() => void otvori(ex)}
+                className="card-premium-hover flex min-h-[156px] w-full flex-col p-5 text-left"
+              >
+                <div className="flex w-full items-start justify-between gap-3">
+                  <div className="h-11 w-11 rounded-xl bg-gradient-brand-soft flex items-center justify-center shrink-0">
+                    <Dumbbell className="h-5 w-5 text-primary" strokeWidth={2.25} />
+                  </div>
+                  {ex.is_global ? (
+                    <span
+                      title="Globalna vežba"
+                      className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground"
+                    >
+                      <Globe2 className="h-3 w-3" />
+                      Globalna
+                    </span>
+                  ) : (
+                    <span
+                      title="Moja vežba"
+                      className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-2.5 py-1 text-[11.5px] font-semibold text-primary"
+                    >
+                      <User2 className="h-3 w-3" />
+                      Moja
+                    </span>
+                  )}
+                </div>
+                <div className="mt-4 font-display text-[17px] font-bold leading-snug tracking-tight line-clamp-2">
+                  {ime}
+                </div>
+                {drugoIme && (
+                  <div className="mt-0.5 w-full truncate text-[12.5px] text-muted-foreground">{ex.name}</div>
+                )}
+                <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-4">
+                  <span className="inline-flex items-center rounded-full bg-surface-2 px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground">
+                    {muscleLabel(ex.primary_muscle)}
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-surface-2 px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground">
+                    {equipLabel(ex.equipment)}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+
+          {imaJos && (
+            <div className="col-span-full flex justify-center pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void ucitajJos()}
+                disabled={ucitavamJos}
+                className="h-10 rounded-full px-5"
+              >
+                {ucitavamJos && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+                {ucitavamJos ? "Učitavam..." : "Učitaj još"}
+              </Button>
+            </div>
+          )}
+        </div>
       ) : (
-        <div className={desktop ? "grid grid-cols-2 xl:grid-cols-3 gap-2 items-start" : "space-y-2"}>
+        <div className="space-y-2">
           {filtered.map((ex) => (
             <button
               key={ex.id}
@@ -438,7 +573,7 @@ const ExerciseLibrary = () => {
               type="button"
               onClick={() => void ucitajJos()}
               disabled={ucitavamJos}
-              className={`h-11 rounded-xl bg-surface-2 text-[13px] font-semibold text-muted-foreground hover:text-foreground transition disabled:opacity-50 ${desktop ? "col-span-full" : "w-full"}`}
+              className="h-11 w-full rounded-xl bg-surface-2 text-[13px] font-semibold text-muted-foreground hover:text-foreground transition disabled:opacity-50"
             >
               {ucitavamJos ? "Učitavam..." : "Učitaj još"}
             </button>

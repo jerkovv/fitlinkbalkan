@@ -3,8 +3,10 @@ import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from "rechar
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Card, SectionTitle } from "@/components/ui-bits";
-import { ArrowUpRight, ArrowDownRight, Loader2, Wallet, Banknote, Landmark, Clock, Trophy } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Loader2, Wallet, Banknote, Landmark, Clock, Trophy, ChevronRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { SendMessageToAthlete } from "@/components/SendMessageToAthlete";
@@ -150,8 +152,51 @@ const RevenueTooltip = ({ active, payload, label }: any) => {
   );
 };
 
+// ---- Racunar ----
+const PERIOD_LABEL: Record<Period, string> = { 3: "3 meseca", 6: "6 meseci", 12: "12 meseci" };
+
+// Kolone tabele poslednjih uplata; zaglavlje i redovi dele isti sablon.
+const PAY_GRID = "grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_110px_130px_150px_16px] items-center gap-4 px-5";
+
+// Na racunaru ima mesta za pun iznos i jedan red objasnjenja, pa KPI nosi i
+// vrednosti koje telefon prikazuje u zasebnim malim karticama.
+const DesktopKpi = ({
+  label,
+  value,
+  unit,
+  tone = "neutral",
+  badge,
+  hint,
+  hover = false,
+}: {
+  label: string;
+  value: string;
+  unit?: string;
+  tone?: keyof typeof TONE_TEXT;
+  badge?: ReactNode;
+  hint?: ReactNode;
+  hover?: boolean;
+}) => (
+  <Card hover={hover} className="flex h-full flex-col p-5">
+    <div className="flex items-center justify-between gap-2">
+      <span className="truncate text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+        {label}
+      </span>
+      {badge}
+    </div>
+    <div className="mt-3 flex items-baseline gap-1.5">
+      <span className={cn("font-display text-[28px] font-bold leading-none tracking-tightest tnum", TONE_TEXT[tone])}>
+        {value}
+      </span>
+      {unit && <span className="text-[12px] font-semibold text-muted-foreground">{unit}</span>}
+    </div>
+    {hint && <div className="mt-auto pt-3 text-[12.5px] text-muted-foreground">{hint}</div>}
+  </Card>
+);
+
 const Finances = () => {
   const { user } = useAuth();
+  const desktop = useDesktopWeb();
   const [loading, setLoading] = useState(true);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [athleteNames, setAthleteNames] = useState<Map<string, string>>(new Map());
@@ -346,10 +391,301 @@ const Finances = () => {
 
   return (
     <>
-      <PhoneShell hasBottomNav title="Finansije" eyebrow="Pregled prihoda">
+      <PhoneShell
+        hasBottomNav
+        title="Finansije"
+        eyebrow="Pregled prihoda"
+        desktopWidth="wide"
+        // Racunar: izbor perioda u zaglavlju, jer menja sve brojke na stranici.
+        action={
+          desktop ? (
+            <div className="inline-flex items-center gap-1 rounded-full bg-surface-2 p-1">
+              {([3, 6, 12] as Period[]).map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setPeriod(n)}
+                  aria-pressed={period === n}
+                  className={cn(
+                    "h-8 whitespace-nowrap rounded-full px-3.5 text-[12.5px] font-semibold transition",
+                    period === n
+                      ? "bg-gradient-brand text-white shadow-brand"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {PERIOD_LABEL[n]}
+                </button>
+              ))}
+            </div>
+          ) : undefined
+        }
+      >
         {loading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : desktop ? (
+          // Racunar: KPI red, pa grafikon uz raspodelu, pa dve liste jedna pored
+          // druge, pa tabela uplata. Na telefonu je sve jedan dug stub kartica.
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <DesktopKpi
+                label="Ovaj mesec"
+                tone="brand"
+                value={thisMonth.toLocaleString("sr-Latn-RS")}
+                unit="RSD"
+                badge={monthBadge}
+                hint={
+                  activeAthletes > 0
+                    ? `Uplatilo ${paidThisMonth} od ${activeAthletes} vežbača`
+                    : `Uplatilo ${paidThisMonth} vežbača`
+                }
+              />
+              <DesktopKpi
+                label={`Ukupno za ${PERIOD_LABEL[period]}`}
+                value={periodTotal.toLocaleString("sr-Latn-RS")}
+                unit="RSD"
+                hint={`Prosek ${avgMonthly.toLocaleString("sr-Latn-RS")} RSD po aktivnom mesecu`}
+              />
+              <DesktopKpi
+                label="Aktivni prihod / mes"
+                tone="brand"
+                value={runRate.toLocaleString("sr-Latn-RS")}
+                unit="RSD"
+                hint="Mesečna vrednost aktivnih članarina"
+              />
+              <Link to="/trener/uplate" className="block rounded-xl">
+                <DesktopKpi
+                  hover
+                  label="Na čekanju"
+                  tone="warning"
+                  value={String(pendingCount)}
+                  badge={<ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                  hint={
+                    pendingAmount > 0
+                      ? `${pendingAmount.toLocaleString("sr-Latn-RS")} RSD čeka potvrdu`
+                      : "Nema zahteva za potvrdu"
+                  }
+                />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-[minmax(0,1fr)_340px] items-stretch gap-6">
+              <Card className="p-6">
+                <div className="mb-5 flex items-start justify-between gap-4">
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                      Prihod po mesecima
+                    </div>
+                    <div className="mt-1 flex items-baseline gap-1.5">
+                      <span className="font-display text-[26px] font-bold tracking-tighter tnum">
+                        {periodTotal.toLocaleString("sr-Latn-RS")}
+                      </span>
+                      <span className="text-[12px] font-semibold text-muted-foreground">
+                        RSD za {PERIOD_LABEL[period]}
+                      </span>
+                    </div>
+                  </div>
+                  <span className={cn(
+                    "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-semibold tnum",
+                    trendUp
+                      ? "bg-success-soft text-success-soft-foreground"
+                      : "bg-destructive-soft text-destructive-soft-foreground",
+                  )}>
+                    {trendUp ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                    {trendUp ? "+" : ""}{trend}% ovaj mesec
+                  </span>
+                </div>
+
+                <div className="h-64 -mx-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+                      <XAxis
+                        dataKey="label"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))", fontWeight: 600 }}
+                      />
+                      <Tooltip cursor={{ fill: "hsl(268 60% 96%)" }} content={<RevenueTooltip />} />
+                      <Bar dataKey="sum" radius={[8, 8, 0, 0]} maxBarSize={56}>
+                        {chartData.map((d, i) => (
+                          <Cell key={i} fill={d.isLast ? "hsl(268 80% 56%)" : "hsl(268 45% 88%)"} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+
+              <Card className="flex flex-col p-6">
+                <div className="mb-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Raspodela po paketima
+                </div>
+                {byPackage.length === 0 ? (
+                  <p className="text-[13px] text-muted-foreground">Nema uplata za {PERIOD_LABEL[period]}.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {byPackage.map((pk) => {
+                      const pct = periodTotal > 0 ? Math.round((pk.total / periodTotal) * 100) : 0;
+                      return (
+                        <div key={pk.name}>
+                          <div className="flex items-baseline justify-between gap-3 mb-1.5">
+                            <span className="text-[13px] font-semibold tracking-tight truncate">{pk.name}</span>
+                            <span className="text-[12px] font-semibold text-muted-foreground tnum shrink-0">{pct}%</span>
+                          </div>
+                          <div className="h-2 rounded-full bg-surface-2 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-gradient-brand"
+                              style={{ width: `${Math.max(2, pct)}%` }}
+                            />
+                          </div>
+                          <div className="mt-1 text-[12px] font-semibold tnum">
+                            {pk.total.toLocaleString("sr-Latn-RS")}{" "}
+                            <span className="text-[11px] text-muted-foreground">RSD</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-2 items-start gap-6">
+              <Card className="overflow-hidden">
+                <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-3">
+                  <h2 className="font-display text-[15px] font-semibold tracking-tighter">Top klijenti</h2>
+                  <span className="text-[11.5px] font-semibold text-muted-foreground">{PERIOD_LABEL[period]}</span>
+                </div>
+                {topPayers.length === 0 ? (
+                  <p className="px-5 pb-5 text-[13px] text-muted-foreground">Nema uplata u ovom periodu.</p>
+                ) : (
+                  <ul className="divide-y divide-hairline border-t border-hairline">
+                    {topPayers.map((t, i) => (
+                      <li key={t.id} className="flex items-center gap-3 px-5 py-3">
+                        <div className={cn(
+                          "h-8 w-8 rounded-full flex items-center justify-center shrink-0 font-display font-bold text-[12.5px]",
+                          i === 0
+                            ? "bg-gradient-brand text-white"
+                            : "bg-surface-2 text-muted-foreground",
+                        )}>
+                          {i === 0 ? <Trophy className="h-[15px] w-[15px]" /> : i + 1}
+                        </div>
+                        <div className="flex-1 min-w-0 text-[14px] font-semibold tracking-tight truncate">
+                          {athleteNames.get(t.id) ?? "Vežbač"}
+                        </div>
+                        <div className="text-[14px] font-bold tracking-tight tnum shrink-0">
+                          {t.total.toLocaleString("sr-Latn-RS")}{" "}
+                          <span className="text-[11px] text-muted-foreground font-semibold">RSD</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+
+              <Card className="overflow-hidden">
+                <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-3">
+                  <h2 className="font-display text-[15px] font-semibold tracking-tighter">Članarine na isteku</h2>
+                  <span className="text-[11.5px] font-semibold text-muted-foreground">narednih 14 dana</span>
+                </div>
+                {expiring.length === 0 ? (
+                  <p className="px-5 pb-5 text-[13px] text-muted-foreground">
+                    Nijedna članarina ne ističe u narednih 14 dana.
+                  </p>
+                ) : (
+                  <ul className="divide-y divide-hairline border-t border-hairline">
+                    {expiring.map((e) => {
+                      const d = daysUntil(e.ends_on);
+                      return (
+                        <li key={e.athlete_id} className="flex items-center gap-3 px-5 py-2.5">
+                          <div className="h-9 w-9 rounded-xl bg-warning-soft text-warning-soft-foreground flex items-center justify-center shrink-0">
+                            <Clock className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[14px] font-semibold tracking-tight truncate">
+                              {athleteNames.get(e.athlete_id) ?? "Vežbač"}
+                            </div>
+                            <div className="text-[12px] text-muted-foreground truncate">
+                              {e.plan_name ? `${e.plan_name} · ` : ""}Ističe {fmtDay(e.ends_on)}
+                            </div>
+                          </div>
+                          <span className="inline-flex items-center rounded-full bg-warning-soft px-2.5 py-1 text-[11.5px] font-semibold text-warning-soft-foreground tnum shrink-0">
+                            {d <= 0 ? "danas" : `za ${d} d`}
+                          </span>
+                          <SendMessageToAthlete
+                            athleteId={e.athlete_id}
+                            athleteName={athleteNames.get(e.athlete_id)}
+                            variant="icon"
+                          />
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </Card>
+            </div>
+
+            <Card className="overflow-hidden">
+              <div className="px-5 pt-5 pb-3">
+                <h2 className="font-display text-[15px] font-semibold tracking-tighter">Poslednje uplate</h2>
+              </div>
+              {recent.length === 0 ? (
+                <div className="border-t border-hairline px-6 py-10 text-center">
+                  <div className="mx-auto h-12 w-12 rounded-2xl bg-surface-2 flex items-center justify-center mb-3">
+                    <Wallet className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="text-[14px] font-semibold tracking-tight mb-1">
+                    Još nema potvrđenih uplata
+                  </div>
+                  <p className="text-[12.5px] text-muted-foreground">
+                    Kad potvrdiš zahtev za članarinu u "Uplate", uplata će se pojaviti ovde.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className={cn(PAY_GRID, "border-y border-hairline bg-surface-2/60 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground")}>
+                    <span>Vežbač</span>
+                    <span>Paket</span>
+                    <span>Način</span>
+                    <span>Datum</span>
+                    <span className="text-right">Iznos</span>
+                    <span />
+                  </div>
+                  <div className="divide-y divide-hairline">
+                    {recent.map((p) => {
+                      const isCash = p.payment_method === "cash";
+                      const Icon = isCash ? Banknote : Landmark;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setSelected(p)}
+                          className={cn(PAY_GRID, "w-full py-3 text-left transition hover:bg-surface-2")}
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="h-9 w-9 rounded-xl bg-success-soft text-success-soft-foreground flex items-center justify-center shrink-0">
+                              <Icon className="h-4 w-4" />
+                            </div>
+                            <span className="truncate text-[14px] font-semibold tracking-tight">
+                              {athleteNames.get(p.athlete_id) ?? "Vežbač"}
+                            </span>
+                          </div>
+                          <span className="truncate text-[13px] text-muted-foreground">{p.package_name}</span>
+                          <span className="text-[13px] text-muted-foreground">{isCash ? "Keš" : "Račun"}</span>
+                          <span className="text-[13px] text-muted-foreground tnum">{fmtWhen(p.decided_at)}</span>
+                          <span className="text-right text-[14px] font-bold tracking-tight tnum">
+                            {p.price_rsd.toLocaleString("sr-Latn-RS")}{" "}
+                            <span className="text-[11px] text-muted-foreground font-semibold">RSD</span>
+                          </span>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </Card>
           </div>
         ) : (
           <div className="space-y-5">

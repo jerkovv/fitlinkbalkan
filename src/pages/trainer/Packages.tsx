@@ -19,6 +19,8 @@ import { Loader2, Plus, Pencil, Trash2, Package } from "lucide-react";
 import { toast } from "sonner";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { LockMark } from "@/components/pretplata/LockMark";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
+import { cn } from "@/lib/utils";
 
 type Pkg = {
   id: string;
@@ -36,6 +38,7 @@ const Packages = () => {
   const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
   const confirm = useConfirm();
+  const desktop = useDesktopWeb();
   const [loading, setLoading] = useState(true);
   const [packages, setPackages] = useState<Pkg[]>([]);
   const [open, setOpen] = useState(false);
@@ -132,12 +135,38 @@ const Packages = () => {
         hasBottomNav
         back="/trener"
         eyebrow="Naplata"
+        desktopWidth="wide"
         title={
-          <h1 className="font-display text-[28px] leading-[1.05] font-bold tracking-tightest">
-            Paketi članarina
-          </h1>
+          desktop ? (
+            "Paketi članarina"
+          ) : (
+            <h1 className="font-display text-[28px] leading-[1.05] font-bold tracking-tightest">
+              Paketi članarina
+            </h1>
+          )
+        }
+        // Racunar: brojac i dugme u zaglavlju, u visini naslova, umesto zasebnog
+        // reda iznad liste.
+        action={
+          desktop ? (
+            <>
+              <span className="text-[12.5px] font-semibold text-muted-foreground tnum">
+                {activeCount} / {PACKAGE_LIMIT} aktivnih
+              </span>
+              <Button
+                onClick={openNew}
+                disabled={activeCount >= PACKAGE_LIMIT}
+                className="h-10 rounded-full px-4 bg-gradient-brand text-white shadow-brand"
+              >
+                <LockMark className="mr-1.5" />
+                <Plus className="h-4 w-4 mr-1.5" strokeWidth={2.5} />
+                Novi paket
+              </Button>
+            </>
+          ) : undefined
         }
       >
+        {!desktop && (
         <div className="flex items-center justify-between">
           <p className="text-[12.5px] text-muted-foreground">
             {activeCount} / {PACKAGE_LIMIT} aktivnih
@@ -151,13 +180,14 @@ const Packages = () => {
             <LockMark className="mr-1.5" /><Plus className="h-4 w-4 mr-1.5" /> Novi paket
           </Button>
         </div>
+        )}
 
         {loading ? (
           <div className="flex justify-center py-16">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : packages.length === 0 ? (
-          <Card className="p-6 text-center space-y-3">
+          <Card className={cn("p-6 text-center space-y-3", desktop && "py-14")}>
             <div className="h-12 w-12 mx-auto rounded-2xl bg-muted flex items-center justify-center">
               <Package className="h-5 w-5 text-muted-foreground" />
             </div>
@@ -167,7 +197,96 @@ const Packages = () => {
             <p className="text-[13px] text-muted-foreground">
               Dodaj paket da vežbači mogu da kupe članarinu.
             </p>
+            {desktop && (
+              <Button
+                onClick={openNew}
+                className="h-10 rounded-full px-4 bg-gradient-brand text-white shadow-brand"
+              >
+                <LockMark className="mr-1.5" />
+                <Plus className="h-4 w-4 mr-1.5" strokeWidth={2.5} />
+                Novi paket
+              </Button>
+            )}
           </Card>
+        ) : desktop ? (
+          // Racunar: mreza kartica. Tanke trake preko cele sirine su izgledale
+          // izduzeno; kartica drzi cenu, sadrzaj paketa i kontrole zajedno.
+          <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+            {packages.map((p) => (
+              <div key={p.id} className="group card-premium-hover flex min-h-[208px] flex-col p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div
+                    className={cn(
+                      "h-11 w-11 rounded-xl bg-gradient-brand-soft flex items-center justify-center transition",
+                      !p.is_active && "opacity-60",
+                    )}
+                  >
+                    <Package className="h-5 w-5 text-primary" strokeWidth={2.25} />
+                  </div>
+                  <label className="flex cursor-pointer items-center gap-2">
+                    <span className="text-[11.5px] font-semibold text-muted-foreground">
+                      {p.is_active ? "Aktivan" : "Neaktivan"}
+                    </span>
+                    <Switch checked={p.is_active} onCheckedChange={() => toggleActive(p)} />
+                  </label>
+                </div>
+
+                {/* Neaktivan paket bledi samo sadrzajem; prekidac i dugmad ostaju jasni. */}
+                <div className={cn("transition", !p.is_active && "opacity-60")}>
+                  <div className="mt-4 font-display text-[17px] font-bold leading-snug tracking-tight line-clamp-2">
+                    {p.name}
+                  </div>
+                  <div className="mt-2 flex items-baseline gap-1.5">
+                    <span className="font-display text-[26px] font-bold leading-none tracking-tightest text-primary tnum">
+                      {p.price_rsd.toLocaleString("sr-Latn-RS")}
+                    </span>
+                    <span className="text-[12px] font-semibold text-muted-foreground">RSD</span>
+                  </div>
+                  {p.sessions_count > 0 && (
+                    <div className="mt-1 text-[12px] text-muted-foreground tnum">
+                      {Math.round(p.price_rsd / p.sessions_count).toLocaleString("sr-Latn-RS")} RSD po treningu
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-auto flex items-center justify-between gap-2 pt-4">
+                  <div className={cn("flex flex-wrap items-center gap-1.5", !p.is_active && "opacity-60")}>
+                    <span className="inline-flex items-center rounded-full bg-primary-soft px-2.5 py-1 text-[11.5px] font-semibold text-primary tnum">
+                      {p.sessions_count} treninga
+                    </span>
+                    <span className="inline-flex items-center rounded-full bg-surface-2 px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground tnum">
+                      {p.duration_days} dana
+                    </span>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      onClick={() => openEdit(p)}
+                      aria-label="Izmeni"
+                      className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground transition hover:bg-surface-2 hover:text-foreground"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => remove(p)}
+                      aria-label="Obriši"
+                      className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground transition hover:bg-destructive-soft hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {activeCount < PACKAGE_LIMIT && (
+              <button
+                onClick={openNew}
+                className="flex min-h-[208px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-hairline text-muted-foreground transition hover:border-primary hover:text-primary"
+              >
+                <Plus className="h-5 w-5" />
+                <span className="text-sm font-semibold">Novi paket</span>
+              </button>
+            )}
+          </div>
         ) : (
           <div className="space-y-2">
             {packages.map((p) => (

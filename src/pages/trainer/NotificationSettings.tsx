@@ -9,6 +9,7 @@ import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { Calendar, CreditCard, Dumbbell, MessageCircle, Loader2 } from "lucide-react";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 
 type Prefs = {
   bookings: boolean;
@@ -29,6 +30,7 @@ const ROWS: { key: keyof Prefs; icon: any; title: string; desc: string }[] = [
 const NotificationSettings = () => {
   const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
+  const desktop = useDesktopWeb();
   const [prefs, setPrefs] = useState<Prefs>(DEFAULTS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<keyof Prefs | null>(null);
@@ -71,38 +73,85 @@ const NotificationSettings = () => {
 
   return (
     <PhoneShell title="Obaveštenja" eyebrow="Podešavanja" back="/trener/profil">
-      <div className="space-y-3 pb-24">
-        <p className="text-[13px] text-muted-foreground px-1">
-          Izaberi šta želiš da te obaveštava. Isključene grupe se neće slati ni u app, ni kao push.
-        </p>
-
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      {desktop ? (
+        // Racunar: jedna kartica sa naslovom odeljka i grupama u dve kolone.
+        // Cetiri pune trake preko ekrana su izgledale prazno i razvuceno.
+        <section className="card-premium overflow-hidden">
+          <div className="border-b border-hairline px-6 py-5">
+            <h2 className="font-display text-[17px] font-bold tracking-tight">Grupe obaveštenja</h2>
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              Izaberi šta želiš da te obaveštava. Isključene grupe se neće slati ni u app, ni kao push.
+            </p>
           </div>
-        ) : (
-          ROWS.map(({ key, icon: Icon, title, desc }) => (
-            <Card key={key} className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-primary-soft text-primary-soft-foreground flex items-center justify-center shrink-0">
-                  <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
+
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 p-6">
+              {ROWS.map(({ key, icon: Icon, title, desc }) => (
+                <div
+                  key={key}
+                  className="flex items-start gap-3 rounded-2xl border border-hairline bg-surface p-4"
+                >
+                  <div className="h-10 w-10 rounded-xl bg-primary-soft text-primary-soft-foreground flex items-center justify-center shrink-0">
+                    <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-[14px] leading-tight">{title}</div>
+                    <div className="text-[12.5px] text-muted-foreground mt-1 leading-snug">{desc}</div>
+                  </div>
+                  <div className="shrink-0 flex h-10 items-center">
+                    {saving === key ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    ) : (
+                      <Switch
+                        checked={prefs[key]}
+                        onCheckedChange={() => toggle(key)}
+                        aria-label={title}
+                      />
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-[14px] leading-tight">{title}</div>
-                  <div className="text-[12px] text-muted-foreground mt-0.5">{desc}</div>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : (
+        <div className="space-y-3 pb-24">
+          <p className="text-[13px] text-muted-foreground px-1">
+            Izaberi šta želiš da te obaveštava. Isključene grupe se neće slati ni u app, ni kao push.
+          </p>
+
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            ROWS.map(({ key, icon: Icon, title, desc }) => (
+              <Card key={key} className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-primary-soft text-primary-soft-foreground flex items-center justify-center shrink-0">
+                    <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-[14px] leading-tight">{title}</div>
+                    <div className="text-[12px] text-muted-foreground mt-0.5">{desc}</div>
+                  </div>
+                  <div className="shrink-0">
+                    {saving === key ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    ) : (
+                      <Switch checked={prefs[key]} onCheckedChange={() => toggle(key)} />
+                    )}
+                  </div>
                 </div>
-                <div className="shrink-0">
-                  {saving === key ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  ) : (
-                    <Switch checked={prefs[key]} onCheckedChange={() => toggle(key)} />
-                  )}
-                </div>
-              </div>
-            </Card>
-          ))
-        )}
-      </div>
+              </Card>
+            ))
+          )}
+        </div>
+      )}
       <BottomNav role="trainer" />
     </PhoneShell>
   );

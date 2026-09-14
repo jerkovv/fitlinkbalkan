@@ -29,9 +29,12 @@ interface Props {
    * bez preklapanja.
    */
   pill?: boolean;
+  /** Stil i tekst obicnog (ne-pill) dugmeta - racunar ga stavlja u zaglavlje stranice. */
+  className?: string;
+  label?: string;
 }
 
-export const BroadcastButton = ({ pill = false }: Props) => {
+export const BroadcastButton = ({ pill = false, className, label = "Obaveštenje" }: Props) => {
   const { locked, openLock, guard } = usePretplataLock();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -84,8 +87,8 @@ export const BroadcastButton = ({ pill = false }: Props) => {
       )}
 
       {!pill && (
-        <Button className="gap-2" onClick={guard(() => setOpen(true))}>
-          <LockMark /><Megaphone className="h-4 w-4" /> Obaveštenje
+        <Button className={cn("gap-2", className)} onClick={guard(() => setOpen(true))}>
+          <LockMark /><Megaphone className="h-4 w-4" /> {label}
         </Button>
       )}
 

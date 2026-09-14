@@ -20,6 +20,7 @@ import {
   sessionColorClasses, dateToWeekday, toIsoDate, formatTime, addMinutesToTime, weekdayLabelsShort,
 } from "@/lib/session";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 
 type Slot = {
   session_type_id: string;
@@ -73,12 +74,18 @@ const Calendar = () => {
   const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
   const confirm = useConfirm();
+  const desktop = useDesktopWeb();
   const [searchParams] = useSearchParams();
   const today = useMemo(() => new Date(), []);
   // Ako notifikacija prosledi ?date=YYYY-MM-DD (slot_date termina), otvori
   // kalendar na taj dan; inace na danasnji.
   const [selectedDate, setSelectedDate] = useState<Date>(
     () => parseDateParam(searchParams.get("date")) ?? today,
+  );
+  // Racunar: mesec koji mali kalendar prikazuje. Odvojen od izabranog dana da bi
+  // trener mogao da lista mesece a da ne promeni dan (i ne okine novo ucitavanje).
+  const [viewMonth, setViewMonth] = useState<Date>(
+    () => new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1),
   );
   const [slots, setSlots] = useState<Slot[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -224,22 +231,297 @@ const Calendar = () => {
   const monthLabel = `${monthNames[selectedDate.getMonth()]} ${selectedDate.getFullYear()}`;
   const isToday = toIsoDate(selectedDate) === toIsoDate(today);
 
+  // ===== Racunar: mali mesecni kalendar i pregled dana =====
+  // Celije meseca od ponedeljka; dani susednih meseca popunjavaju prvi i poslednji red.
+  const monthCells = useMemo(() => {
+    const y = viewMonth.getFullYear();
+    const m = viewMonth.getMonth();
+    const lead = dateToWeekday(new Date(y, m, 1));
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const total = Math.ceil((lead + daysInMonth) / 7) * 7;
+    return Array.from({ length: total }, (_, i) => new Date(y, m, 1 - lead + i));
+  }, [viewMonth]);
+
+  const selectDay = (d: Date) => {
+    setSelectedDate(d);
+    setViewMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+  };
+  const shiftDay = (delta: number) => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + delta);
+    selectDay(d);
+  };
+  const shiftMonth = (delta: number) =>
+    setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + delta, 1));
+
+  // Brojke za pregled dana racunaju se iz vec ucitanih termina, bez novih upita.
+  const aktivniTermini = slots.filter((s) => !s.is_canceled);
+  const dayStats = [
+    { label: "Termini", value: aktivniTermini.length },
+    { label: "Rezervacije", value: bookings.filter((b) => b.status === "booked").length },
+    {
+      label: "Slobodno",
+      value: aktivniTermini.reduce((sum, s) => sum + Math.max(0, s.capacity - bookingsForSlot(s).length), 0),
+    },
+    { label: "Na čekanju", value: aktivniTermini.reduce((sum, s) => sum + s.waitlist_count, 0) },
+  ];
+
   return (
     <>
       <PhoneShell
         hasBottomNav
         title="Kalendar"
         eyebrow={monthLabel}
+        desktopWidth="wide"
         action={
-          <Link
-            to="/trener/termini"
-            className="h-10 w-10 rounded-full bg-surface border border-hairline flex items-center justify-center hover:border-primary/30 active:scale-95 transition"
-            title="Podešavanja termina"
-          >
-            <Settings className="h-4 w-4" strokeWidth={2} />
-          </Link>
+          desktop ? (
+            <Button asChild variant="outline" className="h-10 rounded-full px-4">
+              <Link to="/trener/termini">
+                <Settings className="h-4 w-4 mr-1.5" strokeWidth={2} />
+                Podešavanja termina
+              </Link>
+            </Button>
+          ) : (
+            <Link
+              to="/trener/termini"
+              className="h-10 w-10 rounded-full bg-surface border border-hairline flex items-center justify-center hover:border-primary/30 active:scale-95 transition"
+              title="Podešavanja termina"
+            >
+              <Settings className="h-4 w-4" strokeWidth={2} />
+            </Link>
+          )
         }
       >
+        {desktop ? (
+          // Racunar: levo mesecni kalendar i pregled dana, desno termini izabranog
+          // dana kao vremenska osa. Traka dana i uske trake preko cele sirine su
+          // na sirokom ekranu izgledale izduzeno.
+          <div className="grid grid-cols-[288px_minmax(0,1fr)] items-start gap-6">
+            <div className="sticky top-24 space-y-4">
+              <div className="card-premium p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <button
+                    onClick={() => shiftMonth(-1)}
+                    aria-label="Prethodni mesec"
+                    className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground transition hover:bg-surface-2 hover:text-foreground"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <div className="font-display text-[15px] font-bold tracking-tight">
+                    {monthNames[viewMonth.getMonth()]} {viewMonth.getFullYear()}
+                  </div>
+                  <button
+                    onClick={() => shiftMonth(1)}
+                    aria-label="Sledeći mesec"
+                    className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground transition hover:bg-surface-2 hover:text-foreground"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-7 gap-1">
+                  {weekdayLabelsShort.map((wd) => (
+                    <div key={wd} className="pb-1 text-center text-[10px] font-semibold tracking-wider text-muted-foreground">
+                      {wd}
+                    </div>
+                  ))}
+                  {monthCells.map((d) => {
+                    const iso = toIsoDate(d);
+                    const active = iso === toIsoDate(selectedDate);
+                    const isT = iso === toIsoDate(today);
+                    const outside = d.getMonth() !== viewMonth.getMonth();
+                    return (
+                      <button
+                        key={iso}
+                        onClick={() => selectDay(d)}
+                        aria-current={active ? "date" : undefined}
+                        className={cn(
+                          "flex h-9 items-center justify-center rounded-lg text-[13px] font-semibold tnum transition",
+                          active
+                            ? "bg-gradient-brand text-primary-foreground shadow-brand"
+                            : isT
+                              ? "bg-primary-soft text-primary"
+                              : outside
+                                ? "text-muted-foreground/40 hover:bg-surface-2"
+                                : "text-foreground hover:bg-surface-2",
+                        )}
+                      >
+                        {d.getDate()}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="card-premium p-4">
+                <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Pregled dana
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {dayStats.map((st) => (
+                    <div key={st.label} className="rounded-xl bg-surface-2 p-3">
+                      <div className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                        {st.label}
+                      </div>
+                      <div className="mt-1.5 font-display text-[22px] font-bold leading-none tracking-tight tnum">
+                        {loading ? "-" : st.value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="min-w-0 space-y-4">
+              <div className="flex items-end justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    {isToday ? "Danas" : selectedDate.toLocaleDateString("sr-Latn-RS", { weekday: "long" })}
+                  </div>
+                  <div className="font-display text-[22px] font-bold leading-tight tracking-tight">
+                    {selectedDate.toLocaleDateString("sr-Latn-RS", { day: "numeric", month: "long" })}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-1 rounded-full border border-hairline bg-surface p-1">
+                  <button
+                    onClick={() => shiftDay(-1)}
+                    aria-label="Prethodni dan"
+                    className="h-8 w-8 rounded-full flex items-center justify-center transition hover:bg-surface-2"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => selectDay(today)}
+                    className={cn(
+                      "h-8 rounded-full px-3 text-[12.5px] font-semibold transition",
+                      isToday ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-surface-2",
+                    )}
+                  >
+                    Danas
+                  </button>
+                  <button
+                    onClick={() => shiftDay(1)}
+                    aria-label="Sledeći dan"
+                    className="h-8 w-8 rounded-full flex items-center justify-center transition hover:bg-surface-2"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="card-premium flex justify-center py-16">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : slots.length === 0 ? (
+                <div className="card-premium flex flex-col items-center px-8 py-14 text-center">
+                  <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-brand-soft">
+                    <CalIcon className="h-6 w-6 text-primary" strokeWidth={2} />
+                  </div>
+                  <h3 className="mb-1 font-display text-lg font-bold">Nema termina za ovaj dan</h3>
+                  <p className="mb-4 max-w-sm text-sm text-muted-foreground">
+                    Postavi nedeljni raspored u Podešavanjima termina.
+                  </p>
+                  <Button asChild variant="outline" className="h-10 rounded-full px-4">
+                    <Link to="/trener/termini">
+                      <Settings className="h-4 w-4 mr-1.5" /> Otvori podešavanja
+                    </Link>
+                  </Button>
+                </div>
+              ) : (
+                <ul className="space-y-3">
+                  {slots.map((s) => {
+                    const slotBookings = bookingsForSlot(s);
+                    const colors = sessionColorClasses(s.type_color);
+                    const start = formatTime(s.start_time);
+                    const endTime = addMinutesToTime(start, s.duration_min);
+                    const full = slotBookings.length >= s.capacity;
+                    const popunjeno = s.capacity > 0
+                      ? Math.min(100, Math.round((slotBookings.length / s.capacity) * 100))
+                      : 0;
+                    return (
+                      <li key={slotKey(s)} className="grid grid-cols-[64px_minmax(0,1fr)] gap-4">
+                        <div className="pt-4 text-right">
+                          <div className="font-display text-[17px] font-bold leading-none tracking-tight tnum">{start}</div>
+                          <div className="mt-1 text-[11.5px] text-muted-foreground tnum">{endTime}</div>
+                        </div>
+                        <button
+                          onClick={() => setOpenSlot(s)}
+                          className={cn(
+                            "card-premium-hover relative w-full overflow-hidden p-4 pl-5 text-left",
+                            s.is_canceled && "opacity-50",
+                          )}
+                        >
+                          {/* Traka u boji tipa, da se tipovi razlikuju na prvi pogled. */}
+                          <span aria-hidden className={cn("absolute inset-y-0 left-0 w-1", colors.dot)} />
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex min-w-0 items-center gap-3">
+                              <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl", colors.bg, colors.fg)}>
+                                <CalIcon className="h-5 w-5" strokeWidth={2.25} />
+                              </div>
+                              <div className="min-w-0">
+                                <div className="truncate font-display text-[16px] font-bold tracking-tight">{s.type_name}</div>
+                                <div className="mt-0.5 flex items-center gap-1 text-[12.5px] text-muted-foreground">
+                                  <Clock className="h-3.5 w-3.5 shrink-0" />
+                                  <span className="truncate tnum">{start}-{endTime} · {s.duration_min} min</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                              {s.is_canceled ? (
+                                <Chip tone="warning">Otkazano</Chip>
+                              ) : full ? (
+                                <Chip tone="success">Pun</Chip>
+                              ) : (
+                                <Chip tone="info">{s.capacity - slotBookings.length} slob.</Chip>
+                              )}
+                              {!s.is_canceled && s.waitlist_count > 0 && (
+                                <Chip tone="brand">{s.waitlist_count} na čekanju</Chip>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="mt-4 flex items-center gap-3">
+                            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
+                              <div className={cn("h-full rounded-full", colors.dot)} style={{ width: `${popunjeno}%` }} />
+                            </div>
+                            <span className="flex shrink-0 items-center gap-1 text-[12.5px] text-muted-foreground">
+                              <Users className="h-3.5 w-3.5" />
+                              <span className="font-semibold text-foreground tnum">
+                                {slotBookings.length} / {s.capacity}
+                              </span>
+                            </span>
+                          </div>
+
+                          {slotBookings.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-1.5">
+                              {slotBookings.slice(0, 6).map((b) => (
+                                <span
+                                  key={b.id}
+                                  className="inline-flex max-w-[180px] items-center gap-1.5 rounded-full bg-surface-2 py-1 pl-1 pr-2.5 text-[11.5px] font-semibold"
+                                >
+                                  <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold", colors.bg, colors.fg)}>
+                                    {(athleteName(b.athlete_id)[0] ?? "?").toUpperCase()}
+                                  </span>
+                                  <span className="truncate">{athleteName(b.athlete_id)}</span>
+                                </span>
+                              ))}
+                              {slotBookings.length > 6 && (
+                                <span className="inline-flex items-center rounded-full bg-surface-2 px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground tnum">
+                                  +{slotBookings.length - 6}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </div>
+        ) : (
+        <>
         {/* Day strip */}
         <section>
           <div className="flex items-center justify-between mb-2">
@@ -411,6 +693,8 @@ const Calendar = () => {
               );
             })}
           </ul>
+        )}
+        </>
         )}
       </PhoneShell>
       <BottomNav role="trainer" />

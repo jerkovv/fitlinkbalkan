@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Avatar, Chip } from "@/components/ui-bits";
-import { Search, ChevronRight, Loader2, Mail, Loader, Clock, RefreshCw, Trash2 } from "lucide-react";
+import { Search, ChevronRight, Loader2, Mail, Loader, Clock, RefreshCw, Trash2, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { LockMark } from "@/components/pretplata/LockMark";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 
 type AthleteRow = {
   id: string;
@@ -89,9 +90,19 @@ const filters: { key: "all" | "active" | "expiring" | "expired"; label: string }
   { key: "expired", label: "Istekli" },
 ];
 
+// Racunar: kolone tabele. Svaki red je svoj grid, pa zaglavlje i redovi moraju
+// da dele iste sirine - zato fiksne/fr vrednosti, nikad "auto".
+const ATHLETE_COLS =
+  "grid grid-cols-[minmax(0,2.2fr)_minmax(0,1.5fr)_minmax(0,1.5fr)_128px_16px] items-center gap-4";
+const INVITE_COLS =
+  "grid grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_128px_190px] items-center gap-4";
+const TABLE_HEAD =
+  "border-b border-hairline px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground";
+
 const AthletesList = () => {
   const { locked, openLock, guard } = usePretplataLock();
   const { user } = useAuth();
+  const desktop = useDesktopWeb();
   const [filter, setFilter] = useState<"all" | "active" | "expiring" | "expired">("all");
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
@@ -193,6 +204,14 @@ const AthletesList = () => {
       (filter === "all" || a.status === filter) &&
       (a.profile?.full_name ?? "").toLowerCase().includes(q.toLowerCase()),
   );
+
+  // Racunar: broj po filteru stoji u samom dugmetu, da trener odmah vidi raspodelu.
+  const countByFilter: Record<(typeof filters)[number]["key"], number> = {
+    all: enriched.length,
+    active: enriched.filter((a) => a.status === "active").length,
+    expiring: enriched.filter((a) => a.status === "expiring").length,
+    expired: enriched.filter((a) => a.status === "expired").length,
+  };
 
   // Invite dialog
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -297,154 +316,377 @@ const AthletesList = () => {
 
   return (
     <>
-      <PhoneShell hasBottomNav title="Vežbači" eyebrow={`${rows.length} ukupno`}>
-        {/* Search */}
-        <div className="flex items-center gap-2 card-premium px-4 py-3 focus-within:ring-2 focus-within:ring-primary/40 transition">
-          <Search className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={2} />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Pretraži ime..."
-            className="bg-transparent flex-1 text-[15px] placeholder:text-muted-foreground/70 focus:outline-none"
-          />
-        </div>
-
-        {/* Filter pills */}
-        <div className="flex gap-2 -mx-2 px-2 overflow-x-auto no-scrollbar">
-          {filters.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={cn(
-                "pill px-4 py-2 text-[13px] whitespace-nowrap transition",
-                filter === f.key
-                  ? "bg-foreground text-background"
-                  : "bg-surface border border-hairline text-muted-foreground hover:text-foreground",
-              )}
+      <PhoneShell
+        hasBottomNav
+        title="Vežbači"
+        eyebrow={`${rows.length} ukupno`}
+        desktopWidth="wide"
+        // Racunar: poziv je dugme u zaglavlju. Na telefonu je siroko dugme ispod
+        // liste, koje bi na sirokom ekranu zavrsilo daleko od pogleda.
+        action={
+          desktop ? (
+            <Button
+              onClick={guard(() => setInviteOpen(true))}
+              className="h-10 rounded-full px-4 bg-gradient-brand text-white shadow-brand"
             >
-              {f.label}
-            </button>
-          ))}
-        </div>
+              <LockMark className="mr-1.5" />
+              <Mail className="h-4 w-4 mr-1.5" />
+              Pozovi vežbača
+            </Button>
+          ) : undefined
+        }
+      >
+        {desktop ? (
+          // Racunar: pretraga i filteri u jednom redu, vezbaci kao tabela sa kolonama
+          // umesto tankih traka preko cele sirine.
+          <div className="space-y-6">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex h-10 w-full max-w-sm items-center gap-2 rounded-full border border-hairline bg-surface px-4 transition focus-within:ring-2 focus-within:ring-primary/40">
+                <Search className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2} />
+                <input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="Pretraži ime..."
+                  className="flex-1 min-w-0 bg-transparent text-[14px] placeholder:text-muted-foreground/70 focus:outline-none"
+                />
+              </div>
+              <div className="flex shrink-0 items-center gap-1 rounded-full border border-hairline bg-surface p-1">
+                {filters.map((f) => {
+                  const aktivan = filter === f.key;
+                  return (
+                    <button
+                      key={f.key}
+                      onClick={() => setFilter(f.key)}
+                      aria-pressed={aktivan}
+                      className={cn(
+                        "inline-flex h-8 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold transition",
+                        aktivan ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {f.label}
+                      <span className={cn("tnum text-[11.5px]", aktivan ? "text-background/70" : "text-muted-foreground/70")}>
+                        {countByFilter[f.key]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-        {loading ? (
-          <div className="flex justify-center py-10">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            {loading ? (
+              <div className="flex justify-center py-10">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <>
+                <div className="card-premium overflow-hidden">
+                  {filtered.length === 0 ? (
+                    <div className="flex flex-col items-center px-6 py-14 text-center">
+                      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-brand-soft">
+                        <Users className="h-5 w-5 text-primary" strokeWidth={2.25} />
+                      </div>
+                      <div className="font-display text-[17px] font-bold tracking-tight">
+                        {rows.length === 0 ? "Još nemaš vežbača" : "Nema rezultata"}
+                      </div>
+                      <p className="mt-1 text-[13px] text-muted-foreground">
+                        {rows.length === 0
+                          ? "Pozovi prvog vežbača emailom i pojaviće se ovde."
+                          : "Probaj drugi filter ili drugo ime."}
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className={cn(ATHLETE_COLS, TABLE_HEAD)}>
+                        <div>Vežbač</div>
+                        <div>Članarina</div>
+                        <div>Aktivnost</div>
+                        <div>Status</div>
+                        <div />
+                      </div>
+                      <ul className="divide-y divide-hairline">
+                        {filtered.map((a) => {
+                          const ov = overview.get(a.id);
+                          return (
+                            <li key={a.id}>
+                              <Link
+                                to={`/trener/vezbaci/${a.id}`}
+                                className={cn(ATHLETE_COLS, "px-5 py-3.5 transition hover:bg-surface-2")}
+                              >
+                                <div className="flex min-w-0 items-center gap-3">
+                                  <Avatar
+                                    initials={initialsOf(a.profile?.full_name ?? null)}
+                                    tone={a.status === "expiring" ? "athlete" : "brand"}
+                                    size="sm"
+                                    className="ring-0"
+                                  />
+                                  <div className="min-w-0">
+                                    <div className="truncate text-[14.5px] font-semibold tracking-tight">
+                                      {a.profile?.full_name ?? "Bez imena"}
+                                    </div>
+                                    <div className="truncate text-[12px] text-muted-foreground">
+                                      {goalLabel[a.goal ?? "general"] ?? "Opšte"}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="truncate text-[13.5px] font-medium">
+                                    {a.membership?.plan_name ?? "Bez članarine"}
+                                  </div>
+                                  {a.membership && (
+                                    <div className="truncate text-[12px] text-muted-foreground tnum">
+                                      {a.membership.ends_on ? a.expiresLabel : "Bez roka"}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex min-w-0 items-center gap-2">
+                                  {ov ? (
+                                    <>
+                                      <span className={cn("h-2 w-2 shrink-0 rounded-full", RISK_DOT[ov.risk] ?? "bg-muted")} />
+                                      <span className="truncate text-[13px] text-muted-foreground">
+                                        {recencyText(ov.days_since_last)}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span className="text-[13px] text-muted-foreground/60">-</span>
+                                  )}
+                                </div>
+                                <div>{statusChip[a.status]}</div>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
+                              </Link>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </>
+                  )}
+                </div>
+
+                {pending.length > 0 && (
+                  <section className="space-y-3">
+                    <div className="flex items-baseline gap-2 px-1">
+                      <h2 className="font-display text-[17px] font-bold tracking-tight">Poslate pozivnice</h2>
+                      <span className="text-[13px] font-semibold text-muted-foreground tnum">{pending.length}</span>
+                    </div>
+                    <div className="card-premium overflow-hidden">
+                      <div className={cn(INVITE_COLS, TABLE_HEAD)}>
+                        <div>Pozvan</div>
+                        <div>Poslato</div>
+                        <div>Status</div>
+                        <div className="text-right">Radnje</div>
+                      </div>
+                      <ul className="divide-y divide-hairline">
+                        {pending.map((p) => {
+                          const expired = p.expires_at
+                            ? new Date(p.expires_at).getTime() < Date.now()
+                            : false;
+                          const sentLabel = p.sent_at
+                            ? new Date(p.sent_at).toLocaleDateString("sr-Latn-RS", {
+                                day: "2-digit", month: "short",
+                              })
+                            : "-";
+                          return (
+                            <li key={p.id} className={cn(INVITE_COLS, "px-5 py-3 transition hover:bg-surface-2")}>
+                              <div className="flex min-w-0 items-center gap-3">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2">
+                                  <Clock className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="truncate text-[14px] font-semibold tracking-tight">
+                                    {p.full_name ?? p.email}
+                                  </div>
+                                  <div className="truncate text-[12px] text-muted-foreground">{p.email}</div>
+                                </div>
+                              </div>
+                              <div className="text-[13px] text-muted-foreground tnum">{sentLabel}</div>
+                              <div>
+                                <Chip tone={expired ? "danger" : "warning"}>
+                                  {expired ? "Istekla" : "Čeka"}
+                                </Chip>
+                              </div>
+                              <div className="flex items-center justify-end gap-1.5">
+                                <Button
+                                  variant="outline"
+                                  onClick={() => resendInvite(p)}
+                                  disabled={resendingId === p.id}
+                                  className="h-8 rounded-full px-3 text-[12.5px]"
+                                >
+                                  {resendingId === p.id ? (
+                                    <Loader className="animate-spin" />
+                                  ) : (
+                                    <RefreshCw />
+                                  )}
+                                  Pošalji ponovo
+                                </Button>
+                                <button
+                                  onClick={() => setInviteToDelete(p)}
+                                  className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-destructive-soft hover:text-destructive"
+                                  title="Obriši pozivnicu"
+                                  aria-label="Obriši pozivnicu"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  </section>
+                )}
+              </>
+            )}
           </div>
         ) : (
           <>
-            <ul className="space-y-2">
-              {filtered.map((a) => (
-                <li key={a.id}>
-                  <Link
-                    to={`/trener/vezbaci/${a.id}`}
-                    className="flex items-center gap-3 card-premium-hover px-4 py-3"
-                  >
-                    <Avatar
-                      initials={initialsOf(a.profile?.full_name ?? null)}
-                      tone={a.status === "expiring" ? "athlete" : "brand"}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[15px] font-semibold tracking-tight truncate">
-                        {a.profile?.full_name ?? "Bez imena"}
-                      </div>
-                      <div className="text-[12.5px] text-muted-foreground mt-0.5 truncate">
-                        {goalLabel[a.goal ?? "general"] ?? "Opšte"} · {a.expiresLabel}
-                      </div>
-                      {overview.get(a.id) && (
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span
-                            className={cn(
-                              "h-1.5 w-1.5 rounded-full shrink-0",
-                              RISK_DOT[overview.get(a.id)!.risk] ?? "bg-muted",
-                            )}
-                          />
-                          <span className="text-[11.5px] text-muted-foreground truncate">
-                            {recencyText(overview.get(a.id)!.days_since_last)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    {statusChip[a.status]}
-                    <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
-                  </Link>
-                </li>
+            {/* Search */}
+            <div className="flex items-center gap-2 card-premium px-4 py-3 focus-within:ring-2 focus-within:ring-primary/40 transition">
+              <Search className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={2} />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Pretraži ime..."
+                className="bg-transparent flex-1 text-[15px] placeholder:text-muted-foreground/70 focus:outline-none"
+              />
+            </div>
+
+            {/* Filter pills */}
+            <div className="flex gap-2 -mx-2 px-2 overflow-x-auto no-scrollbar">
+              {filters.map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => setFilter(f.key)}
+                  className={cn(
+                    "pill px-4 py-2 text-[13px] whitespace-nowrap transition",
+                    filter === f.key
+                      ? "bg-foreground text-background"
+                      : "bg-surface border border-hairline text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {f.label}
+                </button>
               ))}
-              {filtered.length === 0 && (
-                <li className="text-center text-[13px] text-muted-foreground py-10">
-                  {rows.length === 0 ? "Još nemaš vežbača." : "Nema rezultata."}
-                </li>
-              )}
-            </ul>
+            </div>
 
-            {/* Pending pozivnice */}
-            {pending.length > 0 && (
-              <div className="space-y-2 pt-2">
-                <div className="eyebrow text-muted-foreground px-1">
-                  Poslate pozivnice · {pending.length}
-                </div>
-                <ul className="space-y-2">
-                  {pending.map((p) => {
-                    const expired = p.expires_at
-                      ? new Date(p.expires_at).getTime() < Date.now()
-                      : false;
-                    const sentLabel = p.sent_at
-                      ? new Date(p.sent_at).toLocaleDateString("sr-Latn-RS", {
-                          day: "2-digit", month: "short",
-                        })
-                      : "-";
-                    return (
-                      <li
-                        key={p.id}
-                        className="flex items-center gap-3 card-premium px-4 py-3"
-                      >
-                        <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[14.5px] font-semibold tracking-tight truncate">
-                            {p.full_name ?? p.email}
-                          </div>
-                          <div className="text-[12px] text-muted-foreground mt-0.5 truncate">
-                            {p.email} · {expired ? "istekla" : `poslato ${sentLabel}`}
-                          </div>
-                        </div>
-                        <Chip tone={expired ? "danger" : "warning"}>
-                          {expired ? "Istekla" : "Čeka"}
-                        </Chip>
-                        <button
-                          onClick={() => resendInvite(p)}
-                          disabled={resendingId === p.id}
-                          className="h-9 w-9 rounded-full bg-primary-soft/60 hover:bg-primary-soft text-primary flex items-center justify-center transition disabled:opacity-50"
-                          title="Pošalji ponovo"
-                        >
-                          {resendingId === p.id ? (
-                            <Loader className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <RefreshCw className="h-4 w-4" />
-                          )}
-                        </button>
-                        <button
-                          onClick={() => setInviteToDelete(p)}
-                          className="h-9 w-9 rounded-full bg-destructive/10 hover:bg-destructive/20 text-destructive flex items-center justify-center transition"
-                          title="Obriši pozivnicu"
-                          aria-label="Obriši pozivnicu"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
+            {loading ? (
+              <div className="flex justify-center py-10">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               </div>
-            )}
+            ) : (
+              <>
+                <ul className="space-y-2">
+                  {filtered.map((a) => (
+                    <li key={a.id}>
+                      <Link
+                        to={`/trener/vezbaci/${a.id}`}
+                        className="flex items-center gap-3 card-premium-hover px-4 py-3"
+                      >
+                        <Avatar
+                          initials={initialsOf(a.profile?.full_name ?? null)}
+                          tone={a.status === "expiring" ? "athlete" : "brand"}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[15px] font-semibold tracking-tight truncate">
+                            {a.profile?.full_name ?? "Bez imena"}
+                          </div>
+                          <div className="text-[12.5px] text-muted-foreground mt-0.5 truncate">
+                            {goalLabel[a.goal ?? "general"] ?? "Opšte"} · {a.expiresLabel}
+                          </div>
+                          {overview.get(a.id) && (
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span
+                                className={cn(
+                                  "h-1.5 w-1.5 rounded-full shrink-0",
+                                  RISK_DOT[overview.get(a.id)!.risk] ?? "bg-muted",
+                                )}
+                              />
+                              <span className="text-[11.5px] text-muted-foreground truncate">
+                                {recencyText(overview.get(a.id)!.days_since_last)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        {statusChip[a.status]}
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
+                      </Link>
+                    </li>
+                  ))}
+                  {filtered.length === 0 && (
+                    <li className="text-center text-[13px] text-muted-foreground py-10">
+                      {rows.length === 0 ? "Još nemaš vežbača." : "Nema rezultata."}
+                    </li>
+                  )}
+                </ul>
 
-            <button
-              onClick={guard(() => setInviteOpen(true))}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-brand text-white py-4 text-[14px] font-semibold shadow-brand active:scale-[0.99] transition"
-            >
-              <LockMark /><Mail className="h-4 w-4" /> Pozovi vežbača emailom
-            </button>
+                {/* Pending pozivnice */}
+                {pending.length > 0 && (
+                  <div className="space-y-2 pt-2">
+                    <div className="eyebrow text-muted-foreground px-1">
+                      Poslate pozivnice · {pending.length}
+                    </div>
+                    <ul className="space-y-2">
+                      {pending.map((p) => {
+                        const expired = p.expires_at
+                          ? new Date(p.expires_at).getTime() < Date.now()
+                          : false;
+                        const sentLabel = p.sent_at
+                          ? new Date(p.sent_at).toLocaleDateString("sr-Latn-RS", {
+                              day: "2-digit", month: "short",
+                            })
+                          : "-";
+                        return (
+                          <li
+                            key={p.id}
+                            className="flex items-center gap-3 card-premium px-4 py-3"
+                          >
+                            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+                              <Clock className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[14.5px] font-semibold tracking-tight truncate">
+                                {p.full_name ?? p.email}
+                              </div>
+                              <div className="text-[12px] text-muted-foreground mt-0.5 truncate">
+                                {p.email} · {expired ? "istekla" : `poslato ${sentLabel}`}
+                              </div>
+                            </div>
+                            <Chip tone={expired ? "danger" : "warning"}>
+                              {expired ? "Istekla" : "Čeka"}
+                            </Chip>
+                            <button
+                              onClick={() => resendInvite(p)}
+                              disabled={resendingId === p.id}
+                              className="h-9 w-9 rounded-full bg-primary-soft/60 hover:bg-primary-soft text-primary flex items-center justify-center transition disabled:opacity-50"
+                              title="Pošalji ponovo"
+                            >
+                              {resendingId === p.id ? (
+                                <Loader className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <RefreshCw className="h-4 w-4" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => setInviteToDelete(p)}
+                              className="h-9 w-9 rounded-full bg-destructive/10 hover:bg-destructive/20 text-destructive flex items-center justify-center transition"
+                              title="Obriši pozivnicu"
+                              aria-label="Obriši pozivnicu"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+
+                <button
+                  onClick={guard(() => setInviteOpen(true))}
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-brand text-white py-4 text-[14px] font-semibold shadow-brand active:scale-[0.99] transition"
+                >
+                  <LockMark /><Mail className="h-4 w-4" /> Pozovi vežbača emailom
+                </button>
+              </>
+            )}
           </>
         )}
       </PhoneShell>

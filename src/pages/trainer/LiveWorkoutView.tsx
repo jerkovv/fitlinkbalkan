@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ChevronLeft, Heart, Loader2, Activity, Pause, Flame } from "lucide-react";
+import { ChevronLeft, Heart, Loader2, Activity, Pause, Flame, UserRound } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 import { Card } from "@/components/ui-bits";
 import { QuickMessagePanel } from "@/components/trainer/QuickMessagePanel";
 import { LiveWorkoutPlan } from "@/components/trainer/LiveWorkoutPlan";
@@ -80,10 +81,25 @@ const HrMiniChart = ({ points }: { points: { ts: string; bpm: number }[] }) => {
   );
 };
 
+// Brojka u kartici trenutne vezbe na racunaru (serija, ukupno, trajanje). Na
+// sirokoj kartici jedan red sitnog teksta se gubio.
+const LivePlocica = ({ label, children }: { label: string; children: ReactNode }) => (
+  <div className="rounded-xl bg-surface-2 px-4 py-3">
+    <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+      {label}
+    </div>
+    <div className="mt-1.5 flex items-baseline gap-1.5 font-display text-[24px] font-bold leading-none tracking-tight tnum">
+      {children}
+    </div>
+  </div>
+);
+
 const LiveWorkoutView = () => {
   const { athleteId } = useParams<{ athleteId: string }>();
   const { user } = useAuth();
   const nav = useNavigate();
+  // Pre ranih return-ova (hook). Racunar dobija svoj raspored u dve kolone.
+  const desktop = useDesktopWeb();
 
   const [state, setState] = useState<LiveState | null>(null);
   // Broj zone (1-5) iz servera. Tabela workout_live_state nema zonu - racuna se
@@ -233,6 +249,14 @@ const LiveWorkoutView = () => {
   }, [elapsedMs]);
 
   if (loading) {
+    // Racunar: stranica je u TrainerWebShell-u, koji je sam scroll okvir - bez 100dvh.
+    if (desktop) {
+      return (
+        <div className="flex justify-center py-24">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      );
+    }
     return (
       <div className="h-[100dvh] bg-background flex items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -241,6 +265,35 @@ const LiveWorkoutView = () => {
   }
 
   if (ended || !session) {
+    const zavrsenKartica = (
+      <Card className="p-6 text-center space-y-3">
+        <Activity className="h-8 w-8 mx-auto text-muted-foreground/60" strokeWidth={1.5} />
+        <div className="text-[18px] font-bold tracking-tight">Trening završen</div>
+        <div className="text-[13px] text-muted-foreground">
+          {athleteName} više ne trenira.
+        </div>
+        <Link
+          to={`/trener/vezbaci/${athleteId}`}
+          className="inline-flex items-center justify-center h-11 px-5 rounded-2xl bg-gradient-brand text-white text-[14px] font-semibold shadow-brand"
+        >
+          Otvori profil vežbača
+        </Link>
+      </Card>
+    );
+    if (desktop) {
+      return (
+        <div className="mx-auto w-full max-w-[560px] space-y-5 animate-fade-in">
+          <button
+            onClick={() => nav(-1)}
+            aria-label="Nazad"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline bg-surface transition hover:bg-surface-2 active:scale-95"
+          >
+            <ChevronLeft className="h-4 w-4" strokeWidth={2.25} />
+          </button>
+          {zavrsenKartica}
+        </div>
+      );
+    }
     return (
       <div className="h-[100dvh] overflow-y-auto bg-background">
         <div className="mx-auto w-full max-w-[440px] min-h-screen px-6 pt-12 space-y-5">
@@ -251,19 +304,7 @@ const LiveWorkoutView = () => {
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <Card className="p-6 text-center space-y-3">
-            <Activity className="h-8 w-8 mx-auto text-muted-foreground/60" strokeWidth={1.5} />
-            <div className="text-[18px] font-bold tracking-tight">Trening završen</div>
-            <div className="text-[13px] text-muted-foreground">
-              {athleteName} više ne trenira.
-            </div>
-            <Link
-              to={`/trener/vezbaci/${athleteId}`}
-              className="inline-flex items-center justify-center h-11 px-5 rounded-2xl bg-gradient-brand text-white text-[14px] font-semibold shadow-brand"
-            >
-              Otvori profil vežbača
-            </Link>
-          </Card>
+          {zavrsenKartica}
         </div>
       </div>
     );
@@ -306,6 +347,236 @@ const LiveWorkoutView = () => {
     return `${m}:${s.toString().padStart(2, "0")}`;
   })();
 
+  // Delovi ekrana su izdvojeni jer ih telefon i racunar slazu razlicito. Svaki se
+  // renderuje u samo jednoj grani, pa se plan i poruke (i njihovi kanali) i dalje
+  // montiraju tacno jednom.
+  const statusOznaka = isResting ? (
+    <>
+      <span
+        className="h-2 w-2 rounded-full"
+        style={{ background: "hsl(var(--session-sky-fg))" }}
+      />
+      <span
+        className="text-[10px] font-bold uppercase tracking-[0.16em]"
+        style={{ color: "hsl(var(--session-sky-fg))" }}
+      >
+        Na odmoru
+      </span>
+    </>
+  ) : (
+    <>
+      <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
+      <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-success-soft-foreground">
+        Trenira sad
+      </span>
+    </>
+  );
+
+  // Odmor: jasna ali smirena oznaka sa odbrojavanjem (sky tokeni).
+  const odmorTraka = isResting && (
+    <div
+      className="rounded-2xl px-4 py-3 flex items-center gap-3"
+      style={{ background: "hsl(var(--session-sky-bg))" }}
+    >
+      <div
+        className="h-11 w-11 rounded-xl inline-flex items-center justify-center shrink-0"
+        style={{ background: "hsl(var(--session-sky-fg) / 0.12)" }}
+      >
+        <Pause
+          className="h-5 w-5"
+          strokeWidth={2.4}
+          fill="currentColor"
+          style={{ color: "hsl(var(--session-sky-fg))" }}
+        />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div
+          className="text-[10px] font-bold uppercase tracking-[0.16em]"
+          style={{ color: "hsl(var(--session-sky-fg))" }}
+        >
+          Odmor
+        </div>
+        <div className="text-[13px] text-muted-foreground leading-tight">
+          Vežbač se odmara
+        </div>
+      </div>
+      <div
+        className="font-display text-[28px] font-bold tracking-tight tnum leading-none"
+        style={{ color: "hsl(var(--session-sky-fg))" }}
+      >
+        {restLabel}
+      </div>
+    </div>
+  );
+
+  // PULS / KALORIJE - identican stat par (grid 2 kolone): obe vrednosti iste
+  // velicine (text-4xl), tabular, jedinica na baseline-u. Card je zona-tintovan.
+  const pulsKartica = (
+    <div
+      className="card-premium p-5 transition-colors"
+      style={{ background: hrColorSoft }}
+    >
+      {hrLive ? (
+      <div className={imaKcal ? "grid grid-cols-2 gap-4" : "grid grid-cols-1 gap-4"}>
+        {/* PULS */}
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <Heart
+              className="h-4 w-4"
+              strokeWidth={2.4}
+              fill="currentColor"
+              style={{ color: hr != null && hr > 0 && hrLive ? hrColor : "hsl(var(--muted-foreground))" }}
+            />
+            Puls
+            {izvorOznaka && (
+              <span className="text-[10px] font-semibold text-muted-foreground normal-case">
+                ({izvorOznaka})
+              </span>
+            )}
+          </div>
+          <div className="flex items-baseline gap-1">
+            <span
+              className="font-display text-4xl font-bold tracking-tightest leading-none tnum"
+              style={{ color: hr != null && hr > 0 && hrLive ? hrColor : "hsl(var(--muted-foreground))" }}
+            >
+              {hr != null && hr > 0 && hrLive ? hr : "-"}
+            </span>
+            <span className="text-sm font-semibold text-muted-foreground">bpm</span>
+          </div>
+          {hrZone != null && zoneVar && (
+            <div
+              className="text-[12px] font-semibold"
+              style={{ color: `hsl(var(${zoneVar}))` }}
+            >
+              Zona {hrZone}
+            </div>
+          )}
+        </div>
+
+        {/* KALORIJE - ista forma kao PULS. Skrivene dok ih nema (sat ih jos nije
+            poslao, ili vezbac nema tezinu/godine u profilu pa procena ne postoji). */}
+        {imaKcal && (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <Flame className="h-4 w-4 text-muted-foreground" strokeWidth={2.4} />
+            Kalorije
+          </div>
+          <div className="flex items-baseline gap-1">
+            <span className="font-display text-4xl font-bold tracking-tightest leading-none tnum">
+              {Math.round(liveCalories ?? 0)}
+            </span>
+            <span className="text-sm font-semibold text-muted-foreground">kcal</span>
+          </div>
+        </div>
+        )}
+      </div>
+      ) : (
+        // Nista ne stize - ni sat ni traka.
+        <div className="flex flex-col items-center justify-center gap-2 py-3">
+          <WatchSlash size={30} />
+          <span className="text-sm font-medium text-muted-foreground">Puls ne stiže</span>
+        </div>
+      )}
+    </div>
+  );
+
+  // Plan treninga koji vezbac upravo radi, sa istorijom po vezbi.
+  // Prikazuje se i za SLOBODAN trening: on nema day_id, ali sme da
+  // dobije vezbe (zive uz sesiju), pa trener i tu moze da ih doda.
+  const planTreninga = athleteId ? (
+    <LiveWorkoutPlan
+      sessionId={session.id}
+      dayId={session.day_id}
+      athleteId={athleteId}
+      currentIdx={state?.current_exercise_idx ?? null}
+      currentSetNumber={state?.current_set_number ?? null}
+    />
+  ) : null;
+
+  if (desktop) {
+    return (
+      <div className="mx-auto w-full max-w-[1120px] animate-fade-in">
+        <header className="flex items-end justify-between gap-6 pb-6">
+          <div className="flex min-w-0 items-start gap-3">
+            <button
+              onClick={() => nav(-1)}
+              aria-label="Nazad"
+              className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-hairline bg-surface transition hover:bg-surface-2 active:scale-95"
+            >
+              <ChevronLeft className="h-4 w-4" strokeWidth={2.25} />
+            </button>
+            <div className="min-w-0">
+              <div className="mb-1 flex items-center gap-1.5">{statusOznaka}</div>
+              <h1 className="font-display text-[30px] leading-[1.1] font-bold tracking-tightest truncate">
+                {athleteName}
+              </h1>
+            </div>
+          </div>
+          <Link
+            to={`/trener/vezbaci/${athleteId}`}
+            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-hairline bg-surface px-4 text-sm font-semibold transition hover:bg-surface-2"
+          >
+            <UserRound className="h-4 w-4" />
+            Profil vežbača
+          </Link>
+        </header>
+
+        {/* Racunar: levo ono sto se prati kroz trening (trenutna vezba i plan),
+            desno puls i poruke. Na visokom ekranu desna kolona ostaje na mestu dok
+            se plan skroluje; na niskom bi joj dno bilo nedostizno, pa tamo ne. */}
+        <div className="grid grid-cols-[minmax(0,1fr)_360px] items-start gap-6">
+          <div className="min-w-0 space-y-4">
+            {odmorTraka}
+
+            <Card className="p-6">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                Trenutna vežba
+              </div>
+              <div className="mt-1.5 font-display text-[28px] font-bold tracking-tighter leading-tight">
+                {state?.current_exercise_name ?? "Priprema..."}
+              </div>
+              <div className="mt-5 grid grid-cols-3 gap-3">
+                <LivePlocica label="Serija">
+                  {state?.current_set_number ?? 1}
+                  {state?.total_sets ? (
+                    <span className="font-sans text-[13px] font-semibold text-muted-foreground">
+                      od {state.total_sets}
+                    </span>
+                  ) : null}
+                </LivePlocica>
+                <LivePlocica label="Ukupno serija">{state?.total_completed_sets ?? 0}</LivePlocica>
+                <LivePlocica label="Trajanje">{elapsedLabel}</LivePlocica>
+              </div>
+            </Card>
+
+            {athleteId && (
+              <Card className="p-5">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-3">
+                  Trening
+                </div>
+                {planTreninga}
+              </Card>
+            )}
+          </div>
+
+          <aside className="space-y-4 [@media(min-height:900px)]:sticky [@media(min-height:900px)]:top-24">
+            {pulsKartica}
+
+            {/* HR mini chart - sakriven kad nema sata (stanje iznad ga pokriva) */}
+            {hrLive && <HrMiniChart points={session.hr_series ?? []} />}
+
+            <Card className="p-5">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-3">
+                Pošalji poruku
+              </div>
+              <QuickMessagePanel sessionId={session.id} />
+            </Card>
+          </aside>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-[100dvh] overflow-y-auto bg-background">
       <div className="mx-auto w-full max-w-[440px] min-h-screen relative pb-24">
@@ -323,29 +594,7 @@ const LiveWorkoutView = () => {
               <ChevronLeft className="h-4 w-4" />
             </button>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                {isResting ? (
-                  <>
-                    <span
-                      className="h-2 w-2 rounded-full"
-                      style={{ background: "hsl(var(--session-sky-fg))" }}
-                    />
-                    <span
-                      className="text-[10px] font-bold uppercase tracking-[0.16em]"
-                      style={{ color: "hsl(var(--session-sky-fg))" }}
-                    >
-                      Na odmoru
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
-                    <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-success-soft-foreground">
-                      Trenira sad
-                    </span>
-                  </>
-                )}
-              </div>
+              <div className="flex items-center gap-1.5">{statusOznaka}</div>
               <div className="text-[15px] font-bold leading-tight truncate">{athleteName}</div>
             </div>
             <div className="text-[13px] font-semibold tnum text-muted-foreground">
@@ -355,42 +604,7 @@ const LiveWorkoutView = () => {
         </div>
 
         <div className="px-4 pt-4 space-y-4">
-          {/* Odmor: jasna ali smirena oznaka sa odbrojavanjem (sky tokeni). */}
-          {isResting && (
-            <div
-              className="rounded-2xl px-4 py-3 flex items-center gap-3"
-              style={{ background: "hsl(var(--session-sky-bg))" }}
-            >
-              <div
-                className="h-11 w-11 rounded-xl inline-flex items-center justify-center shrink-0"
-                style={{ background: "hsl(var(--session-sky-fg) / 0.12)" }}
-              >
-                <Pause
-                  className="h-5 w-5"
-                  strokeWidth={2.4}
-                  fill="currentColor"
-                  style={{ color: "hsl(var(--session-sky-fg))" }}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div
-                  className="text-[10px] font-bold uppercase tracking-[0.16em]"
-                  style={{ color: "hsl(var(--session-sky-fg))" }}
-                >
-                  Odmor
-                </div>
-                <div className="text-[13px] text-muted-foreground leading-tight">
-                  Vežbač se odmara
-                </div>
-              </div>
-              <div
-                className="font-display text-[28px] font-bold tracking-tight tnum leading-none"
-                style={{ color: "hsl(var(--session-sky-fg))" }}
-              >
-                {restLabel}
-              </div>
-            </div>
-          )}
+          {odmorTraka}
 
           {/* Hero card: current exercise */}
           <Card className="p-5 space-y-3">
@@ -423,93 +637,17 @@ const LiveWorkoutView = () => {
             </div>
           </Card>
 
-          {/* PULS / KALORIJE - identican stat par (grid 2 kolone): obe vrednosti iste
-              velicine (text-4xl), tabular, jedinica na baseline-u. Card je zona-tintovan. */}
-          <div
-            className="card-premium p-5 transition-colors"
-            style={{ background: hrColorSoft }}
-          >
-            {hrLive ? (
-            <div className={imaKcal ? "grid grid-cols-2 gap-4" : "grid grid-cols-1 gap-4"}>
-              {/* PULS */}
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  <Heart
-                    className="h-4 w-4"
-                    strokeWidth={2.4}
-                    fill="currentColor"
-                    style={{ color: hr != null && hr > 0 && hrLive ? hrColor : "hsl(var(--muted-foreground))" }}
-                  />
-                  Puls
-                  {izvorOznaka && (
-                    <span className="text-[10px] font-semibold text-muted-foreground normal-case">
-                      ({izvorOznaka})
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span
-                    className="font-display text-4xl font-bold tracking-tightest leading-none tnum"
-                    style={{ color: hr != null && hr > 0 && hrLive ? hrColor : "hsl(var(--muted-foreground))" }}
-                  >
-                    {hr != null && hr > 0 && hrLive ? hr : "-"}
-                  </span>
-                  <span className="text-sm font-semibold text-muted-foreground">bpm</span>
-                </div>
-                {hrZone != null && zoneVar && (
-                  <div
-                    className="text-[12px] font-semibold"
-                    style={{ color: `hsl(var(${zoneVar}))` }}
-                  >
-                    Zona {hrZone}
-                  </div>
-                )}
-              </div>
-
-              {/* KALORIJE - ista forma kao PULS. Skrivene dok ih nema (sat ih jos nije
-                  poslao, ili vezbac nema tezinu/godine u profilu pa procena ne postoji). */}
-              {imaKcal && (
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  <Flame className="h-4 w-4 text-muted-foreground" strokeWidth={2.4} />
-                  Kalorije
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="font-display text-4xl font-bold tracking-tightest leading-none tnum">
-                    {Math.round(liveCalories ?? 0)}
-                  </span>
-                  <span className="text-sm font-semibold text-muted-foreground">kcal</span>
-                </div>
-              </div>
-              )}
-            </div>
-            ) : (
-              // Nista ne stize - ni sat ni traka.
-              <div className="flex flex-col items-center justify-center gap-2 py-3">
-                <WatchSlash size={30} />
-                <span className="text-sm font-medium text-muted-foreground">Puls ne stiže</span>
-              </div>
-            )}
-          </div>
+          {pulsKartica}
 
           {/* HR mini chart - sakriven kad nema sata (stanje iznad ga pokriva) */}
-          {hrLive && <HrMiniChart points={(session.hr_series as any) ?? []} />}
+          {hrLive && <HrMiniChart points={session.hr_series ?? []} />}
 
-          {/* Plan treninga koji vezbac upravo radi, sa istorijom po vezbi.
-              Prikazuje se i za SLOBODAN trening: on nema day_id, ali sme da
-              dobije vezbe (zive uz sesiju), pa trener i tu moze da ih doda. */}
           {athleteId && (
             <Card className="p-4">
               <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3">
                 Trening
               </div>
-              <LiveWorkoutPlan
-                sessionId={session.id}
-                dayId={session.day_id}
-                athleteId={athleteId}
-                currentIdx={state?.current_exercise_idx ?? null}
-                currentSetNumber={state?.current_set_number ?? null}
-              />
+              {planTreninga}
             </Card>
           )}
 

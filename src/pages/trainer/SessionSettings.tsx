@@ -24,6 +24,7 @@ import {
   sessionColors, sessionColorClasses, weekdayLabelsLong, weekdayLabelsShort, formatTime,
 } from "@/lib/session";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 
 type SessionType = {
   id: string;
@@ -45,6 +46,7 @@ const SessionSettings = () => {
   const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
   const confirm = useConfirm();
+  const desktop = useDesktopWeb();
   const [loading, setLoading] = useState(true);
   const [types, setTypes] = useState<SessionType[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -228,10 +230,170 @@ const SessionSettings = () => {
       back="/trener"
       title="Termini"
       eyebrow="Podešavanja rasporeda"
+      desktopWidth="wide"
+      // Racunar: akcije u zaglavlju, u visini naslova. Telefon ih ima kao mala
+      // dugmad iznad svake sekcije.
+      action={
+        desktop ? (
+          <>
+            <Button variant="outline" onClick={openNewType} className="h-10 rounded-full px-4">
+              <Plus className="h-4 w-4 mr-1.5" />
+              Nov tip
+            </Button>
+            <Button
+              onClick={() => openNewSlot()}
+              disabled={types.length === 0}
+              className="h-10 rounded-full px-4 bg-gradient-brand text-white shadow-brand"
+            >
+              <Plus className="h-4 w-4 mr-1.5" strokeWidth={2.5} />
+              Dodaj termin
+            </Button>
+          </>
+        ) : undefined
+      }
     >
       {loading ? (
         <div className="flex justify-center py-10">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : desktop ? (
+        // Racunar: tipovi kao mreza kartica, a nedeljni sablon kao tabla od sedam
+        // kolona (pon-ned), kao pravi kalendar. Sedam kartica jedna ispod druge je
+        // na sirokom ekranu bilo dugacko i prazno.
+        <div className="space-y-8">
+          <section>
+            <div className="mb-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Tipovi</div>
+              <div className="font-display text-lg font-bold tracking-tight">Vrste sesija</div>
+            </div>
+            <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+              {types.map((t) => {
+                const colors = sessionColorClasses(t.color);
+                const brojTermina = templates.filter((x) => x.session_type_id === t.id).length;
+                return (
+                  <div key={t.id} className="group card-premium-hover relative flex min-h-[152px] flex-col p-5">
+                    {/* Klik na karticu otvara izmenu; dugmad su iznad njega (z-10). */}
+                    <button
+                      onClick={() => openEditType(t)}
+                      aria-label={`Izmeni tip ${t.name}`}
+                      className="absolute inset-0 rounded-[inherit]"
+                    />
+                    <div className="flex items-start justify-between gap-3">
+                      <div className={cn("flex h-11 w-11 items-center justify-center rounded-xl", colors.bg)}>
+                        <span className={cn("h-2.5 w-2.5 rounded-full", colors.dot)} />
+                      </div>
+                      <div className="relative z-10 flex items-center gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+                        <button
+                          onClick={() => openEditType(t)}
+                          aria-label="Izmeni tip"
+                          className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground transition hover:bg-surface-2 hover:text-foreground"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteType(t)}
+                          aria-label="Obriši tip"
+                          className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground transition hover:bg-destructive-soft hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-4 font-display text-[17px] font-bold leading-snug tracking-tight line-clamp-2">
+                      {t.name}
+                    </div>
+                    <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-4">
+                      <span className="inline-flex items-center rounded-full bg-surface-2 px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground tnum">
+                        {t.duration_min} min
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-surface-2 px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground tnum">
+                        max {t.capacity} ljudi
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-primary-soft px-2.5 py-1 text-[11.5px] font-semibold text-primary tnum">
+                        {brojTermina}× nedeljno
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+              <button
+                onClick={openNewType}
+                className={cn(
+                  "flex min-h-[152px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-hairline px-6 text-center text-muted-foreground transition hover:border-primary hover:text-primary",
+                  types.length === 0 && "col-span-2 xl:col-span-3",
+                )}
+              >
+                <Plus className="h-5 w-5" />
+                <span className="text-sm font-semibold">Nov tip sesije</span>
+                {types.length === 0 && (
+                  <span className="text-[13px] font-normal text-muted-foreground">
+                    Nemaš tipove sesija. Dodaj npr. "Personalni trening" ili "Group HIIT".
+                  </span>
+                )}
+              </button>
+            </div>
+          </section>
+
+          <section>
+            <div className="mb-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Raspored</div>
+              <div className="font-display text-lg font-bold tracking-tight">Nedeljni šablon</div>
+            </div>
+            <div className="card-premium overflow-hidden">
+              <div className="grid grid-cols-7 divide-x divide-hairline">
+                {weekdayLabelsLong.map((label, wd) => {
+                  const dayTemplates = templatesByDay.get(wd) ?? [];
+                  return (
+                    <div key={wd} className="flex min-w-0 flex-col">
+                      <div className="border-b border-hairline bg-surface-2 px-3 py-2.5">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                          {weekdayLabelsShort[wd]}
+                        </div>
+                        <div className="truncate text-[13px] font-semibold">{label}</div>
+                      </div>
+                      <div className="flex min-h-[260px] flex-1 flex-col gap-1.5 p-2">
+                        {dayTemplates.length === 0 ? (
+                          <div className="px-1 py-2 text-[12px] italic text-muted-foreground/70">Slobodan dan</div>
+                        ) : (
+                          dayTemplates.map((tpl) => {
+                            const type = typeById(tpl.session_type_id);
+                            if (!type) return null;
+                            const colors = sessionColorClasses(type.color);
+                            return (
+                              <div
+                                key={tpl.id}
+                                className={cn("group relative rounded-lg border px-2.5 py-2", colors.bg, colors.border)}
+                              >
+                                <div className={cn("font-display text-[14px] font-bold leading-none tnum", colors.fg)}>
+                                  {formatTime(tpl.start_time)}
+                                </div>
+                                <div className="mt-1 truncate text-[11.5px] font-semibold">{type.name}</div>
+                                <div className="text-[11px] text-muted-foreground tnum">{type.capacity} mesta</div>
+                                <button
+                                  onClick={() => deleteSlot(tpl.id)}
+                                  aria-label="Ukloni termin"
+                                  className="absolute right-1 top-1 h-6 w-6 rounded-full bg-surface flex items-center justify-center text-destructive opacity-0 shadow-sm transition hover:bg-destructive-soft group-hover:opacity-100 focus-visible:opacity-100"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              </div>
+                            );
+                          })
+                        )}
+                        <button
+                          onClick={() => openNewSlot(wd)}
+                          disabled={types.length === 0}
+                          className="mt-auto flex items-center justify-center gap-1 rounded-lg border border-dashed border-hairline py-2 text-[12px] font-semibold text-muted-foreground transition hover:border-primary hover:text-primary disabled:pointer-events-none disabled:opacity-40"
+                        >
+                          <Plus className="h-3.5 w-3.5" /> Dodaj
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
         </div>
       ) : (
         <>
