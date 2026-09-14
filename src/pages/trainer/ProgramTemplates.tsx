@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { useConfirm } from "@/hooks/useConfirm";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { LockMark } from "@/components/pretplata/LockMark";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 
 type Template = {
   id: string;
@@ -32,6 +33,7 @@ const ProgramTemplates = () => {
   const { locked, openLock, guard } = usePretplataLock();
   const { user } = useAuth();
   const confirm = useConfirm();
+  const desktop = useDesktopWeb();
   const [items, setItems] = useState<Template[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -110,13 +112,25 @@ const ProgramTemplates = () => {
       back="/trener"
       eyebrow="Treninzi"
       title="Programi"
+      desktopWidth="wide"
       action={
-        <button
-          onClick={guard(() => setOpen(true))}
-          className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-brand active:scale-95 transition"
-        >
-          <Plus className="h-4 w-4" strokeWidth={2.5} />
-        </button>
+        desktop ? (
+          <Button
+            onClick={guard(() => setOpen(true))}
+            className="h-10 rounded-full px-4 bg-gradient-brand text-white shadow-brand"
+          >
+            <LockMark className="mr-1.5" />
+            <Plus className="h-4 w-4 mr-1.5" strokeWidth={2.5} />
+            Novi program
+          </Button>
+        ) : (
+          <button
+            onClick={guard(() => setOpen(true))}
+            className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-brand active:scale-95 transition"
+          >
+            <Plus className="h-4 w-4" strokeWidth={2.5} />
+          </button>
+        )
       }
     >
       <FullScreenSheet open={open} onClose={() => setOpen(false)} title="Novi program">
@@ -165,6 +179,64 @@ const ProgramTemplates = () => {
           <Button onClick={guard(() => setOpen(true))}>
             <LockMark className="mr-1.5" /><Plus className="h-4 w-4 mr-1.5" /> Novi program
           </Button>
+        </div>
+      ) : desktop ? (
+        // Racunar: mreza kartica. Pune trake preko cele sirine su izgledale izduzeno
+        // i prazno; kartica drzi naziv, opis i oznake zajedno.
+        <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+          {items.map((t) => {
+            const brojDana = counts[t.id] ?? 0;
+            return (
+              <div key={t.id} className="group card-premium-hover relative flex min-h-[176px] flex-col p-5">
+                {/* Link preko cele kartice; dugme za brisanje je iznad njega (z-10). */}
+                <Link
+                  to={`/trener/programi/${t.id}`}
+                  aria-label={`Otvori program ${t.name}`}
+                  className="absolute inset-0 rounded-[inherit]"
+                />
+                <div className="flex items-start justify-between gap-3">
+                  <div className="h-11 w-11 rounded-xl bg-gradient-brand-soft flex items-center justify-center">
+                    <ClipboardList className="h-5 w-5 text-primary" strokeWidth={2.25} />
+                  </div>
+                  <button
+                    onClick={() => handleDeleteTemplate(t)}
+                    aria-label="Obriši program"
+                    className="relative z-10 h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground opacity-0 transition hover:bg-destructive-soft hover:text-destructive group-hover:opacity-100 focus-visible:opacity-100"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="mt-4 font-display text-[17px] font-bold leading-snug tracking-tight line-clamp-2">
+                  {t.name}
+                </div>
+                {t.description && (
+                  <p className="mt-1 text-[13px] text-muted-foreground line-clamp-2">{t.description}</p>
+                )}
+                <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-4">
+                  <span className="inline-flex items-center rounded-full bg-surface-2 px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground tnum">
+                    {brojDana} {brojDana === 1 ? "dan" : "dana"}
+                  </span>
+                  {t.goal && (
+                    <span className="inline-flex items-center rounded-full bg-primary-soft px-2.5 py-1 text-[11.5px] font-semibold text-primary">
+                      {t.goal}
+                    </span>
+                  )}
+                  {t.level && (
+                    <span className="inline-flex items-center rounded-full bg-surface-2 px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground">
+                      {t.level}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          <button
+            onClick={guard(() => setOpen(true))}
+            className="flex min-h-[176px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-hairline text-muted-foreground transition hover:border-primary hover:text-primary"
+          >
+            <Plus className="h-5 w-5" />
+            <span className="text-sm font-semibold">Novi program</span>
+          </button>
         </div>
       ) : (
         <div className="space-y-2">

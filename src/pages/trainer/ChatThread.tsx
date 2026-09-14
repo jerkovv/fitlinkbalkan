@@ -4,8 +4,10 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { ChatThread } from "@/components/ChatThread";
 import { Loader2, ArrowLeft } from "lucide-react";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
+import { TrainerChatDesktop } from "@/components/trainer/web/TrainerChatDesktop";
 
-const TrainerChatThread = () => {
+const TrainerChatThreadMobile = () => {
   const { athleteId } = useParams<{ athleteId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -82,6 +84,13 @@ const TrainerChatThread = () => {
       <ChatThread trainerId={user.id} athleteId={athleteId} className="flex-1 min-h-0" />
     </div>
   );
+};
+
+// Racunar: isti okvir kao spisak (/trener/chat), sa ovim razgovorom otvorenim desno.
+const TrainerChatThread = () => {
+  const desktop = useDesktopWeb();
+  const { athleteId } = useParams<{ athleteId: string }>();
+  return desktop ? <TrainerChatDesktop athleteId={athleteId} /> : <TrainerChatThreadMobile />;
 };
 
 export default TrainerChatThread;

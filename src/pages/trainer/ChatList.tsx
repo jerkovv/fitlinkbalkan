@@ -6,30 +6,11 @@ import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Loader2, MessagesSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
+import { formatRelChat as formatRel, type ChatThreadRow as Thread } from "@/lib/chatThreads";
+import { TrainerChatDesktop } from "@/components/trainer/web/TrainerChatDesktop";
 
-type Thread = {
-  athlete_id: string;
-  athlete_name: string;
-  last_body: string | null;
-  last_at: string | null;
-  last_sender_id: string | null;
-  unread_count: number;
-};
-
-const formatRel = (iso: string | null) => {
-  if (!iso) return "";
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "sad";
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  const d = Math.floor(h / 24);
-  if (d < 7) return `${d}d`;
-  return new Date(iso).toLocaleDateString("sr-Latn-RS", { day: "2-digit", month: "2-digit" });
-};
-
-const ChatList = () => {
+const ChatListMobile = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [threads, setThreads] = useState<Thread[]>([]);
@@ -124,5 +105,10 @@ const ChatList = () => {
     </>
   );
 };
+
+// Racunar: spisak i razgovor u jednom okviru. Grana se bira PRE bilo kog hook-a
+// telefonskog spiska - oba drze isti Realtime kanal (chat-list:<uid>) i ne smeju
+// da budu montirana zajedno.
+const ChatList = () => (useDesktopWeb() ? <TrainerChatDesktop /> : <ChatListMobile />);
 
 export default ChatList;

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { porukaGreske } from "@/lib/errorMessage";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 
 // Isti keyboard-aware pristup kao FullScreenSheetFooter: visina tastature iz
 // Capacitor Keyboard plugin-a (resize mode je "none", pa WKWebView ne skuplja
@@ -70,6 +71,9 @@ export const ChatThread = ({
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const keyboardHeight = useKeyboardHeight();
+  // Racunar: poruke i polje za unos u koloni srednje sirine na sredini, da
+  // mehurici ne beze na dve daleke ivice sirokog prozora.
+  const desktop = useDesktopWeb();
 
   // Mark read on open + every time messages arrive
   useEffect(() => {
@@ -120,8 +124,9 @@ export const ChatThread = ({
 
       <div
         ref={scrollRef}
-        className="flex-1 min-h-0 overflow-y-auto px-3 py-4 space-y-2"
+        className={cn("flex-1 min-h-0 overflow-y-auto", desktop ? "px-8 py-6" : "px-3 py-4")}
       >
+        <div className={cn("space-y-2", desktop && "mx-auto max-w-3xl")}>
         {loading ? (
           <div className="flex items-center justify-center py-10">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -172,13 +177,17 @@ export const ChatThread = ({
             );
           })
         )}
+        </div>
       </div>
 
       <form
         onSubmit={handleSend}
-        className="px-3 pt-2 pb-3 border-t border-hairline bg-surface/80 backdrop-blur"
+        className={cn(
+          "border-t border-hairline bg-surface/80 backdrop-blur",
+          desktop ? "px-8 py-4" : "px-3 pt-2 pb-3",
+        )}
       >
-        <div className="flex items-end gap-2">
+        <div className={cn("flex items-end gap-2", desktop && "mx-auto max-w-3xl")}>
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}

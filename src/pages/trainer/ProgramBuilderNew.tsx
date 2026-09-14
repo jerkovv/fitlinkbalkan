@@ -13,6 +13,8 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { PhoneShell } from "@/components/PhoneShell";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -123,6 +125,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
       } as const;
   const confirm = useConfirm();
   const navigate = useNavigate();
+  const desktop = useDesktopWeb();
   // Mali prag pomeranja pre nego sto se drag aktivira - obican tap na hendl (ili
   // slucajan dodir tokom skrola) ne sme da okine drag. TouchSensor uz delay+tolerance
   // je dopuna za touch uredjaje - razdvaja skrol/tap liste od namernog prevlacenja,
@@ -518,10 +521,354 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
     else toast("Plan je već poslat");
   };
 
+  // Racunar: dan u desnoj koloni. Dok trener ne izabere drugi, to je prvi dan.
+  const aktivniDan = days.find((d) => d.id === openDay) ?? days[0];
+
+  // Sadrzaj jednog dana (superset, vezbe, dodavanje, brisanje dana). Isti je na
+  // telefonu (harmonika ispod zaglavlja dana) i na racunaru (desna kolona).
+  const renderDayBody = (d: Day, exList: Exercise[]) => (
+    <div className="border-t border-hairline px-4 py-3 space-y-2 bg-surface-2/50">
+      {exList.length === 0 && (
+        <p className="text-xs text-muted-foreground text-center py-3">Nema vežbi u ovom danu</p>
+      )}
+      {/* Superset: trener oznaci dve ili vise vezbi i spoji ih u krug.
+          Rezim je vezan za JEDAN dan - vezbe iz dva dana ne mogu u
+          isti krug. U rezimu se hendl za prevlacenje ne renderuje,
+          pa dnd i oznacavanje ne otimaju iste dodire. */}
+      {exList.length >= 2 && (
+        <div className="flex items-center gap-1.5 pb-2">
+          {spajam?.dayId === d.id ? (
+            <>
+              <button
+                type="button"
+                disabled={ssSalje || spajam.ids.size < 2}
+                onClick={() => void spojiSuperset(d.id)}
+                className="h-8 flex-1 rounded-lg bg-primary text-primary-foreground text-[12px] font-semibold inline-flex items-center justify-center gap-1.5 disabled:opacity-40 transition"
+              >
+                <Link2 className="h-3.5 w-3.5" strokeWidth={2.4} />
+                Spoji {spajam.ids.size >= 2 ? spajam.ids.size : ""}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSpajam(null)}
+                className="h-8 px-3 rounded-lg bg-surface-2 text-[12px] font-semibold text-muted-foreground"
+              >
+                Otkaži
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => { setOpenExId(null); setSpajam({ dayId: d.id, ids: new Set() }); }}
+              className="h-8 rounded-lg border border-hairline bg-surface-2 px-3 text-[12px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 transition"
+            >
+              <Link2 className="h-3.5 w-3.5" strokeWidth={2.2} />
+              Napravi superset
+            </button>
+          )}
+        </div>
+      )}
+
+      <DndContext
+        sensors={exerciseDndSensors}
+        collisionDetection={closestCenter}
+        onDragEnd={onExerciseDragEnd(d.id)}
+      >
+      <SortableContext items={exList.map((e) => e.id)} strategy={verticalListSortingStrategy}>
+      {exList.map((ex, exIdx) => {
+        const rows = setsByEx[ex.id] ?? [];
+        const ss = ex.superset_group ?? null;
+        const prviUKrugu = ss != null && (exList[exIdx - 1]?.superset_group ?? null) !== ss;
+        const poslednjiUKrugu = ss != null && (exList[exIdx + 1]?.superset_group ?? null) !== ss;
+        const uSpajanju = spajam?.dayId === d.id;
+        const oznacena = uSpajanju && spajam.ids.has(ex.id);
+        const isDuration = !!ex.exercises?.is_duration_based;
+        const open = openExId === ex.id;
+        const advanced = !!advancedByEx[ex.id];
+        const name = ex.exercises?.name_en?.trim() || ex.exercises?.name || "-";
+        const thumb = ex.exercises?.thumbnail_url;
+        const setCount = rows.length || ex.sets;
+        const summary = isDuration
+          ? (ex.duration_minutes != null ? `${ex.duration_minutes} min` : "Trajanje")
+          : `${setCount} ${setCount === 1 ? "serija" : "serije"}${rows[0]?.weight_kg != null ? ` · ${rows[0].weight_kg} kg` : ""}`;
+        const cols = advanced ? "28px 1fr 1fr 60px 24px" : "28px 1fr 1fr 24px";
+        return (
+          <SortableExerciseRow key={ex.id} id={ex.id}>
+            {({ setActivatorNodeRef, attributes, listeners }) => (
+          <div className={ss != null ? "relative pl-3" : undefined}>
+          {ss != null && (
+            <span
+              aria-hidden
+              className={`absolute left-0 w-[3px] bg-primary/40 ${prviUKrugu ? "top-6 rounded-t-full" : "top-0"} ${poslednjiUKrugu ? "bottom-1 rounded-b-full" : "bottom-0"}`}
+            />
+          )}
+          {prviUKrugu && (
+            <div className="flex items-center gap-1.5 pb-1 pt-0.5">
+              <Link2 className="h-3 w-3 text-primary shrink-0" strokeWidth={2.6} />
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+                Superset
+              </span>
+              {!uSpajanju && (
+                <button
+                  type="button"
+                  disabled={ssSalje}
+                  onClick={() => void razdvojSuperset(d.id, ex.id)}
+                  className="ml-auto inline-flex items-center gap-1 text-[10.5px] font-semibold text-muted-foreground hover:text-foreground disabled:opacity-50"
+                >
+                  <Unlink className="h-3 w-3" strokeWidth={2.4} />
+                  Razdvoji
+                </button>
+              )}
+            </div>
+          )}
+          <div className="bg-surface rounded-lg overflow-hidden">
+            {/* Sazeti red: drag hendl + thumbnail iz baze + ime + sazetak + expand; brisanje desno */}
+            <div className="flex items-center gap-2.5 p-2.5">
+              {uSpajanju ? (
+                // Hendl se NE renderuje u rezimu spajanja: bez aktivatora
+                // dnd ne hvata dodire, pa se ne otimaju sa oznacavanjem.
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSpajam((st) => {
+                      if (!st) return st;
+                      const n = new Set(st.ids);
+                      if (n.has(ex.id)) n.delete(ex.id); else n.add(ex.id);
+                      return { ...st, ids: n };
+                    })
+                  }
+                  aria-label={`Označi ${name}`}
+                  aria-pressed={oznacena}
+                  className={`shrink-0 h-7 w-7 rounded-lg border-2 flex items-center justify-center transition ${oznacena ? "border-primary bg-primary text-primary-foreground" : "border-hairline bg-surface hover:border-primary/50"}`}
+                >
+                  {oznacena && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                </button>
+              ) : (
+              <button
+                ref={setActivatorNodeRef}
+                {...attributes}
+                {...listeners}
+                type="button"
+                aria-label="Promeni redosled vežbe"
+                style={{ WebkitTouchCallout: "none" }}
+                className="shrink-0 h-8 w-6 flex items-center justify-center text-muted-foreground/40 touch-none select-none cursor-grab active:cursor-grabbing"
+              >
+                <GripVertical className="h-4 w-4" />
+              </button>
+              )}
+              <button
+                onClick={() =>
+                  uSpajanju
+                    ? setSpajam((st) => {
+                        if (!st) return st;
+                        const n = new Set(st.ids);
+                        if (n.has(ex.id)) n.delete(ex.id); else n.add(ex.id);
+                        return { ...st, ids: n };
+                      })
+                    : setOpenExId(open ? null : ex.id)
+                }
+                className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
+              >
+                {thumb ? (
+                  <img src={thumb} alt="" loading="lazy" className="h-12 w-12 rounded-lg object-cover bg-surface-2 shrink-0" />
+                ) : (
+                  <div className="h-12 w-12 rounded-lg bg-surface-2 flex items-center justify-center shrink-0">
+                    <Dumbbell className="h-5 w-5 text-muted-foreground/60" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="font-display font-semibold text-sm truncate">{name}</div>
+                  <div className="text-[12px] text-muted-foreground truncate">{summary}</div>
+                </div>
+                {uSpajanju ? null : open ? <ChevronUp className="h-4 w-4 text-primary shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
+              </button>
+              {!uSpajanju && (
+              <button
+                onClick={() => removeExercise(ex.id, d.id)}
+                aria-label="Ukloni vežbu"
+                className="h-8 w-8 rounded-md hover:bg-destructive-soft flex items-center justify-center transition shrink-0"
+              >
+                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+              </button>
+              )}
+            </div>
+
+            {open && !uSpajanju && (
+              <div className="border-t border-hairline px-3 py-3">
+                {/* Sta je vezbac poslednji put digao za bas ovu vezbu -
+                    stoji IZNAD polja za ciljeve, da se danasnji broj
+                    upisuje gledajuci u prosli. */}
+                <LastPerformanceHint data={prosliPut[ex.exercise_id]} />
+                {isDuration ? (
+                  // Vezba na minute (trcanje/hodanje): jedno polje "Minuti".
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-semibold">Minuti</div>
+                    <Input
+                      type="number"
+                      min={1}
+                      defaultValue={ex.duration_minutes ?? ""}
+                      onBlur={(e) => {
+                        const v = e.target.value === "" ? null : parseInt(e.target.value);
+                        if (v !== ex.duration_minutes) updateExercise(ex.id, { duration_minutes: v });
+                      }}
+                      className="h-8 text-sm"
+                      placeholder="npr. 20"
+                    />
+                  </div>
+                ) : (
+                  // Per-set tabela (izvor istine). Pauza skrivena dok se ne ukey "napredno".
+                  <div>
+                    <div className="grid items-center gap-2 mb-1.5" style={{ gridTemplateColumns: cols }}>
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">Set</span>
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">Kg</span>
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">Reps</span>
+                      {advanced && <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">Pauza (s)</span>}
+                      <span />
+                    </div>
+
+                    {rows.map((r, idx) => (
+                      <div key={r.id} className="grid items-center gap-2 mb-2" style={{ gridTemplateColumns: cols }}>
+                        <span className="h-6 w-6 mx-auto rounded-md bg-primary-soft text-primary text-[12px] font-bold flex items-center justify-center">
+                          {idx + 1}
+                        </span>
+                        <Input
+                          key={`w-${r.id}`}
+                          type="number"
+                          step="0.5"
+                          defaultValue={r.weight_kg ?? ""}
+                          onBlur={(e) => {
+                            const v = e.target.value === "" ? null : parseFloat(e.target.value);
+                            if (v !== r.weight_kg) applySets(ex.id, rows.map((row, i) => (i === idx ? { ...row, weight_kg: v } : row)));
+                          }}
+                          className="h-8 text-sm text-center"
+                          placeholder="-"
+                        />
+                        <Input
+                          key={`r-${r.id}`}
+                          defaultValue={r.reps}
+                          onBlur={(e) => {
+                            if (e.target.value !== r.reps) applySets(ex.id, rows.map((row, i) => (i === idx ? { ...row, reps: e.target.value } : row)));
+                          }}
+                          className="h-8 text-sm text-center"
+                          placeholder="8-12"
+                        />
+                        {advanced && (
+                          <Input
+                            key={`p-${r.id}`}
+                            type="number"
+                            defaultValue={r.rest_seconds ?? ""}
+                            onBlur={(e) => {
+                              const v = e.target.value === "" ? null : parseInt(e.target.value);
+                              if (v !== r.rest_seconds) applySets(ex.id, rows.map((row, i) => (i === idx ? { ...row, rest_seconds: v } : row)));
+                            }}
+                            className="h-8 text-sm text-center"
+                            placeholder="90"
+                          />
+                        )}
+                        <button
+                          onClick={() => { if (rows.length > 1) applySets(ex.id, rows.filter((_, i) => i !== idx)); }}
+                          disabled={rows.length <= 1}
+                          aria-label="Ukloni set"
+                          className="h-7 w-7 mx-auto rounded-md hover:bg-destructive-soft flex items-center justify-center transition disabled:opacity-30"
+                        >
+                          <X className="h-3.5 w-3.5 text-muted-foreground" />
+                        </button>
+                      </div>
+                    ))}
+
+                    <div className="flex items-center justify-between mt-1">
+                      <button
+                        onClick={() => {
+                          const last = rows[rows.length - 1];
+                          applySets(ex.id, [...rows, {
+                            id: crypto.randomUUID(),
+                            set_number: rows.length + 1,
+                            reps: last?.reps ?? "10",
+                            weight_kg: last?.weight_kg ?? null,
+                            rest_seconds: last?.rest_seconds ?? 90,
+                          }]);
+                        }}
+                        className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary"
+                      >
+                        <Plus className="h-4 w-4" /> Dodaj set
+                      </button>
+                      <button
+                        onClick={() => setAdvancedByEx((p) => ({ ...p, [ex.id]: !advanced }))}
+                        className={`inline-flex items-center gap-1.5 text-[12px] font-medium ${advanced ? "text-primary" : "text-muted-foreground"}`}
+                      >
+                        <Settings2 className="h-3.5 w-3.5" /> Pauza
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          </div>
+            )}
+          </SortableExerciseRow>
+        );
+      })}
+      </SortableContext>
+      </DndContext>
+
+      <button
+        onClick={() => openExercisePicker(d.id)}
+        className="w-full py-2.5 rounded-lg border-2 border-dashed border-hairline text-sm text-muted-foreground hover:border-primary hover:text-primary transition flex items-center justify-center gap-1.5"
+      >
+        <Plus className="h-4 w-4" /> Dodaj vežbu
+      </button>
+
+      <button
+        onClick={() => handleDeleteDay(d.id)}
+        className="w-full text-xs text-destructive py-2"
+      >
+        Obriši dan
+      </button>
+    </div>
+  );
+
   return (
     <PhoneShell
       back={mode === "assigned" && athleteId ? `/trener/vezbaci/${athleteId}` : "/trener/programi"}
       eyebrow={mode === "assigned" ? templateName : "Program"}
+      desktopWidth="wide"
+      // Racunar: glavne akcije u zaglavlju, u visini naslova. Telefon ih ima kao
+      // traku prilepljenu za dno (vidi nize) - na sirokom ekranu je ta traka
+      // plutala nasred prozora, nezavisno od sadrzaja.
+      action={
+        desktop ? (
+          <>
+            {mode === "template" && (
+              <Button
+                variant="ghost"
+                onClick={handleDeleteProgram}
+                className="h-10 rounded-full px-3.5 text-destructive hover:bg-destructive-soft hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-1.5" />
+                Obriši
+              </Button>
+            )}
+            {days.length > 0 && mode === "template" && (
+              <Button onClick={openAssign} className="h-10 rounded-full px-4 shadow-brand">
+                <UserPlus className="h-4 w-4 mr-1.5" />
+                Dodeli vežbaču
+              </Button>
+            )}
+            {days.length > 0 && mode === "assigned" && (
+              <Button
+                onClick={notifyAthlete}
+                disabled={notifying}
+                className="h-10 rounded-full px-4 bg-gradient-brand text-white shadow-brand"
+              >
+                {notifying ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Send className="h-4 w-4 mr-1.5" />}
+                <LockMark className="mr-1.5" />
+                Pošalji vežbaču
+              </Button>
+            )}
+          </>
+        ) : undefined
+      }
       title={
         mode === "assigned" ? (
           "Izmeni plan"
@@ -554,6 +901,71 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
           <Button onClick={guard(() => setAddDayOpen(true))}>
             <Plus className="h-4 w-4 mr-1.5" /> Novi dan
           </Button>
+        </div>
+      ) : desktop ? (
+        // Racunar: dve kolone - dani levo, izabrani dan desno. Harmonika dana preko
+        // cele sirine je bila izduzena, a otvoren dan je gurao ostale daleko dole.
+        <div className="grid grid-cols-[272px_minmax(0,1fr)] items-start gap-6">
+          <div className="sticky top-24 space-y-2">
+            {days.map((d) => {
+              const broj = (exByDay[d.id] ?? []).length;
+              const aktivan = aktivniDan?.id === d.id;
+              return (
+                <button
+                  key={d.id}
+                  onClick={() => setOpenDay(d.id)}
+                  aria-current={aktivan || undefined}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition",
+                    aktivan ? "border-primary/25 bg-primary-soft shadow-sm" : "border-hairline bg-surface hover:bg-surface-2",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold",
+                      aktivan ? "bg-gradient-brand text-primary-foreground" : "bg-surface-2 text-muted-foreground",
+                    )}
+                  >
+                    {d.day_number}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[14px] font-semibold">{d.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {broj} {broj === 1 ? "vežba" : "vežbi"}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+            <button
+              onClick={guard(() => setAddDayOpen(true))}
+              className="flex w-full items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-hairline py-2.5 text-sm font-semibold text-muted-foreground transition hover:border-primary hover:text-primary"
+            >
+              <Plus className="h-4 w-4" /> Dodaj dan
+            </button>
+          </div>
+
+          {aktivniDan && (
+            <div className="card-premium overflow-hidden">
+              <div className="flex items-center gap-3 px-5 py-4">
+                <div className="min-w-0 flex-1">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    Dan {aktivniDan.day_number}
+                  </div>
+                  <h2 className="truncate font-display text-[22px] font-bold tracking-tight">{aktivniDan.name}</h2>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={guard(() => otvoriPreimenovanje("day", aktivniDan.id, aktivniDan.name))}
+                  className="h-9 rounded-full px-3.5"
+                >
+                  <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                  Preimenuj
+                </Button>
+              </div>
+              {renderDayBody(aktivniDan, exByDay[aktivniDan.id] ?? [])}
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-2">
@@ -596,307 +1008,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                   </button>
                 </div>
 
-                {isOpen && (
-                  <div className="border-t border-hairline px-4 py-3 space-y-2 bg-surface-2/50">
-                    {exList.length === 0 && (
-                      <p className="text-xs text-muted-foreground text-center py-3">Nema vežbi u ovom danu</p>
-                    )}
-                    {/* Superset: trener oznaci dve ili vise vezbi i spoji ih u krug.
-                        Rezim je vezan za JEDAN dan - vezbe iz dva dana ne mogu u
-                        isti krug. U rezimu se hendl za prevlacenje ne renderuje,
-                        pa dnd i oznacavanje ne otimaju iste dodire. */}
-                    {exList.length >= 2 && (
-                      <div className="flex items-center gap-1.5 pb-2">
-                        {spajam?.dayId === d.id ? (
-                          <>
-                            <button
-                              type="button"
-                              disabled={ssSalje || spajam.ids.size < 2}
-                              onClick={() => void spojiSuperset(d.id)}
-                              className="h-8 flex-1 rounded-lg bg-primary text-primary-foreground text-[12px] font-semibold inline-flex items-center justify-center gap-1.5 disabled:opacity-40 transition"
-                            >
-                              <Link2 className="h-3.5 w-3.5" strokeWidth={2.4} />
-                              Spoji {spajam.ids.size >= 2 ? spajam.ids.size : ""}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setSpajam(null)}
-                              className="h-8 px-3 rounded-lg bg-surface-2 text-[12px] font-semibold text-muted-foreground"
-                            >
-                              Otkaži
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => { setOpenExId(null); setSpajam({ dayId: d.id, ids: new Set() }); }}
-                            className="h-8 rounded-lg border border-hairline bg-surface-2 px-3 text-[12px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 transition"
-                          >
-                            <Link2 className="h-3.5 w-3.5" strokeWidth={2.2} />
-                            Napravi superset
-                          </button>
-                        )}
-                      </div>
-                    )}
-
-                    <DndContext
-                      sensors={exerciseDndSensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={onExerciseDragEnd(d.id)}
-                    >
-                    <SortableContext items={exList.map((e) => e.id)} strategy={verticalListSortingStrategy}>
-                    {exList.map((ex, exIdx) => {
-                      const rows = setsByEx[ex.id] ?? [];
-                      const ss = ex.superset_group ?? null;
-                      const prviUKrugu = ss != null && (exList[exIdx - 1]?.superset_group ?? null) !== ss;
-                      const poslednjiUKrugu = ss != null && (exList[exIdx + 1]?.superset_group ?? null) !== ss;
-                      const uSpajanju = spajam?.dayId === d.id;
-                      const oznacena = uSpajanju && spajam.ids.has(ex.id);
-                      const isDuration = !!ex.exercises?.is_duration_based;
-                      const open = openExId === ex.id;
-                      const advanced = !!advancedByEx[ex.id];
-                      const name = ex.exercises?.name_en?.trim() || ex.exercises?.name || "-";
-                      const thumb = ex.exercises?.thumbnail_url;
-                      const setCount = rows.length || ex.sets;
-                      const summary = isDuration
-                        ? (ex.duration_minutes != null ? `${ex.duration_minutes} min` : "Trajanje")
-                        : `${setCount} ${setCount === 1 ? "serija" : "serije"}${rows[0]?.weight_kg != null ? ` · ${rows[0].weight_kg} kg` : ""}`;
-                      const cols = advanced ? "28px 1fr 1fr 60px 24px" : "28px 1fr 1fr 24px";
-                      return (
-                        <SortableExerciseRow key={ex.id} id={ex.id}>
-                          {({ setActivatorNodeRef, attributes, listeners }) => (
-                        <div className={ss != null ? "relative pl-3" : undefined}>
-                        {ss != null && (
-                          <span
-                            aria-hidden
-                            className={`absolute left-0 w-[3px] bg-primary/40 ${prviUKrugu ? "top-6 rounded-t-full" : "top-0"} ${poslednjiUKrugu ? "bottom-1 rounded-b-full" : "bottom-0"}`}
-                          />
-                        )}
-                        {prviUKrugu && (
-                          <div className="flex items-center gap-1.5 pb-1 pt-0.5">
-                            <Link2 className="h-3 w-3 text-primary shrink-0" strokeWidth={2.6} />
-                            <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
-                              Superset
-                            </span>
-                            {!uSpajanju && (
-                              <button
-                                type="button"
-                                disabled={ssSalje}
-                                onClick={() => void razdvojSuperset(d.id, ex.id)}
-                                className="ml-auto inline-flex items-center gap-1 text-[10.5px] font-semibold text-muted-foreground hover:text-foreground disabled:opacity-50"
-                              >
-                                <Unlink className="h-3 w-3" strokeWidth={2.4} />
-                                Razdvoji
-                              </button>
-                            )}
-                          </div>
-                        )}
-                        <div className="bg-surface rounded-lg overflow-hidden">
-                          {/* Sazeti red: drag hendl + thumbnail iz baze + ime + sazetak + expand; brisanje desno */}
-                          <div className="flex items-center gap-2.5 p-2.5">
-                            {uSpajanju ? (
-                              // Hendl se NE renderuje u rezimu spajanja: bez aktivatora
-                              // dnd ne hvata dodire, pa se ne otimaju sa oznacavanjem.
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setSpajam((st) => {
-                                    if (!st) return st;
-                                    const n = new Set(st.ids);
-                                    if (n.has(ex.id)) n.delete(ex.id); else n.add(ex.id);
-                                    return { ...st, ids: n };
-                                  })
-                                }
-                                aria-label={`Označi ${name}`}
-                                aria-pressed={oznacena}
-                                className={`shrink-0 h-7 w-7 rounded-lg border-2 flex items-center justify-center transition ${oznacena ? "border-primary bg-primary text-primary-foreground" : "border-hairline bg-surface hover:border-primary/50"}`}
-                              >
-                                {oznacena && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
-                              </button>
-                            ) : (
-                            <button
-                              ref={setActivatorNodeRef}
-                              {...attributes}
-                              {...listeners}
-                              type="button"
-                              aria-label="Promeni redosled vežbe"
-                              style={{ WebkitTouchCallout: "none" }}
-                              className="shrink-0 h-8 w-6 flex items-center justify-center text-muted-foreground/40 touch-none select-none cursor-grab active:cursor-grabbing"
-                            >
-                              <GripVertical className="h-4 w-4" />
-                            </button>
-                            )}
-                            <button
-                              onClick={() =>
-                                uSpajanju
-                                  ? setSpajam((st) => {
-                                      if (!st) return st;
-                                      const n = new Set(st.ids);
-                                      if (n.has(ex.id)) n.delete(ex.id); else n.add(ex.id);
-                                      return { ...st, ids: n };
-                                    })
-                                  : setOpenExId(open ? null : ex.id)
-                              }
-                              className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
-                            >
-                              {thumb ? (
-                                <img src={thumb} alt="" loading="lazy" className="h-12 w-12 rounded-lg object-cover bg-surface-2 shrink-0" />
-                              ) : (
-                                <div className="h-12 w-12 rounded-lg bg-surface-2 flex items-center justify-center shrink-0">
-                                  <Dumbbell className="h-5 w-5 text-muted-foreground/60" />
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <div className="font-display font-semibold text-sm truncate">{name}</div>
-                                <div className="text-[12px] text-muted-foreground truncate">{summary}</div>
-                              </div>
-                              {uSpajanju ? null : open ? <ChevronUp className="h-4 w-4 text-primary shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
-                            </button>
-                            {!uSpajanju && (
-                            <button
-                              onClick={() => removeExercise(ex.id, d.id)}
-                              aria-label="Ukloni vežbu"
-                              className="h-8 w-8 rounded-md hover:bg-destructive-soft flex items-center justify-center transition shrink-0"
-                            >
-                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                            </button>
-                            )}
-                          </div>
-
-                          {open && !uSpajanju && (
-                            <div className="border-t border-hairline px-3 py-3">
-                              {/* Sta je vezbac poslednji put digao za bas ovu vezbu -
-                                  stoji IZNAD polja za ciljeve, da se danasnji broj
-                                  upisuje gledajuci u prosli. */}
-                              <LastPerformanceHint data={prosliPut[ex.exercise_id]} />
-                              {isDuration ? (
-                                // Vezba na minute (trcanje/hodanje): jedno polje "Minuti".
-                                <div>
-                                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-semibold">Minuti</div>
-                                  <Input
-                                    type="number"
-                                    min={1}
-                                    defaultValue={ex.duration_minutes ?? ""}
-                                    onBlur={(e) => {
-                                      const v = e.target.value === "" ? null : parseInt(e.target.value);
-                                      if (v !== ex.duration_minutes) updateExercise(ex.id, { duration_minutes: v });
-                                    }}
-                                    className="h-8 text-sm"
-                                    placeholder="npr. 20"
-                                  />
-                                </div>
-                              ) : (
-                                // Per-set tabela (izvor istine). Pauza skrivena dok se ne ukey "napredno".
-                                <div>
-                                  <div className="grid items-center gap-2 mb-1.5" style={{ gridTemplateColumns: cols }}>
-                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">Set</span>
-                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">Kg</span>
-                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">Reps</span>
-                                    {advanced && <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">Pauza (s)</span>}
-                                    <span />
-                                  </div>
-
-                                  {rows.map((r, idx) => (
-                                    <div key={r.id} className="grid items-center gap-2 mb-2" style={{ gridTemplateColumns: cols }}>
-                                      <span className="h-6 w-6 mx-auto rounded-md bg-primary-soft text-primary text-[12px] font-bold flex items-center justify-center">
-                                        {idx + 1}
-                                      </span>
-                                      <Input
-                                        key={`w-${r.id}`}
-                                        type="number"
-                                        step="0.5"
-                                        defaultValue={r.weight_kg ?? ""}
-                                        onBlur={(e) => {
-                                          const v = e.target.value === "" ? null : parseFloat(e.target.value);
-                                          if (v !== r.weight_kg) applySets(ex.id, rows.map((row, i) => (i === idx ? { ...row, weight_kg: v } : row)));
-                                        }}
-                                        className="h-8 text-sm text-center"
-                                        placeholder="-"
-                                      />
-                                      <Input
-                                        key={`r-${r.id}`}
-                                        defaultValue={r.reps}
-                                        onBlur={(e) => {
-                                          if (e.target.value !== r.reps) applySets(ex.id, rows.map((row, i) => (i === idx ? { ...row, reps: e.target.value } : row)));
-                                        }}
-                                        className="h-8 text-sm text-center"
-                                        placeholder="8-12"
-                                      />
-                                      {advanced && (
-                                        <Input
-                                          key={`p-${r.id}`}
-                                          type="number"
-                                          defaultValue={r.rest_seconds ?? ""}
-                                          onBlur={(e) => {
-                                            const v = e.target.value === "" ? null : parseInt(e.target.value);
-                                            if (v !== r.rest_seconds) applySets(ex.id, rows.map((row, i) => (i === idx ? { ...row, rest_seconds: v } : row)));
-                                          }}
-                                          className="h-8 text-sm text-center"
-                                          placeholder="90"
-                                        />
-                                      )}
-                                      <button
-                                        onClick={() => { if (rows.length > 1) applySets(ex.id, rows.filter((_, i) => i !== idx)); }}
-                                        disabled={rows.length <= 1}
-                                        aria-label="Ukloni set"
-                                        className="h-7 w-7 mx-auto rounded-md hover:bg-destructive-soft flex items-center justify-center transition disabled:opacity-30"
-                                      >
-                                        <X className="h-3.5 w-3.5 text-muted-foreground" />
-                                      </button>
-                                    </div>
-                                  ))}
-
-                                  <div className="flex items-center justify-between mt-1">
-                                    <button
-                                      onClick={() => {
-                                        const last = rows[rows.length - 1];
-                                        applySets(ex.id, [...rows, {
-                                          id: crypto.randomUUID(),
-                                          set_number: rows.length + 1,
-                                          reps: last?.reps ?? "10",
-                                          weight_kg: last?.weight_kg ?? null,
-                                          rest_seconds: last?.rest_seconds ?? 90,
-                                        }]);
-                                      }}
-                                      className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary"
-                                    >
-                                      <Plus className="h-4 w-4" /> Dodaj set
-                                    </button>
-                                    <button
-                                      onClick={() => setAdvancedByEx((p) => ({ ...p, [ex.id]: !advanced }))}
-                                      className={`inline-flex items-center gap-1.5 text-[12px] font-medium ${advanced ? "text-primary" : "text-muted-foreground"}`}
-                                    >
-                                      <Settings2 className="h-3.5 w-3.5" /> Pauza
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        </div>
-                          )}
-                        </SortableExerciseRow>
-                      );
-                    })}
-                    </SortableContext>
-                    </DndContext>
-
-                    <button
-                      onClick={() => openExercisePicker(d.id)}
-                      className="w-full py-2.5 rounded-lg border-2 border-dashed border-hairline text-sm text-muted-foreground hover:border-primary hover:text-primary transition flex items-center justify-center gap-1.5"
-                    >
-                      <Plus className="h-4 w-4" /> Dodaj vežbu
-                    </button>
-
-                    <button
-                      onClick={() => handleDeleteDay(d.id)}
-                      className="w-full text-xs text-destructive py-2"
-                    >
-                      Obriši dan
-                    </button>
-                  </div>
-                )}
+                {isOpen && renderDayBody(d, exList)}
               </div>
             );
           })}
@@ -913,7 +1025,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
       )}
 
       {/* Brisanje celog sablona - samo template mod (dodeljeni plan se ne brise) */}
-      {mode === "template" && (
+      {mode === "template" && !desktop && (
         <button
           onClick={handleDeleteProgram}
           className="w-full text-[13px] font-semibold text-destructive py-3 mt-2 mb-24"
@@ -930,7 +1042,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
             Vežbač vidi plan tek kada ga pošaljete.
           </p>
           {/* Prostor da poslednji sadrzaj ne stoji ispod sticky "Posalji vezbacu" CTA */}
-          <div className="h-24" />
+          {!desktop && <div className="h-24" />}
         </>
       )}
 
@@ -1035,7 +1147,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
       )}
 
       {/* Sticky bottom CTA - dodela samo u template modu */}
-      {mode === "template" && days.length > 0 && (
+      {mode === "template" && days.length > 0 && !desktop && (
         <div className="fixed bottom-0 left-0 right-0 px-6 pb-6 pt-3 bg-gradient-to-t from-background via-background to-transparent pointer-events-none">
           <div className="max-w-[440px] mx-auto pointer-events-auto">
             <Button onClick={openAssign} className="w-full h-12 shadow-brand">
@@ -1047,7 +1159,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
       )}
 
       {/* Sticky bottom CTA - posalji vezbacu samo u assigned modu */}
-      {mode === "assigned" && days.length > 0 && (
+      {mode === "assigned" && days.length > 0 && !desktop && (
         <div className="fixed bottom-0 left-0 right-0 px-6 pb-6 pt-3 bg-gradient-to-t from-background via-background to-transparent pointer-events-none">
           <div className="max-w-[440px] mx-auto pointer-events-auto">
             <Button

@@ -59,13 +59,20 @@ const PregledMedija = ({ exercise, poster }: { exercise: PickerExercise; poster:
     if (v.readyState >= 1) v.currentTime = 0;
     const tryPlay = () => { v.play().catch(() => {}); };
     const onError = () => setVideoFailed(true);
+    // Browser pauzira nemi video kad se tab sakrije i ne nastavi sam - povratak na
+    // tab bi zatekao zamrznut snimak (isto resava ExerciseHeader).
+    const onVisible = () => {
+      if (document.visibilityState === "visible") tryPlay();
+    };
     v.addEventListener("canplay", tryPlay);
     v.addEventListener("error", onError);
+    document.addEventListener("visibilitychange", onVisible);
     box.appendChild(v);
     tryPlay();
     return () => {
       v.removeEventListener("canplay", tryPlay);
       v.removeEventListener("error", onError);
+      document.removeEventListener("visibilitychange", onVisible);
       v.pause();
       v.remove();
     };
