@@ -12,6 +12,8 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { PhoneShell } from "@/components/PhoneShell";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -129,6 +131,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
         parentCol: "template_id",
       } as const;
   const confirm = useConfirm();
+  const desktop = useDesktopWeb();
   // Mali prag pomeranja pre nego sto se drag aktivira - obican tap na hendl (ili
   // slucajan dodir tokom skrola) ne sme da okine drag. TouchSensor uz delay+tolerance
   // je dopuna za touch uredjaje - razdvaja skrol/tap liste od namernog prevlacenja,
@@ -532,11 +535,144 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
     else toast("Plan je već poslat");
   };
 
+  // Racunar: dan u desnoj koloni. Dok trener ne izabere drugi, to je prvi dan.
+  const aktivniDan = days.find((d) => d.id === openDay) ?? days[0];
+
+  // Sadrzaj jednog dana (obroci, namirnice, dodavanje obroka, brisanje dana). Isti je
+  // na telefonu (harmonika ispod zaglavlja dana) i na racunaru (desna kolona).
+  const renderDayBody = (d: Day, meals: Meal[]) => (
+    <div className="border-t border-hairline px-4 py-3 space-y-3 bg-surface-2/50">
+      {meals.length === 0 && (
+        <p className="text-xs text-muted-foreground text-center py-3">Nema obroka u ovom danu</p>
+      )}
+      {meals.map((m) => {
+        const items = itemsByMeal[m.id] ?? [];
+        let mKcal = 0, mP = 0;
+        items.forEach((it) => { const x = macros(it); mKcal += x.kcal; mP += x.p; });
+        return (
+          <div key={m.id} className="bg-surface rounded-lg p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-sm truncate">
+                  {m.name} {m.time_hint && <span className="text-muted-foreground font-normal">· {m.time_hint}</span>}
+                </div>
+                <div className="text-[11px] text-muted-foreground">{Math.round(mKcal)} kcal · P{Math.round(mP)}g</div>
+              </div>
+              <button
+                onClick={() => handleDeleteMeal(m.id)}
+                className="h-7 w-7 rounded-md hover:bg-destructive-soft flex items-center justify-center transition"
+              >
+                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+              </button>
+            </div>
+
+            <DndContext
+              sensors={foodItemDndSensors}
+              collisionDetection={closestCenter}
+              onDragEnd={onFoodItemDragEnd(m.id)}
+            >
+            <SortableContext items={items.map((it) => it.id)} strategy={verticalListSortingStrategy}>
+            {items.map((it) => {
+              const x = macros(it);
+              return (
+                <SortableFoodItemRow key={it.id} id={it.id}>
+                  {({ setActivatorNodeRef, attributes, listeners }) => (
+                <div className="flex items-center gap-2 py-1.5 border-t border-hairline first:border-t-0">
+                  <button
+                    ref={setActivatorNodeRef}
+                    {...attributes}
+                    {...listeners}
+                    type="button"
+                    aria-label="Promeni redosled namirnice"
+                    style={{ WebkitTouchCallout: "none" }}
+                    className="shrink-0 h-6 w-5 flex items-center justify-center text-muted-foreground/40 touch-none select-none cursor-grab active:cursor-grabbing"
+                  >
+                    <GripVertical className="h-3.5 w-3.5" />
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold truncate">{it.food_items?.name ?? "-"}</div>
+                    <div className="text-[10px] text-muted-foreground">
+                      {x.kcal} kcal · P{x.p} U{x.c} M{x.fat}
+                    </div>
+                  </div>
+                  <Input
+                    type="number"
+                    defaultValue={it.grams}
+                    onBlur={(e) => {
+                      const v = parseFloat(e.target.value);
+                      if (v && v !== it.grams) updateItemGrams(it.id, v);
+                    }}
+                    className={cn("h-7 text-xs text-right", desktop ? "w-20" : "w-16")}
+                  />
+                  <span className="text-[10px] text-muted-foreground w-3">g</span>
+                  <button
+                    onClick={() => removeItem(it.id)}
+                    className="h-6 w-6 rounded-md hover:bg-destructive-soft flex items-center justify-center"
+                  >
+                    <Trash2 className="h-3 w-3 text-destructive" />
+                  </button>
+                </div>
+                  )}
+                </SortableFoodItemRow>
+              );
+            })}
+            </SortableContext>
+            </DndContext>
+
+            <button
+              onClick={() => openFoodPicker(m.id)}
+              className="w-full py-2 rounded-md border border-dashed border-hairline text-xs text-muted-foreground hover:border-primary hover:text-primary transition flex items-center justify-center gap-1"
+            >
+              <Plus className="h-3 w-3" /> Dodaj namirnicu
+            </button>
+          </div>
+        );
+      })}
+
+      <button
+        onClick={() => setAddMealForDayId(d.id)}
+        className="w-full py-2.5 rounded-lg border-2 border-dashed border-hairline text-sm text-muted-foreground hover:border-primary hover:text-primary transition flex items-center justify-center gap-1.5"
+      >
+        <Plus className="h-4 w-4" /> Dodaj obrok
+      </button>
+
+      <button
+        onClick={() => handleDeleteDay(d.id)}
+        className="w-full text-xs text-destructive py-2"
+      >
+        Obriši dan
+      </button>
+    </div>
+  );
+
   return (
     <PhoneShell
       back={mode === "assigned" && athleteId ? `/trener/vezbaci/${athleteId}` : "/trener/ishrana"}
       eyebrow={mode === "assigned" ? templateName : "Plan ishrane"}
       title={mode === "assigned" ? "Izmeni plan ishrane" : templateName}
+      desktopWidth="wide"
+      // Racunar: glavna akcija u zaglavlju, u visini naslova. Telefon je ima kao
+      // traku prilepljenu za dno (vidi nize), koja je na sirokom ekranu plutala.
+      action={
+        desktop && days.length > 0 ? (
+          mode === "template" ? (
+            <Button onClick={openAssign} className="h-10 rounded-full px-4 shadow-brand">
+              <UserPlus className="h-4 w-4 mr-1.5" />
+              Dodeli vežbaču
+            </Button>
+          ) : (
+            <Button
+              onClick={notifyAthlete}
+              disabled={notifying}
+              className="h-10 rounded-full px-4 bg-gradient-brand text-white shadow-brand"
+            >
+              {notifying ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Send className="h-4 w-4 mr-1.5" />}
+              <LockMark className="mr-1.5" />
+              Pošalji vežbaču
+            </Button>
+          )
+        ) : undefined
+      }
     >
       {loading ? (
         <div className="flex justify-center py-10">
@@ -554,6 +690,97 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
           <Button onClick={guard(() => setAddDayOpen(true))}>
             <Plus className="h-4 w-4 mr-1.5" /> Novi dan
           </Button>
+        </div>
+      ) : desktop ? (
+        // Racunar: dve kolone kao editor programa - levo nedeljni raspored i dani,
+        // desno izabrani dan sa obrocima. Harmonika preko cele sirine je bila izduzena.
+        <div className="grid grid-cols-[288px_minmax(0,1fr)] items-start gap-6">
+          <div className="sticky top-24 space-y-2">
+            <button
+              onClick={guard(() => setScheduleOpen(true))}
+              className="flex w-full items-center gap-3 rounded-2xl border border-hairline bg-surface p-3 text-left transition hover:bg-surface-2"
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-brand-soft">
+                <CalendarDays className="h-4 w-4 text-primary" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[14px] font-semibold">Nedeljni raspored</div>
+                <div className="text-xs text-muted-foreground tnum">
+                  {schedule.filter((s) => s.day_id).length}/7 dana podešeno
+                </div>
+              </div>
+            </button>
+
+            <div className="px-1 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Dani
+            </div>
+            {days.map((d) => {
+              const tot = dayTotals(d.id);
+              const brojObroka = (mealsByDay[d.id] ?? []).length;
+              const aktivan = aktivniDan?.id === d.id;
+              return (
+                <button
+                  key={d.id}
+                  onClick={() => setOpenDay(d.id)}
+                  aria-current={aktivan || undefined}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition",
+                    aktivan ? "border-primary/25 bg-primary-soft shadow-sm" : "border-hairline bg-surface hover:bg-surface-2",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold",
+                      aktivan ? "bg-gradient-brand text-primary-foreground" : "bg-surface-2 text-muted-foreground",
+                    )}
+                  >
+                    {d.day_number}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[14px] font-semibold">{d.name}</div>
+                    <div className="text-xs text-muted-foreground tnum">
+                      {tot.kcal} kcal · {brojObroka} {brojObroka === 1 ? "obrok" : "obroka"}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+            <button
+              onClick={guard(() => setAddDayOpen(true))}
+              className="flex w-full items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-hairline py-2.5 text-sm font-semibold text-muted-foreground transition hover:border-primary hover:text-primary"
+            >
+              <Plus className="h-4 w-4" /> Dodaj dan
+            </button>
+            {mode === "assigned" && (
+              <p className="px-1 pt-2 text-[12px] text-muted-foreground">
+                Vežbač vidi plan tek kada ga pošaljete. Kada završite, pošaljite ga.
+              </p>
+            )}
+          </div>
+
+          {aktivniDan && (() => {
+            const tot = dayTotals(aktivniDan.id);
+            const chip = "inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-semibold tnum";
+            return (
+              <div className="card-premium overflow-hidden">
+                <div className="flex flex-wrap items-center gap-3 px-5 py-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                      Dan {aktivniDan.day_number}
+                    </div>
+                    <h2 className="truncate font-display text-[22px] font-bold tracking-tight">{aktivniDan.name}</h2>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className={cn(chip, "bg-primary-soft text-primary")}>{tot.kcal} kcal</span>
+                    <span className={cn(chip, "bg-surface-2 text-muted-foreground")}>P {tot.p} g</span>
+                    <span className={cn(chip, "bg-surface-2 text-muted-foreground")}>U {tot.c} g</span>
+                    <span className={cn(chip, "bg-surface-2 text-muted-foreground")}>M {tot.fat} g</span>
+                  </div>
+                </div>
+                {renderDayBody(aktivniDan, mealsByDay[aktivniDan.id] ?? [])}
+              </div>
+            );
+          })()}
         </div>
       ) : (
         <div className="space-y-3 pb-32">
@@ -596,110 +823,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
                   {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                 </button>
 
-                {isOpen && (
-                  <div className="border-t border-hairline px-4 py-3 space-y-3 bg-surface-2/50">
-                    {meals.length === 0 && (
-                      <p className="text-xs text-muted-foreground text-center py-3">Nema obroka u ovom danu</p>
-                    )}
-                    {meals.map((m) => {
-                      const items = itemsByMeal[m.id] ?? [];
-                      let mKcal = 0, mP = 0;
-                      items.forEach((it) => { const x = macros(it); mKcal += x.kcal; mP += x.p; });
-                      return (
-                        <div key={m.id} className="bg-surface rounded-lg p-3 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 min-w-0">
-                              <div className="font-semibold text-sm truncate">
-                                {m.name} {m.time_hint && <span className="text-muted-foreground font-normal">· {m.time_hint}</span>}
-                              </div>
-                              <div className="text-[11px] text-muted-foreground">{Math.round(mKcal)} kcal · P{Math.round(mP)}g</div>
-                            </div>
-                            <button
-                              onClick={() => handleDeleteMeal(m.id)}
-                              className="h-7 w-7 rounded-md hover:bg-destructive-soft flex items-center justify-center transition"
-                            >
-                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                            </button>
-                          </div>
-
-                          <DndContext
-                            sensors={foodItemDndSensors}
-                            collisionDetection={closestCenter}
-                            onDragEnd={onFoodItemDragEnd(m.id)}
-                          >
-                          <SortableContext items={items.map((it) => it.id)} strategy={verticalListSortingStrategy}>
-                          {items.map((it) => {
-                            const x = macros(it);
-                            return (
-                              <SortableFoodItemRow key={it.id} id={it.id}>
-                                {({ setActivatorNodeRef, attributes, listeners }) => (
-                              <div className="flex items-center gap-2 py-1.5 border-t border-hairline first:border-t-0">
-                                <button
-                                  ref={setActivatorNodeRef}
-                                  {...attributes}
-                                  {...listeners}
-                                  type="button"
-                                  aria-label="Promeni redosled namirnice"
-                                  style={{ WebkitTouchCallout: "none" }}
-                                  className="shrink-0 h-6 w-5 flex items-center justify-center text-muted-foreground/40 touch-none select-none cursor-grab active:cursor-grabbing"
-                                >
-                                  <GripVertical className="h-3.5 w-3.5" />
-                                </button>
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-xs font-semibold truncate">{it.food_items?.name ?? "-"}</div>
-                                  <div className="text-[10px] text-muted-foreground">
-                                    {x.kcal} kcal · P{x.p} U{x.c} M{x.fat}
-                                  </div>
-                                </div>
-                                <Input
-                                  type="number"
-                                  defaultValue={it.grams}
-                                  onBlur={(e) => {
-                                    const v = parseFloat(e.target.value);
-                                    if (v && v !== it.grams) updateItemGrams(it.id, v);
-                                  }}
-                                  className="h-7 w-16 text-xs text-right"
-                                />
-                                <span className="text-[10px] text-muted-foreground w-3">g</span>
-                                <button
-                                  onClick={() => removeItem(it.id)}
-                                  className="h-6 w-6 rounded-md hover:bg-destructive-soft flex items-center justify-center"
-                                >
-                                  <Trash2 className="h-3 w-3 text-destructive" />
-                                </button>
-                              </div>
-                                )}
-                              </SortableFoodItemRow>
-                            );
-                          })}
-                          </SortableContext>
-                          </DndContext>
-
-                          <button
-                            onClick={() => openFoodPicker(m.id)}
-                            className="w-full py-2 rounded-md border border-dashed border-hairline text-xs text-muted-foreground hover:border-primary hover:text-primary transition flex items-center justify-center gap-1"
-                          >
-                            <Plus className="h-3 w-3" /> Dodaj namirnicu
-                          </button>
-                        </div>
-                      );
-                    })}
-
-                    <button
-                      onClick={() => setAddMealForDayId(d.id)}
-                      className="w-full py-2.5 rounded-lg border-2 border-dashed border-hairline text-sm text-muted-foreground hover:border-primary hover:text-primary transition flex items-center justify-center gap-1.5"
-                    >
-                      <Plus className="h-4 w-4" /> Dodaj obrok
-                    </button>
-
-                    <button
-                      onClick={() => handleDeleteDay(d.id)}
-                      className="w-full text-xs text-destructive py-2"
-                    >
-                      Obriši dan
-                    </button>
-                  </div>
-                )}
+                {isOpen && renderDayBody(d, meals)}
               </div>
             );
           })}
@@ -1128,7 +1252,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
       )}
 
       {/* Sticky CTA - dodela samo u template modu */}
-      {mode === "template" && days.length > 0 && (
+      {mode === "template" && days.length > 0 && !desktop && (
         <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[440px] px-6 pb-6 pt-3 bg-gradient-to-t from-background via-background to-transparent">
           <Button onClick={openAssign} className="w-full shadow-brand">
             <UserPlus className="h-4 w-4 mr-2" /> Dodeli vežbaču
@@ -1137,7 +1261,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
       )}
 
       {/* Sticky CTA - posalji vezbacu samo u assigned modu */}
-      {mode === "assigned" && days.length > 0 && (
+      {mode === "assigned" && days.length > 0 && !desktop && (
         <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[440px] px-6 pb-6 pt-3 bg-gradient-to-t from-background via-background to-transparent">
           <p className="text-[11px] text-muted-foreground text-center mb-2">
             Vežbač vidi plan tek kada ga pošaljete. Kada završite, pošaljite ga.

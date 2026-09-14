@@ -17,6 +17,7 @@ import { Plus, Apple, ChevronRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { LockMark } from "@/components/pretplata/LockMark";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 
 type Template = {
   id: string;
@@ -30,6 +31,7 @@ type Template = {
 const NutritionTemplates = () => {
   const { locked, openLock, guard } = usePretplataLock();
   const { user } = useAuth();
+  const desktop = useDesktopWeb();
   const [items, setItems] = useState<Template[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -98,13 +100,25 @@ const NutritionTemplates = () => {
       back="/trener"
       eyebrow="Ishrana"
       title="Planovi ishrane"
+      desktopWidth="wide"
       action={
-        <button
-          onClick={guard(() => setOpen(true))}
-          className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-brand active:scale-95 transition"
-        >
-          <Plus className="h-4 w-4" strokeWidth={2.5} />
-        </button>
+        desktop ? (
+          <Button
+            onClick={guard(() => setOpen(true))}
+            className="h-10 rounded-full px-4 bg-gradient-brand text-white shadow-brand"
+          >
+            <LockMark className="mr-1.5" />
+            <Plus className="h-4 w-4 mr-1.5" strokeWidth={2.5} />
+            Novi plan
+          </Button>
+        ) : (
+          <button
+            onClick={guard(() => setOpen(true))}
+            className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-brand active:scale-95 transition"
+          >
+            <Plus className="h-4 w-4" strokeWidth={2.5} />
+          </button>
+        )
       }
     >
       <FullScreenSheet open={open} onClose={() => setOpen(false)} title="Novi plan ishrane">
@@ -165,6 +179,51 @@ const NutritionTemplates = () => {
           <Button onClick={guard(() => setOpen(true))}>
             <LockMark className="mr-1.5" /><Plus className="h-4 w-4 mr-1.5" /> Novi plan
           </Button>
+        </div>
+      ) : desktop ? (
+        // Racunar: mreza kartica kao kod programa - pune trake preko cele sirine su
+        // izgledale izduzeno, a kartica drzi naziv i ciljeve plana zajedno.
+        <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+          {items.map((t) => {
+            const brojDana = counts[t.id] ?? 0;
+            return (
+              <Link
+                key={t.id}
+                to={`/trener/ishrana/${t.id}`}
+                className="card-premium-hover flex min-h-[176px] flex-col p-5"
+              >
+                <div className="h-11 w-11 rounded-xl bg-gradient-brand-soft flex items-center justify-center">
+                  <Apple className="h-5 w-5 text-primary" strokeWidth={2.25} />
+                </div>
+                <div className="mt-4 font-display text-[17px] font-bold leading-snug tracking-tight line-clamp-2">
+                  {t.name}
+                </div>
+                {t.target_kcal != null && (
+                  <div className="mt-1 text-[13px] text-muted-foreground tnum">
+                    {t.target_kcal} kcal
+                    {t.target_protein != null && ` · ${t.target_protein} g proteina`}
+                  </div>
+                )}
+                <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-4">
+                  <span className="inline-flex items-center rounded-full bg-surface-2 px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground tnum">
+                    {brojDana} {brojDana === 1 ? "dan" : "dana"}
+                  </span>
+                  {t.goal && (
+                    <span className="inline-flex items-center rounded-full bg-primary-soft px-2.5 py-1 text-[11.5px] font-semibold text-primary">
+                      {t.goal}
+                    </span>
+                  )}
+                </div>
+              </Link>
+            );
+          })}
+          <button
+            onClick={guard(() => setOpen(true))}
+            className="flex min-h-[176px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-hairline text-muted-foreground transition hover:border-primary hover:text-primary"
+          >
+            <Plus className="h-5 w-5" />
+            <span className="text-sm font-semibold">Novi plan</span>
+          </button>
         </div>
       ) : (
         <div className="space-y-2">
