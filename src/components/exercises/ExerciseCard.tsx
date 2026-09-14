@@ -1,5 +1,5 @@
 import { forwardRef, useState } from "react";
-import { Bookmark, Check, Maximize2, Play } from "lucide-react";
+import { Bookmark, Check, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MUSCLE_LABELS, type MuscleGroupId } from "@/lib/muscleGroups";
 import { hasExerciseVideo } from "@/lib/exerciseMedia";
@@ -55,10 +55,9 @@ export const ExerciseCard = ({
   onPreview,
 }: Props) => {
   const [imgFailed, setImgFailed] = useState(false);
-  // "Video" samo kad snimak stvarno postoji - deo vezbi ima samo sliku, pa one
-  // dobijaju dugme za uvecanje, da "Video" ne otvori sliku.
-  const video = hasExerciseVideo(exercise);
-  const pregledLabel = video ? "Pogledaj snimak vežbe" : "Uvećaj sliku vežbe";
+  // Play samo kad snimak stvarno postoji - deo vezbi ima samo sliku, a play koji
+  // otvori sliku bi zbunjivao.
+  const canPreview = !!onPreview && hasExerciseVideo(exercise);
   const primaryName = exercise.name_en?.trim() || exercise.name;
   const subtitle =
     exercise.description?.trim() ||
@@ -98,17 +97,17 @@ export const ExerciseCard = ({
             {subtitle}
           </div>
         </div>
-        {onPreview && (
+        {canPreview && (
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onPreview(exercise);
+              onPreview!(exercise);
             }}
-            aria-label={pregledLabel}
-            className="h-9 w-9 rounded-full bg-surface-2 hover:bg-surface-3 flex items-center justify-center shrink-0 transition"
+            aria-label="Pogledaj snimak vežbe"
+            className="h-8 w-8 rounded-full text-muted-foreground hover:bg-surface-2 hover:text-foreground flex items-center justify-center shrink-0 transition"
           >
-            {video ? <Play size={14} fill="currentColor" strokeWidth={0} /> : <Maximize2 size={14} />}
+            <Play size={13} className="ml-px" fill="currentColor" strokeWidth={0} />
           </button>
         )}
         {selected && (
@@ -167,27 +166,19 @@ export const ExerciseCard = ({
           </div>
         )}
 
-        {onPreview && (
+        {/* Isti stil kao bookmark u suprotnom uglu - par diskretnih dugmica, ne
+            natpis preko slike. */}
+        {canPreview && (
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onPreview(exercise);
+              onPreview!(exercise);
             }}
-            aria-label={pregledLabel}
-            className={cn(
-              "absolute bottom-2 right-2 h-7 rounded-full bg-black/60 text-white backdrop-blur-md flex items-center justify-center gap-1 text-[11px] font-semibold hover:bg-black/75 transition",
-              video ? "px-2.5" : "w-7",
-            )}
+            aria-label="Pogledaj snimak vežbe"
+            className="absolute bottom-2 right-2 h-7 w-7 rounded-full bg-background/60 backdrop-blur-md flex items-center justify-center text-foreground hover:bg-background/90 transition"
           >
-            {video ? (
-              <>
-                <Play size={10} fill="currentColor" strokeWidth={0} />
-                Video
-              </>
-            ) : (
-              <Maximize2 size={12} />
-            )}
+            <Play size={12} className="ml-px" fill="currentColor" strokeWidth={0} />
           </button>
         )}
       </div>

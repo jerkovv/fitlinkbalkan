@@ -178,7 +178,7 @@ export const ExercisePreview = ({
                     onClick={() => onToggleBookmark(ex.id)}
                     aria-pressed={bookmarked}
                     className={cn(
-                      "h-12 shrink-0 rounded-full border px-4 flex items-center gap-2 text-sm font-semibold transition",
+                      "h-11 shrink-0 rounded-full border px-4 flex items-center gap-2 text-sm font-semibold transition",
                       bookmarked
                         ? "border-primary/40 bg-primary-soft text-primary"
                         : "border-hairline hover:bg-surface-2",
@@ -195,7 +195,7 @@ export const ExercisePreview = ({
                       onClose();
                     }}
                     className={cn(
-                      "h-12 flex-1 rounded-full px-5 flex items-center justify-center gap-2 font-semibold transition active:scale-[0.98]",
+                      "h-11 flex-1 rounded-full px-5 flex items-center justify-center gap-2 text-sm font-semibold transition active:scale-[0.98]",
                       selected
                         ? "bg-surface-2 text-foreground hover:bg-surface-3"
                         : "bg-gradient-brand text-primary-foreground shadow-brand",
