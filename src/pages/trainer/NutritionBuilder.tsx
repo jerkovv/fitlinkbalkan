@@ -84,14 +84,14 @@ function SortableFoodItemRow({
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id });
-  // touchAction/WebkitTouchCallout na CELOM redu (ne samo hendlu) - dugi pritisak
-  // na hendl inace moze da okine iOS native selekciju teksta susednog sadrzaja
-  // u redu (Copy/Look Up meni + plavi handle-ovi) umesto da pokrene drag.
+  // WebkitTouchCallout + select-none na CELOM redu - dugi pritisak na hendl inace
+  // moze da okine iOS native selekciju teksta susednog sadrzaja (Copy/Look Up meni)
+  // umesto da pokrene drag. touch-action:none je SAMO na hendlu: na celom redu je
+  // gasio skrol stranice cim prst krene preko kartice (skrol je radio samo sa ivice).
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-    touchAction: "none" as const,
     WebkitTouchCallout: "none" as const,
   };
   return (
