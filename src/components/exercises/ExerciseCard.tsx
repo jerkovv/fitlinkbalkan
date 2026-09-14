@@ -138,14 +138,16 @@ export const ExerciseCard = ({
       )}
       style={{ animationDelay: `${Math.min(index * 20, 200)}ms` }}
     >
-      <div className="aspect-[4/3] w-full bg-surface-2 relative overflow-hidden shrink-0">
+      {/* 3:2 = format slicica (800x533) na beloj pozadini: slika ispuni okvir. U 4:3
+          sivom okviru su ostajale sive trake oko bele slike, kao dupli ram. */}
+      <div className="aspect-[3/2] w-full bg-white relative overflow-hidden shrink-0 border-b border-hairline">
         {showImage ? (
           <img
             src={exercise.thumbnail_url!}
             alt={primaryName}
             loading="lazy"
             onError={() => setImgFailed(true)}
-            className="w-full h-full object-contain p-1.5"
+            className="w-full h-full object-contain"
           />
         ) : (
           <Placeholder muscle={exercise.primary_muscle} />

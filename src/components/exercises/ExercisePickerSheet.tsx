@@ -213,7 +213,7 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAd
         {isLoading &&
           Array.from({ length: desktop ? 8 : 6 }).map((_, i) => (
             <div key={i} className="rounded-xl overflow-hidden">
-              <div className="aspect-square bg-surface-2 animate-pulse" />
+              <div className="aspect-[3/2] bg-surface-2 animate-pulse" />
               <div className="p-3 space-y-2">
                 <div className="h-3 bg-surface-2 animate-pulse rounded" />
                 <div className="h-2 w-2/3 bg-surface-2 animate-pulse rounded" />

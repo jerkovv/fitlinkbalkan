@@ -23,6 +23,8 @@ type Props = {
 const PregledMedija = ({ exercise }: { exercise: PickerExercise }) => {
   const [videoFailed, setVideoFailed] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
+  // true tek kad snimak stvarno krene (onPlaying) - do tad se vidi slicica.
+  const [playing, setPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const url = exercise.video_url;
@@ -47,20 +49,40 @@ const PregledMedija = ({ exercise }: { exercise: PickerExercise }) => {
   }, [useVideo, embed?.src]);
 
   return (
-    <div className="relative w-full aspect-[4/3] bg-white">
+    // 16:9 = format snimka (960x540), pa video ispunjava okvir bez traka.
+    <div className="relative w-full aspect-video bg-white">
       {useVideo ? (
-        <video
-          ref={videoRef}
-          src={embed!.src}
-          poster={exercise.thumbnail_url ?? undefined}
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="auto"
-          onError={() => setVideoFailed(true)}
-          className="absolute inset-0 h-full w-full object-contain"
-        />
+        <>
+          {/* Slicica stoji dok snimak ne krene, pa video preko nje izbledi. Poster u
+              samom <video> je skakao: slicica je 3:2, snimak 16:9, pa se slika vidno
+              trzala u trenutku prelaska - najvise na racunaru, gde snimak kasni. */}
+          {exercise.thumbnail_url && (
+            <img
+              src={exercise.thumbnail_url}
+              alt=""
+              aria-hidden
+              className={cn(
+                "absolute inset-0 h-full w-full object-contain transition-opacity duration-300",
+                playing && "opacity-0",
+              )}
+            />
+          )}
+          <video
+            ref={videoRef}
+            src={embed!.src}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            onPlaying={() => setPlaying(true)}
+            onError={() => setVideoFailed(true)}
+            className={cn(
+              "absolute inset-0 h-full w-full object-contain transition-opacity duration-300",
+              playing ? "opacity-100" : "opacity-0",
+            )}
+          />
+        </>
       ) : useEmbed ? (
         <iframe
           src={embed!.src}
@@ -75,7 +97,7 @@ const PregledMedija = ({ exercise }: { exercise: PickerExercise }) => {
           src={imageSrc}
           alt={exercise.name}
           onError={() => setImgFailed(true)}
-          className="absolute inset-0 h-full w-full object-contain p-2"
+          className="absolute inset-0 h-full w-full object-contain"
         />
       ) : (
         <div className="absolute inset-0 bg-gradient-brand-soft flex items-center justify-center">
