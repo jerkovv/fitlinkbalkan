@@ -154,6 +154,9 @@ struct ContentView: View {
     @State private var bannerMessage: TrainerMessage? = nil
     // Zone pulsa sa servera (zonski swipe ekran). Sve može null = "Zona nedostupna".
     @State private var serverHr: Int? = nil
+    // Server javlja da je serverHr puls sa senzora koji je vezbac upario na
+    // telefonu (i da je svez). Tada sat prikazuje njega, ne sopstveni.
+    @State private var sensorLive: Bool = false
     @State private var hrMax: Int? = nil
     @State private var hrZone: Int? = nil
     @State private var hrZoneName: String? = nil
@@ -196,7 +199,8 @@ struct ContentView: View {
                     TabView {
                         ActiveWorkoutView(
                             workout: displayedWorkout,
-                            heartRate: $heartRate,
+                            // Samo za prikaz: senzor ako je ziv, inace puls sata.
+                            heartRate: .constant(displayHeartRate),
                             // nil dok server pocetak nije poznat (izbegava tranzijentnu .now kotvu
                             // pri restore-u); workoutTickAnchor je fiksan cim startedAtMs stigne.
                             tickAnchor: workoutStartedAtMs != nil ? workoutTickAnchor : nil,
@@ -444,15 +448,16 @@ struct ContentView: View {
 
     // Trenutni puls na glavnom ekranu (obojen zonom, isti stil kao normalan trening).
     private var freeMainHeartRate: some View {
-        let zone = HRZone.zone(for: heartRate, maxHR: hrMax ?? 190)
-        let has = heartRate > 0
+        let hr = displayHeartRate
+        let zone = HRZone.zone(for: hr, maxHR: hrMax ?? 190)
+        let has = hr > 0
         return HStack(alignment: .firstTextBaseline, spacing: 4) {
             Image(systemName: "heart.fill")
                 .font(.system(size: 13, weight: .bold))
                 .foregroundColor(has ? zone.color : .textMuted)
                 .scaleEffect(has ? 1.0 : 0.85)
-                .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: heartRate)
-            Text(has ? "\(heartRate)" : "--")
+                .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: hr)
+            Text(has ? "\(hr)" : "--")
                 .font(.zoneNum(32, .heavy)).monospacedDigit()
                 .foregroundColor(has ? zone.color : .textMuted)
                 .contentTransition(.numericText())
@@ -529,17 +534,20 @@ struct ContentView: View {
                 
                 Spacer()
                 
-                // Pravi logo umesto ispisanog imena. Beo je, jer je ekran crn, a
-                // dugme ispod nosi brend gradijent - dva gradijenta jedan iznad
-                // drugog bi se tukla.
+                // Vodoravna varijanta loga, bez TM oznake. Uspravna ima 15%
+                // praznog pojasa izmedju znaka i natpisa, sto na 40 mm ispada
+                // kao rupa nasred ekrana. Beo je, jer dugme ispod vec nosi brend
+                // gradijent - dva gradijenta jedan iznad drugog se tuku.
+                //
+                // Spacer i iznad i ispod: logo stoji na sredini ekrana.
                 Image("logo-wordmark")
                     .resizable()
                     .scaledToFit()
-                    .frame(maxWidth: 118)
+                    .frame(maxWidth: 148)
                     .accessibilityLabel("FitLink")
-                
+
                 Spacer()
-                
+
                 if effectiveToken != nil {
                     // Trening se sada moze pokrenuti direktno sa sata.
                     Button {
@@ -639,23 +647,34 @@ struct ContentView: View {
 
     private let zoneNames = ["Zagrevanje", "Lagano", "Umereno", "Naporno", "Maksimalno"]
 
-    // FitLink rampa: 1 indigo, 2 violet, 3 magenta, 4 amber, 5 crvena.
-    // Kraljevska ljubicasta kao nit brenda, crvena samo na maksimumu.
+    // Apple rampa zona pulsa, ista kao u Workout aplikaciji: plava, zelena, zuta,
+    // narandzasta, crvena. Sistemske boje se same prilagodjavaju tamnoj temi i
+    // Vezbac istu skalu vidi i u FitLink aplikaciji na telefonu (--hr-zone-N).
+    // Brend rampa je ostala tamo gde je brend, ne na merenju.
     private func zoneColor(_ z: Int) -> Color {
         switch z {
-        case 1: return .brandIndigo
-        case 2: return .brandViolet
-        case 3: return .brandMagenta
-        case 4: return .brandWarning
-        case 5: return .brandDestructive
-        default: return .brandViolet
+        case 1: return .blue
+        case 2: return .green
+        case 3: return .yellow
+        case 4: return .orange
+        case 5: return .red
+        default: return .blue
         }
     }
 
+    // Puls za prikaz na satu: prvo senzor, pa sat. Kad vezbac nosi traku ili pojas
+    // uparen na telefonu, server drzi njegov puls u current_hr (sat ga tad ne gazi)
+    // i javlja sensorLive; bez senzora sat pokazuje sopstveni puls kao i do sad.
+    // Sat i dalje SALJE svoj puls serveru - samo ga ne prikazuje dok senzor radi.
+    private var displayHeartRate: Int {
+        if sensorLive, let s = serverHr, s > 0 { return s }
+        return heartRate
+    }
+
     // HR za prikaz: serverski current_hr (iz kog je zona izvedena), pa lokalni puls.
-    // Slobodan trening: svez LOKALNI HealthKit puls (bez servera).
+    // Slobodan trening: lokalni puls, osim kad je senzor ziv (displayHeartRate).
     private var zoneDisplayHr: Int? {
-        if isFreeWorkout { return heartRate > 0 ? heartRate : nil }
+        if isFreeWorkout { return displayHeartRate > 0 ? displayHeartRate : nil }
         if let s = serverHr, s > 0 { return s }
         if heartRate > 0 { return heartRate }
         return nil
@@ -1403,6 +1422,7 @@ struct ContentView: View {
             }
             realtimeClient.onHeartRateZone = { info in
                 serverHr = info.currentHr
+                sensorLive = info.sensorLive
                 hrMax = info.hrMax
                 hrZone = info.zone
                 hrZoneName = info.zoneName

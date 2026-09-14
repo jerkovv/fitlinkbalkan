@@ -75,6 +75,9 @@ private struct PolledWorkout: Decodable {
     let totalSets: Int?
     let currentState: String?
     let currentHr: Int?
+    // true = current_hr je puls sa senzora (traka/pojas) koji je vezbac upario na
+    // telefonu, i jos je svez. Tada ga sat prikazuje umesto sopstvenog.
+    let sensorLive: Bool?
     // Sloj 2: apsolutni kraj odmora, epoch ms (Double, može null).
     let restEndsAtMs: Double?
     // Poslednja poruka trenera za sesiju (može null). Ide zasebnim kanalom,
@@ -99,6 +102,7 @@ private struct PolledWorkout: Decodable {
         case totalSets = "total_sets"
         case currentState = "current_state"
         case currentHr = "current_hr"
+        case sensorLive = "sensor_live"
         case restEndsAtMs = "rest_ends_at_ms"
         case trainerMessage = "trainer_message"
         case hrMax = "hr_max"
@@ -114,6 +118,7 @@ private struct PolledWorkout: Decodable {
 // direktno). Ide na svaki tick - zonski prikaz je uvek svež, bez dedupa.
 struct HeartRateZoneInfo: Equatable {
     let currentHr: Int?
+    let sensorLive: Bool
     let hrMax: Int?
     let zone: Int?
     let zoneName: String?
@@ -278,6 +283,7 @@ final class SupabaseRealtimeClient: ObservableObject {
                 // Zone pulsa takodje mimo dedupa - menjaju se svaki tick.
                 onHeartRateZone?(HeartRateZoneInfo(
                     currentHr: workout.currentHr,
+                    sensorLive: workout.sensorLive ?? false,
                     hrMax: workout.hrMax,
                     zone: workout.hrZone,
                     zoneName: workout.hrZoneName,
