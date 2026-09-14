@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import {
   FullScreenSheet,
@@ -44,7 +44,16 @@ export const ExerciseSearchSheet = ({ open, onOpenChange, selected, onToggleSele
     searchQuery: debounced,
   });
 
-  const { isBookmarked, toggle } = useExerciseBookmarks();
+  const { bookmarks, isBookmarked, toggle } = useExerciseBookmarks();
+
+  // Sacuvane vezbe prve i u pretrazi. Redosled se racuna kad stignu rezultati, ne i
+  // na klik na bookmark - inace bi red pobegao ispod prsta.
+  const bookmarksRef = useRef(bookmarks);
+  bookmarksRef.current = bookmarks;
+  const sortirano = useMemo(() => {
+    const b = bookmarksRef.current;
+    return [...results.filter((e) => b.has(e.id)), ...results.filter((e) => !b.has(e.id))];
+  }, [results]);
 
   return (
     <FullScreenSheet open={open} onClose={() => onOpenChange(false)} title="Pretraga vežbi">
@@ -82,7 +91,7 @@ export const ExerciseSearchSheet = ({ open, onOpenChange, selected, onToggleSele
           {!isLoading && results.length === 0 && (
             <div className="text-center text-sm text-muted-foreground py-6">Nema rezultata</div>
           )}
-          {results.map((ex) => (
+          {sortirano.map((ex) => (
             <ExerciseCard
               key={ex.id}
               exercise={ex}

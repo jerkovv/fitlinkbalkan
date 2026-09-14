@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Dumbbell, Loader2, Search, SlidersHorizontal, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -68,7 +69,15 @@ export const ExercisePickerSheet = ({ open, dayId, dayName, table, onClose, onAd
     isFetchingNextPage,
   } = useInfiniteExercises(queryFilters);
   const { data: totalCount } = useExercisesCount(queryFilters);
-  const exercises = useMemo(() => data?.pages.flat() ?? [], [data]);
+  const exercises = useMemo(() => data?.pages.flatMap((p) => p.items) ?? [], [data]);
+
+  // Sheet ostaje montiran i kad je zatvoren, pa se lista ne povlaci sama pri
+  // otvaranju. Ako je bookmark u medjuvremenu oznacio listu zastarelom, osvezi je
+  // tad - da nove sacuvane vezbe budu na vrhu (dok je otvoren, lista miruje).
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (open) void qc.refetchQueries({ queryKey: ["exercises-infinite"], type: "active", stale: true });
+  }, [open, qc]);
 
   // Load-more preko onScroll na STVARNOM scroll kontejneru. Pouzdanije u WKWebView od
   // IntersectionObserver-a sa root:null: lista skroluje UNUTAR div-a (ne viewport), pa je

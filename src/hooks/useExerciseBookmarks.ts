@@ -59,6 +59,10 @@ export const useExerciseBookmarks = () => {
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["exercise-bookmarks", userId] });
+      // Sacuvane stoje na vrhu liste u pickeru. Lista se samo oznaci zastarelom, bez
+      // povlacenja (refetchType none) - inace bi kartica pobegla ispod prsta cim trener
+      // klikne bookmark. Novi redosled stize kad se picker sledeci put otvori.
+      qc.invalidateQueries({ queryKey: ["exercises-infinite", userId], refetchType: "none" });
     },
   });
 
