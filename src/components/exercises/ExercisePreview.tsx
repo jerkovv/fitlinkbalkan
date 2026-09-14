@@ -3,6 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Bookmark, Check, X } from "lucide-react";
 import { toEmbedUrl } from "@/lib/videoEmbed";
 import { isImageUrl } from "@/lib/exerciseMedia";
+import { exerciseVideoSrc, warmVideo } from "@/lib/videoWarmup";
 import { MUSCLE_LABELS } from "@/lib/muscleGroups";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 import { cn } from "@/lib/utils";
@@ -20,70 +21,61 @@ type Props = {
   replaceMode?: boolean;
 };
 
-const PregledMedija = ({ exercise }: { exercise: PickerExercise }) => {
+/**
+ * Snimak krece odmah: pregled ubaci <video> koji je poceo da se ucitava jos kad je
+ * mis stigao na dugme (ili prst dodirnuo) - vidi videoWarmup - pa je bafer vec pun.
+ * Nema slicice pa videa: taj prelaz je izgledao kao trzaj.
+ *
+ * poster (telefon): slicica popuni okvir samo dok ne stigne prvi frejm, kao ranije.
+ */
+const PregledMedija = ({ exercise, poster }: { exercise: PickerExercise; poster: boolean }) => {
   const [videoFailed, setVideoFailed] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
-  // true tek kad snimak stvarno krene (onPlaying) - do tad se vidi slicica.
-  const [playing, setPlaying] = useState(false);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const boxRef = useRef<HTMLDivElement | null>(null);
 
   const url = exercise.video_url;
-  const embed = url && !isImageUrl(url) ? toEmbedUrl(url) : null;
-  const useVideo = embed?.type === "video" && !videoFailed;
+  const videoSrc = exerciseVideoSrc(url);
+  const embed = url && !videoSrc && !isImageUrl(url) ? toEmbedUrl(url) : null;
+  const useVideo = !!videoSrc && !videoFailed;
   const useEmbed = embed?.type === "youtube" || embed?.type === "vimeo";
   // Slika: vezba bez snimka, ili snimak koji nije ucitao (nikad prazan prozor).
   const imageSrc = url && isImageUrl(url) ? url : exercise.thumbnail_url;
 
-  // muted imperativno + play na canplay: React muted prop nije pouzdan, pa bi iOS
-  // blokirao autoplay i prikazao svoje play dugme (isto kao ExerciseHeader).
   useEffect(() => {
-    if (!useVideo) return;
-    const v = videoRef.current;
-    if (!v) return;
+    if (!useVideo || !videoSrc) return;
+    const box = boxRef.current;
+    if (!box) return;
+    const v = warmVideo(videoSrc);
+    if (v.error) {
+      setVideoFailed(true);
+      return;
+    }
+    v.className = "absolute inset-0 h-full w-full object-contain";
+    if (poster && exercise.thumbnail_url && v.readyState < 2) v.poster = exercise.thumbnail_url;
+    // muted imperativno: React muted prop nije pouzdan, pa bi iOS blokirao autoplay.
     v.muted = true;
     v.defaultMuted = true;
+    // Ponovno otvaranje iste vezbe krece od pocetka petlje.
+    if (v.readyState >= 1) v.currentTime = 0;
     const tryPlay = () => { v.play().catch(() => {}); };
-    tryPlay();
+    const onError = () => setVideoFailed(true);
     v.addEventListener("canplay", tryPlay);
-    return () => v.removeEventListener("canplay", tryPlay);
-  }, [useVideo, embed?.src]);
+    v.addEventListener("error", onError);
+    box.appendChild(v);
+    tryPlay();
+    return () => {
+      v.removeEventListener("canplay", tryPlay);
+      v.removeEventListener("error", onError);
+      v.pause();
+      v.remove();
+    };
+  }, [useVideo, videoSrc, poster, exercise.thumbnail_url]);
 
   return (
     // 16:9 = format snimka (960x540), pa video ispunjava okvir bez traka.
-    <div className="relative w-full aspect-video bg-white">
-      {useVideo ? (
-        <>
-          {/* Slicica stoji dok snimak ne krene, pa video preko nje izbledi. Poster u
-              samom <video> je skakao: slicica je 3:2, snimak 16:9, pa se slika vidno
-              trzala u trenutku prelaska - najvise na racunaru, gde snimak kasni. */}
-          {exercise.thumbnail_url && (
-            <img
-              src={exercise.thumbnail_url}
-              alt=""
-              aria-hidden
-              className={cn(
-                "absolute inset-0 h-full w-full object-contain transition-opacity duration-300",
-                playing && "opacity-0",
-              )}
-            />
-          )}
-          <video
-            ref={videoRef}
-            src={embed!.src}
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="auto"
-            onPlaying={() => setPlaying(true)}
-            onError={() => setVideoFailed(true)}
-            className={cn(
-              "absolute inset-0 h-full w-full object-contain transition-opacity duration-300",
-              playing ? "opacity-100" : "opacity-0",
-            )}
-          />
-        </>
-      ) : useEmbed ? (
+    // Video element ubacuje efekat iznad (ne React), zato ovde nema <video>.
+    <div ref={boxRef} className="relative w-full aspect-video bg-white">
+      {useVideo ? null : useEmbed ? (
         <iframe
           src={embed!.src}
           title={exercise.name}
@@ -170,7 +162,7 @@ export const ExercisePreview = ({
 
                 <div className="relative shrink-0">
                   {/* key po vezbi: nova vezba = cist video element i resetovani fallback-ovi */}
-                  <PregledMedija key={ex.id} exercise={ex} />
+                  <PregledMedija key={ex.id} exercise={ex} poster={!desktop} />
                   <DialogPrimitive.Close
                     aria-label="Zatvori"
                     className="absolute right-3 top-3 h-9 w-9 rounded-full bg-background/85 backdrop-blur-md shadow-sm flex items-center justify-center hover:bg-background transition"

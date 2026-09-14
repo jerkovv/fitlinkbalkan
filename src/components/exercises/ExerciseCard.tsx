@@ -3,6 +3,7 @@ import { Bookmark, Check, Maximize2, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MUSCLE_LABELS, type MuscleGroupId } from "@/lib/muscleGroups";
 import { hasExerciseVideo } from "@/lib/exerciseMedia";
+import { warmExerciseVideo } from "@/lib/videoWarmup";
 import { MuscleGroupIcon } from "./MuscleGroupIcon";
 
 export type PickerExercise = {
@@ -64,6 +65,9 @@ export const ExerciseCard = ({
   // strelice za uvecanje kad vezba ima samo sliku.
   const video = hasExerciseVideo(exercise);
   const pregledLabel = video ? "Pogledaj snimak vežbe" : "Uvećaj sliku vežbe";
+  // Snimak krece da se ucitava cim mis stigne na dugme (ili prst dodirne), da u
+  // pregledu pocne odmah - vidi videoWarmup.
+  const zagrej = () => warmExerciseVideo(exercise.video_url);
   const primaryName = exercise.name_en?.trim() || exercise.name;
   const subtitle =
     exercise.description?.trim() ||
@@ -110,6 +114,9 @@ export const ExerciseCard = ({
               e.stopPropagation();
               onPreview(exercise);
             }}
+            onPointerEnter={zagrej}
+            onPointerDown={zagrej}
+            onFocus={zagrej}
             aria-label={pregledLabel}
             className="h-8 w-8 rounded-full text-muted-foreground hover:bg-surface-2 hover:text-foreground flex items-center justify-center shrink-0 transition"
           >
@@ -186,6 +193,9 @@ export const ExerciseCard = ({
               e.stopPropagation();
               onPreview(exercise);
             }}
+            onPointerEnter={zagrej}
+            onPointerDown={zagrej}
+            onFocus={zagrej}
             aria-label={pregledLabel}
             className={cn("absolute bottom-2 right-2", CORNER_BTN)}
           >
