@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff, Plus, Minus } from "lucide-react";
+import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff, Plus, Minus, History } from "lucide-react";
 import { getHrColor, getHrZone } from "@/lib/workout/hrZone";
 import { HR_FRESH_SECONDS, isFreshWithinGrace } from "@/lib/liveWorkout";
 import { markWorkoutEntered } from "@/lib/workoutSession";
@@ -26,6 +26,7 @@ import { SupersetHint } from "@/components/workout/SupersetHint";
 import { SetLogger } from "@/components/workout/SetLogger";
 import { RestOfWorkout } from "@/components/workout/RestOfWorkout";
 import { RestTimer } from "@/components/workout/RestTimer";
+import { useLastPerformance, type LastPerformanceSet } from "@/hooks/useLastPerformance";
 import { Network } from "@capacitor/network";
 import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor/core";
 import { createCalorieMeter } from "@/lib/wearable/hrCalories";
@@ -173,6 +174,12 @@ const triggerHaptic = async () => {
       navigator.vibrate?.(60);
     }
   }
+};
+
+// "10 reps · 40 kg" - isti zapis kao uradjena serija; bez kilaze za sopstvenu tezinu.
+const prosliTekst = (s: LastPerformanceSet) => {
+  const kg = s.weight_kg != null && Number(s.weight_kg) > 0 ? ` · ${Number(s.weight_kg)} kg` : "";
+  return `${s.reps ?? "-"} reps${kg}`;
 };
 
 const fmtElapsed = (ms: number) => {
@@ -697,6 +704,13 @@ const ActiveWorkout = () => {
   /* ------------------------- Derived ------------------------- */
   const exercises = day?.exercises ?? [];
   const current = pos ? exercises[pos.exerciseIdx] : undefined;
+  // "Prosli put" za vezbe ovog dana. RPC gleda samo ZAVRSENE treninge, pa danasnji
+  // (jos otvoren) ne ulazi - vezbac dok loguje seriju vidi sta je digao prosli put.
+  // Tiho na gresci (vidi hook): istorija je dodatak i ne sme da smeta treningu.
+  const { byExercise: prosliPut } = useLastPerformance(
+    user?.id,
+    exercises.map((e) => e.exercise_id),
+  );
   const totalSetsAll = useMemo(
     () => exercises.reduce((acc, e) => acc + (e.sets ?? 0), 0),
     [exercises]
@@ -2035,6 +2049,8 @@ const ActiveWorkout = () => {
                     (c) => c.exerciseIndex === exerciseIdx && c.setNumber === n
                   );
                   const t = targetForSet(current, n);   // cilj BAS ovog seta
+                  // Ista serija sa poslednjeg zavrsenog treninga (po broju serije).
+                  const prosli = prosliPut[current.exercise_id]?.sets.find((s) => s.set_number === n);
                   return (
                     <div
                       key={n}
@@ -2067,6 +2083,12 @@ const ActiveWorkout = () => {
                             {" · cilj "}
                             {t.repsText ?? "-"} × {t.weight ?? "-"} kg
                           </span>
+                        )}
+                        {prosli && (
+                          <div className="flex items-center gap-1 mt-0.5 text-[11.5px] text-muted-foreground/80 tnum">
+                            <History className="h-3 w-3 shrink-0" strokeWidth={2.2} />
+                            Prošli put · {prosliTekst(prosli)}
+                          </div>
                         )}
                       </div>
                       {active && <ChevronRight className="h-4 w-4 text-primary" />}
