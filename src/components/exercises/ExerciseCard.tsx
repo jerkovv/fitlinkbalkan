@@ -1,5 +1,5 @@
 import { forwardRef, useState } from "react";
-import { Bookmark, Check, Play } from "lucide-react";
+import { Bookmark, Check, Maximize2, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MUSCLE_LABELS, type MuscleGroupId } from "@/lib/muscleGroups";
 import { hasExerciseVideo } from "@/lib/exerciseMedia";
@@ -29,6 +29,11 @@ type Props = {
   onPreview?: (exercise: PickerExercise) => void;
 };
 
+// Dugmici u uglovima slike (bookmark gore levo, pregled dole desno): isti beli krug
+// sa blagom senkom, da se na beloj slici vide cisto i citaju kao par.
+const CORNER_BTN =
+  "h-7 w-7 rounded-full bg-background/95 shadow-[0_1px_3px_rgba(0,0,0,0.14)] ring-1 ring-black/[0.04] flex items-center justify-center text-foreground transition hover:bg-background active:scale-95";
+
 const Placeholder = forwardRef<HTMLDivElement, { muscle: string }>(
   ({ muscle }, ref) => (
     <div
@@ -55,9 +60,10 @@ export const ExerciseCard = ({
   onPreview,
 }: Props) => {
   const [imgFailed, setImgFailed] = useState(false);
-  // Play samo kad snimak stvarno postoji - deo vezbi ima samo sliku, a play koji
-  // otvori sliku bi zbunjivao.
-  const canPreview = !!onPreview && hasExerciseVideo(exercise);
+  // Pregled se otvara za svaku vezbu. Ikonica kaze sta se otvara: play za snimak,
+  // strelice za uvecanje kad vezba ima samo sliku.
+  const video = hasExerciseVideo(exercise);
+  const pregledLabel = video ? "Pogledaj snimak vežbe" : "Uvećaj sliku vežbe";
   const primaryName = exercise.name_en?.trim() || exercise.name;
   const subtitle =
     exercise.description?.trim() ||
@@ -97,17 +103,21 @@ export const ExerciseCard = ({
             {subtitle}
           </div>
         </div>
-        {canPreview && (
+        {onPreview && (
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onPreview!(exercise);
+              onPreview(exercise);
             }}
-            aria-label="Pogledaj snimak vežbe"
+            aria-label={pregledLabel}
             className="h-8 w-8 rounded-full text-muted-foreground hover:bg-surface-2 hover:text-foreground flex items-center justify-center shrink-0 transition"
           >
-            <Play size={13} className="ml-px" fill="currentColor" strokeWidth={0} />
+            {video ? (
+              <Play size={13} className="ml-px" fill="currentColor" strokeWidth={0} />
+            ) : (
+              <Maximize2 size={14} strokeWidth={2.25} />
+            )}
           </button>
         )}
         {selected && (
@@ -151,7 +161,8 @@ export const ExerciseCard = ({
             e.stopPropagation();
             onToggleBookmark(exercise.id);
           }}
-          className="absolute top-2 left-2 h-7 w-7 rounded-full bg-background/60 backdrop-blur-md flex items-center justify-center"
+          aria-label={bookmarked ? "Ukloni iz sačuvanih" : "Sačuvaj vežbu"}
+          className={cn("absolute top-2 left-2", CORNER_BTN)}
         >
           <Bookmark
             size={14}
@@ -166,19 +177,21 @@ export const ExerciseCard = ({
           </div>
         )}
 
-        {/* Isti stil kao bookmark u suprotnom uglu - par diskretnih dugmica, ne
-            natpis preko slike. */}
-        {canPreview && (
+        {onPreview && (
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onPreview!(exercise);
+              onPreview(exercise);
             }}
-            aria-label="Pogledaj snimak vežbe"
-            className="absolute bottom-2 right-2 h-7 w-7 rounded-full bg-background/60 backdrop-blur-md flex items-center justify-center text-foreground hover:bg-background/90 transition"
+            aria-label={pregledLabel}
+            className={cn("absolute bottom-2 right-2", CORNER_BTN)}
           >
-            <Play size={12} className="ml-px" fill="currentColor" strokeWidth={0} />
+            {video ? (
+              <Play size={11} className="ml-px" fill="currentColor" strokeWidth={0} />
+            ) : (
+              <Maximize2 size={12} strokeWidth={2.25} />
+            )}
           </button>
         )}
       </div>

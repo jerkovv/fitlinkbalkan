@@ -144,7 +144,7 @@ export const ExercisePreview = ({
             {ex && (
               <>
                 <DialogPrimitive.Title className="sr-only">{ex.name}</DialogPrimitive.Title>
-                <DialogPrimitive.Description className="sr-only">Snimak i podaci o vežbi</DialogPrimitive.Description>
+                <DialogPrimitive.Description className="sr-only">Pregled vežbe</DialogPrimitive.Description>
 
                 <div className="relative shrink-0">
                   {/* key po vezbi: nova vezba = cist video element i resetovani fallback-ovi */}
