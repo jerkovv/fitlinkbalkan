@@ -6,6 +6,8 @@ import { hrSourceLabel, isHrSignalLive, isWatchConnected } from "@/lib/liveWorko
 import { useActiveAthletes } from "@/hooks/useActiveAthletes";
 import { WatchSlash } from "@/components/trainer/WatchSlash";
 import { ZaboravljenTreningTraka, jeZaboravljen } from "@/components/trainer/ZaustaviTrening";
+import { NiskaBaterijaIkonica } from "@/components/trainer/NiskaBaterijaIkonica";
+import { baterijaSesije } from "@/lib/baterija";
 import { cn } from "@/lib/utils";
 
 // Pocetna trenera: prikazuje prva 3 aktivna vezbaca (posle istog sortiranja kao
@@ -68,8 +70,14 @@ export const ActiveAthletesList = () => {
                 <div className="flex-1 min-w-0">
                   {/* Ime levo + status (zelena tackica + tekst) prirodno desno, bez flush. */}
                   <div className="flex items-center gap-2">
-                    <span className="flex-1 min-w-0 font-display text-[16px] font-semibold leading-tight tracking-tight truncate">
-                      {a.athlete_name ?? "Vežbač"}
+                    <span className="flex flex-1 min-w-0 items-center gap-1.5">
+                      <span className="min-w-0 font-display text-[16px] font-semibold leading-tight tracking-tight truncate">
+                        {a.athlete_name ?? "Vežbač"}
+                      </span>
+                      <NiskaBaterijaIkonica
+                        traka={baterijaSesije(a.sensor_battery, a.sensor_battery_at, a.started_at)}
+                        sat={baterijaSesije(a.watch_battery, a.watch_battery_at, a.started_at)}
+                      />
                     </span>
                     <span className="inline-flex items-center gap-1.5 shrink-0 text-[11px] font-medium text-muted-foreground tnum whitespace-nowrap">
                       <span className="h-2 w-2 rounded-full bg-green-500 shrink-0" aria-hidden="true" />

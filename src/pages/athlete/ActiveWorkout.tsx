@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff, Plus, Minus, Pencil } from "lucide-react";
+import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff, Plus, Minus, Pencil, BatteryLow } from "lucide-react";
+import { NISKA_BATERIJA } from "@/lib/baterija";
 import { ProsliPutTraka, serijaTekst } from "@/components/workout/ProsliPutTraka";
 import { getHrColor, getHrZone } from "@/lib/workout/hrZone";
 import { HR_FRESH_SECONDS, isFreshWithinGrace } from "@/lib/liveWorkout";
@@ -263,6 +264,12 @@ const ActiveWorkout = () => {
   // izricit izbor vezbaca i tacnija je, pa u prikazu ide i ispred sata.
   const [liveHrSource, setLiveHrSource] = useState<"sensor" | "healthkit" | null>(null);
   const [sensorConnected, setSensorConnected] = useState(false);
+  // Baterija trake (telefon je cita) i sata (stize sa servera). Vezbac vidi oznaku
+  // samo kad je niska; poruka iskoci jednom po treningu.
+  const [trakaBaterija, setTrakaBaterija] = useState<number | null>(null);
+  const [satBaterija, setSatBaterija] = useState<number | null>(null);
+  const trakaUpozorenaRef = useRef(false);
+  const satUpozorenRef = useRef(false);
   // Traka meri puls ali ne i potrosnju - procenjuje se iz pulsa (Keytel), da
   // trening bez sata ne zavrsi sa nula kalorija u rezimeu.
   const meracKcalRef = useRef<ReturnType<typeof createCalorieMeter> | null>(null);
@@ -640,6 +647,17 @@ const ActiveWorkout = () => {
         },
         (povezana) => setSensorConnected(povezana),
         (status) => setTrakaStatus(status),
+        (pct) => {
+          setTrakaBaterija(pct);
+          // Treneru u zivo stanje: kartica Puls i ikonica u spisku aktivnih.
+          supabase
+            .rpc("athlete_report_sensor_battery" as any, { p_session_id: sessionId, p_battery: pct })
+            .then(() => undefined, () => undefined);
+          if (pct <= NISKA_BATERIJA && !trakaUpozorenaRef.current) {
+            trakaUpozorenaRef.current = true;
+            toast(`Baterija senzora pulsa je ${pct}%`, { description: "Napuni ga posle treninga." });
+          }
+        },
       );
       } catch (e) {
         // Bez ovoga jedna greska u BLE sloju ostavi trening i bez trake i bez
@@ -963,6 +981,13 @@ const ActiveWorkout = () => {
       }
       const pollHr = workout?.current_hr;
       if (typeof pollHr === "number" && pollHr > 0) setWatchHr(pollHr);
+      // Baterija sata (server je vraca samo ako je izmerena u ovom treningu).
+      const pollSatBaterija = typeof workout?.watch_battery === "number" ? workout.watch_battery : null;
+      setSatBaterija(pollSatBaterija);
+      if (pollSatBaterija != null && pollSatBaterija <= NISKA_BATERIJA && !satUpozorenRef.current) {
+        satUpozorenRef.current = true;
+        toast(`Baterija sata je ${pollSatBaterija}%`, { description: "Napuni ga posle treninga." });
+      }
 
       // Rezerva za realtime: ako je dogadjaj o promeni plana promasio, poll (2s)
       // ga uhvati, pa vezbac ne ostane sa starom vezbom do kraja treninga.
@@ -1867,6 +1892,9 @@ const ActiveWorkout = () => {
   const showOfflineWithWatch = offlineWithWatch && !phoneTakeover;
   // SOLO (watchWasPresent == false): mreza NIKAD ne zakljucava (telefon radi/ne radi sam).
   const controlsLocked = !phoneTakeover && (isWatchLost || offlineWithWatch);
+  // Oznaka baterije u zaglavlju samo kad je niska; pun procenat je u podesavanjima.
+  const niskaTraka = sensorConnected && trakaBaterija != null && trakaBaterija <= NISKA_BATERIJA;
+  const niskiSat = satBaterija != null && satBaterija <= NISKA_BATERIJA;
 
   return (
     <div className="h-[100dvh] overflow-y-auto bg-background">
@@ -1908,6 +1936,22 @@ const ActiveWorkout = () => {
               </span>
             </div>
           </div>
+          {(niskaTraka || niskiSat) && (
+            <div className="px-4 pb-2 -mt-1 flex justify-end gap-1.5">
+              {niskaTraka && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-semibold text-warning-soft-foreground tnum">
+                  <BatteryLow className="h-3 w-3" strokeWidth={2.4} />
+                  Traka {trakaBaterija}%
+                </span>
+              )}
+              {niskiSat && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-semibold text-warning-soft-foreground tnum">
+                  <BatteryLow className="h-3 w-3" strokeWidth={2.4} />
+                  Sat {satBaterija}%
+                </span>
+              )}
+            </div>
+          )}
           {/* Stanje uparene trake, samo dok NIJE povezana: prazan puls inace ne kaze
               da li traka nije nadjena, nije na telu ili je aplikacija u kvaru. */}
           {trakaStatus && trakaStatus.stanje !== "nema" && trakaStatus.stanje !== "povezana" && (

@@ -10,6 +10,7 @@ import {
 import {
   clearSavedSensor,
   getSavedSensor,
+  getSavedSensorBattery,
   isHrSensorSupported,
   readBattery,
   saveSensor,
@@ -21,6 +22,19 @@ import {
 } from "@/lib/wearable/bleHeartRate";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { NISKA_BATERIJA } from "@/lib/baterija";
+
+// "izmereno danas u 14:20" / "izmereno juče u 09:05" / "izmereno 12. sep"
+const kadaIzmereno = (iso: string) => {
+  const d = new Date(iso);
+  const sad = new Date();
+  const vreme = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  const dan = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const razlika = Math.round((dan(sad) - dan(d)) / 86400000);
+  if (razlika <= 0) return `izmereno danas u ${vreme}`;
+  if (razlika === 1) return `izmereno juče u ${vreme}`;
+  return `izmereno ${d.toLocaleDateString("sr-Latn-RS", { day: "numeric", month: "short" })}`;
+};
 
 /**
  * Uparivanje puls trake (Bluetooth), bez sata.
@@ -32,7 +46,11 @@ import { toast } from "sonner";
 export const HrSensorCard = () => {
   const podrzano = isHrSensorSupported();
   const [sensor, setSensor] = useState<HrSensor | null>(() => getSavedSensor());
-  const [baterija, setBaterija] = useState<number | null>(null);
+  // Poslednja izmerena vrednost (upis pri uparivanju i tokom svakog treninga), da
+  // ne nestane cim traka nije povezana.
+  const [baterija, setBaterija] = useState<{ pct: number; at: string } | null>(() =>
+    getSavedSensorBattery(getSavedSensor()?.deviceId),
+  );
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [skeniram, setSkeniram] = useState(false);
@@ -131,7 +149,7 @@ export const HrSensorCard = () => {
     saveSensor(izabrana);
     setSensor(izabrana);
     const pct = await readBattery(izabrana.deviceId);
-    setBaterija(pct);
+    setBaterija(pct != null ? { pct, at: new Date().toISOString() } : null);
     ocistiProbu();
     setSheetOpen(false);
     toast.success("Senzor je uparen");
@@ -196,8 +214,13 @@ export const HrSensorCard = () => {
             )}
 
             {povezana && baterija != null && (
-              <div className="text-[11px] text-muted-foreground mt-1.5">
-                Baterija trake: {baterija}%
+              <div
+                className={cn(
+                  "text-[11px] mt-1.5 tnum",
+                  baterija.pct <= NISKA_BATERIJA ? "font-semibold text-warning" : "text-muted-foreground",
+                )}
+              >
+                Baterija trake: {baterija.pct}% · {kadaIzmereno(baterija.at)}
               </div>
             )}
             {!podrzano && (

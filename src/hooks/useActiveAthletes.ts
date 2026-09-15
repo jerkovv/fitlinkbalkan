@@ -25,6 +25,11 @@ export type ActiveAthlete = {
   rest_ends_at: string | null;
   total_completed_sets: number | null;
   last_heartbeat: string | null;
+  // Baterija trake i sata sa vremenom merenja (vidi baterijaSesije).
+  sensor_battery: number | null;
+  sensor_battery_at: string | null;
+  watch_battery: number | null;
+  watch_battery_at: string | null;
 };
 
 const ZONE_RANK: Record<string, number> = { rest: 1, easy: 2, moderate: 3, hard: 4, max: 5 };
@@ -126,6 +131,10 @@ export const useActiveAthletes = () => {
                       watch_last_hr_at: (row!.watch_last_hr_at as string | null) ?? null,
                       hr_last_at: (row!.hr_last_at as string | null) ?? null,
                       hr_source: (row!.hr_source as HrSource) ?? null,
+                      sensor_battery: (row!.sensor_battery as number | null) ?? null,
+                      sensor_battery_at: (row!.sensor_battery_at as string | null) ?? null,
+                      watch_battery: (row!.watch_battery as number | null) ?? null,
+                      watch_battery_at: (row!.watch_battery_at as string | null) ?? null,
                       current_active_calories:
                         (row!.current_active_calories as number | null) ?? a.current_active_calories,
                     },

@@ -1,4 +1,5 @@
 import Foundation
+import WatchKit
 
 struct UserContextResponse: Codable {
     let userId: String
@@ -231,6 +232,9 @@ struct WatchStartWorkoutResponse: Codable {
 
 final class SupabaseClient {
     static let shared = SupabaseClient()
+
+    // Kad je baterija sata poslednji put poslata (vidi reportBatteryIfDue).
+    private var lastBatteryReportAt: Date?
     
     private let session: URLSession
     private let decoder: JSONDecoder
@@ -315,6 +319,32 @@ final class SupabaseClient {
         } catch {
             throw SupabaseError.decodingFailed(error.localizedDescription)
         }
+    }
+
+    // Baterija sata tokom treninga, da je trener vidi (i vezbac na telefonu kad je
+    // niska). Salje se retko, a greska se guta: baterija ne sme da smeta treningu.
+    func reportBattery(token: String, sessionId: String, battery: Int) async {
+        let body: [String: Any] = [
+            "p_token": token,
+            "p_session_id": sessionId,
+            "p_battery": battery
+        ]
+        _ = try? await callRPC(functionName: "watch_report_battery", body: body)
+    }
+
+    // Poziva se uz svako slanje pulsa (~5 s), a salje najvise jednom na 5 min: baterija
+    // se sporo menja. Nepoznat nivo (-1, odmah posle ukljucenja pracenja) se ne salje i
+    // ne trosi termin, pa ide vec na sledecem pulsu.
+    func reportBatteryIfDue(token: String, sessionId: String) async {
+        if let last = lastBatteryReportAt, Date().timeIntervalSince(last) < 300 { return }
+        let level: Float = await MainActor.run {
+            let device = WKInterfaceDevice.current()
+            device.isBatteryMonitoringEnabled = true
+            return device.batteryLevel
+        }
+        guard level >= 0 else { return }
+        lastBatteryReportAt = Date()
+        await reportBattery(token: token, sessionId: sessionId, battery: Int((level * 100).rounded()))
     }
 
     @discardableResult

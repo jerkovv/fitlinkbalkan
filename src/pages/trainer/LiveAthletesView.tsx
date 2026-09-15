@@ -1,6 +1,8 @@
 import { Link, useNavigate } from "react-router-dom";
 import { ChevronLeft, Dumbbell, Flame, Heart, Activity, Loader2, Pause } from "lucide-react";
 import { ZaustaviTreningDugme, ZaboravljenTreningTraka, jeZaboravljen } from "@/components/trainer/ZaustaviTrening";
+import { NiskaBaterijaIkonica } from "@/components/trainer/NiskaBaterijaIkonica";
+import { baterijaSesije } from "@/lib/baterija";
 import { Avatar } from "@/components/ui-bits";
 import { PhoneShell } from "@/components/PhoneShell";
 import { cn } from "@/lib/utils";
@@ -123,8 +125,14 @@ const LiveAthletesView = () => {
                           />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="font-display text-[17px] font-bold leading-tight tracking-tight truncate">
-                            {a.athlete_name ?? "Vežbač"}
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <span className="font-display text-[17px] font-bold leading-tight tracking-tight truncate">
+                              {a.athlete_name ?? "Vežbač"}
+                            </span>
+                            <NiskaBaterijaIkonica
+                              traka={baterijaSesije(a.sensor_battery, a.sensor_battery_at, a.started_at)}
+                              sat={baterijaSesije(a.watch_battery, a.watch_battery_at, a.started_at)}
+                            />
                           </div>
                           <div
                             className={cn(
@@ -286,8 +294,14 @@ const LiveAthletesView = () => {
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="font-display text-[16px] font-semibold leading-tight tracking-tight truncate">
-                          {a.athlete_name ?? "Vežbač"}
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <span className="font-display text-[16px] font-semibold leading-tight tracking-tight truncate">
+                            {a.athlete_name ?? "Vežbač"}
+                          </span>
+                          <NiskaBaterijaIkonica
+                            traka={baterijaSesije(a.sensor_battery, a.sensor_battery_at, a.started_at)}
+                            sat={baterijaSesije(a.watch_battery, a.watch_battery_at, a.started_at)}
+                          />
                         </div>
                         <div className="text-[12.5px] text-muted-foreground mt-0.5 truncate flex items-center gap-1.5">
                           {isResting ? (

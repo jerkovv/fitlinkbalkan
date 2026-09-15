@@ -2272,6 +2272,8 @@ struct ContentView: View {
                 activeCalories: kcal > 0 ? kcal : nil
             )
             noteRpcSuccess()
+            // Baterija sata ide uz puls, ali najvise jednom na 5 min (vidi reportBatteryIfDue).
+            await SupabaseClient.shared.reportBatteryIfDue(token: token, sessionId: sessionId)
         } catch SupabaseError.sessionEnded {
             // Trening je zavrsen na serveru, a sat je jos slao puls (fantom).
             // Zatvori HealthKit workout, prestani slanje, napusti ekran treninga.

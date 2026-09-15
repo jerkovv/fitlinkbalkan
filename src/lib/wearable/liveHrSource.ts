@@ -1,6 +1,6 @@
 import { App } from "@capacitor/app";
 import type { PluginListenerHandle } from "@capacitor/core";
-import { getSavedSensor, startSensorHrMonitoring } from "./bleHeartRate";
+import { getSavedSensor, readBattery, startSensorHrMonitoring } from "./bleHeartRate";
 
 export type LiveHrSource = "sensor" | "healthkit";
 
@@ -16,6 +16,8 @@ export type SensorStatus =
 // svaki neuspeo pokusaj usput kratko skenira, sto trosi bateriju telefona.
 const PRVI_RAZMAK_MS = 20000;
 const NAJVECI_RAZMAK_MS = 60000;
+// Baterija trake se sporo menja; citanje na svakih 5 min je dovoljno i skoro besplatno.
+const BATERIJA_RAZMAK_MS = 5 * 60 * 1000;
 
 /**
  * Jedno mesto koje bira odakle ide zivi puls tokom treninga na telefonu.
@@ -38,8 +40,11 @@ export const startLiveHrSource = async (
   onSensorConnectionChange?: (povezana: boolean) => void,
   /** Stanje trake sa razlogom - da vezbac na ekranu vidi zasto pulsa nema. */
   onStatus?: (status: SensorStatus) => void,
+  /** Baterija trake u procentima: cim se poveze, pa na svakih 5 min dok je povezana. */
+  onBattery?: (pct: number) => void,
 ): Promise<() => void> => {
   const sensor = getSavedSensor();
+  let baterijaTajmer: ReturnType<typeof setInterval> | null = null;
 
   let ugasen = false;
   // Razlika je bitna: stopTrake znaci "nadzor nad trakom postoji" (i posle pada
@@ -68,6 +73,23 @@ export const startLiveHrSource = async (
     stopHk = null;
   };
 
+  const citajBateriju = async () => {
+    if (ugasen || !trakaPovezana || !sensor) return;
+    const pct = await readBattery(sensor.deviceId);
+    if (pct != null && !ugasen) onBattery?.(pct);
+  };
+
+  // Veza se pali i gasi vise puta u treningu; tajmer prati samo trenutnu vezu.
+  const pratiBateriju = (povezana: boolean) => {
+    if (baterijaTajmer) {
+      clearInterval(baterijaTajmer);
+      baterijaTajmer = null;
+    }
+    if (!povezana || !onBattery) return;
+    void citajBateriju();
+    baterijaTajmer = setInterval(() => void citajBateriju(), BATERIJA_RAZMAK_MS);
+  };
+
   const zakaziPokusaj = (uMs: number) => {
     if (ugasen || stopTrake || tajmer) return;
     tajmer = setTimeout(() => {
@@ -86,6 +108,7 @@ export const startLiveHrSource = async (
         (bpm) => onUpdate(bpm, "sensor"),
         (povezana) => {
           trakaPovezana = povezana;
+          pratiBateriju(povezana);
           onSensorConnectionChange?.(povezana);
           onStatus?.(povezana ? { stanje: "povezana" } : { stanje: "trazim" });
           if (povezana) {
@@ -152,6 +175,7 @@ export const startLiveHrSource = async (
     ugasen = true;
     trakaPovezana = false;
     if (tajmer) clearTimeout(tajmer);
+    if (baterijaTajmer) clearInterval(baterijaTajmer);
     void slusac?.remove();
     stopTrake?.();
     stopTrake = null;

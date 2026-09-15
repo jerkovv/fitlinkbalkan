@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ChevronLeft, Heart, Loader2, Activity, Pause, Flame, UserRound, Square } from "lucide-react";
+import { ChevronLeft, Heart, Loader2, Activity, Pause, Flame, UserRound, Square, Bluetooth, Watch } from "lucide-react";
 import { useZaustaviTrening } from "@/hooks/useZaustaviTrening";
+import { NISKA_BATERIJA, baterijaSesije } from "@/lib/baterija";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
@@ -31,6 +32,11 @@ type LiveState = {
   rest_ends_at: string | null;
   // Puls poslednjih 10 min {ts, bpm}, puni ga i sat i traka (vidi _hr_recent_append).
   hr_recent?: { ts: string; bpm: number }[] | null;
+  // Baterija trake i sata sa vremenom merenja (vidi baterijaSesije).
+  sensor_battery?: number | null;
+  sensor_battery_at?: string | null;
+  watch_battery?: number | null;
+  watch_battery_at?: string | null;
 };
 
 type SessionRow = {
@@ -83,6 +89,30 @@ const HrMiniChart = ({ points }: { points: { ts: string; bpm: number }[] }) => {
     </div>
   );
 };
+
+// Kartica Puls: jedan red po uredjaju sa baterijom; niska je narandzasta.
+const UredjajRed = ({
+  ikona,
+  naziv,
+  pct,
+  dajePuls,
+}: {
+  ikona: ReactNode;
+  naziv: string;
+  pct: number;
+  dajePuls: boolean;
+}) => (
+  <div className="flex items-center justify-between gap-2 text-[12.5px]">
+    <span className="inline-flex min-w-0 items-center gap-1.5 text-muted-foreground">
+      {ikona}
+      <span className="font-medium text-foreground">{naziv}</span>
+      {dajePuls && <span className="truncate">· daje puls</span>}
+    </span>
+    <span className={pct <= NISKA_BATERIJA ? "tnum font-semibold text-warning" : "tnum font-semibold text-foreground"}>
+      {pct}%
+    </span>
+  </div>
+);
 
 // Brojka u kartici trenutne vezbe na racunaru (serija, ukupno, trajanje). Na
 // sirokoj kartici jedan red sitnog teksta se gubio.
@@ -438,6 +468,10 @@ const LiveWorkoutView = () => {
     </div>
   );
 
+  // Baterija uredjaja izmerena u ovom treningu (starija je sa proslog).
+  const trakaBaterija = baterijaSesije(state?.sensor_battery, state?.sensor_battery_at, session.started_at);
+  const satBaterija = baterijaSesije(state?.watch_battery, state?.watch_battery_at, session.started_at);
+
   // PULS / KALORIJE - identican stat par (grid 2 kolone): obe vrednosti iste
   // velicine (text-4xl), tabular, jedinica na baseline-u. Card je zona-tintovan.
   const pulsKartica = (
@@ -504,6 +538,28 @@ const LiveWorkoutView = () => {
         <div className="flex flex-col items-center justify-center gap-2 py-3">
           <WatchSlash size={30} />
           <span className="text-sm font-medium text-muted-foreground">Puls ne stiže</span>
+        </div>
+      )}
+
+      {/* Uredjaji koji su se javili u ovom treningu: baterija i koji daje puls. */}
+      {(trakaBaterija != null || satBaterija != null) && (
+        <div className="mt-4 space-y-1.5 border-t border-hairline pt-3">
+          {trakaBaterija != null && (
+            <UredjajRed
+              ikona={<Bluetooth className="h-3.5 w-3.5" strokeWidth={2.2} />}
+              naziv="Traka"
+              pct={trakaBaterija}
+              dajePuls={hrLive && state?.hr_source === "sensor"}
+            />
+          )}
+          {satBaterija != null && (
+            <UredjajRed
+              ikona={<Watch className="h-3.5 w-3.5" strokeWidth={2.2} />}
+              naziv="Sat"
+              pct={satBaterija}
+              dajePuls={hrLive && state?.hr_source === "watch"}
+            />
+          )}
         </div>
       )}
     </div>

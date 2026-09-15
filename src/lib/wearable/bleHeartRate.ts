@@ -20,8 +20,12 @@ const BATTERY_SERVICE = "0000180f-0000-1000-8000-00805f9b34fb";
 const BATTERY_LEVEL = "00002a19-0000-1000-8000-00805f9b34fb";
 
 const STORAGE_KEY = "fitlink.hr_sensor";
+const BATTERY_KEY = "fitlink.hr_sensor_battery";
 
 export type HrSensor = { deviceId: string; name: string };
+
+/** Poslednja izmerena baterija trake i kad je izmerena. */
+export type SensorBattery = { deviceId: string; pct: number; at: string };
 
 /** Nadjen uredjaj u skeniranju (jaci signal = blize). */
 export type ScannedSensor = HrSensor & { rssi: number | null };
@@ -104,6 +108,7 @@ export const saveSensor = (sensor: HrSensor) => {
 export const clearSavedSensor = () => {
   try {
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(BATTERY_KEY);
   } catch {
     /* noop */
   }
@@ -154,9 +159,31 @@ export const readBattery = async (deviceId: string): Promise<number | null> => {
     const BleClient = await client();
     const value = await BleClient.read(deviceId, BATTERY_SERVICE, BATTERY_LEVEL);
     const pct = value.getUint8(0);
-    return Number.isFinite(pct) ? pct : null;
+    if (!Number.isFinite(pct) || pct > 100) return null;
+    // Pamti se poslednja vrednost: traka je povezana samo tokom treninga i pri
+    // uparivanju, pa bi je podesavanja inace videla samo u tom trenutku.
+    try {
+      const zapis: SensorBattery = { deviceId, pct, at: new Date().toISOString() };
+      localStorage.setItem(BATTERY_KEY, JSON.stringify(zapis));
+    } catch {
+      /* noop */
+    }
+    return pct;
   } catch {
     // Baterijski servis nije obavezan deo profila - dosta traka ga nema.
+    return null;
+  }
+};
+
+/** Poslednja izmerena baterija, samo ako je bas za ovu traku. */
+export const getSavedSensorBattery = (deviceId: string | null | undefined): SensorBattery | null => {
+  if (!deviceId) return null;
+  try {
+    const raw = localStorage.getItem(BATTERY_KEY);
+    if (!raw) return null;
+    const zapis = JSON.parse(raw) as SensorBattery;
+    return zapis?.deviceId === deviceId && Number.isFinite(zapis.pct) ? zapis : null;
+  } catch {
     return null;
   }
 };

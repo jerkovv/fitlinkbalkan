@@ -7,6 +7,8 @@ import { hrSourceLabel, isHrSignalLive, isWatchConnected } from "@/lib/liveWorko
 import { useActiveAthletes } from "@/hooks/useActiveAthletes";
 import { WatchSlash } from "@/components/trainer/WatchSlash";
 import { ZaustaviTreningDugme, jeZaboravljen } from "@/components/trainer/ZaustaviTrening";
+import { NiskaBaterijaIkonica } from "@/components/trainer/NiskaBaterijaIkonica";
+import { baterijaSesije } from "@/lib/baterija";
 
 // Pocetna na racunaru: aktivni vezbaci kao tabela u jednoj kartici. Isti hook i
 // ista pravila za puls/kcal kao telefonski ActiveAthletesList; Dashboard montira
@@ -99,8 +101,14 @@ export const DashboardActiveAthletes = () => {
                         />
                       </span>
                       <span className="min-w-0">
-                        <span className="block truncate text-[14px] font-semibold tracking-tight">
-                          {a.athlete_name ?? "Vežbač"}
+                        <span className="flex min-w-0 items-center gap-1.5">
+                          <span className="truncate text-[14px] font-semibold tracking-tight">
+                            {a.athlete_name ?? "Vežbač"}
+                          </span>
+                          <NiskaBaterijaIkonica
+                            traka={baterijaSesije(a.sensor_battery, a.sensor_battery_at, a.started_at)}
+                            sat={baterijaSesije(a.watch_battery, a.watch_battery_at, a.started_at)}
+                          />
                         </span>
                         <span
                           className={cn(
