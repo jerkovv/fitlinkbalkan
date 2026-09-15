@@ -29,6 +29,8 @@ type LiveState = {
   last_heartbeat: string | null;
   current_state: string | null;
   rest_ends_at: string | null;
+  // Puls poslednjih 10 min {ts, bpm}, puni ga i sat i traka (vidi _hr_recent_append).
+  hr_recent?: { ts: string; bpm: number }[] | null;
 };
 
 type SessionRow = {
@@ -42,7 +44,7 @@ type SessionRow = {
 };
 
 const HrMiniChart = ({ points }: { points: { ts: string; bpm: number }[] }) => {
-  if (!points.length) {
+  if (points.length < 2) {
     return (
       <div className="h-20 rounded-xl bg-surface-2 flex items-center justify-center text-[12px] text-muted-foreground">
         Nema HR podataka još
@@ -255,6 +257,25 @@ const LiveWorkoutView = () => {
     if (h > 0) return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
     return `${m}:${s.toString().padStart(2, "0")}`;
   }, [elapsedMs]);
+
+  // Tacke za "HR poslednjih 10 min". Glavni izvor je hr_recent iz zivog stanja: puni ga
+  // i sat i traka, i stize realtime-om. hr_series se sa samo satom tokom treninga ne
+  // puni (sat ga salje tek na kraju), pa je grafik tada bio prazan; ostaje kao rezerva,
+  // u oba oblika ({ts, bpm} ili [sekunde, bpm]).
+  const hrTacke = useMemo(() => {
+    const pocetak = session?.started_at ? new Date(session.started_at).getTime() : 0;
+    const svez = (state?.hr_recent ?? []).filter(
+      (p) => p && Number.isFinite(p.bpm) && new Date(p.ts).getTime() >= pocetak,
+    );
+    if (svez.length >= 2) return svez;
+    return ((session?.hr_series ?? []) as unknown[]).flatMap((p) => {
+      if (Array.isArray(p) && Number.isFinite(Number(p[0])) && Number.isFinite(Number(p[1]))) {
+        return [{ ts: new Date(pocetak + Number(p[0]) * 1000).toISOString(), bpm: Number(p[1]) }];
+      }
+      const o = p as { ts?: string; bpm?: number } | null;
+      return o?.ts && Number.isFinite(Number(o.bpm)) ? [{ ts: o.ts, bpm: Number(o.bpm) }] : [];
+    });
+  }, [state?.hr_recent, session]);
 
   if (loading) {
     // Racunar: stranica je u TrainerWebShell-u, koji je sam scroll okvir - bez 100dvh.
@@ -582,7 +603,7 @@ const LiveWorkoutView = () => {
             {pulsKartica}
 
             {/* HR mini chart - sakriven kad nema sata (stanje iznad ga pokriva) */}
-            {hrLive && <HrMiniChart points={session.hr_series ?? []} />}
+            {hrLive && <HrMiniChart points={hrTacke} />}
 
             <Card className="p-5">
               <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-3">
@@ -659,7 +680,7 @@ const LiveWorkoutView = () => {
           {pulsKartica}
 
           {/* HR mini chart - sakriven kad nema sata (stanje iznad ga pokriva) */}
-          {hrLive && <HrMiniChart points={session.hr_series ?? []} />}
+          {hrLive && <HrMiniChart points={hrTacke} />}
 
           {athleteId && (
             <Card className="p-4">
