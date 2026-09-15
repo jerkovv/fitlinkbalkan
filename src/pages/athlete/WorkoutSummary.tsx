@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, Check, MessageSquare, Clock, Dumbbell, Flame, Heart } from "lucide-react";
+import { Loader2, Check, MessageSquare, Clock, Dumbbell, Flame, Heart, Bluetooth } from "lucide-react";
+import { getSavedSensor, getSavedSensorBattery } from "@/lib/wearable/bleHeartRate";
+import { BaterijaIkona } from "@/components/wearables/BaterijaIkona";
+import { NISKA_BATERIJA } from "@/lib/baterija";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { porukaGreske } from "@/lib/errorMessage";
@@ -391,6 +394,12 @@ const WorkoutSummary = () => {
   // Slobodan trening (bez plana): day_id je null -> nema vezbi/serija/volumena, samo
   // trajanje/puls/kcal/zone. Sakrij "Po vezbi", Volumen i Serije; naslov je drugaciji.
   const isFree = session.day_id == null;
+  // Baterija trake iz ovog treninga: telefon pamti poslednje merenje; starije je sa ranijeg.
+  const trakaZapis = getSavedSensorBattery(getSavedSensor()?.deviceId);
+  const trakaBaterija =
+    trakaZapis && new Date(trakaZapis.at).getTime() >= new Date(session.started_at).getTime()
+      ? trakaZapis.pct
+      : null;
 
   return (
     <div className="h-[100dvh] overflow-y-auto bg-background">
@@ -458,6 +467,25 @@ const WorkoutSummary = () => {
             value={stats.kcal ? `${Math.round(stats.kcal)} kcal` : "-"}
           />
         </div>
+
+        {/* Baterija senzora pulsa izmerena u ovom treningu (telefon je pamti). */}
+        {trakaBaterija != null && (
+          <div className="mt-3 flex items-center justify-between rounded-2xl bg-surface border border-hairline px-4 py-3 text-[13px]">
+            <span className="inline-flex items-center gap-2 text-muted-foreground">
+              <Bluetooth className="h-4 w-4" strokeWidth={2.2} />
+              Baterija senzora pulsa
+            </span>
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 font-semibold tnum",
+                trakaBaterija <= NISKA_BATERIJA ? "text-warning" : "text-foreground",
+              )}
+            >
+              <BaterijaIkona pct={trakaBaterija} className="h-4 w-4" />
+              {trakaBaterija}%
+            </span>
+          </div>
+        )}
 
         {/* Zone pulsa - IZNAD "Po vezbi", samo kad ima HR podatka (zone se racunaju iz
             hr_series; bez sata sve su 0 -> sekcija se ne prikazuje). Isti izvor/komponenta

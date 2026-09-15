@@ -26,10 +26,13 @@ export const HRZonesChart = ({ zones }: Props) => {
         const row = byZone.get(def.zone);
         const sec = row?.seconds_in_zone ?? 0;
         const pct = total > 0 ? Math.round((sec / total) * 100) : 0;
+        // Zona 1 treninga iz aplikacije nema donju granicu (sve ispod Zone 2), pa pise "do 114".
         const range =
-          row?.min_bpm != null && row?.max_bpm != null
-            ? `${row.min_bpm}-${row.max_bpm}`
-            : null;
+          row?.max_bpm != null && row?.min_bpm != null && row.min_bpm <= 0
+            ? `do ${row.max_bpm}`
+            : row?.min_bpm != null && row?.max_bpm != null
+              ? `${row.min_bpm}-${row.max_bpm}`
+              : null;
         return (
           <div key={def.zone} className="space-y-1">
             <div className="flex items-center justify-between text-[12px]">

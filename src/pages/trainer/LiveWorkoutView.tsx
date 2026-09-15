@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ChevronLeft, Heart, Loader2, Activity, Pause, Flame, UserRound, Square, Bluetooth, Watch, BatteryFull, BatteryMedium, BatteryLow, BatteryWarning } from "lucide-react";
+import { ChevronLeft, Heart, Loader2, Activity, Pause, Flame, UserRound, Square, Bluetooth, Watch } from "lucide-react";
+import { BaterijaIkona } from "@/components/wearables/BaterijaIkona";
 import { useZaustaviTrening } from "@/hooks/useZaustaviTrening";
 import { NISKA_BATERIJA, baterijaSesije } from "@/lib/baterija";
 import { supabase } from "@/lib/supabase";
@@ -103,8 +104,6 @@ const UredjajRed = ({
   dajePuls: boolean;
 }) => {
   // Ikonica baterije uz procenat, da se zna da je broj baterija; puni se po nivou.
-  const BaterijaIkona =
-    pct <= NISKA_BATERIJA ? BatteryWarning : pct < 50 ? BatteryLow : pct < 80 ? BatteryMedium : BatteryFull;
   const niska = pct <= NISKA_BATERIJA;
   return (
     <div className="flex items-center justify-between gap-2 text-[12.5px]">
@@ -121,10 +120,7 @@ const UredjajRed = ({
         }
         aria-label={`Baterija: ${pct}%`}
       >
-        <BaterijaIkona
-          className={niska ? "h-4 w-4" : "h-4 w-4 text-muted-foreground"}
-          strokeWidth={2.2}
-        />
+        <BaterijaIkona pct={pct} className={niska ? "h-4 w-4" : "h-4 w-4 text-muted-foreground"} />
         {pct}%
       </span>
     </div>
@@ -173,6 +169,11 @@ const LiveWorkoutView = () => {
   };
 
   const lastHrFetchRef = useRef(0);
+  const lastLiveFetchRef = useRef(0);
+  // Sesija i zivo stanje citaju se po ID-ju sesije. Po vezbacu je bilo pogresno: zivi
+  // red ostaje i posle treninga (zavrsen), pa vezbac sa istorijom ima desetine redova,
+  // upit po vezbacu pukne i ekran pokaze "Priprema..." i "Puls ne stize".
+  const sessionIdRef = useRef<string | null>(null);
 
   // Fetch athlete name
   useEffect(() => {
@@ -188,9 +189,10 @@ const LiveWorkoutView = () => {
   }, [athleteId]);
 
   // Fetch active session for this athlete
-  const fetchSession = async () => {
-    if (!athleteId) return;
-    const { data } = await supabase
+  // undefined = upit nije uspeo (mreza): tad se nista ne menja, jer greska nije kraj treninga.
+  const fetchSession = async (): Promise<SessionRow | null | undefined> => {
+    if (!athleteId) return undefined;
+    const { data, error } = await supabase
       .from("workout_session_logs")
       .select("id, athlete_id, started_at, is_active, hr_series, day_id")
       .eq("athlete_id", athleteId)
@@ -198,24 +200,33 @@ const LiveWorkoutView = () => {
       .order("started_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+    if (error) return undefined;
     const row = data as any as SessionRow | null;
     if (!row) {
+      sessionIdRef.current = null;
       setSession(null);
       setEnded(true);
     } else {
+      // Novi trening istog vezbaca: stanje proslog se ne sme prikazivati uz njega.
+      if (sessionIdRef.current && sessionIdRef.current !== row.id) setState(null);
+      sessionIdRef.current = row.id;
       setSession(row);
       setEnded(false);
     }
+    return row;
   };
 
   const fetchLiveState = async () => {
-    if (!athleteId) return;
-    const { data } = await supabase
+    const sid = sessionIdRef.current;
+    if (!sid) return;
+    const { data, error } = await supabase
       .from("workout_live_state" as any)
       .select("*")
-      .eq("athlete_id", athleteId)
+      .eq("session_log_id", sid)
       .maybeSingle();
-    setState((data as any) ?? null);
+    // Samo nov podatak menja prikaz: kad upit zakaze, trener i dalje vidi poslednje
+    // poznato stanje umesto praznog ekrana.
+    if (!error && data) setState(data as any);
   };
 
   // Serverski broj zone za ovog vezbaca (ista RPC kao lista aktivnih). Server
@@ -232,7 +243,14 @@ const LiveWorkoutView = () => {
   useEffect(() => {
     if (!user || !athleteId) return;
     (async () => {
-      await Promise.all([fetchSession(), fetchLiveState(), fetchZone()]);
+      // Prvo sesija (zivo stanje se cita po njenom ID-ju); kratka greska mreze na
+      // ulasku se ponovi, da trener ne dobije lazno "Trening zavrsen".
+      let s = await fetchSession();
+      for (let i = 0; s === undefined && i < 3; i++) {
+        await new Promise((r) => setTimeout(r, 1000));
+        s = await fetchSession();
+      }
+      await Promise.all([fetchLiveState(), fetchZone()]);
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -263,12 +281,25 @@ const LiveWorkoutView = () => {
           filter: `athlete_id=eq.${athleteId}`,
         },
         (payload) => {
+          const sid = sessionIdRef.current;
           if (payload.eventType === "DELETE") {
-            setState(null);
-            setEnded(true);
+            // Brise se i red nekog proslog treninga; kraj je samo ako je bas ovaj.
+            const stari = payload.old as { session_log_id?: string } | null;
+            if (sid && stari?.session_log_id === sid) {
+              setState(null);
+              setEnded(true);
+            }
             return;
           }
-          setState(payload.new as LiveState);
+          const row = payload.new as LiveState;
+          if (row.session_log_id !== sid) {
+            // Vezbac je poceo nov trening dok je stranica otvorena: povuci ga odmah.
+            if (row.current_state === "active" || row.current_state === "rest") {
+              void fetchSession().then(() => fetchLiveState());
+            }
+            return;
+          }
+          setState(row);
         },
       )
       .subscribe();
@@ -284,6 +315,12 @@ const LiveWorkoutView = () => {
       if (t - lastHrFetchRef.current >= 30000) {
         lastHrFetchRef.current = t;
         fetchSession();
+      }
+      // Rezerva za realtime (ume da se prekine u pozadini ili na losoj mrezi): zivo
+      // stanje se svakih 5 s povuce i direktno.
+      if (t - lastLiveFetchRef.current >= 5000) {
+        lastLiveFetchRef.current = t;
+        fetchLiveState();
       }
       setNow(t);
     }, 1000);
@@ -488,6 +525,8 @@ const LiveWorkoutView = () => {
   // Baterija uredjaja izmerena u ovom treningu (starija je sa proslog).
   const trakaBaterija = baterijaSesije(state?.sensor_battery, state?.sensor_battery_at, session.started_at);
   const satBaterija = baterijaSesije(state?.watch_battery, state?.watch_battery_at, session.started_at);
+  // Slobodan trening bez vezbi nema seriju; "Serija 1" bi tu bila izmisljena.
+  const bezVezbe = session.day_id == null && !state?.current_exercise_name;
 
   // PULS / KALORIJE - identican stat par (grid 2 kolone): obe vrednosti iste
   // velicine (text-4xl), tabular, jedinica na baseline-u. Card je zona-tintovan.
@@ -646,12 +685,12 @@ const LiveWorkoutView = () => {
                 Trenutna vežba
               </div>
               <div className="mt-1.5 font-display text-[28px] font-bold tracking-tighter leading-tight">
-                {state?.current_exercise_name ?? "Priprema..."}
+                {state?.current_exercise_name ?? (session.day_id == null ? "Slobodan trening" : "Priprema...")}
               </div>
               <div className="mt-5 grid grid-cols-3 gap-3">
                 <LivePlocica label="Serija">
-                  {state?.current_set_number ?? 1}
-                  {state?.total_sets ? (
+                  {bezVezbe ? "-" : state?.current_set_number ?? 1}
+                  {!bezVezbe && state?.total_sets ? (
                     <span className="font-sans text-[13px] font-semibold text-muted-foreground">
                       od {state.total_sets}
                     </span>
@@ -725,8 +764,11 @@ const LiveWorkoutView = () => {
               Trenutna vežba
             </div>
             <div className="font-display text-[24px] font-bold tracking-tighter leading-tight">
-              {state?.current_exercise_name ?? "Priprema..."}
+              {state?.current_exercise_name ?? (session.day_id == null ? "Slobodan trening" : "Priprema...")}
             </div>
+            {bezVezbe ? (
+              <div className="text-[13px] text-muted-foreground">Trening bez plana</div>
+            ) : (
             <div className="flex items-center gap-3 text-[13px] text-muted-foreground">
               <span>
                 Serija{" "}
@@ -748,6 +790,7 @@ const LiveWorkoutView = () => {
                 ukupno serija
               </span>
             </div>
+            )}
           </Card>
 
           {pulsKartica}
