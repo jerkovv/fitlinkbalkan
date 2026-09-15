@@ -18,6 +18,10 @@ const PRVI_RAZMAK_MS = 20000;
 const NAJVECI_RAZMAK_MS = 60000;
 // Baterija trake se sporo menja; citanje na svakih 5 min je dovoljno i skoro besplatno.
 const BATERIJA_RAZMAK_MS = 5 * 60 * 1000;
+// Koliko se traka trazi punim tempom pre nego sto, uz sat koji vec daje puls, pokusaji
+// postanu retki: vezbac je traku verovatno ostavio kod kuce, a puls ionako stize.
+const TRAKA_PROBA_MS = 60 * 1000;
+const SPORI_RAZMAK_MS = 3 * 60 * 1000;
 
 /**
  * Jedno mesto koje bira odakle ide zivi puls tokom treninga na telefonu.
@@ -42,8 +46,11 @@ export const startLiveHrSource = async (
   onStatus?: (status: SensorStatus) => void,
   /** Baterija trake u procentima: cim se poveze, pa na svakih 5 min dok je povezana. */
   onBattery?: (pct: number) => void,
+  /** Da li puls vec stize sa drugog izvora (sat). Tad se traka posle minuta trazi retko. */
+  imaDrugiIzvor?: () => boolean,
 ): Promise<() => void> => {
   const sensor = getSavedSensor();
+  const pocetak = Date.now();
   let baterijaTajmer: ReturnType<typeof setInterval> | null = null;
 
   let ugasen = false;
@@ -71,6 +78,17 @@ export const startLiveHrSource = async (
   const ugasiHk = () => {
     stopHk?.();
     stopHk = null;
+  };
+
+  // Razmak do sledeceg pokusaja posle neuspeha. Svaki neuspeo pokusaj skenira i trosi
+  // bateriju telefona, pa kad sat vec daje puls, a traka se ni posle minuta nije
+  // javila, ide se na 3 min. Traka koju vezbac upali kasnije i dalje preuzima puls
+  // (i odmah pri povratku u aplikaciju, vidi appStateChange ispod).
+  const sledeciRazmak = () => {
+    if (imaDrugiIzvor?.() && Date.now() - pocetak > TRAKA_PROBA_MS) return SPORI_RAZMAK_MS;
+    const r = razmak;
+    razmak = Math.min(razmak * 2, NAJVECI_RAZMAK_MS);
+    return r;
   };
 
   const citajBateriju = async () => {
@@ -136,8 +154,7 @@ export const startLiveHrSource = async (
       console.warn("[HR] traka se nije javila:", rezultat.razlog);
       onStatus?.({ stanje: "pala", razlog: rezultat.razlog });
       void pokreniHk();
-      zakaziPokusaj(razmak);
-      razmak = Math.min(razmak * 2, NAJVECI_RAZMAK_MS);
+      zakaziPokusaj(sledeciRazmak());
     } catch (e) {
       // Nadzor mora da prezivi svaku gresku: bez ovoga jedan izuzetak ubije
       // pokusaje do kraja treninga, a vezbac ne vidi ni zasto.
@@ -145,8 +162,7 @@ export const startLiveHrSource = async (
       console.warn("[HR] pokusaj puknuo:", poruka);
       onStatus?.({ stanje: "pala", razlog: poruka || "nepoznata greška" });
       void pokreniHk();
-      zakaziPokusaj(razmak);
-      razmak = Math.min(razmak * 2, NAJVECI_RAZMAK_MS);
+      zakaziPokusaj(sledeciRazmak());
     } finally {
       pokusajUToku = false;
     }

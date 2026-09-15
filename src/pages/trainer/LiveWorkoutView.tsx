@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ChevronLeft, Heart, Loader2, Activity, Pause, Flame, UserRound, Square, Bluetooth, Watch } from "lucide-react";
+import { ChevronLeft, Heart, Loader2, Activity, Pause, Flame, UserRound, Square, Bluetooth, Watch, BatteryFull, BatteryMedium, BatteryLow, BatteryWarning } from "lucide-react";
 import { useZaustaviTrening } from "@/hooks/useZaustaviTrening";
 import { NISKA_BATERIJA, baterijaSesije } from "@/lib/baterija";
 import { supabase } from "@/lib/supabase";
@@ -101,18 +101,35 @@ const UredjajRed = ({
   naziv: string;
   pct: number;
   dajePuls: boolean;
-}) => (
-  <div className="flex items-center justify-between gap-2 text-[12.5px]">
-    <span className="inline-flex min-w-0 items-center gap-1.5 text-muted-foreground">
-      {ikona}
-      <span className="font-medium text-foreground">{naziv}</span>
-      {dajePuls && <span className="truncate">· daje puls</span>}
-    </span>
-    <span className={pct <= NISKA_BATERIJA ? "tnum font-semibold text-warning" : "tnum font-semibold text-foreground"}>
-      {pct}%
-    </span>
-  </div>
-);
+}) => {
+  // Ikonica baterije uz procenat, da se zna da je broj baterija; puni se po nivou.
+  const BaterijaIkona =
+    pct <= NISKA_BATERIJA ? BatteryWarning : pct < 50 ? BatteryLow : pct < 80 ? BatteryMedium : BatteryFull;
+  const niska = pct <= NISKA_BATERIJA;
+  return (
+    <div className="flex items-center justify-between gap-2 text-[12.5px]">
+      <span className="inline-flex min-w-0 items-center gap-1.5 text-muted-foreground">
+        {ikona}
+        <span className="font-medium text-foreground">{naziv}</span>
+        {dajePuls && <span className="truncate">· daje puls</span>}
+      </span>
+      <span
+        className={
+          niska
+            ? "inline-flex items-center gap-1 tnum font-semibold text-warning"
+            : "inline-flex items-center gap-1 tnum font-semibold text-foreground"
+        }
+        aria-label={`Baterija: ${pct}%`}
+      >
+        <BaterijaIkona
+          className={niska ? "h-4 w-4" : "h-4 w-4 text-muted-foreground"}
+          strokeWidth={2.2}
+        />
+        {pct}%
+      </span>
+    </div>
+  );
+};
 
 // Brojka u kartici trenutne vezbe na racunaru (serija, ukupno, trajanje). Na
 // sirokoj kartici jedan red sitnog teksta se gubio.

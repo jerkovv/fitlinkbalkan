@@ -221,6 +221,10 @@ function withTimeout<T>(p: PromiseLike<T>, ms: number): Promise<T> {
 // ovoliko nudimo "Nastavi na telefonu" (da ne ostane zaglavljeno ako sat crkne).
 const WATCH_ESCAPE_MS = 60000;
 
+// Koliko se uparena traka trazi pre nego sto, uz sat koji vec daje puls, poruka o
+// njoj nestane iz zaglavlja (isti rok kao TRAKA_PROBA_MS u liveHrSource).
+const TRAKA_PROBA_MS = 60000;
+
 // Realtime pozicija: koliko dugo POSLE korisnicke akcije optimisticki prikaz ima
 // prednost nad realtime payload-om (da zakasneli pred-akcijski event ne vrati prikaz
 // na staro). Poll (2s) je korektor posle isteka. Vazi samo za telefonove SOPSTVENE
@@ -278,6 +282,8 @@ const ActiveWorkout = () => {
   // Kad je stigao poslednji otkucaj sa trake. Sama veza ume da ostane otvorena i
   // posto traka spadne sa ruke, pa "povezana" nije dokaz da puls jos stize.
   const trakaPoslednjiPutRef = useRef(0);
+  // Kad je pocelo trazenje uparene trake (za TRAKA_PROBA_MS).
+  const trakaPocetakRef = useRef(Date.now());
   // Zivi HR sa SATA preko realtime live-state (workout_live_state.current_hr). Instant izvor
   // kad sat vozi trening - bez cekanja 2s poll-a. Poll (pos.currentHr) ostaje fallback.
   const [watchHr, setWatchHr] = useState<number | null>(null);
@@ -634,6 +640,7 @@ const ActiveWorkout = () => {
       const { startLiveHrSource } = await import("@/lib/wearable/liveHrSource");
       if (cancelled) return;
 
+      trakaPocetakRef.current = Date.now();
       cleanup = await startLiveHrSource(
         (bpm, source) => {
           setLiveHr(bpm);
@@ -658,6 +665,8 @@ const ActiveWorkout = () => {
             toast(`Baterija senzora pulsa je ${pct}%`, { description: "Napuni ga posle treninga." });
           }
         },
+        // Sat koji se javlja = drugi izvor pulsa; tad se traka posle minuta trazi retko.
+        () => isFreshWithinGrace(watchSignalLocalRef.current, Date.now()),
       );
       } catch (e) {
         // Bez ovoga jedna greska u BLE sloju ostavi trening i bez trake i bez
@@ -1237,8 +1246,11 @@ const ActiveWorkout = () => {
   const hbRef = useRef<{ hr: number | null; source: "sensor" | "phone"; kcal: number | null }>({
     hr: null, source: "phone", kcal: null,
   });
+  // Dok sat daje puls, telefon ne salje svoj (HealthKit) broj: server bi inace
+  // naizmenicno upisivao sat i telefon, pa bi treneru skakao izvor. Traka ide uvek.
+  const satSvez = isFreshWithinGrace(watchSignalLocalRef.current, Date.now());
   hbRef.current = {
-    hr: liveHr ?? null,
+    hr: liveHrSource === "sensor" || !satSvez ? liveHr ?? null : null,
     source: liveHrSource === "sensor" ? "sensor" : "phone",
     kcal: trakaDaje && sensorKcal != null ? Math.round(sensorKcal) : null,
   };
@@ -1895,6 +1907,13 @@ const ActiveWorkout = () => {
   // Oznaka baterije u zaglavlju samo kad je niska; pun procenat je u podesavanjima.
   const niskaTraka = sensorConnected && trakaBaterija != null && trakaBaterija <= NISKA_BATERIJA;
   const niskiSat = satBaterija != null && satBaterija <= NISKA_BATERIJA;
+  // Uparena traka koje nema: posle minuta trazenja, a sat vec daje puls, poruka o
+  // traci nestaje (puls ide sa sata). Bez sata ostaje, jer tad objasnjava prazan puls.
+  const prikaziTrakaStatus =
+    !!trakaStatus &&
+    trakaStatus.stanje !== "nema" &&
+    trakaStatus.stanje !== "povezana" &&
+    !(watchWasPresent && !watchStale && Date.now() - trakaPocetakRef.current > TRAKA_PROBA_MS);
 
   return (
     <div className="h-[100dvh] overflow-y-auto bg-background">
@@ -1954,7 +1973,7 @@ const ActiveWorkout = () => {
           )}
           {/* Stanje uparene trake, samo dok NIJE povezana: prazan puls inace ne kaze
               da li traka nije nadjena, nije na telu ili je aplikacija u kvaru. */}
-          {trakaStatus && trakaStatus.stanje !== "nema" && trakaStatus.stanje !== "povezana" && (
+          {prikaziTrakaStatus && trakaStatus && (
             <div className="px-4 pb-1.5 text-[11px] text-muted-foreground leading-snug">
               {trakaStatus.stanje === "trazim"
                 ? "Tražim senzor pulsa..."
