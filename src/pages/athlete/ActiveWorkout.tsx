@@ -682,7 +682,7 @@ const ActiveWorkout = () => {
             id: row.id,
             message: row.message,
             message_type: row.message_type ?? "text",
-            sent_at: row.sent_at ?? new Date().toISOString(),
+            sent_at: row.created_at ?? new Date().toISOString(),
           };
           setIncomingMessage(msg);
           triggerHaptic();

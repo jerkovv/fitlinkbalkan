@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Dumbbell, Flame, Heart, Activity, Loader2, Pause } from "lucide-react";
+import { ChevronLeft, Dumbbell, Flame, Heart, Activity, Loader2, Pause } from "lucide-react";
+import { ZaustaviTreningDugme, ZaboravljenTreningTraka, jeZaboravljen } from "@/components/trainer/ZaustaviTrening";
 import { Avatar } from "@/components/ui-bits";
 import { PhoneShell } from "@/components/PhoneShell";
 import { cn } from "@/lib/utils";
@@ -18,7 +19,7 @@ const fmtRest = (ms: number) => {
 
 const LiveAthletesView = () => {
   const nav = useNavigate();
-  const { athletes, now, loading } = useActiveAthletes();
+  const { athletes, now, loading, ukloni } = useActiveAthletes();
   const desktop = useDesktopWeb();
 
   if (desktop) {
@@ -104,7 +105,7 @@ const LiveAthletesView = () => {
                 const isResting = a.current_state === "rest" && restMs > 0;
 
                 return (
-                  <li key={a.athlete_id}>
+                  <li key={a.athlete_id} className="relative">
                     <Link
                       to={`/trener/vezbac/${a.athlete_id}/live`}
                       className={cn(
@@ -125,11 +126,17 @@ const LiveAthletesView = () => {
                           <div className="font-display text-[17px] font-bold leading-tight tracking-tight truncate">
                             {a.athlete_name ?? "Vežbač"}
                           </div>
-                          <div className="mt-0.5 text-[12.5px] text-muted-foreground tnum">
+                          <div
+                            className={cn(
+                              "mt-0.5 text-[12.5px] tnum",
+                              jeZaboravljen(a.started_at, now) ? "text-destructive" : "text-muted-foreground",
+                            )}
+                          >
                             trenira {timeLabel}
                           </div>
                         </div>
-                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60 transition group-hover:translate-x-0.5 group-hover:text-primary" />
+                        {/* Mesto za "Zaustavi", koje je van Link-a (vidi ispod). */}
+                        <span className="w-[92px] shrink-0" aria-hidden="true" />
                       </div>
 
                       <div
@@ -185,6 +192,13 @@ const LiveAthletesView = () => {
                         )}
                       </div>
                     </Link>
+                    <div className="absolute right-5 top-[1.625rem]">
+                      <ZaustaviTreningDugme
+                        sessionId={a.session_id}
+                        athleteName={a.athlete_name}
+                        onStopped={() => ukloni(a.session_id)}
+                      />
+                    </div>
                   </li>
                 );
               })}
@@ -249,9 +263,10 @@ const LiveAthletesView = () => {
               const kcal = Math.round(a.current_active_calories ?? 0);
               const restMs = a.rest_ends_at ? new Date(a.rest_ends_at).getTime() - now : 0;
               const isResting = a.current_state === "rest" && restMs > 0;
+              const zaboravljen = jeZaboravljen(a.started_at, now);
 
               return (
-                <li key={a.athlete_id}>
+                <li key={a.athlete_id} className="relative">
                   <Link
                     to={`/trener/vezbac/${a.athlete_id}/live`}
                     className={cn(
@@ -260,7 +275,7 @@ const LiveAthletesView = () => {
                       isResting && "bg-surface-2",
                     )}
                   >
-                    <div className="flex items-center gap-3 px-4 py-3.5">
+                    <div className={cn("flex items-center gap-3 px-4 py-3.5", zaboravljen && "pb-[3.75rem]")}>
                       <div className="relative shrink-0">
                         <Avatar initials={initials} tone="brand" />
                         {/* Uvek zeleno: prikazan ovde = trenira = aktivan (nezavisno od sata). */}
@@ -309,6 +324,13 @@ const LiveAthletesView = () => {
                       </div>
                     </div>
                   </Link>
+                  <ZaboravljenTreningTraka
+                    sessionId={a.session_id}
+                    athleteName={a.athlete_name}
+                    startedAt={a.started_at}
+                    now={now}
+                    onStopped={() => ukloni(a.session_id)}
+                  />
                 </li>
               );
             })}

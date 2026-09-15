@@ -49,9 +49,11 @@ export const QuickMessagePanel = ({ sessionId }: QuickMessagePanelProps) => {
     (async () => {
       const { data } = await supabase
         .from("workout_live_messages" as any)
-        .select("id, message, message_type, sent_at")
+        // Kolona je created_at (sent_at ne postoji, upit je vracao 400 i lista je
+        // ostajala prazna); alias zadrzava ime koje ostatak koda koristi.
+        .select("id, message, message_type, sent_at:created_at")
         .eq("session_log_id", sessionId)
-        .order("sent_at", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(10);
       if (!alive) return;
       setMessages(((data as any[]) ?? []) as SentMessage[]);
@@ -83,7 +85,7 @@ export const QuickMessagePanel = ({ sessionId }: QuickMessagePanelProps) => {
                 id: row.id,
                 message: row.message,
                 message_type: row.message_type ?? "text",
-                sent_at: row.sent_at ?? new Date().toISOString(),
+                sent_at: row.created_at ?? new Date().toISOString(),
               },
               ...prev,
             ].slice(0, 10);

@@ -156,5 +156,11 @@ export const useActiveAthletes = () => {
     });
   }, [athletes]);
 
-  return { athletes: sorted, now, loading };
+  // Posle zaustavljanja: red nestaje odmah, pa se lista potvrdi sa servera.
+  const ukloni = (sessionId: string) => {
+    setAthletes((prev) => prev.filter((a) => a.session_id !== sessionId));
+    fetchAthletes();
+  };
+
+  return { athletes: sorted, now, loading, ukloni };
 };

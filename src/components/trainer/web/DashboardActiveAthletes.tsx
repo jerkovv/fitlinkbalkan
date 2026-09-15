@@ -6,6 +6,7 @@ import { getHrColor, formatDuration } from "@/lib/workout/hrZone";
 import { hrSourceLabel, isHrSignalLive, isWatchConnected } from "@/lib/liveWorkout";
 import { useActiveAthletes } from "@/hooks/useActiveAthletes";
 import { WatchSlash } from "@/components/trainer/WatchSlash";
+import { ZaustaviTreningDugme, jeZaboravljen } from "@/components/trainer/ZaustaviTrening";
 
 // Pocetna na racunaru: aktivni vezbaci kao tabela u jednoj kartici. Isti hook i
 // ista pravila za puls/kcal kao telefonski ActiveAthletesList; Dashboard montira
@@ -13,9 +14,11 @@ import { WatchSlash } from "@/components/trainer/WatchSlash";
 // Siroka kolona prima vise redova nego telefon (tamo su 3).
 const MAX_ON_HOME = 5;
 const COLS = "grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_108px_92px]";
+// "Zaustavi" stoji van Link-a (dugme u linku nije ispravan HTML), u svojoj koloni.
+const AKCIJA_KOL = "flex w-[128px] shrink-0 justify-end pl-4 pr-5";
 
 export const DashboardActiveAthletes = () => {
-  const { athletes, now, loading } = useActiveAthletes();
+  const { athletes, now, loading, ukloni } = useActiveAthletes();
   const total = athletes.length;
   const visible = athletes.slice(0, MAX_ON_HOME);
 
@@ -58,16 +61,14 @@ export const DashboardActiveAthletes = () => {
         </div>
       ) : (
         <>
-          <div
-            className={cn(
-              "grid gap-4 border-y border-hairline bg-surface-2/50 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground",
-              COLS,
-            )}
-          >
-            <span>Vežbač</span>
-            <span>Trenutno</span>
-            <span>Puls</span>
-            <span className="text-right">Kcal</span>
+          <div className="flex items-center border-y border-hairline bg-surface-2/50 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            <div className={cn("grid min-w-0 flex-1 gap-4 pl-5", COLS)}>
+              <span>Vežbač</span>
+              <span>Trenutno</span>
+              <span>Puls</span>
+              <span className="text-right">Kcal</span>
+            </div>
+            <span className={AKCIJA_KOL} aria-hidden="true" />
           </div>
           <ul className="divide-y divide-hairline">
             {visible.map((a) => {
@@ -84,10 +85,10 @@ export const DashboardActiveAthletes = () => {
                 : "Priprema...";
 
               return (
-                <li key={a.athlete_id}>
+                <li key={a.athlete_id} className="flex items-center transition hover:bg-surface-2">
                   <Link
                     to={`/trener/vezbac/${a.athlete_id}/live`}
-                    className={cn("grid items-center gap-4 px-5 py-3 transition hover:bg-surface-2", COLS)}
+                    className={cn("grid min-w-0 flex-1 items-center gap-4 py-3 pl-5", COLS)}
                   >
                     <span className="flex min-w-0 items-center gap-3">
                       <span className="relative shrink-0">
@@ -101,7 +102,12 @@ export const DashboardActiveAthletes = () => {
                         <span className="block truncate text-[14px] font-semibold tracking-tight">
                           {a.athlete_name ?? "Vežbač"}
                         </span>
-                        <span className="block text-[12px] text-muted-foreground tnum">
+                        <span
+                          className={cn(
+                            "block text-[12px] tnum",
+                            jeZaboravljen(a.started_at, now) ? "text-destructive" : "text-muted-foreground",
+                          )}
+                        >
                           trenira {formatDuration(elapsed)}
                         </span>
                       </span>
@@ -138,6 +144,13 @@ export const DashboardActiveAthletes = () => {
                       )}
                     </span>
                   </Link>
+                  <div className={AKCIJA_KOL}>
+                    <ZaustaviTreningDugme
+                      sessionId={a.session_id}
+                      athleteName={a.athlete_name}
+                      onStopped={() => ukloni(a.session_id)}
+                    />
+                  </div>
                 </li>
               );
             })}

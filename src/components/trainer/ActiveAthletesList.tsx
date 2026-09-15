@@ -5,6 +5,8 @@ import { getHrColor, formatDuration } from "@/lib/workout/hrZone";
 import { hrSourceLabel, isHrSignalLive, isWatchConnected } from "@/lib/liveWorkout";
 import { useActiveAthletes } from "@/hooks/useActiveAthletes";
 import { WatchSlash } from "@/components/trainer/WatchSlash";
+import { ZaboravljenTreningTraka, jeZaboravljen } from "@/components/trainer/ZaustaviTrening";
+import { cn } from "@/lib/utils";
 
 // Pocetna trenera: prikazuje prva 3 aktivna vezbaca (posle istog sortiranja kao
 // stranica "Trenira uzivo"), pa dugme "Pogledaj sve" ako ih ima vise. Izvor podataka,
@@ -12,7 +14,7 @@ import { WatchSlash } from "@/components/trainer/WatchSlash";
 const MAX_ON_HOME = 3;
 
 export const ActiveAthletesList = () => {
-  const { athletes, now, loading } = useActiveAthletes();
+  const { athletes, now, loading, ukloni } = useActiveAthletes();
 
   if (loading) return null;
 
@@ -45,10 +47,13 @@ export const ActiveAthletesList = () => {
             ? `${a.current_exercise_name} · Serija ${a.current_set_number ?? 1}`
             : "Priprema...";
           return (
-            <li key={a.athlete_id}>
+            <li key={a.athlete_id} className="relative">
               <Link
                 to={`/trener/vezbac/${a.athlete_id}/live`}
-                className="flex items-center gap-3 card-premium-hover px-4 py-3.5"
+                className={cn(
+                  "flex items-center gap-3 card-premium-hover px-4 py-3.5",
+                  jeZaboravljen(a.started_at, now) && "pb-[3.75rem]",
+                )}
               >
                 <div className="relative shrink-0">
                   <Avatar initials={initials} tone="brand" />
@@ -113,6 +118,14 @@ export const ActiveAthletesList = () => {
 
                 <ChevronRight className="h-4 w-4 text-muted-foreground/60 shrink-0 self-center" />
               </Link>
+              {/* Trening koji traje satima: zaustavljanje odmah sa pocetne. */}
+              <ZaboravljenTreningTraka
+                sessionId={a.session_id}
+                athleteName={a.athlete_name}
+                startedAt={a.started_at}
+                now={now}
+                onStopped={() => ukloni(a.session_id)}
+              />
             </li>
           );
         })}

@@ -38,6 +38,7 @@ import { WearableTrendChart } from "@/components/wearables/WearableTrendChart";
 import { useWearableConnections } from "@/hooks/useWearableConnections";
 import { WorkoutsList } from "@/components/wearables/WorkoutsList";
 import { MembershipEditSheet } from "@/components/trainer/MembershipEditSheet";
+import { AktivanTreningBaner } from "@/components/trainer/ZaustaviTrening";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 
@@ -820,6 +821,7 @@ const AthleteProfile = () => {
         // levo ono sto trener menja (planovi, treninzi, zdravlje), desno kontakt,
         // clanarina, merenja i fotke. Na telefonu je sve to jedna duga kolona.
         <div className="space-y-6">
+          <AktivanTreningBaner athleteId={athlete.id} athleteName={athlete.full_name} />
           {stats && stats.success === false ? (
             <Card className="p-6 text-center text-[13px] text-muted-foreground">
               Nema još podataka
@@ -1380,6 +1382,8 @@ const AthleteProfile = () => {
               </button>
             </div>
           </Card>
+
+          <AktivanTreningBaner athleteId={athlete.id} athleteName={athlete.full_name} />
 
           {/* Statisticki blok */}
           {stats && stats.success === false ? (

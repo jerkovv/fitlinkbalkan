@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ChevronLeft, Heart, Loader2, Activity, Pause, Flame, UserRound, Square } from "lucide-react";
-import { toast } from "sonner";
-import { porukaGreske } from "@/lib/errorMessage";
-import { useConfirm } from "@/hooks/useConfirm";
+import { useZaustaviTrening } from "@/hooks/useZaustaviTrening";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
@@ -117,32 +115,12 @@ const LiveWorkoutView = () => {
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(Date.now());
   const [ended, setEnded] = useState(false);
-  const confirm = useConfirm();
-  const [zaustavljam, setZaustavljam] = useState(false);
-
-  // Trener zaustavlja trening koji je vezbac zaboravio da ugasi. Kraj ide istim
-  // putem kao vezbacev "Zavrsi" (trainer_finish_workout), pa telefon, sat i Live
-  // Activity vide obican kraj; upisane serije ostaju.
+  // Trener zaustavlja trening koji je vezbac zaboravio da ugasi (vidi useZaustaviTrening).
+  const { zaustavi, zaustavlja } = useZaustaviTrening();
+  const zaustavljam = !!zaustavlja;
   const zaustaviTrening = async () => {
-    if (!session || zaustavljam) return;
-    const ok = await confirm({
-      title: "Zaustaviti trening?",
-      description: `Trening${athleteName ? ` vežbača ${athleteName}` : ""} biće završen i sačuvan sa serijama upisanim do sada. Koristi ovo kad je vežbač zaboravio da ugasi trening.`,
-      confirmLabel: "Zaustavi",
-      destructive: true,
-    });
-    if (!ok) return;
-    setZaustavljam(true);
-    const { data, error } = await supabase.rpc("trainer_finish_workout" as any, { p_session_id: session.id });
-    setZaustavljam(false);
-    if (error) {
-      toast.error(porukaGreske(error));
-      return;
-    }
-    const res = data as { success?: boolean } | null;
-    if (res?.success === false) toast("Trening je već bio završen");
-    else toast.success("Trening je zaustavljen");
-    setEnded(true);
+    if (!session) return;
+    if (await zaustavi(session.id, athleteName)) setEnded(true);
   };
 
   const lastHrFetchRef = useRef(0);
