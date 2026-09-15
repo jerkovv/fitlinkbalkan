@@ -7,7 +7,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useNotifications, type AppNotification, type NotificationKind } from "@/hooks/useNotifications";
+import { useNotifications, useNoveDokJeOtvoreno, type AppNotification, type NotificationKind } from "@/hooks/useNotifications";
 import { NotificationDetail } from "@/components/NotificationDetail";
 import { cn } from "@/lib/utils";
 
@@ -57,19 +57,23 @@ export const NotificationItem = ({
   n,
   onClick,
   compact = false,
+  nova,
 }: {
   n: AppNotification;
   onClick?: () => void;
   compact?: boolean;
+  /** Istaknuto kao novo. Liste ga zadaju same, jer se pri otvaranju sve odmah oznaci procitanim. */
+  nova?: boolean;
 }) => {
   const meta = KIND_META[n.kind] ?? FALLBACK_META;
   const Icon = meta.icon;
+  const istaknuta = nova ?? !n.is_read;
   return (
     <button
       onClick={onClick}
       className={cn(
         "w-full text-left flex gap-3 px-4 py-3 transition active:scale-[0.99]",
-        !n.is_read && "bg-primary/5",
+        istaknuta && "bg-primary/5",
         compact ? "hover:bg-surface-2" : "rounded-2xl card-premium-hover",
       )}
     >
@@ -85,7 +89,7 @@ export const NotificationItem = ({
           <div className="text-[12.5px] text-muted-foreground mt-0.5 line-clamp-2">{n.body}</div>
         )}
       </div>
-      {!n.is_read && <span className="h-2 w-2 rounded-full bg-primary mt-2 shrink-0" aria-label="Nepročitano" />}
+      {istaknuta && <span className="h-2 w-2 rounded-full bg-primary mt-2 shrink-0" aria-label="Novo" />}
     </button>
   );
 };
@@ -93,9 +97,12 @@ export const NotificationItem = ({
 export const NotificationBell = () => {
   const navigate = useNavigate();
   const { user, role } = useAuth();
-  const { items, unreadCount, markRead, markAllRead } = useNotifications();
+  const notif = useNotifications();
+  const { items, unreadCount, markRead } = notif;
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<AppNotification | null>(null);
+  // Otvaranje zvonca oznaci sve kao procitano; nove ostaju istaknute dok je otvoreno.
+  const nove = useNoveDokJeOtvoreno(notif, open);
 
   const preview = items.slice(0, 6);
 
@@ -144,14 +151,6 @@ export const NotificationBell = () => {
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="font-semibold text-[14px] tracking-tight">Notifikacije</div>
-          {unreadCount > 0 && (
-            <button
-              onClick={() => markAllRead()}
-              className="text-[11px] font-semibold text-primary hover:underline inline-flex items-center gap-1"
-            >
-              <Check className="h-3 w-3" /> Označi sve
-            </button>
-          )}
         </div>
 
         {preview.length === 0 ? (
@@ -161,7 +160,7 @@ export const NotificationBell = () => {
         ) : (
           <div className="max-h-[420px] overflow-y-auto divide-y divide-border">
             {preview.map((n) => (
-              <NotificationItem key={n.id} n={n} onClick={() => handleItemClick(n)} compact />
+              <NotificationItem key={n.id} n={n} nova={nove.has(n.id)} onClick={() => handleItemClick(n)} compact />
             ))}
           </div>
         )}

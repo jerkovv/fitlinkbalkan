@@ -129,3 +129,35 @@ export const useNotifications = () => {
   return { items, loading, unreadCount, markRead, markAllRead, remove, refetch: fetchItems };
 };
 
+/**
+ * Otvaranje liste znaci "procitano", kao u svakoj aplikaciji: dok je lista otvorena,
+ * sve nepročitano (i ono sto stigne u medjuvremenu) odmah se oznaci kao procitano,
+ * pa broj na zvoncu nestane bez dugmeta. Vraca id-jeve koji su bili novi, da ostanu
+ * istaknuti dok je lista otvorena; sledece otvaranje ih prikazuje kao obicne.
+ */
+export const useNoveDokJeOtvoreno = (
+  notif: Pick<ReturnType<typeof useNotifications>, "items" | "loading" | "markAllRead">,
+  otvoreno: boolean,
+) => {
+  const { items, loading, markAllRead } = notif;
+  const [nove, setNove] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    if (!otvoreno) setNove(new Set());
+  }, [otvoreno]);
+
+  useEffect(() => {
+    if (!otvoreno || loading) return;
+    const neprocitane = items.filter((n) => !n.is_read);
+    if (!neprocitane.length) return;
+    setNove((prev) => {
+      const s = new Set(prev);
+      neprocitane.forEach((n) => s.add(n.id));
+      return s;
+    });
+    void markAllRead();
+  }, [otvoreno, loading, items, markAllRead]);
+
+  return nove;
+};
+
