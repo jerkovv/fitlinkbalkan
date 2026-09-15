@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff, Plus, Minus, History, Pencil } from "lucide-react";
+import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff, Plus, Minus, Pencil } from "lucide-react";
+import { ProsliPutTraka, serijaTekst } from "@/components/workout/ProsliPutTraka";
 import { getHrColor, getHrZone } from "@/lib/workout/hrZone";
 import { HR_FRESH_SECONDS, isFreshWithinGrace } from "@/lib/liveWorkout";
 import { markWorkoutEntered } from "@/lib/workoutSession";
@@ -27,7 +28,7 @@ import { SetLogger } from "@/components/workout/SetLogger";
 import { RestOfWorkout } from "@/components/workout/RestOfWorkout";
 import { IspraviSerijeSheet, type IspravljenaSerija } from "@/components/workout/IspraviSerijeSheet";
 import { RestTimer } from "@/components/workout/RestTimer";
-import { useLastPerformance, type LastPerformanceSet } from "@/hooks/useLastPerformance";
+import { useLastPerformance } from "@/hooks/useLastPerformance";
 import { Network } from "@capacitor/network";
 import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor/core";
 import { createCalorieMeter } from "@/lib/wearable/hrCalories";
@@ -184,12 +185,6 @@ const triggerHaptic = async () => {
       navigator.vibrate?.(60);
     }
   }
-};
-
-// "10 reps · 40 kg" - isti zapis kao uradjena serija; bez kilaze za sopstvenu tezinu.
-const prosliTekst = (s: LastPerformanceSet) => {
-  const kg = s.weight_kg != null && Number(s.weight_kg) > 0 ? ` · ${Number(s.weight_kg)} kg` : "";
-  return `${s.reps ?? "-"} reps${kg}`;
 };
 
 const fmtElapsed = (ms: number) => {
@@ -2093,6 +2088,8 @@ const ActiveWorkout = () => {
                 </div>
               </div>
 
+              <ProsliPutTraka prosli={prosliPut[current.exercise_id]} trenutnaSerija={setNumber} />
+
               {/* Sets list */}
               <div className="rounded-3xl bg-surface border border-hairline overflow-hidden">
                 {setsList.map((n) => {
@@ -2105,14 +2102,6 @@ const ActiveWorkout = () => {
                     (c) => c.exerciseIndex === exerciseIdx && c.setNumber === n
                   ) ?? (log ? { reps: log.reps ?? 0, weight_kg: Number(log.weight_kg ?? 0) } : undefined);
                   const t = targetForSet(current, n);   // cilj BAS ovog seta
-                  // Ista serija sa poslednjeg zavrsenog treninga (po broju serije).
-                  // Serija bez ijednog broja (npr. upis bez kilaze i ponavljanja) se ne
-                  // prikazuje - "Prosli put · - reps" ne govori nista.
-                  const prosliRed = prosliPut[current.exercise_id]?.sets.find((s) => s.set_number === n);
-                  const prosli =
-                    prosliRed && (prosliRed.reps != null || Number(prosliRed.weight_kg ?? 0) > 0)
-                      ? prosliRed
-                      : undefined;
                   return (
                     <div
                       key={n}
@@ -2135,22 +2124,19 @@ const ActiveWorkout = () => {
                       </div>
                       <div className="flex-1 text-[13px]">
                         <span className="font-semibold text-foreground">Serija {n}</span>
+                        {/* Isti zapis kao traka "Prosli put": "60 kg × 8". */}
                         {completed ? (
-                          <span className="text-muted-foreground">
+                          <span className="text-muted-foreground tnum">
                             {" · "}
-                            {completed.reps} reps · {completed.weight_kg} kg
+                            {serijaTekst(completed.reps, completed.weight_kg)}
                           </span>
                         ) : (
-                          <span className="text-muted-foreground">
+                          <span className="text-muted-foreground tnum">
                             {" · cilj "}
-                            {t.repsText ?? "-"} × {t.weight ?? "-"} kg
+                            {t.weight != null && Number(t.weight) > 0
+                              ? `${String(t.weight).replace(".", ",")} kg × ${t.repsText ?? "-"}`
+                              : `${t.repsText ?? "-"} reps`}
                           </span>
-                        )}
-                        {prosli && (
-                          <div className="flex items-center gap-1 mt-0.5 text-[11.5px] text-muted-foreground/80 tnum">
-                            <History className="h-3 w-3 shrink-0" strokeWidth={2.2} />
-                            Prošli put · {prosliTekst(prosli)}
-                          </div>
                         )}
                       </div>
                       {active && <ChevronRight className="h-4 w-4 text-primary" />}
@@ -2173,24 +2159,6 @@ const ActiveWorkout = () => {
                   );
                 })}
               </div>
-
-              {/* Prosli put je bilo vise serija nego danas: te serije se ne poklapaju ni sa
-                  jednim redom iznad (poklapanje je po broju serije), pa bi se izgubile iz vida. */}
-              {(() => {
-                const visak = (prosliPut[current.exercise_id]?.sets ?? []).filter(
-                  (s) => s.set_number > setsForCurrent && (s.reps != null || Number(s.weight_kg ?? 0) > 0),
-                );
-                if (!visak.length) return null;
-                return (
-                  <div className="-mt-1 flex items-start gap-1.5 px-2 text-[11.5px] text-muted-foreground/80 tnum">
-                    <History className="mt-[3px] h-3 w-3 shrink-0" strokeWidth={2.2} />
-                    <span>
-                      Prošli put još:{" "}
-                      {visak.map((s) => `serija ${s.set_number} · ${prosliTekst(s)}`).join(", ")}
-                    </span>
-                  </div>
-                );
-              })()}
 
               {/* Active set logger */}
               <SetLogger
