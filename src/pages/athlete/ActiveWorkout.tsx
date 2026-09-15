@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff, Plus, Minus, History } from "lucide-react";
+import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff, Plus, Minus, History, Pencil } from "lucide-react";
 import { getHrColor, getHrZone } from "@/lib/workout/hrZone";
 import { HR_FRESH_SECONDS, isFreshWithinGrace } from "@/lib/liveWorkout";
 import { markWorkoutEntered } from "@/lib/workoutSession";
@@ -25,6 +25,7 @@ import { ExerciseHeader } from "@/components/workout/ExerciseHeader";
 import { SupersetHint } from "@/components/workout/SupersetHint";
 import { SetLogger } from "@/components/workout/SetLogger";
 import { RestOfWorkout } from "@/components/workout/RestOfWorkout";
+import { IspraviSerijeSheet, type IspravljenaSerija } from "@/components/workout/IspraviSerijeSheet";
 import { RestTimer } from "@/components/workout/RestTimer";
 import { useLastPerformance, type LastPerformanceSet } from "@/hooks/useLastPerformance";
 import { Network } from "@capacitor/network";
@@ -145,6 +146,15 @@ type CompletedSet = {
   setNumber: number;
   reps: number;
   weight_kg: number;
+};
+
+// Zavrsena serija sa servera (set_logs). exercise_id je red vezbe u planu (ex.id).
+type LogSerije = {
+  exercise_id: string;
+  set_number: number;
+  reps: number | null;
+  weight_kg: number | null;
+  logged_by_trainer: boolean | null;
 };
 
 type HRPoint = { ts: string; bpm: number };
@@ -711,6 +721,45 @@ const ActiveWorkout = () => {
     user?.id,
     exercises.map((e) => e.exercise_id),
   );
+
+  // Zavrsene serije ovog treninga sa servera - za ispravku kilaze na vezbi koja je
+  // vec prosla. completedSets je samo lokalni optimisticki log i nestaje posle
+  // ponovnog ulaska u trening, pa ispravka cita ovo. Osvezava se posle svake
+  // serije (pozicija se pomeri) i posle ispravke.
+  const [logovi, setLogovi] = useState<LogSerije[]>([]);
+  const [logoviVerzija, setLogoviVerzija] = useState(0);
+  const [urediIdx, setUrediIdx] = useState<number | null>(null);
+  useEffect(() => {
+    if (!sessionId) return;
+    let otkazano = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("set_logs")
+        .select("exercise_id, set_number, reps, weight_kg, logged_by_trainer")
+        .eq("session_log_id", sessionId)
+        .eq("done", true);
+      if (otkazano || error) return;
+      setLogovi((data ?? []) as LogSerije[]);
+    })();
+    return () => { otkazano = true; };
+  }, [sessionId, pos?.exerciseIdx, pos?.setNumber, logoviVerzija]);
+
+  const logoviVezbe = (ex: { id: string }) => logovi.filter((l) => l.exercise_id === ex.id);
+  const uradjenoPoVezbi: Record<string, LogSerije[]> = {};
+  for (const l of logovi) (uradjenoPoVezbi[l.exercise_id] ??= []).push(l);
+  const urediVezba = urediIdx != null ? exercises[urediIdx] : undefined;
+
+  // Ispravka je sacuvana: popravi i lokalne oznake serija, pa povuci serije iznova.
+  const posleIspravke = (idx: number, izmene: IspravljenaSerija[]) => {
+    setCompletedSets((prev) =>
+      prev.map((c) => {
+        if (c.exerciseIndex !== idx) return c;
+        const z = izmene.find((x) => x.set_number === c.setNumber);
+        return z ? { ...c, reps: z.reps, weight_kg: z.weight_kg } : c;
+      }),
+    );
+    setLogoviVerzija((v) => v + 1);
+  };
   const totalSetsAll = useMemo(
     () => exercises.reduce((acc, e) => acc + (e.sets ?? 0), 0),
     [exercises]
@@ -2045,9 +2094,11 @@ const ActiveWorkout = () => {
                   // Markeri "urađeno" se izvode iz pozicije (server), ne iz lokalnog loga.
                   const done = n < setNumber;
                   const active = n === setNumber && pos.state === "active";
+                  // Posle ponovnog ulaska lokalnog loga nema, pa oznaka pada na serversku seriju.
+                  const log = done ? logoviVezbe(current).find((l) => l.set_number === n) : undefined;
                   const completed = completedSets.find(
                     (c) => c.exerciseIndex === exerciseIdx && c.setNumber === n
-                  );
+                  ) ?? (log ? { reps: log.reps ?? 0, weight_kg: Number(log.weight_kg ?? 0) } : undefined);
                   const t = targetForSet(current, n);   // cilj BAS ovog seta
                   // Ista serija sa poslednjeg zavrsenog treninga (po broju serije).
                   const prosli = prosliPut[current.exercise_id]?.sets.find((s) => s.set_number === n);
@@ -2092,6 +2143,16 @@ const ActiveWorkout = () => {
                         )}
                       </div>
                       {active && <ChevronRight className="h-4 w-4 text-primary" />}
+                      {log && (
+                        <button
+                          type="button"
+                          onClick={() => setUrediIdx(exerciseIdx)}
+                          aria-label={`Ispravi seriju ${n}`}
+                          className="h-8 w-8 -mr-1.5 shrink-0 rounded-full flex items-center justify-center text-muted-foreground transition hover:bg-surface-2 hover:text-foreground active:scale-95"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   );
                 })}
@@ -2114,8 +2175,25 @@ const ActiveWorkout = () => {
 
           {/* Ceo trening - sklopljeno, da se usred serije gleda serija. */}
           {day?.exercises?.length ? (
-            <RestOfWorkout vezbe={day.exercises} currentIdx={exerciseIdx} />
+            <RestOfWorkout
+              vezbe={day.exercises}
+              currentIdx={exerciseIdx}
+              uradjeno={uradjenoPoVezbi}
+              onIspravi={(i) => setUrediIdx(i)}
+            />
           ) : null}
+
+          {/* Ispravka zavrsenih serija - trenutne ili vec prosle vezbe. */}
+          {urediVezba && urediIdx != null && sessionId && (
+            <IspraviSerijeSheet
+              open
+              onOpenChange={(o) => { if (!o) setUrediIdx(null); }}
+              sessionId={sessionId}
+              vezba={{ id: urediVezba.id, name: urediVezba.exercise.name }}
+              serije={logoviVezbe(urediVezba)}
+              onSaved={(izmene) => posleIspravke(urediIdx, izmene)}
+            />
+          )}
 
           {/* Manual finish */}
           <button

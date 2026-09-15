@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, ChevronDown, Dumbbell, Link2 } from "lucide-react";
+import { Check, ChevronDown, Dumbbell, Link2, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type SetDetail = {
@@ -25,6 +25,8 @@ type Vezba = {
   };
 };
 
+type UradjenaSerija = { set_number: number; reps: number | null; weight_kg: number | null };
+
 const ciljTekst = (ex: Vezba): string => {
   if (ex.exercise.is_duration_based) {
     return ex.duration_minutes != null ? `${ex.duration_minutes} min` : "-";
@@ -37,6 +39,16 @@ const ciljTekst = (ex: Vezba): string => {
   return delovi.join(" · ");
 };
 
+// "60 kg × 8 · 60 kg × 8 · 55 kg × 6" - ono sto je stvarno uradjeno, redom serija.
+const uradjenoTekst = (serije: UradjenaSerija[]): string =>
+  [...serije]
+    .sort((a, b) => a.set_number - b.set_number)
+    .map((s) => {
+      const kg = s.weight_kg != null && Number(s.weight_kg) > 0 ? `${Number(s.weight_kg)} kg × ` : "× ";
+      return `${kg}${s.reps ?? "-"}`;
+    })
+    .join(" · ");
+
 /**
  * Ceo trening, dok vezbac trenira.
  *
@@ -47,13 +59,22 @@ const ciljTekst = (ex: Vezba): string => {
  *
  * Sklopljeno je podrazumevano: usred serije se gleda serija, ne spisak. Zaglavlje
  * nosi napredak ("3/5 vežbi"), pa i sklopljeno nesto govori.
+ *
+ * Vezba sa zavrsenim serijama pokazuje sta je uradjeno i ima olovku za ispravku -
+ * jedini put nazad do kilaze pogresno unete na vezbi koja je vec prosla.
  */
 export const RestOfWorkout = ({
   vezbe,
   currentIdx,
+  uradjeno,
+  onIspravi,
 }: {
   vezbe: Vezba[];
   currentIdx: number;
+  /** Zavrsene serije po vezbi (kljuc ex.id). */
+  uradjeno?: Record<string, UradjenaSerija[]>;
+  /** Otvori ispravku serija vezbe na tom indeksu. */
+  onIspravi?: (idx: number) => void;
 }) => {
   const [otvoreno, setOtvoreno] = useState(false);
   if (vezbe.length <= 1) return null;
@@ -97,6 +118,8 @@ export const RestOfWorkout = ({
             const ss = ex.superset_group ?? null;
             const prviUKrugu = ss != null && (vezbe[i - 1]?.superset_group ?? null) !== ss;
             const poslednjiUKrugu = ss != null && (vezbe[i + 1]?.superset_group ?? null) !== ss;
+            const serije = uradjeno?.[ex.id] ?? [];
+            const imaUradjeno = serije.length > 0 && !ex.exercise.is_duration_based;
             return (
               <div key={`w-${ex.id}`}>
               {prviUKrugu && (
@@ -113,46 +136,59 @@ export const RestOfWorkout = ({
                   ss != null && "border-l-[3px] border-primary/40 ml-1",
                   ss != null && poslednjiUKrugu && "mb-1",
                   aktivna && "bg-primary-soft",
-                  gotova && "opacity-55",
                 )}
               >
-                <div
-                  className={cn(
-                    "h-6 w-6 rounded-lg flex items-center justify-center shrink-0 text-[10.5px] font-bold tnum",
-                    aktivna
-                      ? "bg-gradient-brand text-white shadow-brand"
-                      : "bg-surface-2 text-muted-foreground",
-                  )}
-                >
-                  {gotova ? <Check className="h-3 w-3" strokeWidth={3} /> : i + 1}
-                </div>
-
-                {ex.exercise.thumbnail_url ? (
-                  <img
-                    src={ex.exercise.thumbnail_url}
-                    alt=""
-                    loading="lazy"
-                    className="h-8 w-8 rounded-lg object-cover bg-surface-2 shrink-0"
-                  />
-                ) : (
-                  <div className="h-8 w-8 rounded-lg bg-surface-2 flex items-center justify-center shrink-0">
-                    <Dumbbell className="h-3.5 w-3.5 text-muted-foreground/60" />
-                  </div>
-                )}
-
-                <div className="flex-1 min-w-0">
+                {/* Prigusena je samo gotova vezba, ne i olovka - ona mora ostati jasna. */}
+                <div className={cn("flex min-w-0 flex-1 items-center gap-2.5", gotova && "opacity-55")}>
                   <div
                     className={cn(
-                      "text-[13px] font-semibold leading-snug line-clamp-2",
-                      aktivna && "text-primary-soft-foreground",
+                      "h-6 w-6 rounded-lg flex items-center justify-center shrink-0 text-[10.5px] font-bold tnum",
+                      aktivna
+                        ? "bg-gradient-brand text-white shadow-brand"
+                        : "bg-surface-2 text-muted-foreground",
                     )}
                   >
-                    {ime}
+                    {gotova ? <Check className="h-3 w-3" strokeWidth={3} /> : i + 1}
                   </div>
-                  <div className="text-[11.5px] text-muted-foreground tnum">
-                    {ciljTekst(ex)}
+
+                  {ex.exercise.thumbnail_url ? (
+                    <img
+                      src={ex.exercise.thumbnail_url}
+                      alt=""
+                      loading="lazy"
+                      className="h-8 w-8 rounded-lg object-cover bg-surface-2 shrink-0"
+                    />
+                  ) : (
+                    <div className="h-8 w-8 rounded-lg bg-surface-2 flex items-center justify-center shrink-0">
+                      <Dumbbell className="h-3.5 w-3.5 text-muted-foreground/60" />
+                    </div>
+                  )}
+
+                  <div className="flex-1 min-w-0">
+                    <div
+                      className={cn(
+                        "text-[13px] font-semibold leading-snug line-clamp-2",
+                        aktivna && "text-primary-soft-foreground",
+                      )}
+                    >
+                      {ime}
+                    </div>
+                    <div className="text-[11.5px] text-muted-foreground tnum line-clamp-1">
+                      {imaUradjeno ? uradjenoTekst(serije) : ciljTekst(ex)}
+                    </div>
                   </div>
                 </div>
+
+                {imaUradjeno && onIspravi && (
+                  <button
+                    type="button"
+                    onClick={() => onIspravi(i)}
+                    aria-label={`Ispravi serije: ${ime}`}
+                    className="h-8 w-8 -mr-1.5 shrink-0 rounded-full flex items-center justify-center text-muted-foreground transition hover:bg-surface-2 hover:text-foreground active:scale-95"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
               </div>
             );
