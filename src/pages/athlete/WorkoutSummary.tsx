@@ -13,7 +13,9 @@ import {
 } from "@/components/ui/full-screen-sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { HRZonesChart } from "@/components/wearables/HRZonesChart";
-import type { ZoneBucket } from "@/lib/wearable/hrZones";
+import { HRTimeSeriesChart } from "@/components/wearables/HRTimeSeriesChart";
+import type { HRSample, ZoneBucket } from "@/lib/wearable/hrZones";
+import { paroviUUzorke } from "@/lib/wearable/hrParovi";
 
 type SessionRow = {
   id: string;
@@ -96,6 +98,9 @@ const WorkoutSummary = () => {
   // HR zone iz get_inapp_workout_detail (isti izvor kao InApp dialog). Racunaju se iz
   // hr_series koji sat upise par sekundi POSLE finish-a, pa se refetch-uju uz metrike.
   const [zones, setZones] = useState<ZoneBucket[]>([]);
+  // Grafik pulsa iz istog RPC-a, kao u detalju treninga sa sata.
+  const [hrUzorci, setHrUzorci] = useState<HRSample[]>([]);
+  const [maxHr, setMaxHr] = useState<number | null>(null);
 
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
@@ -245,6 +250,8 @@ const WorkoutSummary = () => {
       if (error || cancelled) return;
       const detail = (Array.isArray(data) ? data[0] : data) as any;
       if (detail?.zones) setZones(detail.zones as ZoneBucket[]);
+      if (detail?.hr_series) setHrUzorci(paroviUUzorke(detail.hr_series, detail.started_at));
+      if (detail?.max_hr) setMaxHr(detail.max_hr);
     };
 
     const refetch = async () => {
@@ -455,6 +462,22 @@ const WorkoutSummary = () => {
         {/* Zone pulsa - IZNAD "Po vezbi", samo kad ima HR podatka (zone se racunaju iz
             hr_series; bez sata sve su 0 -> sekcija se ne prikazuje). Isti izvor/komponenta
             kao InApp dialog. */}
+        {hrUzorci.length >= 2 && (
+          <section className="mt-7">
+            <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground mb-3">
+              Puls tokom treninga
+            </h2>
+            <div className="rounded-3xl bg-surface border border-hairline p-4">
+              <HRTimeSeriesChart
+                hrSeries={hrUzorci}
+                maxHR={maxHr ?? 190}
+                hrAvg={stats.hrAvg || null}
+                hrMax={stats.hrMax || null}
+              />
+            </div>
+          </section>
+        )}
+
         {zones.some((z) => z.seconds_in_zone > 0) && (
           <section className="mt-7">
             <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground mb-3">

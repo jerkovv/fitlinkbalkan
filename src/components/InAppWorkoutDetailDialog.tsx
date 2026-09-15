@@ -13,6 +13,7 @@ import {
 } from "@/lib/wearable/hrZones";
 import { HRTimeSeriesChart } from "@/components/wearables/HRTimeSeriesChart";
 import { HRZonesChart } from "@/components/wearables/HRZonesChart";
+import { paroviUUzorke } from "@/lib/wearable/hrParovi";
 
 interface Props {
   sessionId: string | null;
@@ -105,12 +106,10 @@ export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange }: Prop
   const maxHR = detail?.max_hr ?? computeMaxHR(detail?.birth_year ?? null);
   // Zone dolaze gotove sa servera (5 stavki: zone, zone_name, min_bpm, max_bpm, seconds_in_zone).
   const zones = detail?.zones ?? [];
-  // Validni parovi [t, hr] za grafik; manje od 2 -> sakrij ceo grafik (bez prazne ose).
-  const validPairs = useMemo(
-    () =>
-      (detail?.hr_series ?? []).filter(
-        (p) => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1]) && p[1] > 0,
-      ),
+  // Tacke pulsa kao {ts, bpm}, da grafik izgleda kao za trening sa sata (vreme na
+  // satu ispod). Manje od 2 -> sakrij ceo grafik (bez prazne ose).
+  const hrUzorci = useMemo(
+    () => paroviUUzorke(detail?.hr_series, detail?.started_at),
     [detail],
   );
 
@@ -163,10 +162,14 @@ export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange }: Prop
                 {whenISO && (
                   <>
                     <div className="text-[12px] text-muted-foreground mt-0.5">
-                      {fmtDate(whenISO)}
+                      {fmtDate(detail.started_at ?? whenISO)}
                     </div>
+                    {/* Od - do, kao trening sa sata. Trenerom upisan trening nema
+                        mereno trajanje, pa tu ostaje jedno vreme. */}
                     <div className="text-[12px] text-muted-foreground tnum">
-                      {fmtTime(whenISO)}
+                      {detail.completed_at && detail.duration_seconds != null && !upisaoTrener
+                        ? `${fmtTime(detail.started_at)} - ${fmtTime(detail.completed_at)}`
+                        : fmtTime(whenISO)}
                     </div>
                   </>
                 )}
@@ -204,6 +207,32 @@ export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange }: Prop
               </div>
             </Card>
 
+            {/* Puls i zone odmah ispod brojeva - isti raspored i naslovi kao trening
+                sa sata (WorkoutDetailDialog). */}
+            {hrUzorci.length >= 2 && (
+              <Card className="p-4">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-2">
+                  Puls tokom treninga
+                </div>
+                <HRTimeSeriesChart
+                  hrSeries={hrUzorci}
+                  maxHR={maxHR}
+                  hrAvg={detail.hr_avg}
+                  hrMax={detail.hr_max}
+                />
+              </Card>
+            )}
+
+            {/* Zone pulsa (sakrij celu sekciju kad je ukupno vreme 0) */}
+            {zones.some((z) => z.seconds_in_zone > 0) && (
+              <Card className="p-4">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-3">
+                  Zone pulsa
+                </div>
+                <HRZonesChart zones={zones} />
+              </Card>
+            )}
+
             {/* Volumen / Setovi (samo ako ima volumena) */}
             {detail.total_volume_kg != null && detail.total_volume_kg > 0 && (
               <Card className="p-4">
@@ -220,31 +249,6 @@ export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange }: Prop
                     value={`${detail.sets_done ?? 0}`}
                   />
                 </div>
-              </Card>
-            )}
-
-            {/* HR time series (samo ako ima bar 2 validna para [t, hr]) */}
-            {validPairs.length >= 2 && (
-              <Card className="p-4">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-2">
-                  Puls tokom treninga
-                </div>
-                <HRTimeSeriesChart
-                  hrSeries={detail.hr_series}
-                  maxHR={maxHR}
-                  hrAvg={detail.hr_avg}
-                  hrMax={detail.hr_max}
-                />
-              </Card>
-            )}
-
-            {/* Zone tokom treninga (sakrij celu sekciju kad je ukupno vreme 0) */}
-            {zones.some((z) => z.seconds_in_zone > 0) && (
-              <Card className="p-4">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-3">
-                  Zone tokom treninga
-                </div>
-                <HRZonesChart zones={zones} />
               </Card>
             )}
 
