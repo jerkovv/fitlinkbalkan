@@ -2158,6 +2158,24 @@ const ActiveWorkout = () => {
                 })}
               </div>
 
+              {/* Prosli put je bilo vise serija nego danas: te serije se ne poklapaju ni sa
+                  jednim redom iznad (poklapanje je po broju serije), pa bi se izgubile iz vida. */}
+              {(() => {
+                const visak = (prosliPut[current.exercise_id]?.sets ?? []).filter(
+                  (s) => s.set_number > setsForCurrent,
+                );
+                if (!visak.length) return null;
+                return (
+                  <div className="-mt-1 flex items-start gap-1.5 px-2 text-[11.5px] text-muted-foreground/80 tnum">
+                    <History className="mt-[3px] h-3 w-3 shrink-0" strokeWidth={2.2} />
+                    <span>
+                      Prošli put još:{" "}
+                      {visak.map((s) => `serija ${s.set_number} · ${prosliTekst(s)}`).join(", ")}
+                    </span>
+                  </div>
+                );
+              })()}
+
               {/* Active set logger */}
               <SetLogger
                 key={`${exerciseIdx}-${setNumber}`}
