@@ -7,15 +7,14 @@ import { hrSourceLabel, isHrSignalLive, isWatchConnected } from "@/lib/liveWorko
 import { useActiveAthletes } from "@/hooks/useActiveAthletes";
 import { WatchSlash } from "@/components/trainer/WatchSlash";
 import { ZaustaviTreningDugme, jeZaboravljen } from "@/components/trainer/ZaustaviTrening";
-import { NiskaBaterijaIkonica } from "@/components/trainer/NiskaBaterijaIkonica";
-import { baterijaSesije } from "@/lib/baterija";
+import { BaterijaVezbaca, baterijaVezbaca } from "@/components/trainer/BaterijaVezbaca";
 
 // Pocetna na racunaru: aktivni vezbaci kao tabela u jednoj kartici. Isti hook i
 // ista pravila za puls/kcal kao telefonski ActiveAthletesList; Dashboard montira
 // samo jedan od njih, pa nema dupli poll ni dupli realtime kanal.
 // Siroka kolona prima vise redova nego telefon (tamo su 3).
 const MAX_ON_HOME = 5;
-const COLS = "grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_108px_92px]";
+const COLS = "grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_108px_76px_92px]";
 // "Zaustavi" stoji van Link-a (dugme u linku nije ispravan HTML), u svojoj koloni.
 const AKCIJA_KOL = "flex w-[128px] shrink-0 justify-end pl-4 pr-5";
 
@@ -68,6 +67,7 @@ export const DashboardActiveAthletes = () => {
               <span>Vežbač</span>
               <span>Trenutno</span>
               <span>Puls</span>
+              <span>Baterija</span>
               <span className="text-right">Kcal</span>
             </div>
             <span className={AKCIJA_KOL} aria-hidden="true" />
@@ -101,14 +101,8 @@ export const DashboardActiveAthletes = () => {
                         />
                       </span>
                       <span className="min-w-0">
-                        <span className="flex min-w-0 items-center gap-1.5">
-                          <span className="truncate text-[14px] font-semibold tracking-tight">
-                            {a.athlete_name ?? "Vežbač"}
-                          </span>
-                          <NiskaBaterijaIkonica
-                            traka={baterijaSesije(a.sensor_battery, a.sensor_battery_at, a.started_at)}
-                            sat={baterijaSesije(a.watch_battery, a.watch_battery_at, a.started_at)}
-                          />
+                        <span className="block truncate text-[14px] font-semibold tracking-tight">
+                          {a.athlete_name ?? "Vežbač"}
                         </span>
                         <span
                           className={cn(
@@ -141,6 +135,15 @@ export const DashboardActiveAthletes = () => {
                         </>
                       ) : (
                         <WatchSlash size={16} />
+                      )}
+                    </span>
+
+                    {/* Baterija trake, a bez nje sata. */}
+                    <span className="text-[13px] font-semibold">
+                      {baterijaVezbaca(a) ? (
+                        <BaterijaVezbaca a={a} />
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
                       )}
                     </span>
 

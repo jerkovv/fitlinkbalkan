@@ -1,8 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { ChevronLeft, Dumbbell, Flame, Heart, Activity, Loader2, Pause } from "lucide-react";
 import { ZaustaviTreningDugme, ZaboravljenTreningTraka, jeZaboravljen } from "@/components/trainer/ZaustaviTrening";
-import { NiskaBaterijaIkonica } from "@/components/trainer/NiskaBaterijaIkonica";
-import { baterijaSesije } from "@/lib/baterija";
+import { BaterijaVezbaca, baterijaVezbaca } from "@/components/trainer/BaterijaVezbaca";
 import { Avatar } from "@/components/ui-bits";
 import { PhoneShell } from "@/components/PhoneShell";
 import { cn } from "@/lib/utils";
@@ -125,14 +124,8 @@ const LiveAthletesView = () => {
                           />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="flex min-w-0 items-center gap-1.5">
-                            <span className="font-display text-[17px] font-bold leading-tight tracking-tight truncate">
-                              {a.athlete_name ?? "Vežbač"}
-                            </span>
-                            <NiskaBaterijaIkonica
-                              traka={baterijaSesije(a.sensor_battery, a.sensor_battery_at, a.started_at)}
-                              sat={baterijaSesije(a.watch_battery, a.watch_battery_at, a.started_at)}
-                            />
+                          <div className="font-display text-[17px] font-bold leading-tight tracking-tight truncate">
+                            {a.athlete_name ?? "Vežbač"}
                           </div>
                           <div
                             className={cn(
@@ -187,17 +180,27 @@ const LiveAthletesView = () => {
                             Bez sata
                           </div>
                         )}
-                        {live && (
-                          <span
+                        {/* Pilule desno: baterija (traka, a bez nje sat) i kalorije. */}
+                        <div className="flex items-center gap-1.5">
+                          <BaterijaVezbaca
+                            a={a}
                             className={cn(
-                              "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground tnum",
+                              "rounded-full px-2.5 py-1 text-[11.5px] font-semibold",
                               isResting ? "bg-surface" : "bg-surface-2",
                             )}
-                          >
-                            <Flame className="h-3.5 w-3.5" strokeWidth={2.4} />
-                            {kcal} kcal
-                          </span>
-                        )}
+                          />
+                          {live && (
+                            <span
+                              className={cn(
+                                "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground tnum",
+                                isResting ? "bg-surface" : "bg-surface-2",
+                              )}
+                            >
+                              <Flame className="h-3.5 w-3.5" strokeWidth={2.4} />
+                              {kcal} kcal
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </Link>
                     <div className="absolute right-5 top-[1.625rem]">
@@ -294,14 +297,8 @@ const LiveAthletesView = () => {
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex min-w-0 items-center gap-1.5">
-                          <span className="font-display text-[16px] font-semibold leading-tight tracking-tight truncate">
-                            {a.athlete_name ?? "Vežbač"}
-                          </span>
-                          <NiskaBaterijaIkonica
-                            traka={baterijaSesije(a.sensor_battery, a.sensor_battery_at, a.started_at)}
-                            sat={baterijaSesije(a.watch_battery, a.watch_battery_at, a.started_at)}
-                          />
+                        <div className="font-display text-[16px] font-semibold leading-tight tracking-tight truncate">
+                          {a.athlete_name ?? "Vežbač"}
                         </div>
                         <div className="text-[12.5px] text-muted-foreground mt-0.5 truncate flex items-center gap-1.5">
                           {isResting ? (
@@ -332,8 +329,11 @@ const LiveAthletesView = () => {
                           // Bez sata -> precrtan sat (kao LA kartica), na mestu pulsa.
                           <WatchSlash size={18} />
                         )}
-                        <div className="text-[12.5px] text-muted-foreground mt-1 tnum">
-                          {live ? `${kcal} kcal · ${timeLabel}` : timeLabel}
+                        {/* Ispod pulsa: baterija (traka, a bez nje sat), kalorije i trajanje. */}
+                        <div className="mt-1 flex items-center justify-end gap-1.5 text-[12.5px] text-muted-foreground tnum">
+                          <BaterijaVezbaca a={a} />
+                          {baterijaVezbaca(a) && <span aria-hidden="true">·</span>}
+                          <span>{live ? `${kcal} kcal · ${timeLabel}` : timeLabel}</span>
                         </div>
                       </div>
                     </div>

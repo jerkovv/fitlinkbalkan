@@ -5,6 +5,16 @@ export const NISKA_BATERIJA = 20;
  * Procenat baterije samo ako je izmeren u ovom treningu. Zivo stanje cuva i
  * vrednost sa proslog treninga, koja bi inace izgledala kao trenutna.
  */
+/**
+ * Jedna baterija za spisak aktivnih: traka ima prednost (kad je povezana, ona daje
+ * puls), inace sat.
+ */
+export const baterijaZaPrikaz = (
+  traka: number | null,
+  sat: number | null,
+): { pct: number; uredjaj: "traka" | "sat" } | null =>
+  traka != null ? { pct: traka, uredjaj: "traka" } : sat != null ? { pct: sat, uredjaj: "sat" } : null;
+
 export const baterijaSesije = (
   pct: number | null | undefined,
   at: string | null | undefined,
