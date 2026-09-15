@@ -7,33 +7,68 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
-import { Calendar, CreditCard, Dumbbell, MessageCircle, Loader2 } from "lucide-react";
+import {
+  CalendarPlus,
+  CalendarX,
+  Clock,
+  Dumbbell,
+  Trophy,
+  MessageCircle,
+  IdCard,
+  Wallet,
+  Loader2,
+} from "lucide-react";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 
-type Prefs = {
-  bookings: boolean;
-  payments: boolean;
-  workouts: boolean;
-  messages: boolean;
+type Vrsta = {
+  kind: string;
+  icon: typeof CalendarPlus;
+  title: string;
+  desc: string;
 };
 
-const DEFAULTS: Prefs = { bookings: true, payments: true, workouts: true, messages: true };
-
-const ROWS: { key: keyof Prefs; icon: any; title: string; desc: string }[] = [
-  { key: "bookings", icon: Calendar, title: "Termini", desc: "Rezervacije i otkazivanja od vežbača" },
-  { key: "payments", icon: CreditCard, title: "Članarine", desc: "Kad vežbač potvrdi uplatu ili istekne članarina" },
-  { key: "workouts", icon: Dumbbell, title: "Završeni treninzi", desc: "Kad vežbač završi zadati trening" },
-  { key: "messages", icon: MessageCircle, title: "Poruke", desc: "Direktne poruke od vežbača" },
+// Svaka vrsta obavestenja koja stize treneru, po odeljcima. Kljuc je notifications.kind;
+// iskljucene vrste server ne upisuje (trg_notifications_trainer_prefs), pa ne ide ni push.
+const ODELJCI: { naslov: string; vrste: Vrsta[] }[] = [
+  {
+    naslov: "Termini",
+    vrste: [
+      { kind: "booking_created", icon: CalendarPlus, title: "Nova rezervacija", desc: "Kad vežbač rezerviše termin" },
+      { kind: "booking_canceled", icon: CalendarX, title: "Otkazan termin", desc: "Kad vežbač otkaže termin" },
+      { kind: "waitlist_joined", icon: Clock, title: "Lista čekanja", desc: "Kad se vežbač prijavi na listu čekanja" },
+    ],
+  },
+  {
+    naslov: "Treninzi",
+    vrste: [
+      { kind: "workout_completed", icon: Dumbbell, title: "Završen trening", desc: "Kad vežbač završi trening" },
+      { kind: "pr_set", icon: Trophy, title: "Novi lični rekord", desc: "Kad vežbač obori svoj rekord" },
+    ],
+  },
+  {
+    naslov: "Poruke",
+    vrste: [
+      { kind: "message", icon: MessageCircle, title: "Nova poruka", desc: "Direktne poruke od vežbača" },
+    ],
+  },
+  {
+    naslov: "Članarine",
+    vrste: [
+      { kind: "payment_request", icon: IdCard, title: "Zahtev za članarinu", desc: "Kad vežbač zatraži paket" },
+      { kind: "payment_marked", icon: Wallet, title: "Potvrđena uplata", desc: "Kad vežbač označi da je platio" },
+    ],
+  },
 ];
 
 const NotificationSettings = () => {
   const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
   const desktop = useDesktopWeb();
-  const [prefs, setPrefs] = useState<Prefs>(DEFAULTS);
+  // Iskljucene vrste; prazno = sve stize.
+  const [utisane, setUtisane] = useState<Set<string>>(() => new Set());
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<keyof Prefs | null>(null);
+  const [saving, setSaving] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -41,47 +76,57 @@ const NotificationSettings = () => {
       setLoading(true);
       const { data } = await supabase
         .from("trainer_notification_prefs")
-        .select("bookings, payments, workouts, messages")
+        .select("muted_kinds")
         .eq("trainer_id", user.id)
         .maybeSingle();
-      if (data) setPrefs(data as Prefs);
+      const muted = (data as { muted_kinds?: string[] | null } | null)?.muted_kinds ?? [];
+      setUtisane(new Set(muted));
       setLoading(false);
     })();
   }, [user]);
 
-  const toggle = async (key: keyof Prefs) => {
+  const toggle = async (kind: string) => {
     if (locked) return openLock();
     if (!user) return;
-    const next = { ...prefs, [key]: !prefs[key] };
-    setPrefs(next);
-    setSaving(key);
+    const prethodne = utisane;
+    const sledece = new Set(utisane);
+    const ukljucujem = sledece.has(kind);
+    if (ukljucujem) sledece.delete(kind);
+    else sledece.add(kind);
+    setUtisane(sledece);
+    setSaving(kind);
     const { error } = await supabase
       .from("trainer_notification_prefs")
       .upsert(
-        { trainer_id: user.id, ...next, updated_at: new Date().toISOString() },
-        { onConflict: "trainer_id" }
+        { trainer_id: user.id, muted_kinds: [...sledece], updated_at: new Date().toISOString() } as any,
+        { onConflict: "trainer_id" },
       );
     setSaving(null);
     if (error) {
       console.error("[notif prefs upsert]", error);
-      setPrefs(prefs); // rollback
+      setUtisane(prethodne);
       toast.error(porukaGreske(error));
     } else {
-      toast.success(next[key] ? "Uključeno" : "Isključeno");
+      toast.success(ukljucujem ? "Uključeno" : "Isključeno");
     }
   };
+
+  const prekidac = ({ kind, title }: Vrsta) =>
+    saving === kind ? (
+      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+    ) : (
+      <Switch checked={!utisane.has(kind)} onCheckedChange={() => toggle(kind)} aria-label={title} />
+    );
+
+  const opis = "Izaberi koja obaveštenja želiš da dobijaš. Isključena ne stižu ni u aplikaciju ni kao push.";
 
   return (
     <PhoneShell title="Obaveštenja" eyebrow="Podešavanja" back="/trener/profil">
       {desktop ? (
-        // Racunar: jedna kartica sa naslovom odeljka i grupama u dve kolone.
-        // Cetiri pune trake preko ekrana su izgledale prazno i razvuceno.
         <section className="card-premium overflow-hidden">
           <div className="border-b border-hairline px-6 py-5">
-            <h2 className="font-display text-[17px] font-bold tracking-tight">Grupe obaveštenja</h2>
-            <p className="mt-1 text-[13px] text-muted-foreground">
-              Izaberi šta želiš da te obaveštava. Isključene grupe se neće slati ni u app, ni kao push.
-            </p>
+            <h2 className="font-display text-[17px] font-bold tracking-tight">Šta ti stiže</h2>
+            <p className="mt-1 text-[13px] text-muted-foreground">{opis}</p>
           </div>
 
           {loading ? (
@@ -89,29 +134,31 @@ const NotificationSettings = () => {
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 p-6">
-              {ROWS.map(({ key, icon: Icon, title, desc }) => (
-                <div
-                  key={key}
-                  className="flex items-start gap-3 rounded-2xl border border-hairline bg-surface p-4"
-                >
-                  <div className="h-10 w-10 rounded-xl bg-primary-soft text-primary-soft-foreground flex items-center justify-center shrink-0">
-                    <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
+            <div className="space-y-6 p-6">
+              {ODELJCI.map((o) => (
+                <div key={o.naslov}>
+                  <div className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    {o.naslov}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-[14px] leading-tight">{title}</div>
-                    <div className="text-[12.5px] text-muted-foreground mt-1 leading-snug">{desc}</div>
-                  </div>
-                  <div className="shrink-0 flex h-10 items-center">
-                    {saving === key ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                    ) : (
-                      <Switch
-                        checked={prefs[key]}
-                        onCheckedChange={() => toggle(key)}
-                        aria-label={title}
-                      />
-                    )}
+                  <div className="grid grid-cols-2 gap-3">
+                    {o.vrste.map((v) => {
+                      const Icon = v.icon;
+                      return (
+                        <div
+                          key={v.kind}
+                          className="flex items-center gap-3 rounded-2xl border border-hairline bg-surface p-4"
+                        >
+                          <div className="h-10 w-10 rounded-xl bg-primary-soft text-primary-soft-foreground flex items-center justify-center shrink-0">
+                            <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-[14px] leading-tight">{v.title}</div>
+                            <div className="text-[12.5px] text-muted-foreground mt-1 leading-snug">{v.desc}</div>
+                          </div>
+                          <div className="shrink-0 flex h-10 items-center">{prekidac(v)}</div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
@@ -119,35 +166,37 @@ const NotificationSettings = () => {
           )}
         </section>
       ) : (
-        <div className="space-y-3 pb-24">
-          <p className="text-[13px] text-muted-foreground px-1">
-            Izaberi šta želiš da te obaveštava. Isključene grupe se neće slati ni u app, ni kao push.
-          </p>
+        <div className="space-y-5 pb-24">
+          <p className="text-[13px] text-muted-foreground px-1">{opis}</p>
 
           {loading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            ROWS.map(({ key, icon: Icon, title, desc }) => (
-              <Card key={key} className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-primary-soft text-primary-soft-foreground flex items-center justify-center shrink-0">
-                    <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-[14px] leading-tight">{title}</div>
-                    <div className="text-[12px] text-muted-foreground mt-0.5">{desc}</div>
-                  </div>
-                  <div className="shrink-0">
-                    {saving === key ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                    ) : (
-                      <Switch checked={prefs[key]} onCheckedChange={() => toggle(key)} />
-                    )}
-                  </div>
+            ODELJCI.map((o) => (
+              <section key={o.naslov} className="space-y-2">
+                <div className="px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  {o.naslov}
                 </div>
-              </Card>
+                <Card className="divide-y divide-hairline overflow-hidden p-0">
+                  {o.vrste.map((v) => {
+                    const Icon = v.icon;
+                    return (
+                      <div key={v.kind} className="flex items-center gap-3 px-4 py-3.5">
+                        <div className="h-10 w-10 rounded-xl bg-primary-soft text-primary-soft-foreground flex items-center justify-center shrink-0">
+                          <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-[14px] leading-tight">{v.title}</div>
+                          <div className="text-[12px] text-muted-foreground mt-0.5">{v.desc}</div>
+                        </div>
+                        <div className="shrink-0">{prekidac(v)}</div>
+                      </div>
+                    );
+                  })}
+                </Card>
+              </section>
             ))
           )}
         </div>

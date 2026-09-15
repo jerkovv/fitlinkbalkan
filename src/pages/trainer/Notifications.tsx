@@ -6,7 +6,8 @@ import { NotificationDetail } from "@/components/NotificationDetail";
 import { BroadcastButton } from "@/components/BroadcastButton";
 import { useNotifications, useNoveDokJeOtvoreno, type AppNotification } from "@/hooks/useNotifications";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
-import { Bell, Trash2 } from "lucide-react";
+import { Bell, Trash2, Settings } from "lucide-react";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 // Racunar: grupe po danu, da duga lista ima oslonac za oko.
@@ -61,12 +62,30 @@ const Notifications = () => {
         eyebrow="Aktivnost"
         title="Notifikacije"
         action={
+          // Podesavanja (koja obavestenja stizu) su odmah uz listu, i na telefonu i na racunaru.
           desktop ? (
-            <BroadcastButton
-              label="Pošalji obaveštenje"
-              className="h-10 rounded-full px-4 bg-gradient-brand text-white shadow-brand"
-            />
-          ) : undefined
+            <>
+              <Link
+                to="/trener/podesavanja-obavestenja"
+                className="inline-flex h-10 items-center gap-1.5 rounded-full border border-hairline bg-surface px-4 text-sm font-semibold transition hover:bg-surface-2"
+              >
+                <Settings className="h-4 w-4" />
+                Podešavanja
+              </Link>
+              <BroadcastButton
+                label="Pošalji obaveštenje"
+                className="h-10 rounded-full px-4 bg-gradient-brand text-white shadow-brand"
+              />
+            </>
+          ) : (
+            <Link
+              to="/trener/podesavanja-obavestenja"
+              aria-label="Podešavanja obaveštenja"
+              className="h-10 w-10 rounded-full bg-surface border border-hairline flex items-center justify-center transition active:scale-95"
+            >
+              <Settings className="h-4 w-4" />
+            </Link>
+          )
         }
       >
         {desktop ? (
