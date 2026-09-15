@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
+import { Keyboard } from "@capacitor/keyboard";
 import { supabase } from "@/lib/supabase";
 import { porukaGreske } from "@/lib/errorMessage";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -50,6 +51,26 @@ const PORUKE: Record<string, string> = {
 export const IspraviSerijeSheet = ({ open, onOpenChange, sessionId, vezba, serije, onSaved }: Props) => {
   const [polja, setPolja] = useState<Record<number, { kg: string; reps: string }>>({});
   const [cuvam, setCuvam] = useState(false);
+
+  // Tastatura na telefonu: WKWebView se ne skuplja sam (resize "none"), pa bi
+  // tastatura prekrila polja i dugme. Fioka se podigne za visinu tastature, isti
+  // pristup kao FullScreenSheet i Drawer.
+  const [tastatura, setTastatura] = useState(0);
+  useEffect(() => {
+    if (!open) return;
+    const show = Keyboard.addListener("keyboardWillShow", (info) => setTastatura(info.keyboardHeight));
+    const hide = Keyboard.addListener("keyboardWillHide", () => setTastatura(0));
+    return () => {
+      show.then((h) => h.remove());
+      hide.then((h) => h.remove());
+      setTastatura(0);
+    };
+  }, [open]);
+  // Polje u fokusu ostaje u vidnom polju kad se tastatura podigne.
+  const uFokus = (e: React.FocusEvent<HTMLInputElement>) => {
+    const el = e.currentTarget;
+    setTimeout(() => el.scrollIntoView({ block: "center", behavior: "smooth" }), 320);
+  };
 
   const sortirane = useMemo(
     () => [...serije].sort((a, b) => a.set_number - b.set_number),
@@ -132,6 +153,11 @@ export const IspraviSerijeSheet = ({ open, onOpenChange, sessionId, vezba, serij
       <SheetContent
         side="bottom"
         className="h-auto max-h-[85dvh] w-full max-w-[440px] mx-auto rounded-t-3xl p-0 flex flex-col"
+        style={{
+          paddingBottom: tastatura ? `${tastatura}px` : undefined,
+          maxHeight: tastatura ? "calc(100dvh - 16px)" : undefined,
+          transition: "padding-bottom 0.25s ease",
+        }}
       >
         <SheetTitle className="sr-only">Ispravi serije</SheetTitle>
         <SheetDescription className="sr-only">
@@ -151,6 +177,12 @@ export const IspraviSerijeSheet = ({ open, onOpenChange, sessionId, vezba, serij
             <span className="text-center">Kg</span>
             <span className="text-center">Ponavljanja</span>
           </div>
+          {stavke.length === 0 && (
+            <div className="flex items-center justify-center gap-2 py-6 text-[13px] text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Učitavam serije...
+            </div>
+          )}
           {stavke.map(({ s, p, zakljucana, ispravna }) => (
             <div key={s.set_number} className="grid grid-cols-[56px_1fr_1fr] items-center gap-2 py-1.5">
               <span className="text-[14px] font-bold tnum">{s.set_number}</span>
@@ -164,14 +196,16 @@ export const IspraviSerijeSheet = ({ open, onOpenChange, sessionId, vezba, serij
                   <input
                     inputMode="decimal"
                     value={p?.kg ?? ""}
-                    onChange={(e) => postavi(s.set_number, "kg", e.target.value)}
+                    onFocus={uFokus}
+                    onChange={(e) => postavi(s.set_number,"kg", e.target.value)}
                     aria-label={`Kilaža, serija ${s.set_number}`}
                     className={cn(inputKlase, !ispravna && "border-destructive/60")}
                   />
                   <input
                     inputMode="numeric"
                     value={p?.reps ?? ""}
-                    onChange={(e) => postavi(s.set_number, "reps", e.target.value)}
+                    onFocus={uFokus}
+                    onChange={(e) => postavi(s.set_number,"reps", e.target.value)}
                     aria-label={`Ponavljanja, serija ${s.set_number}`}
                     className={cn(inputKlase, !ispravna && "border-destructive/60")}
                   />
@@ -181,7 +215,12 @@ export const IspraviSerijeSheet = ({ open, onOpenChange, sessionId, vezba, serij
           ))}
         </div>
 
-        <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom),20px)] border-t border-hairline">
+        <div
+          className={cn(
+            "px-5 pt-3 border-t border-hairline",
+            tastatura ? "pb-3" : "pb-[max(env(safe-area-inset-bottom),20px)]",
+          )}
+        >
           <Button
             onClick={sacuvaj}
             disabled={!mozeCuvanje}

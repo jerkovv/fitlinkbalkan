@@ -732,7 +732,7 @@ const ActiveWorkout = () => {
   useEffect(() => {
     if (!sessionId) return;
     let otkazano = false;
-    (async () => {
+    const ucitaj = async () => {
       const { data, error } = await supabase
         .from("set_logs")
         .select("exercise_id, set_number, reps, weight_kg, logged_by_trainer")
@@ -740,8 +740,13 @@ const ActiveWorkout = () => {
         .eq("done", true);
       if (otkazano || error) return;
       setLogovi((data ?? []) as LogSerije[]);
-    })();
-    return () => { otkazano = true; };
+    };
+    ucitaj();
+    // Pozicija se pomera optimisticki, PRE nego sto server upise seriju, pa prvi upit
+    // cesto ne vidi seriju koja je upravo zavrsena. Drugi, posle kratke pauze, je hvata -
+    // bez njega je ispravka prve serije postajala moguca tek posle druge.
+    const t = setTimeout(ucitaj, 1500);
+    return () => { otkazano = true; clearTimeout(t); };
   }, [sessionId, pos?.exerciseIdx, pos?.setNumber, logoviVerzija]);
 
   const logoviVezbe = (ex: { id: string }) => logovi.filter((l) => l.exercise_id === ex.id);
@@ -2101,7 +2106,13 @@ const ActiveWorkout = () => {
                   ) ?? (log ? { reps: log.reps ?? 0, weight_kg: Number(log.weight_kg ?? 0) } : undefined);
                   const t = targetForSet(current, n);   // cilj BAS ovog seta
                   // Ista serija sa poslednjeg zavrsenog treninga (po broju serije).
-                  const prosli = prosliPut[current.exercise_id]?.sets.find((s) => s.set_number === n);
+                  // Serija bez ijednog broja (npr. upis bez kilaze i ponavljanja) se ne
+                  // prikazuje - "Prosli put · - reps" ne govori nista.
+                  const prosliRed = prosliPut[current.exercise_id]?.sets.find((s) => s.set_number === n);
+                  const prosli =
+                    prosliRed && (prosliRed.reps != null || Number(prosliRed.weight_kg ?? 0) > 0)
+                      ? prosliRed
+                      : undefined;
                   return (
                     <div
                       key={n}
@@ -2143,10 +2154,15 @@ const ActiveWorkout = () => {
                         )}
                       </div>
                       {active && <ChevronRight className="h-4 w-4 text-primary" />}
-                      {log && (
+                      {/* Olovka na svakoj uradjenoj seriji odmah, ne tek kad server-ski log
+                          stigne; otvaranje ispravke ionako povuce serije iznova. */}
+                      {done && (
                         <button
                           type="button"
-                          onClick={() => setUrediIdx(exerciseIdx)}
+                          onClick={() => {
+                            setLogoviVerzija((v) => v + 1);
+                            setUrediIdx(exerciseIdx);
+                          }}
                           aria-label={`Ispravi seriju ${n}`}
                           className="h-8 w-8 -mr-1.5 shrink-0 rounded-full flex items-center justify-center text-muted-foreground transition hover:bg-surface-2 hover:text-foreground active:scale-95"
                         >
@@ -2162,7 +2178,7 @@ const ActiveWorkout = () => {
                   jednim redom iznad (poklapanje je po broju serije), pa bi se izgubile iz vida. */}
               {(() => {
                 const visak = (prosliPut[current.exercise_id]?.sets ?? []).filter(
-                  (s) => s.set_number > setsForCurrent,
+                  (s) => s.set_number > setsForCurrent && (s.reps != null || Number(s.weight_kg ?? 0) > 0),
                 );
                 if (!visak.length) return null;
                 return (
