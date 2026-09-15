@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ChevronLeft, Heart, Loader2, Activity, Pause, Flame, UserRound } from "lucide-react";
+import { ChevronLeft, Heart, Loader2, Activity, Pause, Flame, UserRound, Square } from "lucide-react";
+import { toast } from "sonner";
+import { porukaGreske } from "@/lib/errorMessage";
+import { useConfirm } from "@/hooks/useConfirm";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
@@ -114,6 +117,33 @@ const LiveWorkoutView = () => {
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(Date.now());
   const [ended, setEnded] = useState(false);
+  const confirm = useConfirm();
+  const [zaustavljam, setZaustavljam] = useState(false);
+
+  // Trener zaustavlja trening koji je vezbac zaboravio da ugasi. Kraj ide istim
+  // putem kao vezbacev "Zavrsi" (trainer_finish_workout), pa telefon, sat i Live
+  // Activity vide obican kraj; upisane serije ostaju.
+  const zaustaviTrening = async () => {
+    if (!session || zaustavljam) return;
+    const ok = await confirm({
+      title: "Zaustaviti trening?",
+      description: `Trening${athleteName ? ` vežbača ${athleteName}` : ""} biće završen i sačuvan sa serijama upisanim do sada. Koristi ovo kad je vežbač zaboravio da ugasi trening.`,
+      confirmLabel: "Zaustavi",
+      destructive: true,
+    });
+    if (!ok) return;
+    setZaustavljam(true);
+    const { data, error } = await supabase.rpc("trainer_finish_workout" as any, { p_session_id: session.id });
+    setZaustavljam(false);
+    if (error) {
+      toast.error(porukaGreske(error));
+      return;
+    }
+    const res = data as { success?: boolean } | null;
+    if (res?.success === false) toast("Trening je već bio završen");
+    else toast.success("Trening je zaustavljen");
+    setEnded(true);
+  };
 
   const lastHrFetchRef = useRef(0);
 
@@ -512,13 +542,24 @@ const LiveWorkoutView = () => {
               </h1>
             </div>
           </div>
-          <Link
-            to={`/trener/vezbaci/${athleteId}`}
-            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-hairline bg-surface px-4 text-sm font-semibold transition hover:bg-surface-2"
-          >
-            <UserRound className="h-4 w-4" />
-            Profil vežbača
-          </Link>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={zaustaviTrening}
+              disabled={zaustavljam}
+              className="inline-flex h-10 items-center gap-1.5 rounded-full border border-destructive/30 px-4 text-sm font-semibold text-destructive transition hover:bg-destructive-soft disabled:opacity-50"
+            >
+              {zaustavljam ? <Loader2 className="h-4 w-4 animate-spin" /> : <Square className="h-3.5 w-3.5 fill-current" />}
+              Zaustavi trening
+            </button>
+            <Link
+              to={`/trener/vezbaci/${athleteId}`}
+              className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-hairline bg-surface px-4 text-sm font-semibold transition hover:bg-surface-2"
+            >
+              <UserRound className="h-4 w-4" />
+              Profil vežbača
+            </Link>
+          </div>
         </header>
 
         {/* Racunar: levo ono sto se prati kroz trening (trenutna vezba i plan),
@@ -658,6 +699,17 @@ const LiveWorkoutView = () => {
             </div>
             <QuickMessagePanel sessionId={session.id} />
           </Card>
+
+          {/* Kad je vezbac zaboravio da ugasi trening. */}
+          <button
+            type="button"
+            onClick={zaustaviTrening}
+            disabled={zaustavljam}
+            className="w-full h-12 rounded-2xl border border-destructive/30 bg-surface text-[14px] font-semibold text-destructive inline-flex items-center justify-center gap-2 transition active:scale-[0.99] disabled:opacity-50"
+          >
+            {zaustavljam ? <Loader2 className="h-4 w-4 animate-spin" /> : <Square className="h-3.5 w-3.5 fill-current" />}
+            Zaustavi trening
+          </button>
         </div>
       </div>
     </div>
