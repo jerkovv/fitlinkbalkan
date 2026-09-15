@@ -23,7 +23,7 @@ export const BaterijaVezbaca = ({ a, className }: { a: SaBaterijom; className?: 
   const b = baterijaVezbaca(a);
   if (!b) return null;
   const niska = b.pct <= NISKA_BATERIJA;
-  const opis = `Baterija ${b.uredjaj === "traka" ? "trake" : "sata"}: ${b.pct}%`;
+  const opis = `Baterija ${b.uredjaj === "traka" ? "senzora" : "sata"}: ${b.pct}%`;
   return (
     <span
       title={opis}

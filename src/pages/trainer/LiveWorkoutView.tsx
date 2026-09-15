@@ -603,7 +603,7 @@ const LiveWorkoutView = () => {
           {trakaBaterija != null && (
             <UredjajRed
               ikona={<Bluetooth className="h-3.5 w-3.5" strokeWidth={2.2} />}
-              naziv="Traka"
+              naziv="Senzor"
               pct={trakaBaterija}
               dajePuls={hrLive && state?.hr_source === "sensor"}
             />

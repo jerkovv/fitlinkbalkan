@@ -70,7 +70,9 @@ export function isHrSignalLive(
 
 /** Kratka oznaka izvora za trenerski prikaz. Sat se ne ispisuje - on je podrazumevan. */
 export function hrSourceLabel(source: HrSource): string | null {
-  if (source === "sensor") return "traka";
+  // "senzor", ne "traka": isto ime kao "Senzor pulsa" u podesavanjima, a preko BLE-a
+  // puls salje i narukvica za ruku ili sat u rezimu emitovanja, ne samo traka za grudi.
+  if (source === "sensor") return "senzor";
   if (source === "phone") return "telefon";
   return null;
 }
