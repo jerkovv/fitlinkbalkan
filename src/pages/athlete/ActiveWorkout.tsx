@@ -2088,7 +2088,7 @@ const ActiveWorkout = () => {
                 </div>
               </div>
 
-              <ProsliPutTraka prosli={prosliPut[current.exercise_id]} trenutnaSerija={setNumber} />
+              <ProsliPutTraka prosli={prosliPut[current.exercise_id]} serijaDanas={setsForCurrent} />
 
               {/* Sets list */}
               <div className="rounded-3xl bg-surface border border-hairline overflow-hidden">

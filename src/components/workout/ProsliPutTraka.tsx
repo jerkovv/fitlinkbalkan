@@ -1,6 +1,5 @@
 import { History } from "lucide-react";
 import type { LastPerformance } from "@/hooks/useLastPerformance";
-import { cn } from "@/lib/utils";
 
 const broj = (n: number) => String(n).replace(".", ",");
 
@@ -12,19 +11,12 @@ export const serijaTekst = (reps: number | null | undefined, kg: number | null |
   return reps != null ? `${reps} reps` : "-";
 };
 
-// Po kalendarskim danima, ne po 24h: jucerasnji vecernji trening je "juce" i ujutru.
-const kadaTekst = (iso: string | null) => {
-  if (!iso) return null;
-  const d = new Date(iso);
-  const sad = new Date();
-  const dani = Math.round(
-    (new Date(sad.getFullYear(), sad.getMonth(), sad.getDate()).getTime() -
-      new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()) /
-      86400000,
-  );
-  if (dani <= 0) return "danas";
-  if (dani === 1) return "juče";
-  return `pre ${dani} ${dani % 10 === 1 && dani % 100 !== 11 ? "dan" : "dana"}`;
+// Isti zapis kao trenerov "Prosli put" u builderu: "10 kg x 10".
+const cipTekst = (reps: number | null, kg: number | null) => {
+  const k = kg != null && Number(kg) > 0 ? `${broj(Number(kg))} kg` : null;
+  if (k && reps != null) return `${k} x ${reps}`;
+  if (k) return k;
+  return reps != null ? `${reps} reps` : "-";
 };
 
 // 1 serija, 2-4 serije, 5+ serija (21 serija, 22 serije).
@@ -36,52 +28,45 @@ const serijeRec = (n: number) => {
 
 type Props = {
   prosli: LastPerformance | undefined;
-  /** Serija koja se sad radi - njen par sa proslog puta je istaknut. */
-  trenutnaSerija: number;
+  /** Koliko serija je danas u planu - kad se razlikuje od proslog puta, to pise. */
+  serijaDanas: number;
 };
 
 /**
- * Ceo prosli trening za ovu vezbu u jednoj traci: kad je bio, koliko serija i
- * svaka serija kao "60 kg × 10". Sve serije su tu, pa se vidi i kad je prosli
- * put bilo vise serija nego danas.
+ * Prosli trening za ovu vezbu, u istom fazonu kao trenerov "Prosli put" u builderu:
+ * sitan naslov i serije redom, bez datuma i bez isticanja. Beli okvir ostaje, jer
+ * stoji medju ostalim karticama ekrana treninga.
  */
-export const ProsliPutTraka = ({ prosli, trenutnaSerija }: Props) => {
+export const ProsliPutTraka = ({ prosli, serijaDanas }: Props) => {
   const serije = (prosli?.sets ?? [])
     .filter((s) => s.reps != null || Number(s.weight_kg ?? 0) > 0)
     .sort((a, b) => a.set_number - b.set_number);
   if (!serije.length) return null;
-  const kada = kadaTekst(prosli?.performed_at ?? null);
+  const drugiBroj = serijaDanas > 0 && serije.length !== serijaDanas;
 
   return (
     <div className="rounded-2xl bg-surface border border-hairline px-3.5 py-3">
-      <div className="flex items-center gap-1.5 text-[11.5px] text-muted-foreground">
-        <History className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />
-        <span className="font-semibold text-foreground">Prošli put</span>
-        {kada && <span>· {kada}</span>}
-        <span>
-          · {serije.length} {serijeRec(serije.length)}
+      <div className="flex items-center gap-1.5 mb-2">
+        <History className="h-3.5 w-3.5 text-muted-foreground shrink-0" strokeWidth={2.2} />
+        <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">
+          Prošli put
         </span>
+        {/* Npr. prosli put 4 serije, danas u planu 3: da ne izgleda da je jedna visak. */}
+        {drugiBroj && (
+          <span className="ml-auto text-[11.5px] text-muted-foreground tnum">
+            {serije.length} {serijeRec(serije.length)}, danas {serijaDanas}
+          </span>
+        )}
       </div>
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {serije.map((s) => {
-          const tren = s.set_number === trenutnaSerija;
-          return (
-            <span
-              key={s.set_number}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12.5px] font-semibold tnum",
-                tren
-                  ? "border-primary/50 bg-primary-soft/40 text-primary"
-                  : "border-hairline bg-surface-2 text-foreground",
-              )}
-            >
-              <span className={cn("text-[10.5px] font-bold", tren ? "text-primary/70" : "text-muted-foreground")}>
-                {s.set_number}
-              </span>
-              {serijaTekst(s.reps, s.weight_kg)}
-            </span>
-          );
-        })}
+      <div className="flex flex-wrap gap-1.5">
+        {serije.map((s) => (
+          <span
+            key={s.set_number}
+            className="inline-flex items-center rounded-full bg-surface-2 px-2.5 py-1 text-[13px] font-medium tnum"
+          >
+            {cipTekst(s.reps, s.weight_kg)}
+          </span>
+        ))}
       </div>
     </div>
   );
