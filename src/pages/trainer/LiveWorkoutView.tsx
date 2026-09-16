@@ -12,7 +12,8 @@ import { QuickMessagePanel } from "@/components/trainer/QuickMessagePanel";
 import { LiveWorkoutPlan } from "@/components/trainer/LiveWorkoutPlan";
 import { WatchSlash } from "@/components/trainer/WatchSlash";
 import { getHrColor, getZoneVar } from "@/lib/workout/hrZone";
-import { hrSourceLabel, isHrSignalLive, isWatchConnected, type HrSource } from "@/lib/liveWorkout";
+import { isHrSignalLive, isWatchConnected, type HrSource } from "@/lib/liveWorkout";
+import { jeSatUredjaj, kratkaOznakaIzvora, nazivUredjaja } from "@/lib/uredjaji";
 
 type LiveState = {
   session_log_id: string;
@@ -34,6 +35,8 @@ type LiveState = {
   // Puls poslednjih 10 min {ts, bpm}, puni ga i sat i traka (vidi _hr_recent_append).
   hr_recent?: { ts: string; bpm: number }[] | null;
   // Baterija trake i sata sa vremenom merenja (vidi baterijaSesije).
+  /** Naziv uparenog BLE uredjaja, da se sat koji emituje puls ne prikazuje kao pojas. */
+  sensor_name?: string | null;
   sensor_battery?: number | null;
   sensor_battery_at?: string | null;
   watch_battery?: number | null;
@@ -100,29 +103,32 @@ const UredjajRed = ({
 }: {
   ikona: ReactNode;
   naziv: string;
-  pct: number;
+  /** null = uredjaj ne javlja bateriju (dosta satova je ne deli). */
+  pct: number | null;
   dajePuls: boolean;
 }) => {
   // Ikonica baterije uz procenat, da se zna da je broj baterija; puni se po nivou.
-  const niska = pct <= NISKA_BATERIJA;
+  const niska = pct != null && pct <= NISKA_BATERIJA;
   return (
     <div className="flex items-center justify-between gap-2 text-[12.5px]">
       <span className="inline-flex min-w-0 items-center gap-1.5 text-muted-foreground">
         {ikona}
-        <span className="font-medium text-foreground">{naziv}</span>
-        {dajePuls && <span className="truncate">· daje puls</span>}
+        <span className="truncate font-medium text-foreground">{naziv}</span>
+        {dajePuls && <span className="shrink-0">· daje puls</span>}
       </span>
-      <span
-        className={
-          niska
-            ? "inline-flex items-center gap-1 tnum font-semibold text-warning"
-            : "inline-flex items-center gap-1 tnum font-semibold text-foreground"
-        }
-        aria-label={`Baterija: ${pct}%`}
-      >
-        <BaterijaIkona pct={pct} className={niska ? "h-4 w-4" : "h-4 w-4 text-muted-foreground"} />
-        {pct}%
-      </span>
+      {pct != null && (
+        <span
+          className={
+            niska
+              ? "inline-flex items-center gap-1 tnum font-semibold text-warning"
+              : "inline-flex items-center gap-1 tnum font-semibold text-foreground"
+          }
+          aria-label={`Baterija: ${pct}%`}
+        >
+          <BaterijaIkona pct={pct} className={niska ? "h-4 w-4" : "h-4 w-4 text-muted-foreground"} />
+          {pct}%
+        </span>
+      )}
     </div>
   );
 };
@@ -432,7 +438,8 @@ const LiveWorkoutView = () => {
   // meri, a uz traku ih telefon procenjuje iz pulsa i salje istim putem, pa vise
   // nema slucaja u kom bi prikazana nula bila laz.
   const hrLive = isHrSignalLive(state?.hr_last_at ?? null, state?.watch_last_hr_at ?? null, now);
-  const izvorOznaka = watchConnected ? null : hrSourceLabel(state?.hr_source ?? null);
+  // Uz puls ide kratka oznaka (HUAWEI, SAT, TELEFON); pun naziv uredjaja je u redu ispod.
+  const izvorOznaka = kratkaOznakaIzvora(state?.hr_source ?? null, state?.sensor_name);
   // Uz sat ostaje kako je bilo (prikaz i na nuli, da polje ne iskoci kroz trening);
   // uz traku tek kad procena zaista postoji.
   const imaKcal = watchConnected || (hrLive && liveCalories > 0);
@@ -525,6 +532,9 @@ const LiveWorkoutView = () => {
   // Baterija uredjaja izmerena u ovom treningu (starija je sa proslog).
   const trakaBaterija = baterijaSesije(state?.sensor_battery, state?.sensor_battery_at, session.started_at);
   const satBaterija = baterijaSesije(state?.watch_battery, state?.watch_battery_at, session.started_at);
+  // Red uredjaja se prikazuje i bez baterije: bitno je da trener vidi CIME vezbac trenira.
+  const imaSenzor = !!state?.sensor_name?.trim() || trakaBaterija != null;
+  const imaSat = satBaterija != null || watchConnected;
   // Slobodan trening bez vezbi nema seriju; "Serija 1" bi tu bila izmisljena.
   const bezVezbe = session.day_id == null && !state?.current_exercise_name;
 
@@ -597,21 +607,27 @@ const LiveWorkoutView = () => {
         </div>
       )}
 
-      {/* Uredjaji koji su se javili u ovom treningu: baterija i koji daje puls. */}
-      {(trakaBaterija != null || satBaterija != null) && (
+      {/* Uredjaji u ovom treningu: pravo ime, ko daje puls i baterija ako je javlja. */}
+      {(imaSenzor || imaSat) && (
         <div className="mt-4 space-y-1.5 border-t border-hairline pt-3">
-          {trakaBaterija != null && (
+          {imaSenzor && (
             <UredjajRed
-              ikona={<Bluetooth className="h-3.5 w-3.5" strokeWidth={2.2} />}
-              naziv="Senzor"
+              ikona={
+                jeSatUredjaj(state?.sensor_name) ? (
+                  <Watch className="h-3.5 w-3.5" strokeWidth={2.2} />
+                ) : (
+                  <Bluetooth className="h-3.5 w-3.5" strokeWidth={2.2} />
+                )
+              }
+              naziv={nazivUredjaja(state?.sensor_name)}
               pct={trakaBaterija}
               dajePuls={hrLive && state?.hr_source === "sensor"}
             />
           )}
-          {satBaterija != null && (
+          {imaSat && (
             <UredjajRed
               ikona={<Watch className="h-3.5 w-3.5" strokeWidth={2.2} />}
-              naziv="Sat"
+              naziv="Apple Watch"
               pct={satBaterija}
               dajePuls={hrLive && state?.hr_source === "watch"}
             />

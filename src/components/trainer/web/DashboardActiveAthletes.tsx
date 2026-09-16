@@ -3,7 +3,8 @@ import { Activity, ArrowRight, Heart, Loader2 } from "lucide-react";
 import { Avatar } from "@/components/ui-bits";
 import { cn } from "@/lib/utils";
 import { getHrColor, formatDuration } from "@/lib/workout/hrZone";
-import { hrSourceLabel, isHrSignalLive, isWatchConnected } from "@/lib/liveWorkout";
+import { isHrSignalLive, isWatchConnected } from "@/lib/liveWorkout";
+import { kratkaOznakaIzvora } from "@/lib/uredjaji";
 import { useActiveAthletes } from "@/hooks/useActiveAthletes";
 import { WatchSlash } from "@/components/trainer/WatchSlash";
 import { ZaustaviTreningDugme, jeZaboravljen } from "@/components/trainer/ZaustaviTrening";
@@ -77,7 +78,7 @@ export const DashboardActiveAthletes = () => {
               const elapsed = a.started_at ? now - new Date(a.started_at).getTime() : 0;
               const initials = (a.athlete_name ?? "??").slice(0, 2).toUpperCase();
               const hrLive = isHrSignalLive(a.hr_last_at, a.watch_last_hr_at, now);
-              const izvor = hrSourceLabel(a.hr_source);
+              const izvor = kratkaOznakaIzvora(a.hr_source, a.sensor_name);
               // Isto pravilo kao telefon: kcal uz sat uvek, uz traku tek kad procena postoji.
               const showKcal =
                 isWatchConnected(a.watch_last_hr_at, now) ||

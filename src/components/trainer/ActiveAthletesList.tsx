@@ -2,7 +2,8 @@ import { Link } from "react-router-dom";
 import { Avatar, Card, SectionTitle } from "@/components/ui-bits";
 import { Heart, ChevronRight, Activity, Flame, ArrowRight } from "lucide-react";
 import { getHrColor, formatDuration } from "@/lib/workout/hrZone";
-import { hrSourceLabel, isHrSignalLive, isWatchConnected } from "@/lib/liveWorkout";
+import { isHrSignalLive, isWatchConnected } from "@/lib/liveWorkout";
+import { kratkaOznakaIzvora } from "@/lib/uredjaji";
 import { useActiveAthletes } from "@/hooks/useActiveAthletes";
 import { WatchSlash } from "@/components/trainer/WatchSlash";
 import { ZaboravljenTreningTraka, jeZaboravljen } from "@/components/trainer/ZaustaviTrening";
@@ -95,9 +96,9 @@ export const ActiveAthletesList = () => {
                         {a.current_hr ?? "-"}
                         {/* Odakle puls stize - samo kad NIJE sat, da se ne pomisli
                             da vezbac ima sat kad ima traku na ruci. */}
-                        {hrSourceLabel(a.hr_source) && (
+                        {kratkaOznakaIzvora(a.hr_source, a.sensor_name) && (
                           <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                            {hrSourceLabel(a.hr_source)}
+                            {kratkaOznakaIzvora(a.hr_source, a.sensor_name)}
                           </span>
                         )}
                       </div>

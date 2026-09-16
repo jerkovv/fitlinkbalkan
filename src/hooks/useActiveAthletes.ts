@@ -26,6 +26,8 @@ export type ActiveAthlete = {
   total_completed_sets: number | null;
   last_heartbeat: string | null;
   // Baterija trake i sata sa vremenom merenja (vidi baterijaSesije).
+  /** Naziv uparenog BLE uredjaja (npr. HUAWEI WATCH GT 5), kad ga telefon posalje. */
+  sensor_name: string | null;
   sensor_battery: number | null;
   sensor_battery_at: string | null;
   watch_battery: number | null;
@@ -131,6 +133,7 @@ export const useActiveAthletes = () => {
                       watch_last_hr_at: (row!.watch_last_hr_at as string | null) ?? null,
                       hr_last_at: (row!.hr_last_at as string | null) ?? null,
                       hr_source: (row!.hr_source as HrSource) ?? null,
+                      sensor_name: (row!.sensor_name as string | null) ?? null,
                       sensor_battery: (row!.sensor_battery as number | null) ?? null,
                       sensor_battery_at: (row!.sensor_battery_at as string | null) ?? null,
                       watch_battery: (row!.watch_battery as number | null) ?? null,

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff, Plus, Minus, Pencil, BatteryLow } from "lucide-react";
 import { NISKA_BATERIJA } from "@/lib/baterija";
+import { getSavedSensor } from "@/lib/wearable/bleHeartRate";
 import { ProsliPutTraka, serijaTekst } from "@/components/workout/ProsliPutTraka";
 import { getHrColor, getHrZone } from "@/lib/workout/hrZone";
 import { HR_FRESH_SECONDS, isFreshWithinGrace } from "@/lib/liveWorkout";
@@ -652,13 +653,28 @@ const ActiveWorkout = () => {
           }
           hrSeriesRef.current.push({ ts: new Date().toISOString(), bpm });
         },
-        (povezana) => setSensorConnected(povezana),
+        (povezana) => {
+          setSensorConnected(povezana);
+          // Naziv uredjaja treneru cim se poveze: baterija ume da stigne kasnije ili nikad.
+          if (povezana) {
+            supabase
+              .rpc("athlete_report_sensor" as any, {
+                p_session_id: sessionId,
+                p_name: getSavedSensor()?.name ?? null,
+              })
+              .then(() => undefined, () => undefined);
+          }
+        },
         (status) => setTrakaStatus(status),
         (pct) => {
           setTrakaBaterija(pct);
           // Treneru u zivo stanje: kartica Puls i ikonica u spisku aktivnih.
           supabase
-            .rpc("athlete_report_sensor_battery" as any, { p_session_id: sessionId, p_battery: pct })
+            .rpc("athlete_report_sensor" as any, {
+              p_session_id: sessionId,
+              p_battery: pct,
+              p_name: getSavedSensor()?.name ?? null,
+            })
             .then(() => undefined, () => undefined);
           if (pct <= NISKA_BATERIJA && !trakaUpozorenaRef.current) {
             trakaUpozorenaRef.current = true;

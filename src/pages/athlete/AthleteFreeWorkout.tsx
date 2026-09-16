@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Heart, Loader2, Check, Dumbbell, Flame, X, BatteryLow } from "lucide-react";
 import { toast } from "sonner";
 import { NISKA_BATERIJA } from "@/lib/baterija";
+import { getSavedSensor } from "@/lib/wearable/bleHeartRate";
 import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor/core";
 import {
   AlertDialog,
@@ -356,13 +357,27 @@ const AthleteFreeWorkout = () => {
           const kcal = meracRef.current?.add(bpm) ?? null;
           if (kcal != null) setTrakaKcal(kcal);
         },
-        undefined,
+        (povezana) => {
+          // Naziv uredjaja treneru cim se poveze (baterija ume da stigne kasnije ili nikad).
+          if (povezana) {
+            supabase
+              .rpc("athlete_report_sensor" as any, {
+                p_session_id: sessionId,
+                p_name: getSavedSensor()?.name ?? null,
+              })
+              .then(() => undefined, () => undefined);
+          }
+        },
         (status) => setTrakaStatus(status),
         (pct) => {
           setTrakaBaterija(pct);
           // Treneru u zivo stanje: kartica Puls i ikonica u spisku aktivnih.
           supabase
-            .rpc("athlete_report_sensor_battery" as any, { p_session_id: sessionId, p_battery: pct })
+            .rpc("athlete_report_sensor" as any, {
+              p_session_id: sessionId,
+              p_battery: pct,
+              p_name: getSavedSensor()?.name ?? null,
+            })
             .then(() => undefined, () => undefined);
           if (pct <= NISKA_BATERIJA && !trakaUpozorenaRef.current) {
             trakaUpozorenaRef.current = true;
