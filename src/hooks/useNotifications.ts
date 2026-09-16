@@ -23,7 +23,9 @@ export type NotificationKind =
   | "booking_canceled_by_trainer" // ka vežbaču: trener otkazao njegov termin
   // waitlist
   | "waitlist_promoted" // ka vežbaču: oslobodilo se mesto, rezervisan termin
-  | "waitlist_joined"; // ka treneru: neko se prijavio na listu čekanja
+  | "waitlist_joined" // ka treneru: neko se prijavio na listu čekanja
+  // podsetnik: trening stoji bez ikakve aktivnosti (notify_forgotten_workouts)
+  | "workout_forgotten";
 
 export interface AppNotification {
   id: string;

@@ -41,6 +41,8 @@ export const getActionTarget = (
     return null;
   }
   // athlete
+  // Podsetnik "Jos treniras?": vodi pravo na trening, da moze odmah da ga ugasi.
+  if (n.kind === "workout_forgotten") return { path: "/vezbac/trening", label: "Otvori trening" };
   if (n.kind === "program_assigned") return { path: "/vezbac/trening", label: "Otvori program" };
   if (n.kind === "nutrition_assigned") return { path: "/vezbac/ishrana", label: "Otvori plan ishrane" };
   if (n.kind === "message_from_trainer") return { path: "/vezbac/chat", label: "Otvori chat" };

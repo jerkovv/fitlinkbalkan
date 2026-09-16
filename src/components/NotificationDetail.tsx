@@ -38,6 +38,7 @@ const KIND_META: Record<
   membership_rejected:  { icon: AlertTriangle, tone: "text-[hsl(var(--session-rose-fg))] bg-[hsl(var(--session-rose-bg))]",       label: "Zahtev odbijen" },
   broadcast:            { icon: Megaphone,     tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]",   label: "Obaveštenje" },
   booking_canceled_by_trainer: { icon: CalendarX, tone: "text-[hsl(var(--session-rose-fg))] bg-[hsl(var(--session-rose-bg))]",     label: "Termin otkazan" },
+  workout_forgotten:    { icon: AlertTriangle, tone: "text-[hsl(var(--session-amber-fg))] bg-[hsl(var(--session-amber-bg))]",     label: "Trening još traje" },
   // waitlist
   waitlist_promoted:    { icon: CalendarClock, tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]",   label: "Lista čekanja" },
   waitlist_joined:      { icon: Clock,         tone: "text-[hsl(var(--session-indigo-fg))] bg-[hsl(var(--session-indigo-bg))]",   label: "Lista čekanja" },

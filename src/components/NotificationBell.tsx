@@ -36,6 +36,8 @@ const KIND_META: Record<
   // waitlist
   waitlist_promoted:    { icon: CalendarClock,  tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]" },
   waitlist_joined:      { icon: Clock,          tone: "text-[hsl(var(--session-indigo-fg))] bg-[hsl(var(--session-indigo-bg))]" },
+  // podsetnik "Jos treniras?" kad trening stoji bez aktivnosti
+  workout_forgotten:    { icon: AlertTriangle,  tone: "text-[hsl(var(--session-amber-fg))] bg-[hsl(var(--session-amber-bg))]" },
 };
 
 // Bezbedan fallback za nepoznat kind (nov tip sa servera) -> nikad ne rusi render.
