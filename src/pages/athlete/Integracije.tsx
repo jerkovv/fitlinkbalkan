@@ -70,15 +70,15 @@ const Integracije = () => {
           <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             Senzor pulsa
           </div>
-          <HuaweiSatCard
-            sensor={huaweiUparen ? senzor : null}
-            baterija={huaweiUparen ? baterija : null}
-            onSaved={sacuvanSenzor}
-            onForget={zaboraviSenzor}
-          />
           <HrSensorCard
             sensor={huaweiUparen ? null : senzor}
             baterija={huaweiUparen ? null : baterija}
+            onSaved={sacuvanSenzor}
+            onForget={zaboraviSenzor}
+          />
+          <HuaweiSatCard
+            sensor={huaweiUparen ? senzor : null}
+            baterija={huaweiUparen ? baterija : null}
             onSaved={sacuvanSenzor}
             onForget={zaboraviSenzor}
           />
