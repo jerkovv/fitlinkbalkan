@@ -652,6 +652,9 @@ const ActiveWorkout = () => {
             if (kcal != null) setSensorKcal(kcal);
           }
           hrSeriesRef.current.push({ ts: new Date().toISOString(), bpm });
+          // U pozadini se JS tajmeri guse, a dogadjaj sa senzora i dalje stize: svaki
+          // otkucaj je prilika da se puls upise na server (najvise jednom u 5 s).
+          if (source === "sensor") posaljiOtkucaj();
         },
         (povezana) => {
           setSensorConnected(povezana);
@@ -1270,34 +1273,33 @@ const ActiveWorkout = () => {
     source: liveHrSource === "sensor" ? "sensor" : "phone",
     kcal: trakaDaje && sensorKcal != null ? Math.round(sensorKcal) : null,
   };
+  // Poslednje slanje stoji u ref-u, da ga dele i interval i dogadjaj sa senzora.
+  const poslednjiOtkucajRef = useRef(0);
+  const posaljiOtkucaj = useCallback(async () => {
+    if (!sessionId || finishedRef.current) return;
+    const { hr, source, kcal } = hbRef.current;
+    const razmak = source === "sensor" ? 5000 : 12000;
+    if (Date.now() - poslednjiOtkucajRef.current < razmak) return;
+    poslednjiOtkucajRef.current = Date.now();
+    try {
+      await supabase.rpc("athlete_heartbeat", {
+        p_session_id: sessionId,
+        p_hr: hr,
+        // Trener po ovome zna da puls stize sa senzora, a ne sa sata (hr_source).
+        p_source: source,
+        p_calories: kcal,
+      } as any);
+    } catch {
+      /* noop */
+    }
+  }, [sessionId]);
+
   useEffect(() => {
     if (!sessionId || finished) return;
-    let stopped = false;
-    let poslednjeSlanje = 0;
-    const beat = async () => {
-      if (stopped || finishedRef.current) return;
-      const { hr, source, kcal } = hbRef.current;
-      if (source !== "sensor" && Date.now() - poslednjeSlanje < 12000) return;
-      poslednjeSlanje = Date.now();
-      try {
-        await supabase.rpc("athlete_heartbeat", {
-          p_session_id: sessionId,
-          p_hr: hr,
-          // Trener po ovome zna da puls stize sa trake, a ne sa sata (hr_source).
-          p_source: source,
-          p_calories: kcal,
-        } as any);
-      } catch {
-        /* noop */
-      }
-    };
-    beat();
-    const id = setInterval(beat, 5000);
-    return () => {
-      stopped = true;
-      clearInterval(id);
-    };
-  }, [sessionId, finished]);
+    posaljiOtkucaj();
+    const id = setInterval(() => void posaljiOtkucaj(), 5000);
+    return () => clearInterval(id);
+  }, [sessionId, finished, posaljiOtkucaj]);
 
   /* ------------------------- Live Activity (iOS lock screen) ------------------------- */
   // START kad postoji aktivna sesija + pozicija (jednom), UPDATE na promenu
@@ -1345,7 +1347,8 @@ const ActiveWorkout = () => {
       restEndsAtMs: isResting && pos.restEndsAtMs ? pos.restEndsAtMs : undefined,
       isDurationBased: !!ex.exercise.is_duration_based,
       durationMinutes: ex.exercise.is_duration_based ? (ex.duration_minutes ?? undefined) : undefined,
-      watchConnected: watchEverPresent,
+      // Bilo koji ziv izvor pulsa (sat ILI senzor): native tad prikazuje puls.
+      watchConnected: watchEverPresent || trakaDaje,
       thumbnailUrl: ex.exercise.thumbnail_url ?? undefined,
       weightText,
     };

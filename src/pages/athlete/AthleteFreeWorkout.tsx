@@ -356,6 +356,7 @@ const AthleteFreeWorkout = () => {
           hrSeriesRef.current.push({ ts: new Date().toISOString(), bpm });
           const kcal = meracRef.current?.add(bpm) ?? null;
           if (kcal != null) setTrakaKcal(kcal);
+          posaljiOtkucaj();
         },
         (povezana) => {
           // Naziv uredjaja treneru cim se poveze (baterija ume da stigne kasnije ili nikad).
@@ -404,27 +405,33 @@ const AthleteFreeWorkout = () => {
   // gde tad ima prednost nad satom (sat ga ne gazi 20s).
   const hbTrakaRef = useRef<{ hr: number | null; kcal: number | null }>({ hr: null, kcal: null });
   hbTrakaRef.current = { hr: trakaHr, kcal: trakaKcal != null ? Math.round(trakaKcal) : null };
+  // Slanje stoji na jednom mestu: zove ga i interval i svaki otkucaj sa senzora (u
+  // pozadini se JS tajmeri guse, a dogadjaj sa senzora i dalje stize).
+  const poslednjiOtkucajRef = useRef(0);
+  const posaljiOtkucaj = useCallback(async () => {
+    if (!sessionId || finishedRef.current || !trakaVodiRef.current) return;
+    const { hr, kcal } = hbTrakaRef.current;
+    if (hr == null) return;
+    if (Date.now() - poslednjiOtkucajRef.current < 5000) return;
+    poslednjiOtkucajRef.current = Date.now();
+    try {
+      await supabase.rpc("athlete_heartbeat", {
+        p_session_id: sessionId,
+        p_hr: hr,
+        p_source: "sensor",
+        p_calories: kcal,
+      } as any);
+    } catch {
+      /* noop */
+    }
+  }, [sessionId]);
+
   useEffect(() => {
     if (!sessionId) return;
-    const beat = async () => {
-      if (finishedRef.current || !trakaVodiRef.current) return;
-      const { hr, kcal } = hbTrakaRef.current;
-      if (hr == null) return;
-      try {
-        await supabase.rpc("athlete_heartbeat", {
-          p_session_id: sessionId,
-          p_hr: hr,
-          p_source: "sensor",
-          p_calories: kcal,
-        } as any);
-      } catch {
-        /* noop */
-      }
-    };
-    beat();
-    const id = setInterval(beat, 5000);
+    posaljiOtkucaj();
+    const id = setInterval(() => void posaljiOtkucaj(), 5000);
     return () => clearInterval(id);
-  }, [sessionId]);
+  }, [sessionId, posaljiOtkucaj]);
 
   // 5) Zavrsi: ISTA finalize logika kao ActiveWorkout (complete_workout_session sa HR
   //    statistikom + serijom), pa navigacija na rezime. Idempotentno + timeout.
