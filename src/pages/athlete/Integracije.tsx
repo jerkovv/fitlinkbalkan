@@ -1,9 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { WearableProviderCard, type ProviderStatus } from "@/components/wearables/WearableProviderCard";
 import { useWearableConnections } from "@/hooks/useWearableConnections";
-import { HrSensorCard } from "@/components/wearables/HrSensorCard";
+import { HrSensorCard, type ZapisBaterije } from "@/components/wearables/HrSensorCard";
+import { HuaweiSatCard, jeHuawei } from "@/components/wearables/HuaweiSatCard";
+import { getSavedSensor, getSavedSensorBattery, type HrSensor } from "@/lib/wearable/bleHeartRate";
 import {
   detectPlatform,
   getAvailableProviders,
@@ -17,6 +19,23 @@ const Integracije = () => {
 
   const { connections, connect, disconnect, syncNow, connecting } =
     useWearableConnections();
+
+  // Jedan uparen uredjaj za puls (traka ili sat u rezimu emitovanja): obe kartice
+  // ispod ga dele, pa stanje stoji ovde.
+  const [senzor, setSenzor] = useState<HrSensor | null>(() => getSavedSensor());
+  const [baterija, setBaterija] = useState<ZapisBaterije>(() =>
+    getSavedSensorBattery(getSavedSensor()?.deviceId),
+  );
+  // Uparen uredjaj stoji na TACNO jednoj kartici, da ne pise dva puta isto ime.
+  const huaweiUparen = jeHuawei(senzor);
+  const zaboraviSenzor = () => {
+    setSenzor(null);
+    setBaterija(null);
+  };
+  const sacuvanSenzor = (s: HrSensor, pct: number | null) => {
+    setSenzor(s);
+    setBaterija(pct != null ? { pct, at: new Date().toISOString() } : null);
+  };
 
   const connectionMap = new Map(connections.map((c) => [c.provider, c]));
 
@@ -51,7 +70,18 @@ const Integracije = () => {
           <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             Senzor pulsa
           </div>
-          <HrSensorCard />
+          <HuaweiSatCard
+            sensor={huaweiUparen ? senzor : null}
+            baterija={huaweiUparen ? baterija : null}
+            onSaved={sacuvanSenzor}
+            onForget={zaboraviSenzor}
+          />
+          <HrSensorCard
+            sensor={huaweiUparen ? null : senzor}
+            baterija={huaweiUparen ? null : baterija}
+            onSaved={sacuvanSenzor}
+            onForget={zaboraviSenzor}
+          />
         </section>
 
         {available.length > 0 && (
