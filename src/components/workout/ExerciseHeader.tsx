@@ -97,7 +97,22 @@ export const ExerciseHeader = ({
     tryPlay();
     v.addEventListener("canplay", tryPlay);
     v.addEventListener("loadeddata", tryPlay);
+
+    // Rezim ustede baterije na iPhone-u potpuno blokira autoplay: ostane iOS-ovo sivo
+    // play dugme preko zamrznutog frejma, a vezbac ne vidi pokret. Kad se posle par
+    // sekundi nista ne pomeri, prelazi se na sliku vezbe (gif se vrti i u ustedi).
+    // Pauza dok je ekran u pozadini je normalna, pa se tad ne proverava.
+    const proveriDaLiIde = () => {
+      if (document.visibilityState !== "visible") return;
+      const el = videoRef.current;
+      if (el && el.paused && el.currentTime === 0) setVideoFailed(true);
+    };
+    const t1 = setTimeout(proveriDaLiIde, 1500);
+    const t2 = setTimeout(proveriDaLiIde, 3500);
+
     return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
       v.removeEventListener("canplay", tryPlay);
       v.removeEventListener("loadeddata", tryPlay);
     };
