@@ -46,10 +46,19 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="fitlink_obavestenja" />
+        <!-- Trening u pozadini: bez ovog servisa Android uspava aplikaciju kad se
+             ekran zakljuca, pa puls sa senzora prestane da se belezi. -->
+        <service
+            android:name=".TreningServis"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
+
     </application>
 
     <!-- Permissions -->
 
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Puls traka preko Bluetooth-a. neverForLocation je izjava da se skeniranje

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Loader2, X, Check, ChevronRight, MessageCircle, Heart, Dumbbell, WifiOff, Plus, Minus, Pencil, BatteryLow } from "lucide-react";
 import { NISKA_BATERIJA } from "@/lib/baterija";
 import { getSavedSensor } from "@/lib/wearable/bleHeartRate";
+import { pokreniTreningServis, zaustaviTreningServis } from "@/lib/treningServis";
 import { ProsliPutTraka, serijaTekst } from "@/components/workout/ProsliPutTraka";
 import { getHrColor, getHrZone } from "@/lib/workout/hrZone";
 import { HR_FRESH_SECONDS, isFreshWithinGrace } from "@/lib/liveWorkout";
@@ -285,6 +286,17 @@ const ActiveWorkout = () => {
   const trakaPoslednjiPutRef = useRef(0);
   // Kad je pocelo trazenje uparene trake (za TRAKA_PROBA_MS).
   const trakaPocetakRef = useRef(Date.now());
+  // Android: obavestenje "Trening u toku" drzi proces zivim dok je telefon zakljucan,
+  // pa se puls sa senzora belezi i kad ekran nije upaljen (iOS to resava Bluetooth
+  // rezimom u pozadini).
+  useEffect(() => {
+    if (!sessionId) return;
+    void pokreniTreningServis();
+    return () => {
+      void zaustaviTreningServis();
+    };
+  }, [sessionId]);
+
   // Zivi HR sa SATA preko realtime live-state (workout_live_state.current_hr). Instant izvor
   // kad sat vozi trening - bez cekanja 2s poll-a. Poll (pos.currentHr) ostaje fallback.
   const [watchHr, setWatchHr] = useState<number | null>(null);

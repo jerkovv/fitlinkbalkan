@@ -4,6 +4,7 @@ import { Heart, Loader2, Check, Dumbbell, Flame, X, BatteryLow } from "lucide-re
 import { toast } from "sonner";
 import { NISKA_BATERIJA } from "@/lib/baterija";
 import { getSavedSensor } from "@/lib/wearable/bleHeartRate";
+import { pokreniTreningServis, zaustaviTreningServis } from "@/lib/treningServis";
 import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor/core";
 import {
   AlertDialog,
@@ -171,6 +172,17 @@ const AthleteFreeWorkout = () => {
   // dok sat daje puls - efekat trake ne sme da drzi zastarelo stanje).
   const trakaPocetakRef = useRef(Date.now());
   const satZadnjiRef = useRef<string | null>(null);
+  // Android: obavestenje "Trening u toku" drzi proces zivim dok je telefon zakljucan,
+  // pa se puls sa senzora belezi i kad ekran nije upaljen (iOS to resava Bluetooth
+  // rezimom u pozadini).
+  useEffect(() => {
+    if (!sessionId) return;
+    void pokreniTreningServis();
+    return () => {
+      void zaustaviTreningServis();
+    };
+  }, [sessionId]);
+
   // Baterija trake (telefon je cita) i sata (zivi red); oznaka samo kad je niska,
   // poruka jednom po treningu.
   const [trakaBaterija, setTrakaBaterija] = useState<number | null>(null);
