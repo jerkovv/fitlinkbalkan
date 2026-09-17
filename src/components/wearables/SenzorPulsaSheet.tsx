@@ -71,6 +71,9 @@ export const SenzorPulsaSheet = ({
   // Poslednje ocitavanje kakvo je uredjaj poslao, i ono odbaceno - da se vidi da li
   // broj fali zbog nas ili zato sto uredjaj ne oseca kozu.
   const [probaOcitavanje, setProbaOcitavanje] = useState<HrReading | null>(null);
+  // Veza stoji, a nijedno ocitavanje nije stiglo: kod sata to znaci da emitovanje
+  // pulsa nije upaljeno, pa ekran mora da kaze bas to umesto da drzi "--".
+  const [bezOcitavanja, setBezOcitavanja] = useState(false);
 
   const stopScanRef = useRef<(() => Promise<void>) | null>(null);
   const stopProbeRef = useRef<(() => void) | null>(null);
@@ -83,7 +86,15 @@ export const SenzorPulsaSheet = ({
     setProbaVeza("spajam");
     setProbaRazlog(null);
     setProbaOcitavanje(null);
+    setBezOcitavanja(false);
   };
+
+  useEffect(() => {
+    setBezOcitavanja(false);
+    if (probaVeza !== "ok" || probaBpm != null || probaOcitavanje) return;
+    const t = setTimeout(() => setBezOcitavanja(true), 8000);
+    return () => clearTimeout(t);
+  }, [probaVeza, probaBpm, probaOcitavanje]);
 
   // iOS ume da odbije connect dok skeniranje jos traje, pa se stop CEKA.
   const ocistiSkeniranje = async () => {
@@ -227,6 +238,18 @@ export const SenzorPulsaSheet = ({
                   <div className="mt-2 text-[12px] text-destructive leading-snug">
                     Uređaj javlja da ne oseća kožu. Zategni ga i navlaži kontakte - dok javlja
                     da nema kontakt, broj koji šalje nije merenje.
+                  </div>
+                )}
+                {bezOcitavanja && (
+                  <div className="mt-2 space-y-2">
+                    <div className="text-[12px] text-destructive leading-snug">
+                      Veza radi, ali uređaj ne šalje otkucaje. Ako je sat, uključi emitovanje
+                      pulsa na njemu i ostavi taj ekran upaljen; traku stavi na sebe da se
+                      probudi.
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => void probaj(proba)}>
+                      Probaj ponovo
+                    </Button>
                   </div>
                 )}
                 {probaOcitavanje?.contact === null && (
