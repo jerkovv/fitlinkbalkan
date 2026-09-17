@@ -161,6 +161,7 @@ export const GarminSatCard = ({ sensor, baterija, onSaved, onForget }: Props) =>
         naslov="Poveži Garmin sat"
         koraci={KORACI}
         putevi={PUTEVI}
+        pripada={jeGarminSat}
         napomena={NAPOMENA}
         uvod="Kad emitovanje radi, sat se javlja u spisku ispod, obično imenom modela (Forerunner, Fenix, Venu)."
       />

@@ -71,7 +71,10 @@ const IME_KANDIDAT_RE =
 
 // Apple Watch ne ume da emituje puls preko Bluetooth-a - on do nas stize preko
 // svoje aplikacije na satu. U spisku bi bio samo pogresan izbor.
-const NIJE_SENZOR_RE = /apple watch|airpods|\bmac\b|iphone|ipad/i;
+const NIJE_SENZOR_RE = /\bapple\b[\s\S]*\bwatch\b|airpods|\bmac\b|iphone|ipad|macbook/i;
+
+/** Ime kakvo uredjaj javi ume da nosi duple razmake i nevidljive znake. */
+const sazmi = (ime: string): string => ime.replace(/\s+/g, " ").trim();
 
 const oglasavaHr = (uuids?: string[] | null): boolean =>
   (uuids ?? []).some((u) => {
@@ -180,7 +183,7 @@ export const scanForHrSensors = async (
         for (const u of uredjaji) {
           if (!u?.deviceId) continue;
           uBlizini.add(u.deviceId);
-          const ime = u.name || nadjeni.get(u.deviceId)?.name || "";
+          const ime = sazmi(u.name || nadjeni.get(u.deviceId)?.name || "");
           if (!sviUredjaji && NIJE_SENZOR_RE.test(ime)) continue;
           if (!hrServis && !sviUredjaji && !IME_KANDIDAT_RE.test(ime)) continue;
           const postojeci = nadjeni.get(u.deviceId);
@@ -219,7 +222,7 @@ export const scanForHrSensors = async (
     uBlizini.add(deviceId);
     const postojeci = nadjeni.get(deviceId);
     // iOS ime stize tek uz konekciju kod nekih traka - tada localName ostaje prazan.
-    const ime = rezultat.localName || rezultat.device?.name || postojeci?.name || "";
+    const ime = sazmi(rezultat.localName || rezultat.device?.name || postojeci?.name || "");
     const hrServis = oglasavaHr(rezultat.uuids) || !!postojeci?.hrServis;
     // Bez oznake pulsa u reklami, jedini trag je ime; prazno ime bez te oznake je
     // tudji uredjaj, ne senzor koji krije ime (taj se javi sa 0x180D).

@@ -5,6 +5,7 @@ import { Card } from "@/components/ui-bits";
 import { clearSavedSensor, isHrSensorSupported, type HrSensor } from "@/lib/wearable/bleHeartRate";
 import { SenzorPulsaSheet } from "@/components/wearables/SenzorPulsaSheet";
 import { NISKA_BATERIJA } from "@/lib/baterija";
+import { jeHuaweiSat } from "@/lib/uredjaji";
 import { kadaIzmereno, type ZapisBaterije } from "@/components/wearables/HrSensorCard";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -22,8 +23,7 @@ const NAPOMENA =
   "Dok emituje puls, sat se kod nekih modela privremeno odvoji od Huawei Health aplikacije. Ako opcije nema u meniju, taj model je ne podržava.";
 
 /** Da li je uparen bas Huawei uredjaj (ime iz skeniranja), da chip ne laze. */
-export const jeHuawei = (sensor: HrSensor | null) =>
-  !!sensor && /huawei|\bhw\b|watch gt|watch fit/i.test(sensor.name);
+export const jeHuawei = (sensor: HrSensor | null) => jeHuaweiSat(sensor?.name);
 
 type Props = {
   sensor: HrSensor | null;
@@ -133,6 +133,7 @@ export const HuaweiSatCard = ({ sensor, baterija, onSaved, onForget }: Props) =>
         onSaved={onSaved}
         naslov="Poveži Huawei sat"
         koraci={KORACI}
+        pripada={jeHuaweiSat}
         napomena={NAPOMENA}
         uvod="Kad emitovanje radi, sat se javlja u spisku ispod. Na iPhone-u ime ume da bude prazno, pa piše samo Puls traka."
       />

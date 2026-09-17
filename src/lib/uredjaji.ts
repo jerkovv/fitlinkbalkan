@@ -10,6 +10,14 @@ const GARMIN_TRAKA_RE = /\bhrm\b|hrm[-\s]?(dual|pro|run|swim|tri|fit)/i;
 export const jeGarminSat = (naziv?: string | null): boolean =>
   !!naziv && GARMIN_SAT_RE.test(naziv) && !GARMIN_TRAKA_RE.test(naziv);
 
+const HUAWEI_RE = /huawei|\bhw\b|watch gt|watch fit/i;
+
+export const jeHuaweiSat = (naziv?: string | null): boolean => !!naziv && HUAWEI_RE.test(naziv);
+
+/** Uredjaj koji ima svoju karticu, pa ga "Senzor pulsa" ne nudi. */
+export const imaSvojuKarticu = (naziv?: string | null): boolean =>
+  jeGarminSat(naziv) || jeHuaweiSat(naziv);
+
 // Sat koji emituje puls (Huawei, Amazfit, Garmin i slicni) stize istim BLE putem kao
 // pojas za grudi, pa se razlikuje samo po nazivu koji uredjaj javi u skeniranju.
 const SAT_RE = /watch|band|huawei|amazfit|galaxy|\bgt\s?\d/i;

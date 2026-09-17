@@ -27,6 +27,8 @@ type Props = {
   koraci?: string[];
   /** Isti posao, drugi meni po modelu: otvara se tek kad vezbac ne nadje svoj. */
   putevi?: { modeli: string; put: string }[];
+  /** Koji uredjaji pripadaju OVOJ kartici; ostali cekaju iza "prikazi sve". */
+  pripada?: (ime: string) => boolean;
   napomena?: string;
   uvod?: string;
 };
@@ -55,6 +57,7 @@ export const SenzorPulsaSheet = ({
   naslov = "Poveži senzor pulsa",
   koraci,
   putevi,
+  pripada,
   napomena,
   uvod = "Stavi senzor na sebe da bi se probudio, pa ga izaberi sa spiska.",
 }: Props) => {
@@ -165,6 +168,10 @@ export const SenzorPulsaSheet = ({
     }
     stopProbeRef.current = rezultat.stop;
   };
+
+  // Garmin kartica ne sme da nudi Huawei sat ni obrnuto: svaka pokazuje svoje, a
+  // "prikazi sve" ostaje izlaz za uredjaj koji se javi pod neocekivanim imenom.
+  const prikazani = sviUredjaji || !pripada ? nadjeni : nadjeni.filter((d) => pripada(d.name));
 
   const sacuvaj = async () => {
     if (!proba) return;
@@ -300,7 +307,7 @@ export const SenzorPulsaSheet = ({
           </div>
         ) : (
           <>
-            {nadjeni.map((d) => (
+            {prikazani.map((d) => (
               <button
                 key={d.deviceId}
                 onClick={() => void probaj(d)}
@@ -322,13 +329,13 @@ export const SenzorPulsaSheet = ({
               </div>
             )}
 
-            {!skeniram && nadjeni.length === 0 && !greska && (
+            {!skeniram && prikazani.length === 0 && !greska && (
               <div className="text-center py-6 text-sm text-muted-foreground px-6">
                 Nijedan uređaj nije nađen.
               </div>
             )}
 
-            {!sviUredjaji && uBlizini > nadjeni.length && (
+            {!sviUredjaji && uBlizini > prikazani.length && (
               <button
                 onClick={() => void pokreniSkeniranje(true)}
                 className="w-full text-center py-3 text-[12.5px] font-semibold text-primary"

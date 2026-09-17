@@ -5,6 +5,7 @@ import { Card } from "@/components/ui-bits";
 import { clearSavedSensor, isHrSensorSupported, type HrSensor } from "@/lib/wearable/bleHeartRate";
 import { SenzorPulsaSheet } from "@/components/wearables/SenzorPulsaSheet";
 import { NISKA_BATERIJA } from "@/lib/baterija";
+import { imaSvojuKarticu } from "@/lib/uredjaji";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -142,7 +143,8 @@ export const HrSensorCard = ({ sensor, baterija, onSaved, onForget }: Props) => 
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
         onSaved={onSaved}
-        napomena="Sat koji ume da emituje puls uključi u tom režimu pre skeniranja."
+        pripada={(ime) => !imaSvojuKarticu(ime)}
+        napomena="Sat koji ume da emituje puls uključi u tom režimu pre skeniranja. Huawei i Garmin imaju svoje kartice ispod."
       />
     </>
   );
