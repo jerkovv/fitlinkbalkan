@@ -1,10 +1,21 @@
 import type { HrSource } from "@/lib/liveWorkout";
 
+// Garmin sat emituje puls tek u rezimu "Broadcast Heart Rate" i tada se javlja
+// imenom modela (Forerunner, Fenix, Venu), ne uvek recju Garmin.
+const GARMIN_SAT_RE =
+  /garmin|forerunner|f[eē]nix|venu|v[ií]voactive|v[ií]vomove|v[ií]vosmart|instinct|epix|enduro|tactix|quatix|descent|approach|marq|lily|bounce/i;
+// Garmin grudne trake (HRM-Dual, HRM-Pro) nisu sat i ostaju na kartici "Senzor pulsa".
+const GARMIN_TRAKA_RE = /\bhrm\b|hrm[-\s]?(dual|pro|run|swim|tri|fit)/i;
+
+export const jeGarminSat = (naziv?: string | null): boolean =>
+  !!naziv && GARMIN_SAT_RE.test(naziv) && !GARMIN_TRAKA_RE.test(naziv);
+
 // Sat koji emituje puls (Huawei, Amazfit, Garmin i slicni) stize istim BLE putem kao
 // pojas za grudi, pa se razlikuje samo po nazivu koji uredjaj javi u skeniranju.
-const SAT_RE = /watch|band|huawei|amazfit|galaxy|forerunner|venu|vivoactive|fenix|instinct|\bgt\s?\d/i;
+const SAT_RE = /watch|band|huawei|amazfit|galaxy|\bgt\s?\d/i;
 
-export const jeSatUredjaj = (naziv?: string | null): boolean => !!naziv && SAT_RE.test(naziv);
+export const jeSatUredjaj = (naziv?: string | null): boolean =>
+  !!naziv && (SAT_RE.test(naziv) || jeGarminSat(naziv));
 
 /**
  * Uredno ime uredjaja iz naziva koji javi Bluetooth ("HUAWEI WATCH GT 5-ABC" ->
@@ -13,7 +24,8 @@ export const jeSatUredjaj = (naziv?: string | null): boolean => !!naziv && SAT_R
 const MARKE: { re: RegExp; naziv: string }[] = [
   { re: /huawei|watch gt|watch fit/i, naziv: "Huawei Watch" },
   { re: /amazfit|zepp/i, naziv: "Amazfit" },
-  { re: /garmin|forerunner|venu|vivoactive|fenix|instinct/i, naziv: "Garmin" },
+  { re: GARMIN_TRAKA_RE, naziv: "Garmin traka" },
+  { re: GARMIN_SAT_RE, naziv: "Garmin Watch" },
   { re: /polar/i, naziv: "Polar" },
   { re: /coospo/i, naziv: "Coospo" },
   { re: /wahoo|tickr/i, naziv: "Wahoo" },

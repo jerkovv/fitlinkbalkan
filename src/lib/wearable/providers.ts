@@ -72,8 +72,8 @@ export const PROVIDER_META: Record<Provider, ProviderMeta> = {
   },
   garmin: {
     id: "garmin",
-    name: "Garmin",
-    description: "Garmin satovi i Garmin Connect",
+    name: "Garmin Connect",
+    description: "Istorija treninga i san sa Garmin naloga (puls sa sata već radi preko kartice Garmin sat)",
     icon: Mountain,
     accent: "from-primary to-primary-glow",
     supportedPlatforms: ["ios", "android", "web"],

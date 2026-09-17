@@ -5,6 +5,7 @@ import { WearableProviderCard, type ProviderStatus } from "@/components/wearable
 import { useWearableConnections } from "@/hooks/useWearableConnections";
 import { HrSensorCard, type ZapisBaterije } from "@/components/wearables/HrSensorCard";
 import { HuaweiSatCard, jeHuawei } from "@/components/wearables/HuaweiSatCard";
+import { GarminSatCard, jeGarmin } from "@/components/wearables/GarminSatCard";
 import { getSavedSensor, getSavedSensorBattery, type HrSensor } from "@/lib/wearable/bleHeartRate";
 import {
   detectPlatform,
@@ -28,6 +29,8 @@ const Integracije = () => {
   );
   // Uparen uredjaj stoji na TACNO jednoj kartici, da ne pise dva puta isto ime.
   const huaweiUparen = jeHuawei(senzor);
+  const garminUparen = jeGarmin(senzor);
+  const satUparen = huaweiUparen || garminUparen;
   const zaboraviSenzor = () => {
     setSenzor(null);
     setBaterija(null);
@@ -71,14 +74,20 @@ const Integracije = () => {
             Senzor pulsa
           </div>
           <HrSensorCard
-            sensor={huaweiUparen ? null : senzor}
-            baterija={huaweiUparen ? null : baterija}
+            sensor={satUparen ? null : senzor}
+            baterija={satUparen ? null : baterija}
             onSaved={sacuvanSenzor}
             onForget={zaboraviSenzor}
           />
           <HuaweiSatCard
             sensor={huaweiUparen ? senzor : null}
             baterija={huaweiUparen ? baterija : null}
+            onSaved={sacuvanSenzor}
+            onForget={zaboraviSenzor}
+          />
+          <GarminSatCard
+            sensor={garminUparen ? senzor : null}
+            baterija={garminUparen ? baterija : null}
             onSaved={sacuvanSenzor}
             onForget={zaboraviSenzor}
           />
