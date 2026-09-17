@@ -14,13 +14,13 @@ import { toast } from "sonner";
 // putem kao Huawei: ukljuci se "Broadcast Heart Rate" i sat emituje puls preko
 // standardnog Bluetooth profila, koji FitLink hvata kao svaki drugi senzor.
 const KORACI = [
-  "Na satu drži gornje dugme da otvoriš Kontrole (na Venu i Vivoactive prevuci nadole po ekranu).",
-  'Izaberi ikonicu srca, "Broadcast Heart Rate" (Emitovanje pulsa), i potvrdi.',
-  "Vrati se ovde i izaberi sat sa spiska. Ostavi emitovanje uključeno dok traje uparivanje.",
+  "Na satu DRŽI gornje dugme da otvoriš Kontrole. Prevlačenje nadole daje obaveštenja, to nije taj meni.",
+  'U Kontrolama izaberi ikonicu srca, "Broadcast Heart Rate" (Emitovanje pulsa).',
+  "Ostavi taj ekran upaljen na satu, pa se vrati ovde i izaberi sat sa spiska.",
 ];
 
 const NAPOMENA =
-  "Ako ikonice nema u Kontrolama, potraži Podešavanja > Senzori i dodaci > Puls na zglobu > Emitovanje pulsa. Dok emituje, sat troši više baterije, a neki modeli ne javljaju stanje baterije.";
+  "Ako ikonice nema u Kontrolama, put je Podešavanja > Senzori i dodaci > Puls na zglobu > Emitovanje pulsa. Čim izađeš sa tog ekrana, sat prestaje da šalje puls. Dok emituje, troši više baterije, a neki modeli ne javljaju stanje baterije.";
 
 /** Da li je uparen bas Garmin sat (ime iz skeniranja), da chip ne laze. */
 export const jeGarmin = (sensor: HrSensor | null) => jeGarminSat(sensor?.name);
