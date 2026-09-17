@@ -18,6 +18,17 @@ const HR_SERVICE = "0000180d-0000-1000-8000-00805f9b34fb";
 const HR_MEASUREMENT = "00002a37-0000-1000-8000-00805f9b34fb";
 const BATTERY_SERVICE = "0000180f-0000-1000-8000-00805f9b34fb";
 const BATTERY_LEVEL = "00002a19-0000-1000-8000-00805f9b34fb";
+const DEVICE_INFO_SERVICE = "0000180a-0000-1000-8000-00805f9b34fb";
+// Svaka BLE periferija ima ova dva servisa, pa upit po njima vraca sve sto je
+// uopste upareno sa telefonom - i sat koji svoj servis pulsa jos nije pokazao.
+const GENERIC_ACCESS_SERVICE = "00001800-0000-1000-8000-00805f9b34fb";
+const GENERIC_ATTRIBUTE_SERVICE = "00001801-0000-1000-8000-00805f9b34fb";
+const SVI_UPARENI_SERVISI = [
+  BATTERY_SERVICE,
+  DEVICE_INFO_SERVICE,
+  GENERIC_ACCESS_SERVICE,
+  GENERIC_ATTRIBUTE_SERVICE,
+];
 
 const STORAGE_KEY = "fitlink.hr_sensor";
 const BATTERY_KEY = "fitlink.hr_sensor_battery";
@@ -32,6 +43,8 @@ export type ScannedSensor = HrSensor & {
   rssi: number | null;
   /** Da li je uredjaj sam oglasio servis pulsa (satovi to cesto ne rade). */
   hrServis: boolean;
+  /** Vec je uparen sa telefonom, pa ga skeniranje ne vidi (dat je posebnim pozivom). */
+  povezanSaTelefonom?: boolean;
 };
 
 /** BLE radi samo u aplikaciji iz prodavnice - u WebView-u i Safari-ju Web Bluetooth ne postoji. */
@@ -150,6 +163,51 @@ export const scanForHrSensors = async (
   const nadjeni = new Map<string, ScannedSensor>();
   const uBlizini = new Set<string>();
 
+  /**
+   * Sat uparen sa telefonom (Garmin preko Garmin Connect, Apple Watch) PRESTAJE
+   * da se oglasava dok je veza ziva, pa ga skeniranje ne vidi ma koliko trajalo.
+   * Takav uredjaj sistem daje samo na poseban upit, po servisu - bez ovoga je
+   * spisak prazan iako je sat tu i emituje puls.
+   */
+  const dodajUparene = async () => {
+    const upisi = async (servisi: string[], hrServis: boolean) => {
+      try {
+        const uredjaji = await BleClient.getConnectedDevices(servisi);
+        for (const u of uredjaji) {
+          if (!u?.deviceId) continue;
+          uBlizini.add(u.deviceId);
+          const ime = u.name || nadjeni.get(u.deviceId)?.name || "";
+          if (!hrServis && !sviUredjaji && !IME_KANDIDAT_RE.test(ime)) continue;
+          const postojeci = nadjeni.get(u.deviceId);
+          nadjeni.set(u.deviceId, {
+            deviceId: u.deviceId,
+            name: ime || (hrServis ? "Puls traka" : "Nepoznat uređaj"),
+            rssi: postojeci?.rssi ?? null,
+            hrServis: hrServis || !!postojeci?.hrServis,
+            povezanSaTelefonom: true,
+          });
+        }
+      } catch {
+        /* Android bez dozvole ili stariji iOS - spisak se onda oslanja na skeniranje */
+      }
+    };
+    // Prvo oni koji stvarno nose puls, pa ostali upareni (sat ume da sakrije 0x180D
+    // dok emitovanje nije upaljeno, a vezbac mora da vidi da je uredjaj tu).
+    await upisi([HR_SERVICE], true);
+    await upisi(SVI_UPARENI_SERVISI, false);
+    if (nadjeni.size) onFound(poredjani(), uBlizini.size);
+  };
+
+  const poredjani = () =>
+    [...nadjeni.values()].sort(
+      (a, b) =>
+        Number(b.hrServis) - Number(a.hrServis) ||
+        Number(!!b.povezanSaTelefonom) - Number(!!a.povezanSaTelefonom) ||
+        (b.rssi ?? -999) - (a.rssi ?? -999),
+    );
+
+  await dodajUparene();
+
   await BleClient.requestLEScan({ services: [] }, (rezultat) => {
     const deviceId = rezultat.device?.deviceId;
     if (!deviceId) return;
@@ -171,14 +229,10 @@ export const scanForHrSensors = async (
       name: ime || (hrServis ? "Puls traka" : "Nepoznat uređaj"),
       rssi: typeof rezultat.rssi === "number" ? rezultat.rssi : postojeci?.rssi ?? null,
       hrServis,
+      povezanSaTelefonom: postojeci?.povezanSaTelefonom,
     });
-    // Prvo uredjaji koji sami kazu da salju puls, pa po jacini signala.
-    onFound(
-      [...nadjeni.values()].sort(
-        (a, b) => Number(b.hrServis) - Number(a.hrServis) || (b.rssi ?? -999) - (a.rssi ?? -999),
-      ),
-      uBlizini.size,
-    );
+    // Prvo uredjaji koji sami kazu da salju puls, pa upareni, pa po jacini signala.
+    onFound(poredjani(), uBlizini.size);
   });
 
   let zaustavljen = false;
@@ -243,6 +297,13 @@ const poruka = (e: unknown): string => {
 const probudiTraku = async (deviceId: string, seconds = 6): Promise<void> => {
   try {
     const BleClient = await client();
+    // Uparen uredjaj se ne oglasava dok je veza ziva - njega nema smisla cekati.
+    try {
+      const upareni = await BleClient.getConnectedDevices([HR_SERVICE, ...SVI_UPARENI_SERVISI]);
+      if (upareni.some((u) => u?.deviceId === deviceId)) return;
+    } catch {
+      /* nema veze, ispod sledi skeniranje */
+    }
     let vidjena = false;
     await BleClient.requestLEScan({ services: [] }, (r) => {
       if (r.device?.deviceId === deviceId) vidjena = true;

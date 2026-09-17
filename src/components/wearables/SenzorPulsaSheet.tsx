@@ -34,6 +34,18 @@ type Props = {
  * rezimu emitovanja). Isti prozor koriste sve kartice u "Povezani uredjaji" - samo
  * im se razlikuju koraci na vrhu, jer se emitovanje svuda ukljucuje drugacije.
  */
+/**
+ * Red ispod imena u spisku. Uredjaj uparen sa telefonom nema jacinu signala (ne
+ * oglasava se), a onaj koji u najavi ne kaze da nosi puls potvrdjuje se probom.
+ */
+const opisUredjaja = (d: ScannedSensor): string => {
+  const delovi: string[] = [];
+  if (d.povezanSaTelefonom) delovi.push("Već uparen sa telefonom");
+  else if (d.rssi != null) delovi.push(`Signal ${d.rssi} dBm`);
+  if (!d.hrServis) delovi.push("puls se potvrđuje probom");
+  return delovi.join(" · ");
+};
+
 export const SenzorPulsaSheet = ({
   open,
   onClose,
@@ -255,14 +267,7 @@ export const SenzorPulsaSheet = ({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold truncate">{d.name}</div>
-                  <div className="text-[11px] text-muted-foreground">
-                    {[
-                      d.hrServis ? null : "Ne javlja puls u najavi, proveri probom",
-                      d.rssi != null ? `Signal ${d.rssi} dBm` : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </div>
+                  <div className="text-[11px] text-muted-foreground">{opisUredjaja(d)}</div>
                 </div>
               </button>
             ))}
