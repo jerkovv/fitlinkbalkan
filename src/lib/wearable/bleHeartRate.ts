@@ -28,7 +28,11 @@ export type HrSensor = { deviceId: string; name: string };
 export type SensorBattery = { deviceId: string; pct: number; at: string };
 
 /** Nadjen uredjaj u skeniranju (jaci signal = blize). */
-export type ScannedSensor = HrSensor & { rssi: number | null };
+export type ScannedSensor = HrSensor & {
+  rssi: number | null;
+  /** Da li je uredjaj sam oglasio servis pulsa (satovi to cesto ne rade). */
+  hrServis: boolean;
+};
 
 /** BLE radi samo u aplikaciji iz prodavnice - u WebView-u i Safari-ju Web Bluetooth ne postoji. */
 export const isHrSensorSupported = (): boolean => {
@@ -40,6 +44,23 @@ export const isHrSensorSupported = (): boolean => {
 };
 
 const client = async () => (await import("@capacitor-community/bluetooth-le")).BleClient;
+
+/**
+ * Ime koje lici na sat ili senzor pulsa.
+ *
+ * Skeniranje NE sme da filtrira po servisu 0x180D: pojasevi za grudi ga oglase,
+ * ali sat u rezimu emitovanja (Garmin, deo Huawei modela) salje samo ime, pa uz
+ * filter uopste ne izadje u spisku. Zato se skenira sve, a buka (slusalice, TV,
+ * tudji telefoni) se skida po imenu.
+ */
+const IME_KANDIDAT_RE =
+  /garmin|forerunner|f[e\u0113]nix|venu|v[i\u00ed]vo|instinct|epix|enduro|tactix|quatix|descent|approach|marq|lily|bounce|\bhrm\b|polar|coospo|magene|wahoo|tickr|scosche|amazfit|zepp|huawei|watch|band|heart|\bhr\b|puls|\bcl\d{3}/i;
+
+const oglasavaHr = (uuids?: string[] | null): boolean =>
+  (uuids ?? []).some((u) => {
+    const mali = (u ?? "").toLowerCase();
+    return mali === "180d" || mali === "0x180d" || mali.startsWith("0000180d");
+  });
 
 /**
  * androidNeverForLocation: skeniranje na Androidu 12+ inace trazi i dozvolu za
@@ -115,28 +136,49 @@ export const clearSavedSensor = () => {
 };
 
 /**
- * Skeniranje traje ograniceno (default 12s) i vraca sve sto emituje HR servis.
- * Isti uredjaj se u skeniranju javlja vise puta - zove se onFound sa vec
- * sazetom listom, da UI ne mora da radi dedup.
+ * Skeniranje traje ograniceno (default 12s) i vraca senzore pulsa i satove u
+ * rezimu emitovanja. Isti uredjaj se u skeniranju javlja vise puta - zove se
+ * onFound sa vec sazetom listom, da UI ne mora da radi dedup.
  */
 export const scanForHrSensors = async (
-  onFound: (found: ScannedSensor[]) => void,
+  onFound: (found: ScannedSensor[], ukupnoUBlizini: number) => void,
   seconds = 12,
+  /** Bez filtera po imenu: za sat koji se javi pod imenom kakvo ne ocekujemo. */
+  sviUredjaji = false,
 ): Promise<() => Promise<void>> => {
   const BleClient = await initialize();
   const nadjeni = new Map<string, ScannedSensor>();
+  const uBlizini = new Set<string>();
 
-  await BleClient.requestLEScan({ services: [HR_SERVICE] }, (rezultat) => {
+  await BleClient.requestLEScan({ services: [] }, (rezultat) => {
     const deviceId = rezultat.device?.deviceId;
     if (!deviceId) return;
+    uBlizini.add(deviceId);
     const postojeci = nadjeni.get(deviceId);
+    // iOS ime stize tek uz konekciju kod nekih traka - tada localName ostaje prazan.
+    const ime = rezultat.localName || rezultat.device?.name || postojeci?.name || "";
+    const hrServis = oglasavaHr(rezultat.uuids) || !!postojeci?.hrServis;
+    // Bez oznake pulsa u reklami, jedini trag je ime; prazno ime bez te oznake je
+    // tudji uredjaj, ne senzor koji krije ime (taj se javi sa 0x180D).
+    if (!hrServis && !sviUredjaji && !IME_KANDIDAT_RE.test(ime)) {
+      // I odbaceni se broje: spisak nudi "prikazi sve" tek kad ima sta da pokaze.
+      onFound([...nadjeni.values()], uBlizini.size);
+      return;
+    }
     nadjeni.set(deviceId, {
       deviceId,
-      // iOS ime stize tek uz konekciju kod nekih traka - tada localName ostaje prazan.
-      name: rezultat.localName || rezultat.device?.name || postojeci?.name || "Puls traka",
+      // Bez imena: senzor koji ga krije javlja bar 0x180D, sve ostalo je nepoznato.
+      name: ime || (hrServis ? "Puls traka" : "Nepoznat uređaj"),
       rssi: typeof rezultat.rssi === "number" ? rezultat.rssi : postojeci?.rssi ?? null,
+      hrServis,
     });
-    onFound([...nadjeni.values()].sort((a, b) => (b.rssi ?? -999) - (a.rssi ?? -999)));
+    // Prvo uredjaji koji sami kazu da salju puls, pa po jacini signala.
+    onFound(
+      [...nadjeni.values()].sort(
+        (a, b) => Number(b.hrServis) - Number(a.hrServis) || (b.rssi ?? -999) - (a.rssi ?? -999),
+      ),
+      uBlizini.size,
+    );
   });
 
   let zaustavljen = false;
@@ -202,7 +244,7 @@ const probudiTraku = async (deviceId: string, seconds = 6): Promise<void> => {
   try {
     const BleClient = await client();
     let vidjena = false;
-    await BleClient.requestLEScan({ services: [HR_SERVICE] }, (r) => {
+    await BleClient.requestLEScan({ services: [] }, (r) => {
       if (r.device?.deviceId === deviceId) vidjena = true;
     });
     const kraj = Date.now() + seconds * 1000;

@@ -45,6 +45,10 @@ export const SenzorPulsaSheet = ({
 }: Props) => {
   const [skeniram, setSkeniram] = useState(false);
   const [nadjeni, setNadjeni] = useState<ScannedSensor[]>([]);
+  // Koliko uredjaja se uopste javilo u blizini i da li spisak vise ne filtrira po
+  // imenu: sat u rezimu emitovanja ume da se javi imenom koje ne ocekujemo.
+  const [uBlizini, setUBlizini] = useState(0);
+  const [sviUredjaji, setSviUredjaji] = useState(false);
   const [greska, setGreska] = useState<string | null>(null);
 
   // Proba uzivo: dok je uredjaj izabran, prikazuje se stvaran puls.
@@ -77,14 +81,23 @@ export const SenzorPulsaSheet = ({
     if (stop) await stop();
   };
 
-  const pokreniSkeniranje = async () => {
+  const pokreniSkeniranje = async (sve = false) => {
     setGreska(null);
     setNadjeni([]);
+    setUBlizini(0);
+    setSviUredjaji(sve);
     ocistiProbu();
     await ocistiSkeniranje();
     setSkeniram(true);
     try {
-      const stop = await scanForHrSensors((lista) => setNadjeni(lista));
+      const stop = await scanForHrSensors(
+        (lista, ukupno) => {
+          setNadjeni(lista);
+          setUBlizini(ukupno);
+        },
+        12,
+        sve,
+      );
       stopScanRef.current = stop;
       // scanForHrSensors sam staje posle svog roka - ovde se samo gasi indikator.
       setTimeout(() => setSkeniram(false), 12000);
@@ -223,7 +236,7 @@ export const SenzorPulsaSheet = ({
               className="mt-3"
               onClick={() => {
                 ocistiProbu();
-                void pokreniSkeniranje();
+                void pokreniSkeniranje(sviUredjaji);
               }}
             >
               Nazad na spisak
@@ -242,9 +255,14 @@ export const SenzorPulsaSheet = ({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold truncate">{d.name}</div>
-                  {d.rssi != null && (
-                    <div className="text-[11px] text-muted-foreground">Signal {d.rssi} dBm</div>
-                  )}
+                  <div className="text-[11px] text-muted-foreground">
+                    {[
+                      d.hrServis ? null : "Ne javlja puls u najavi, proveri probom",
+                      d.rssi != null ? `Signal ${d.rssi} dBm` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </div>
                 </div>
               </button>
             ))}
@@ -259,6 +277,15 @@ export const SenzorPulsaSheet = ({
               <div className="text-center py-6 text-sm text-muted-foreground px-6">
                 Nijedan uređaj nije nađen.
               </div>
+            )}
+
+            {!sviUredjaji && uBlizini > nadjeni.length && (
+              <button
+                onClick={() => void pokreniSkeniranje(true)}
+                className="w-full text-center py-3 text-[12.5px] font-semibold text-primary"
+              >
+                Ne vidiš svoj uređaj? Prikaži sve u blizini ({uBlizini})
+              </button>
             )}
           </>
         )}
@@ -277,7 +304,7 @@ export const SenzorPulsaSheet = ({
             variant="outline"
             className="w-full"
             disabled={skeniram}
-            onClick={() => void pokreniSkeniranje()}
+            onClick={() => void pokreniSkeniranje(sviUredjaji)}
           >
             <Search className="h-4 w-4 mr-1.5" />
             {skeniram ? "Tražim..." : "Skeniraj ponovo"}
