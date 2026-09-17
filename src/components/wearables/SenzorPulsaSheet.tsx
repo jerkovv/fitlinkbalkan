@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { HeartPulse, Loader2, Search } from "lucide-react";
+import { ChevronDown, HeartPulse, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   FullScreenSheet,
@@ -25,6 +25,8 @@ type Props = {
   naslov?: string;
   /** Sta uraditi na uredjaju pre skeniranja (npr. ukljuciti emitovanje pulsa). */
   koraci?: string[];
+  /** Isti posao, drugi meni po modelu: otvara se tek kad vezbac ne nadje svoj. */
+  putevi?: { modeli: string; put: string }[];
   napomena?: string;
   uvod?: string;
 };
@@ -52,6 +54,7 @@ export const SenzorPulsaSheet = ({
   onSaved,
   naslov = "Poveži senzor pulsa",
   koraci,
+  putevi,
   napomena,
   uvod = "Stavi senzor na sebe da bi se probudio, pa ga izaberi sa spiska.",
 }: Props) => {
@@ -188,6 +191,24 @@ export const SenzorPulsaSheet = ({
               </li>
             ))}
           </ol>
+        )}
+
+        {putevi && putevi.length > 0 && (
+          <details className="rounded-2xl border border-hairline bg-surface-2 px-4 py-3 [&[open]>summary>svg]:rotate-180">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[13px] font-semibold">
+              Gde je to na mom modelu?
+              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform" />
+            </summary>
+            <ul className="mt-3 space-y-2.5">
+              {putevi.map((p) => (
+                <li key={p.modeli} className="text-[12px] leading-snug">
+                  <span className="font-semibold">{p.modeli}</span>
+                  <br />
+                  <span className="text-muted-foreground">{p.put}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
         )}
 
         <p className="text-[13px] text-muted-foreground">{uvod}</p>

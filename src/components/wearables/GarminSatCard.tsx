@@ -14,13 +14,40 @@ import { toast } from "sonner";
 // putem kao Huawei: ukljuci se "Broadcast Heart Rate" i sat emituje puls preko
 // standardnog Bluetooth profila, koji FitLink hvata kao svaki drugi senzor.
 const KORACI = [
-  "Na satu otvori Podešavanja > Zdravlje i dobrobit (Health & Wellness) > Puls na zglobu (Wrist Heart Rate).",
+  'Na satu otvori Podešavanja i nađi "Wrist Heart Rate" (Puls na zglobu). Meni iznad njega zavisi od modela, spisak je ispod.',
   'Izaberi "Broadcast Heart Rate" (Emitovanje pulsa) i pritisni gornje dugme da krene emitovanje.',
   "Ostavi taj ekran upaljen na satu, pa se vrati ovde i izaberi sat sa spiska.",
 ];
 
+/**
+ * Isti posao, drugi meni po seriji - provereno u Garmin uputstvima za svaku.
+ * Bez ovoga se vezbac vrti po pogresnom meniju i zakljuci da sat ne moze.
+ */
+const PUTEVI = [
+  {
+    modeli: "Venu 4, Vivoactive 6, Forerunner 165, 255, 265, 570, 955, 965, 970, Fenix 8, Fenix E",
+    put: "Podešavanja > Health & Wellness > Wrist Heart Rate > Broadcast Heart Rate",
+  },
+  {
+    modeli: "Venu 3, Vivoactive 5",
+    put: "Podešavanja > Watch Sensors > Wrist Heart Rate > Broadcast Heart Rate",
+  },
+  {
+    modeli: "Fenix 7 i stariji, Epix, Enduro, Tactix, Instinct 2 i 3, Instinct Crossover",
+    put: "Drži MENU > Sensors & Accessories > Wrist Heart Rate > Broadcast Heart Rate",
+  },
+  {
+    modeli: "Venu 2, Venu Sq, Vivoactive 4 i stariji",
+    put: "Podešavanja (zupčanik) > Wrist Heart Rate > Broadcast",
+  },
+  {
+    modeli: "Prečica na skoro svim modelima",
+    put: "Drži gornje dugme (na Fenix-u LIGHT, na Instinct-u CTRL) da otvoriš Kontrole, pa izaberi ikonicu srca. Ako je nema, dodaje se kroz izmenu Kontrola.",
+  },
+];
+
 const NAPOMENA =
-  'Brži put: DRŽI gornje dugme za Kontrole i izaberi ikonicu srca, ako je tu. "Senzori i dodaci" nije taj meni, tamo se dodaju spoljni senzori. Ponovni pritisak gornjeg dugmeta zaustavlja emitovanje, pa sat prestaje da šalje puls. Dok emituje, troši više baterije, a neki modeli ne javljaju stanje baterije.';
+  "Ponovni pritisak istog dugmeta zaustavlja emitovanje, kao i izlazak sa tog ekrana, pa sat odmah prestaje da šalje puls. Dok emituje, troši više baterije, a neki modeli ne javljaju stanje baterije.";
 
 /** Da li je uparen bas Garmin sat (ime iz skeniranja), da chip ne laze. */
 export const jeGarmin = (sensor: HrSensor | null) => jeGarminSat(sensor?.name);
@@ -133,6 +160,7 @@ export const GarminSatCard = ({ sensor, baterija, onSaved, onForget }: Props) =>
         onSaved={onSaved}
         naslov="Poveži Garmin sat"
         koraci={KORACI}
+        putevi={PUTEVI}
         napomena={NAPOMENA}
         uvod="Kad emitovanje radi, sat se javlja u spisku ispod, obično imenom modela (Forerunner, Fenix, Venu)."
       />
