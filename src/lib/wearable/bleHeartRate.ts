@@ -69,6 +69,10 @@ const client = async () => (await import("@capacitor-community/bluetooth-le")).B
 const IME_KANDIDAT_RE =
   /garmin|forerunner|f[e\u0113]nix|venu|v[i\u00ed]vo|instinct|epix|enduro|tactix|quatix|descent|approach|marq|lily|bounce|\bhrm\b|polar|coospo|magene|wahoo|tickr|scosche|amazfit|zepp|huawei|watch|band|heart|\bhr\b|puls|\bcl\d{3}/i;
 
+// Apple Watch ne ume da emituje puls preko Bluetooth-a - on do nas stize preko
+// svoje aplikacije na satu. U spisku bi bio samo pogresan izbor.
+const NIJE_SENZOR_RE = /apple watch|airpods|\bmac\b|iphone|ipad/i;
+
 const oglasavaHr = (uuids?: string[] | null): boolean =>
   (uuids ?? []).some((u) => {
     const mali = (u ?? "").toLowerCase();
@@ -177,6 +181,7 @@ export const scanForHrSensors = async (
           if (!u?.deviceId) continue;
           uBlizini.add(u.deviceId);
           const ime = u.name || nadjeni.get(u.deviceId)?.name || "";
+          if (!sviUredjaji && NIJE_SENZOR_RE.test(ime)) continue;
           if (!hrServis && !sviUredjaji && !IME_KANDIDAT_RE.test(ime)) continue;
           const postojeci = nadjeni.get(u.deviceId);
           nadjeni.set(u.deviceId, {
@@ -218,9 +223,13 @@ export const scanForHrSensors = async (
     const hrServis = oglasavaHr(rezultat.uuids) || !!postojeci?.hrServis;
     // Bez oznake pulsa u reklami, jedini trag je ime; prazno ime bez te oznake je
     // tudji uredjaj, ne senzor koji krije ime (taj se javi sa 0x180D).
+    if (!sviUredjaji && NIJE_SENZOR_RE.test(ime)) {
+      onFound(poredjani(), uBlizini.size);
+      return;
+    }
     if (!hrServis && !sviUredjaji && !IME_KANDIDAT_RE.test(ime)) {
       // I odbaceni se broje: spisak nudi "prikazi sve" tek kad ima sta da pokaze.
-      onFound([...nadjeni.values()], uBlizini.size);
+      onFound(poredjani(), uBlizini.size);
       return;
     }
     nadjeni.set(deviceId, {
