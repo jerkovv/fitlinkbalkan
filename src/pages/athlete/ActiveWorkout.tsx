@@ -30,6 +30,7 @@ import { SupersetHint } from "@/components/workout/SupersetHint";
 import { SetLogger } from "@/components/workout/SetLogger";
 import { RestOfWorkout } from "@/components/workout/RestOfWorkout";
 import { IspraviSerijeSheet, type IspravljenaSerija } from "@/components/workout/IspraviSerijeSheet";
+import { jePoRuci, prefiksRuku } from "@/lib/kgPoRuci";
 import { RestTimer } from "@/components/workout/RestTimer";
 import { useLastPerformance } from "@/hooks/useLastPerformance";
 import { Network } from "@capacitor/network";
@@ -53,7 +54,7 @@ type LiveActivityFields = {
   durationMinutes?: number;
   watchConnected: boolean;   // sat prisutan -> native prikazuje puls
   thumbnailUrl?: string;     // URL slike vezbe (native kesira u App Group)
-  weightText?: string;       // npr "15 kg × 10" ili "10 pon." (samo snaga, ne kardio)
+  weightText?: string;       // npr "15 kg × 10", "2× 15 kg × 10" ili "10 pon." (samo snaga, ne kardio)
 };
 interface LiveActivityPluginDef {
   start(options: LiveActivityFields & { athleteName: string; workoutStartedAtMs: number }): Promise<{ success: boolean }>;
@@ -106,6 +107,8 @@ type DayExercise = {
   set_details: SetDetail[] | null;
   /** NULL = obicna vezba. Isti broj = jedan superset krug (radi se naizmenicno). */
   superset_group?: number | null;
+  /** true = kilaza je za jednu ruku (dve tegle), prikaz "2× 15 kg". */
+  kg_po_ruci?: boolean | null;
   exercise_id: string;
   exercise: {
     name: string;
@@ -1336,13 +1339,14 @@ const ActiveWorkout = () => {
     const hr = typeof hrRaw === "number" && hrRaw > 0 ? hrRaw : null;
 
     // weightText tekuceg seta (samo snaga). Kardio -> izostavi (vec ide "n min").
-    // "{kg} kg × {reps}" (× = U+00D7), ili "{reps} pon." ako nema tezine, inace nista.
+    // "{kg} kg × {reps}" (× = U+00D7), po ruci "2× {kg} kg × {reps}", ili "{reps} pon."
+    // ako nema tezine, inace nista. Isti zapis kao serverski _la_cilj_serije.
     let weightText: string | undefined;
     if (!ex.exercise.is_duration_based) {
       const tgt = targetForSet(ex, pos.setNumber);
       const reps = tgt.repsText?.trim() || null;
       if (tgt.weight != null && tgt.weight > 0) {
-        const kg = String(Math.round(tgt.weight * 100) / 100);   // 15 ne 15.0, 2.5 ostaje 2.5
+        const kg = `${prefiksRuku(jePoRuci(ex))}${Math.round(tgt.weight * 100) / 100}`;   // 15 ne 15.0, 2.5 ostaje 2.5
         weightText = reps ? `${kg} kg × ${reps}` : `${kg} kg`;
       } else if (reps) {
         weightText = `${reps} pon.`;
@@ -1894,6 +1898,8 @@ const ActiveWorkout = () => {
   const setsList = Array.from({ length: setsForCurrent }, (_, i) => i + 1);
   // Cilj TRENUTNOG seta (per-set iz set_details, fallback na parent) - za prikaz i prefil.
   const curTarget = targetForSet(current, setNumber);
+  // Dve tegle: kilaza se unosi i cuva po ruci, a prikazuje "2× 15 kg".
+  const curPoRuci = jePoRuci(current);
   const progressPct = totalSetsAll > 0 ? (completedTotal / totalSetsAll) * 100 : 0;
   // Uparena traka koja salje puls ide PRVA - ona je izricit izbor vezbaca i tacnija
   // je od opticke procene. Bez trake ostaje kao i do sad: sat prisutan -> realtime
@@ -2177,7 +2183,9 @@ const ActiveWorkout = () => {
                     Cilj kg
                   </div>
                   <div className="font-display text-[22px] font-bold tracking-tightest tnum mt-0.5">
-                    {curTarget.weight ?? "-"}
+                    {curTarget.weight != null
+                      ? `${Number(curTarget.weight) > 0 ? prefiksRuku(curPoRuci) : ""}${curTarget.weight}`
+                      : "-"}
                   </div>
                 </div>
               </div>
@@ -2222,13 +2230,13 @@ const ActiveWorkout = () => {
                         {completed ? (
                           <span className="text-muted-foreground tnum">
                             {" · "}
-                            {serijaTekst(completed.reps, completed.weight_kg)}
+                            {serijaTekst(completed.reps, completed.weight_kg, curPoRuci)}
                           </span>
                         ) : (
                           <span className="text-muted-foreground tnum">
                             {" · cilj "}
                             {t.weight != null && Number(t.weight) > 0
-                              ? `${String(t.weight).replace(".", ",")} kg × ${t.repsText ?? "-"}`
+                              ? `${prefiksRuku(curPoRuci)}${String(t.weight).replace(".", ",")} kg × ${t.repsText ?? "-"}`
                               : `${t.repsText ?? "-"} reps`}
                           </span>
                         )}
@@ -2261,6 +2269,7 @@ const ActiveWorkout = () => {
                 totalSets={setsForCurrent}
                 targetReps={curTarget.reps}
                 targetWeightKg={curTarget.weight}
+                poRuci={curPoRuci}
                 initialReps={initialFor(exerciseIdx, setNumber)?.reps ?? null}
                 initialWeightKg={initialFor(exerciseIdx, setNumber)?.weight_kg ?? null}
                 onComplete={handleSetComplete}
@@ -2285,7 +2294,7 @@ const ActiveWorkout = () => {
               open
               onOpenChange={(o) => { if (!o) setUrediIdx(null); }}
               sessionId={sessionId}
-              vezba={{ id: urediVezba.id, name: urediVezba.exercise.name }}
+              vezba={{ id: urediVezba.id, name: urediVezba.exercise.name, kgPoRuci: jePoRuci(urediVezba) }}
               serije={logoviVezbe(urediVezba)}
               onSaved={(izmene) => posleIspravke(urediIdx, izmene)}
             />

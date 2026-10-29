@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@
 import { supabase } from "@/lib/supabase";
 import { Loader2, Dumbbell, Clock, CalendarDays, TrendingUp, TrendingDown, Minus, X } from "lucide-react";
 import { cn, razlikaKg } from "@/lib/utils";
+import { faktorRuku, jePoRuci, nemaKoloneKgPoRuci, poRuciSerije, prefiksRuku } from "@/lib/kgPoRuci";
 
 type Props = {
   sessionId: string | null;
@@ -38,14 +39,25 @@ type ExerciseRow = {
   primary_muscle: string | null;
   /** Cilj kilaze po seriji (per-set red). Serija bez reda pada na planned_weight. */
   set_targets: Record<number, number | null>;
+  /** Dve tegle: kilaza je po ruci ("2× 15 kg"), volumen se broji duplo. */
+  kg_po_ruci: boolean;
   set_logs: Array<{
     set_number: number;
     reps: number | null;
     weight_kg: number | null;
     rpe: number | null;
     done: boolean;
+    /** Snimak sa serije; nema ga u starim redovima ni pre migracije. */
+    kg_po_ruci?: boolean | null;
   }>;
 };
+
+// Serije sa kg_po_ruci (snimak na seriji i oznaka vezbe), pa bez nje dok migracija
+// nije primenjena - inace bi ceo upit pao i dijalog ostao bez serija.
+const SERIJE_SA_RUKAMA =
+  "exercise_id, set_number, reps, weight_kg, rpe, done, kg_po_ruci, assigned_program_exercises(id, position, sets, reps, weight_kg, duration_minutes, kg_po_ruci, exercises(name, primary_muscle, is_duration_based))";
+const SERIJE_BEZ_RUKU =
+  "exercise_id, set_number, reps, weight_kg, rpe, done, assigned_program_exercises(id, position, sets, reps, weight_kg, duration_minutes, exercises(name, primary_muscle, is_duration_based))";
 
 const formatDate = (iso: string | null) => {
   if (!iso) return "-";
@@ -91,12 +103,12 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
             .eq("id", sessionId)
             .maybeSingle(),
           supabase.rpc("get_session_plan_full" as any, { p_session_id: sessionId }),
-          supabase
-            .from("set_logs")
-            .select(
-              "exercise_id, set_number, reps, weight_kg, rpe, done, assigned_program_exercises(id, position, sets, reps, weight_kg, duration_minutes, exercises(name, primary_muscle, is_duration_based))"
-            )
-            .eq("session_log_id", sessionId),
+          (async () => {
+            const upit = (kolone: string) =>
+              supabase.from("set_logs").select(kolone).eq("session_log_id", sessionId);
+            const prvi = await upit(SERIJE_SA_RUKAMA);
+            return nemaKoloneKgPoRuci(prvi.error) ? await upit(SERIJE_BEZ_RUKU) : prvi;
+          })(),
         ]);
 
       if (!sessionData) {
@@ -151,6 +163,7 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
           exercise_name: ex.exercise?.name ?? "Vežba",
           primary_muscle: ex.exercise?.primary_muscle ?? null,
           set_targets: ciljevi,
+          kg_po_ruci: jePoRuci(ex),
           set_logs: (logsByEx[ex.id] ?? []).sort((a, b) => a.set_number - b.set_number),
         };
       });
@@ -170,6 +183,7 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
           exercise_name: sample?.exercises?.name ?? "Vežba (uklonjena iz plana)",
           primary_muscle: sample?.exercises?.primary_muscle ?? null,
           set_targets: {},
+          kg_po_ruci: jePoRuci(sample),
           set_logs: logsByEx[exId].sort((a, b) => a.set_number - b.set_number),
         });
       }
@@ -183,13 +197,17 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
     load();
   }, [open, sessionId]);
 
-  // Agregat: tonaža + completion rate
+  // Agregat: tonaža + completion rate. Dve tegle se broje duplo (kao na serveru).
   const totalVolume = exercises.reduce((acc, ex) => {
     return (
       acc +
       ex.set_logs
         .filter((s) => s.done)
-        .reduce((a, s) => a + (Number(s.weight_kg) || 0) * (Number(s.reps) || 0), 0)
+        .reduce(
+          (a, s) =>
+            a + (Number(s.weight_kg) || 0) * (Number(s.reps) || 0) * faktorRuku(poRuciSerije(s, ex)),
+          0,
+        )
     );
   }, 0);
 
@@ -302,7 +320,7 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
                       ) : (
                         <div className="text-[11.5px] text-muted-foreground mt-0.5">
                           Plan: {ex.sets} × {ex.planned_reps ?? "-"}
-                          {ex.planned_weight ? ` @ ${ex.planned_weight} kg` : ""}
+                          {ex.planned_weight ? ` @ ${prefiksRuku(ex.kg_po_ruci)}${ex.planned_weight} kg` : ""}
                         </div>
                       )}
                     </div>
@@ -327,6 +345,7 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
                         const planW = ex.set_targets[setNum] ?? ex.planned_weight;
                         const actW = log?.weight_kg != null ? Number(log.weight_kg) : null;
                         const wDelta = razlikaKg(actW, planW);
+                        const poRuci = log ? poRuciSerije(log, ex) : ex.kg_po_ruci;
 
                         return (
                           <div
@@ -342,7 +361,7 @@ export const WorkoutSessionDetailDialog = ({ sessionId, open, onOpenChange }: Pr
                                 done ? "text-foreground" : "text-muted-foreground/50"
                               )}
                             >
-                              {actW ?? "-"}
+                              {actW != null ? `${actW > 0 ? prefiksRuku(poRuci) : ""}${actW}` : "-"}
                               {wDelta != null && done && (
                                 <span
                                   className={cn(

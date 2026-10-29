@@ -9,6 +9,7 @@ import { ExerciseHeader } from "@/components/workout/ExerciseHeader";
 import { RestOfWorkout } from "@/components/workout/RestOfWorkout";
 import { SupersetHint } from "@/components/workout/SupersetHint";
 import { RestTimer } from "@/components/workout/RestTimer";
+import { jePoRuci } from "@/lib/kgPoRuci";
 
 type SetDetail = {
   set_number: number;
@@ -25,6 +26,8 @@ type PlanExercise = {
   duration_minutes: number | null;
   /** NULL = obicna vezba. Isti broj = jedan superset krug (radi se naizmenicno). */
   superset_group: number | null;
+  /** true = kilaza je za jednu ruku (dve tegle), prikaz "2× 15 kg". */
+  kg_po_ruci?: boolean | null;
   set_details: SetDetail[] | null;
   exercise_id: string;
   exercise: {
@@ -260,6 +263,7 @@ export const FreeWorkoutExercises = ({
             totalSets={trenutna.sets}
             targetReps={cilj.reps}
             targetWeightKg={cilj.weight}
+            poRuci={jePoRuci(trenutna)}
             onComplete={zavrsiSeriju}
             disabled={disabled}
           />

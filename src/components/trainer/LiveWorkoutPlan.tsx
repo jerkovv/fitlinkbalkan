@@ -7,6 +7,7 @@ import { porukaGreske } from "@/lib/errorMessage";
 import { useLastPerformance } from "@/hooks/useLastPerformance";
 import { ExercisePickerSheet } from "@/components/exercises/ExercisePickerSheet";
 import { Input } from "@/components/ui/input";
+import { jePoRuci, poRuciSerije, prefiksRuku } from "@/lib/kgPoRuci";
 
 type SetDetail = {
   set_number: number;
@@ -26,6 +27,8 @@ type DayExercise = {
   set_details: SetDetail[] | null;
   /** NULL = obicna vezba. Isti broj = jedan superset krug. */
   superset_group: number | null;
+  /** true = kilaza je za jednu ruku (dve tegle), prikaz "2× 15 kg". */
+  kg_po_ruci?: boolean | null;
   exercise_id: string;
   exercise: {
     name: string;
@@ -58,14 +61,14 @@ type DanasnjiSet = {
 /** Raspored kolona mreze: serija | prosli put | kg | ponavljanja | cekiranje. */
 const KOLONE = "grid grid-cols-[20px_minmax(0,1fr)_56px_56px_32px] gap-x-2 items-center";
 
-/** "40 kg x 10" ili samo "x 10" za vezbe sa sopstvenom tezinom. */
-const setTekst = (s: { reps: number | null; weight_kg: number | null }): string => {
-  const kg = s.weight_kg != null && Number(s.weight_kg) > 0 ? `${Number(s.weight_kg)} kg` : null;
+/** "40 kg x 10", "2× 15 kg x 10" (po ruci) ili samo "x 10" za vezbe sa sopstvenom tezinom. */
+const setTekst = (s: { reps: number | null; weight_kg: number | null }, poRuci = false): string => {
+  const kg = s.weight_kg != null && Number(s.weight_kg) > 0 ? `${prefiksRuku(poRuci)}${Number(s.weight_kg)} kg` : null;
   const reps = s.reps != null ? `x ${s.reps}` : null;
   return [kg, reps].filter(Boolean).join(" ") || "-";
 };
 
-/** Cilj za danas, sazeto: "4 x 10 · 60 kg" ili "20 min". */
+/** Cilj za danas, sazeto: "4 x 10 · 60 kg", "4 x 10 · 2× 15 kg" ili "20 min". */
 const ciljTekst = (ex: DayExercise): string => {
   if (ex.exercise.is_duration_based) {
     return ex.duration_minutes != null ? `${ex.duration_minutes} min` : "Trajanje";
@@ -75,7 +78,7 @@ const ciljTekst = (ex: DayExercise): string => {
   const reps = prvi?.reps ?? (ex.reps != null ? String(ex.reps) : null);
   const kg = prvi?.weight_kg ?? ex.weight_kg;
   const delovi = [`${brojSetova} x ${reps ?? "-"}`];
-  if (kg != null && Number(kg) > 0) delovi.push(`${Number(kg)} kg`);
+  if (kg != null && Number(kg) > 0) delovi.push(`${prefiksRuku(jePoRuci(ex))}${Number(kg)} kg`);
   return delovi.join(" · ");
 };
 
@@ -355,6 +358,21 @@ export const LiveWorkoutPlan = ({
     await ucitaj();
   };
 
+  /**
+   * Kilaza po ruci (dve tegle) za tu vezbu, usred treninga. Kao i pauza, menja
+   * plan samo za danas i podize plan_version, pa vezbacev telefon odmah vidi "2×".
+   */
+  const postaviPoRuci = async (ex: DayExercise, vrednost: boolean) => {
+    setSalje(true);
+    const { error } = await supabase.rpc("trainer_set_kg_po_ruci" as any, {
+      p_session_id: sessionId, p_ape_id: ex.id, p_value: vrednost,
+    });
+    setSalje(false);
+    if (error) { toast.error(porukaGreske(error)); return; }
+    toast.success(vrednost ? "Kilaža je po ruci, broji se duplo" : "Kilaža više nije po ruci");
+    await ucitaj();
+  };
+
   const dodajSeriju = async (ex: DayExercise, sets: number) => {
     setSalje(true);
     const { data, error } = await supabase.rpc("trainer_set_exercise_target" as any, {
@@ -500,6 +518,7 @@ export const LiveWorkoutPlan = ({
         const istorija = prosliPut[ex.exercise_id];
         const danasnje = danas[ex.id] ?? [];
         const kardio = !!ex.exercise.is_duration_based;
+        const poRuci = jePoRuci(ex);
         const brojSerija = Math.max(ex.sets ?? 0, ex.set_details?.length ?? 0) || 1;
         const otvorenaId = otvorena ?? (currentIdx != null ? vezbe[currentIdx]?.id : undefined);
         const razvijena = otvorenaId === ex.id;
@@ -683,7 +702,7 @@ export const LiveWorkoutPlan = ({
                 <div className="flex flex-wrap gap-1">
                   {istorija.sets.map((s2) => (
                     <span key={s2.set_number} className="inline-flex items-center rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium tnum text-muted-foreground">
-                      {setTekst(s2)}
+                      {setTekst(s2, poRuciSerije(s2, istorija))}
                     </span>
                   ))}
                 </div>
@@ -700,7 +719,7 @@ export const LiveWorkoutPlan = ({
                 <div className={cn(KOLONE, "pb-1 text-[9.5px] uppercase tracking-wider font-semibold text-muted-foreground")}>
                   <span />
                   <span>Prošli put</span>
-                  <span className="text-center">Kg</span>
+                  <span className="text-center">{poRuci ? "2× kg" : "Kg"}</span>
                   <span className="text-center">Pon.</span>
                   <span />
                 </div>
@@ -718,7 +737,7 @@ export const LiveWorkoutPlan = ({
                     <div key={sn} className={cn(KOLONE, "py-[3px]")}>
                       <span className="text-[12.5px] font-bold tnum">{sn}</span>
                       <span className="text-[11px] tnum text-muted-foreground truncate">
-                        {pro ? setTekst(pro) : "-"}
+                        {pro ? setTekst(pro, poRuciSerije(pro, istorija)) : "-"}
                       </span>
                       <Input
                         value={vKg}
@@ -726,7 +745,7 @@ export const LiveWorkoutPlan = ({
                         onBlur={() => void sacuvajCeliju(ex, sn, upisana)}
                         inputMode="decimal"
                         placeholder={c?.weight_kg != null ? String(Number(c.weight_kg)) : "-"}
-                        aria-label={`Kilaža, serija ${sn}`}
+                        aria-label={poRuci ? `Kilaža po ruci, serija ${sn}` : `Kilaža, serija ${sn}`}
                         className="h-8 px-1 text-[12.5px] text-center tnum"
                       />
                       <Input
@@ -824,6 +843,38 @@ export const LiveWorkoutPlan = ({
                     </label>
                   )}
                 </div>
+
+                {/* Dve tegle (bucice): upisuje se kilaza jedne ruke, a volumen je
+                    broji duplo. Vazi samo za danasnji trening, kao i pauza. */}
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={poRuci}
+                  disabled={salje}
+                  onClick={() => void postaviPoRuci(ex, !poRuci)}
+                  className={cn(
+                    "mt-1.5 h-9 w-full rounded-lg px-2.5 inline-flex items-center gap-2 text-[12px] font-semibold transition disabled:opacity-50",
+                    poRuci
+                      ? "bg-primary-soft text-primary-soft-foreground"
+                      : "bg-surface-2 text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "h-4 w-4 shrink-0 rounded-[5px] border flex items-center justify-center transition",
+                      poRuci ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/50",
+                    )}
+                  >
+                    {poRuci && <Check className="h-3 w-3" strokeWidth={3.2} />}
+                  </span>
+                  <span className="whitespace-nowrap">2× (po ruci)</span>
+                  {poRuci && (
+                    <span className="ml-auto whitespace-nowrap text-[11px] font-medium opacity-80">
+                      broji se duplo
+                    </span>
+                  )}
+                </button>
               </div>
             )}
 

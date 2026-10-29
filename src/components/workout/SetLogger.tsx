@@ -7,6 +7,8 @@ interface SetLoggerProps {
   totalSets: number;
   targetReps: number | null;
   targetWeightKg: number | null;
+  /** Dve tegle: unosi se kilaza jedne ruke (cuva se tako, volumen je broji duplo). */
+  poRuci?: boolean;
   initialReps?: number | null;
   initialWeightKg?: number | null;
   onComplete: (data: {
@@ -157,6 +159,7 @@ export const SetLogger = ({
   totalSets,
   targetReps,
   targetWeightKg,
+  poRuci = false,
   initialReps,
   initialWeightKg,
   onComplete,
@@ -207,7 +210,8 @@ export const SetLogger = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      {/* items-end: duzi natpis "Težina po ruci" sme u dva reda, a stepperi ostaju u istoj visini. */}
+      <div className="grid grid-cols-2 gap-3 items-end">
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-2">
             Ponavljanja
@@ -216,7 +220,7 @@ export const SetLogger = ({
         </div>
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-2">
-            Težina (kg)
+            {poRuci ? "Težina po ruci (kg)" : "Težina (kg)"}
           </div>
           <Stepper value={weight} onChange={setWeight} step={1} max={999} />
         </div>

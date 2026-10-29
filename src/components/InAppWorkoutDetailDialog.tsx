@@ -14,6 +14,7 @@ import {
 import { HRTimeSeriesChart } from "@/components/wearables/HRTimeSeriesChart";
 import { HRZonesChart } from "@/components/wearables/HRZonesChart";
 import { paroviUUzorke } from "@/lib/wearable/hrParovi";
+import { jePoRuci, poRuciSerije } from "@/lib/kgPoRuci";
 
 interface Props {
   sessionId: string | null;
@@ -30,6 +31,8 @@ interface InAppSet {
   // stari podaci (bez ovog polja) ne puknu.
   duration_minutes: number | null;
   done: boolean;
+  /** Snimak sa serije: kilaza po ruci ("2× 15 kg × 10"). Nema ga pre migracije. */
+  kg_po_ruci?: boolean | null;
 }
 
 interface InAppExercise {
@@ -42,6 +45,8 @@ interface InAppExercise {
   // Vezbe trcanja/hodanja (is_duration_based): plan se prikazuje u minutima.
   is_duration_based: boolean;
   planned_duration_minutes: number | null;
+  /** Dve tegle: kilaza je po ruci. Server volumen vec broji duplo. */
+  kg_po_ruci?: boolean | null;
   done_count: number;
   sets: InAppSet[];
 }
@@ -303,7 +308,9 @@ export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange }: Prop
                           ) : (
                             <div className="text-[11.5px] text-muted-foreground mt-0.5">
                               Plan: {ex.planned_sets} × {ex.planned_reps ?? "-"}
-                              {ex.planned_weight_kg != null ? ` @ ${ex.planned_weight_kg} kg` : ""}
+                              {ex.planned_weight_kg != null
+                                ? ` @ ${jePoRuci(ex) ? "2× " : ""}${ex.planned_weight_kg} kg`
+                                : ""}
                             </div>
                           )}
                         </div>
@@ -328,6 +335,12 @@ export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange }: Prop
                               >
                                 {ex.is_duration_based ? (
                                   <>Serija {s.set_number}: {s.duration_minutes != null ? `${s.duration_minutes} min` : "-"}</>
+                                ) : poRuciSerije(s, ex) && s.weight_kg != null ? (
+                                  // Dve tegle: kilaza ide prva, da se "2×" ne cita kao ponavljanja.
+                                  <>
+                                    Serija {s.set_number}: 2× {s.weight_kg} kg × {s.reps ?? "-"}
+                                    {s.rpe != null ? ` - RPE ${s.rpe}` : ""}
+                                  </>
                                 ) : (
                                   <>
                                     Serija {s.set_number}: {s.reps ?? "-"}

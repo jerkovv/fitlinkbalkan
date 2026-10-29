@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useLastPerformance } from "@/hooks/useLastPerformance";
 import { PhoneShell } from "@/components/PhoneShell";
+import { jePoRuci, poRuciSerije, prefiksRuku } from "@/lib/kgPoRuci";
 
 type SetDetail = {
   set_number: number;
@@ -21,6 +22,8 @@ type PreviewExercise = {
   duration_minutes: number | null;
   /** NULL = obicna vezba. Isti broj = jedan superset krug. */
   superset_group: number | null;
+  /** true = kilaza je za jednu ruku (dve tegle), prikaz "2× 15 kg". */
+  kg_po_ruci?: boolean | null;
   set_details: SetDetail[] | null;
   exercise_id: string;
   exercise: {
@@ -39,7 +42,7 @@ type DayFull = {
   exercises: PreviewExercise[];
 };
 
-/** "4 x 8-12 · 50 kg", ili "20 min" za vezbe na minute. */
+/** "4 x 8-12 · 50 kg", po ruci "4 x 10 · 2× 15 kg", ili "20 min" za vezbe na minute. */
 const ciljTekst = (ex: PreviewExercise): string => {
   if (ex.exercise.is_duration_based) {
     return ex.duration_minutes != null ? `${ex.duration_minutes} min` : "-";
@@ -48,12 +51,12 @@ const ciljTekst = (ex: PreviewExercise): string => {
   const reps = prvi?.reps ?? (ex.reps != null ? String(ex.reps) : null);
   const kg = prvi?.weight_kg ?? ex.weight_kg;
   const delovi = [`${ex.set_details?.length || ex.sets} x ${reps ?? "-"}`];
-  if (kg != null && Number(kg) > 0) delovi.push(`${Number(kg)} kg`);
+  if (kg != null && Number(kg) > 0) delovi.push(`${prefiksRuku(jePoRuci(ex))}${Number(kg)} kg`);
   return delovi.join(" · ");
 };
 
-const setTekst = (s: { reps: number | null; weight_kg: number | null }): string => {
-  const kg = s.weight_kg != null && Number(s.weight_kg) > 0 ? `${Number(s.weight_kg)} kg` : null;
+const setTekst = (s: { reps: number | null; weight_kg: number | null }, poRuci = false): string => {
+  const kg = s.weight_kg != null && Number(s.weight_kg) > 0 ? `${prefiksRuku(poRuci)}${Number(s.weight_kg)} kg` : null;
   const reps = s.reps != null ? `x ${s.reps}` : null;
   return [kg, reps].filter(Boolean).join(" ") || "-";
 };
@@ -276,7 +279,7 @@ export default function WorkoutPreview() {
                       {rekord != null && (
                         <span className="ml-auto inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">
                           <Trophy className="h-3 w-3 text-warning shrink-0" strokeWidth={2.2} />
-                          {rekord} kg
+                          {prefiksRuku(jePoRuci(istorija))}{rekord} kg
                         </span>
                       )}
                     </div>
@@ -286,7 +289,7 @@ export default function WorkoutPreview() {
                           key={s.set_number}
                           className="inline-flex items-center rounded-md bg-surface-2 px-1.5 py-0.5 text-[11.5px] font-medium tnum"
                         >
-                          {setTekst(s)}
+                          {setTekst(s, poRuciSerije(s, istorija))}
                         </span>
                       ))}
                     </div>

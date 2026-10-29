@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Check, ChevronDown, Dumbbell, Link2, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { jePoRuci, poRuciSerije, prefiksRuku, type SaKgPoRuci } from "@/lib/kgPoRuci";
 
 type SetDetail = {
   set_number: number;
@@ -16,6 +17,8 @@ type Vezba = {
   duration_minutes: number | null;
   /** NULL = obicna vezba. Isti broj = jedan superset krug. */
   superset_group?: number | null;
+  /** true = kilaza je za jednu ruku (dve tegle), prikaz "2× 15 kg". */
+  kg_po_ruci?: boolean | null;
   set_details: SetDetail[] | null;
   exercise: {
     name: string;
@@ -25,7 +28,7 @@ type Vezba = {
   };
 };
 
-type UradjenaSerija = { set_number: number; reps: number | null; weight_kg: number | null };
+type UradjenaSerija = SaKgPoRuci & { set_number: number; reps: number | null; weight_kg: number | null };
 
 const ciljTekst = (ex: Vezba): string => {
   if (ex.exercise.is_duration_based) {
@@ -35,16 +38,19 @@ const ciljTekst = (ex: Vezba): string => {
   const reps = prvi?.reps ?? (ex.reps != null ? String(ex.reps) : null);
   const kg = prvi?.weight_kg ?? ex.weight_kg;
   const delovi = [`${ex.set_details?.length || ex.sets} x ${reps ?? "-"}`];
-  if (kg != null && Number(kg) > 0) delovi.push(`${Number(kg)} kg`);
+  if (kg != null && Number(kg) > 0) delovi.push(`${prefiksRuku(jePoRuci(ex))}${Number(kg)} kg`);
   return delovi.join(" · ");
 };
 
 // "60 kg × 8 · 60 kg × 8 · 55 kg × 6" - ono sto je stvarno uradjeno, redom serija.
-const uradjenoTekst = (serije: UradjenaSerija[]): string =>
+// Po ruci: "2× 15 kg × 10".
+const uradjenoTekst = (serije: UradjenaSerija[], ex: Vezba): string =>
   [...serije]
     .sort((a, b) => a.set_number - b.set_number)
     .map((s) => {
-      const kg = s.weight_kg != null && Number(s.weight_kg) > 0 ? `${Number(s.weight_kg)} kg × ` : "× ";
+      const kg = s.weight_kg != null && Number(s.weight_kg) > 0
+        ? `${prefiksRuku(poRuciSerije(s, ex))}${Number(s.weight_kg)} kg × `
+        : "× ";
       return `${kg}${s.reps ?? "-"}`;
     })
     .join(" · ");
@@ -174,7 +180,7 @@ export const RestOfWorkout = ({
                       {ime}
                     </div>
                     <div className="text-[11.5px] text-muted-foreground tnum line-clamp-1">
-                      {imaUradjeno ? uradjenoTekst(serije) : ciljTekst(ex)}
+                      {imaUradjeno ? uradjenoTekst(serije, ex) : ciljTekst(ex)}
                     </div>
                   </div>
                 </div>

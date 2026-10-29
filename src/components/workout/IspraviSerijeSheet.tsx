@@ -7,6 +7,7 @@ import { porukaGreske } from "@/lib/errorMessage";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { prefiksRuku } from "@/lib/kgPoRuci";
 
 export type SerijaZaIspravku = {
   set_number: number;
@@ -21,7 +22,8 @@ type Props = {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   sessionId: string;
-  vezba: { id: string; name: string };
+  /** kgPoRuci: dve tegle, kilaza se unosi po ruci ("2× 15 kg"). */
+  vezba: { id: string; name: string; kgPoRuci?: boolean };
   serije: SerijaZaIspravku[];
   onSaved: (izmene: IspravljenaSerija[]) => void;
 };
@@ -174,7 +176,7 @@ export const IspraviSerijeSheet = ({ open, onOpenChange, sessionId, vezba, serij
         <div className="overflow-y-auto px-5 pb-2">
           <div className="grid grid-cols-[56px_1fr_1fr] gap-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             <span>Serija</span>
-            <span className="text-center">Kg</span>
+            <span className="text-center">{vezba.kgPoRuci ? "Kg po ruci" : "Kg"}</span>
             <span className="text-center">Ponavljanja</span>
           </div>
           {stavke.length === 0 && (
@@ -189,7 +191,7 @@ export const IspraviSerijeSheet = ({ open, onOpenChange, sessionId, vezba, serij
               {zakljucana ? (
                 <div className="col-span-2 flex h-11 items-center justify-center gap-1.5 rounded-xl bg-surface-2 text-[12.5px] text-muted-foreground tnum">
                   <Lock className="h-3.5 w-3.5 shrink-0" />
-                  {Number(s.weight_kg ?? 0)} kg × {s.reps ?? "-"} · upisao trener
+                  {Number(s.weight_kg ?? 0) > 0 ? prefiksRuku(vezba.kgPoRuci) : ""}{Number(s.weight_kg ?? 0)} kg × {s.reps ?? "-"} · upisao trener
                 </div>
               ) : (
                 <>
@@ -198,7 +200,7 @@ export const IspraviSerijeSheet = ({ open, onOpenChange, sessionId, vezba, serij
                     value={p?.kg ?? ""}
                     onFocus={uFokus}
                     onChange={(e) => postavi(s.set_number,"kg", e.target.value)}
-                    aria-label={`Kilaža, serija ${s.set_number}`}
+                    aria-label={vezba.kgPoRuci ? `Kilaža po ruci, serija ${s.set_number}` : `Kilaža, serija ${s.set_number}`}
                     className={cn(inputKlase, !ispravna && "border-destructive/60")}
                   />
                   <input

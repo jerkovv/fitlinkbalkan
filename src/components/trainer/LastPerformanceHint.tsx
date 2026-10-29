@@ -1,9 +1,10 @@
 import { History, Trophy } from "lucide-react";
 import type { LastPerformance } from "@/hooks/useLastPerformance";
+import { jePoRuci, poRuciSerije, prefiksRuku } from "@/lib/kgPoRuci";
 
-/** "40 kg x 10" ili samo "x 10" za vezbe sa sopstvenom tezinom. */
-function setTekst(s: { reps: number | null; weight_kg: number | null }): string {
-  const kg = s.weight_kg != null && Number(s.weight_kg) > 0 ? `${Number(s.weight_kg)} kg` : null;
+/** "40 kg x 10", "2× 15 kg x 10" (po ruci) ili samo "x 10" za vezbe sa sopstvenom tezinom. */
+function setTekst(s: { reps: number | null; weight_kg: number | null }, poRuci = false): string {
+  const kg = s.weight_kg != null && Number(s.weight_kg) > 0 ? `${prefiksRuku(poRuci)}${Number(s.weight_kg)} kg` : null;
   const reps = s.reps != null ? `x ${s.reps}` : null;
   return [kg, reps].filter(Boolean).join(" ") || "-";
 }
@@ -38,7 +39,7 @@ export const LastPerformanceHint = ({ data }: { data: LastPerformance | undefine
         {rekord != null && (
           <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-semibold text-muted-foreground">
             <Trophy className="h-3 w-3 text-warning shrink-0" strokeWidth={2.2} />
-            {rekord} kg
+            {prefiksRuku(jePoRuci(data))}{rekord} kg
           </span>
         )}
       </div>
@@ -48,7 +49,7 @@ export const LastPerformanceHint = ({ data }: { data: LastPerformance | undefine
             key={s.set_number}
             className="inline-flex items-center rounded-md bg-surface px-1.5 py-0.5 text-[11.5px] font-medium tnum"
           >
-            {setTekst(s)}
+            {setTekst(s, poRuciSerije(s, data))}
           </span>
         ))}
       </div>

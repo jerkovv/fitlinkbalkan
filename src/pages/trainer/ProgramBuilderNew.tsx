@@ -35,6 +35,7 @@ import { LockMark } from "@/components/pretplata/LockMark";
 import { useLastPerformance } from "@/hooks/useLastPerformance";
 import { LastPerformanceHint } from "@/components/trainer/LastPerformanceHint";
 import { vezbi } from "@/lib/brojReci";
+import { jePoRuci, prefiksRuku } from "@/lib/kgPoRuci";
 
 type Day = { id: string; day_number: number; name: string; notes: string | null };
 type Exercise = {
@@ -50,6 +51,8 @@ type Exercise = {
   notes: string | null;
   /** NULL = obicna vezba. Isti broj = jedan superset krug (unutar istog dana). */
   superset_group: number | null;
+  /** true = kilaza je za jednu ruku (dve tegle), prikaz "2× 15 kg". Nema ga dok migracija ne stigne. */
+  kg_po_ruci?: boolean | null;
   exercises: { name: string; name_en: string | null; primary_muscle: string; is_duration_based: boolean | null; thumbnail_url: string | null } | null;
 };
 // Per-set cilj (izvor istine). id je DB id ili privremeni (React key); ne salje se u upsert.
@@ -318,11 +321,21 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
     navigate("/trener/programi");
   };
 
-  const updateExercise = async (exId: string, patch: Partial<Exercise>) => {
+  // dayId = izmena se odmah upise i lokalno, bez ponovnog ucitavanja celog plana
+  // (prekidac ne sme da trepne spinerom); neuspeh vraca stanje iz baze.
+  const updateExercise = async (exId: string, patch: Partial<Exercise>, dayId?: string) => {
     if (locked) return openLock();
-    const { error } = await supabase.from(cfg.exTable).update(patch as any).eq("id", exId);
-    if (error) { toast.error(porukaGreske(error)); return; }
-    load();
+    if (dayId) {
+      setExByDay((prev) => ({
+        ...prev,
+        [dayId]: (prev[dayId] ?? []).map((e) => (e.id === exId ? { ...e, ...patch } : e)),
+      }));
+    }
+    // .select(): red koji RLS odbije ne vraca gresku, pa bi lokalna izmena lagala.
+    const { data, error } = await supabase.from(cfg.exTable).update(patch as any).eq("id", exId).select("id");
+    if (error) { toast.error(porukaGreske(error)); load(); return; }
+    if (dayId && !data?.length) { toast.error("Izmena nije sačuvana"); load(); return; }
+    if (!dayId) load();
   };
 
   // Snimanje per-set redova jedne vezbe (auto, onBlur) ATOMICNO preko RPC-a
@@ -589,9 +602,10 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
         const name = ex.exercises?.name_en?.trim() || ex.exercises?.name || "-";
         const thumb = ex.exercises?.thumbnail_url;
         const setCount = rows.length || ex.sets;
+        const poRuci = jePoRuci(ex);
         const summary = isDuration
           ? (ex.duration_minutes != null ? `${ex.duration_minutes} min` : "Trajanje")
-          : `${setCount} ${setCount === 1 ? "serija" : "serije"}${rows[0]?.weight_kg != null ? ` · ${rows[0].weight_kg} kg` : ""}`;
+          : `${setCount} ${setCount === 1 ? "serija" : "serije"}${rows[0]?.weight_kg != null ? ` · ${prefiksRuku(poRuci)}${rows[0].weight_kg} kg` : poRuci ? " · 2× po ruci" : ""}`;
         const cols = advanced ? "28px 1fr 1fr 60px 24px" : "28px 1fr 1fr 24px";
         return (
           <SortableExerciseRow key={ex.id} id={ex.id}>
@@ -721,7 +735,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                   <div>
                     <div className="grid items-center gap-2 mb-1.5" style={{ gridTemplateColumns: cols }}>
                       <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">Set</span>
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">Kg</span>
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">{poRuci ? "2× kg" : "Kg"}</span>
                       <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">Reps</span>
                       {advanced && <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">Pauza (s)</span>}
                       <span />
@@ -741,6 +755,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                             const v = e.target.value === "" ? null : parseFloat(e.target.value);
                             if (v !== r.weight_kg) applySets(ex.id, rows.map((row, i) => (i === idx ? { ...row, weight_kg: v } : row)));
                           }}
+                          aria-label={poRuci ? `Kilaža po ruci, set ${idx + 1}` : `Kilaža, set ${idx + 1}`}
                           className="h-8 text-sm text-center"
                           placeholder="-"
                         />
@@ -800,6 +815,29 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                         <Settings2 className="h-3.5 w-3.5" /> Pauza
                       </button>
                     </div>
+                    {/* Dve tegle (bucice): upisuje se kilaza jedne ruke, a volumen je
+                        broji duplo. Svoj red, da se na uskom telefonu ne gura sa
+                        "Dodaj set" i "Pauza". */}
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={poRuci}
+                      onClick={() => void updateExercise(ex.id, { kg_po_ruci: !poRuci }, d.id)}
+                      className={`mt-2.5 inline-flex items-center gap-2 text-[12px] font-medium ${poRuci ? "text-primary" : "text-muted-foreground"}`}
+                    >
+                      <span
+                        aria-hidden
+                        className={`h-4 w-4 shrink-0 rounded-[5px] border flex items-center justify-center transition ${poRuci ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/50"}`}
+                      >
+                        {poRuci && <Check className="h-3 w-3" strokeWidth={3.2} />}
+                      </span>
+                      2× (po ruci)
+                    </button>
+                    {poRuci && (
+                      <p className="mt-1 pl-6 text-[11.5px] text-muted-foreground">
+                        Kilaža je za jednu ruku, broji se duplo.
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

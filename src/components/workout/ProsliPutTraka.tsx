@@ -1,19 +1,27 @@
 import { History } from "lucide-react";
 import type { LastPerformance } from "@/hooks/useLastPerformance";
+import { poRuciSerije, prefiksRuku } from "@/lib/kgPoRuci";
 
 const broj = (n: number) => String(n).replace(".", ",");
 
-/** "60 kg × 10"; bez kilaze (sopstvena tezina) "10 reps", bez ponavljanja "60 kg". */
-export const serijaTekst = (reps: number | null | undefined, kg: number | null | undefined) => {
-  const k = kg != null && Number(kg) > 0 ? `${broj(Number(kg))} kg` : null;
+/**
+ * "60 kg × 10", po ruci "2× 15 kg × 10"; bez kilaze (sopstvena tezina) "10 reps",
+ * bez ponavljanja "60 kg".
+ */
+export const serijaTekst = (
+  reps: number | null | undefined,
+  kg: number | null | undefined,
+  poRuci = false,
+) => {
+  const k = kg != null && Number(kg) > 0 ? `${prefiksRuku(poRuci)}${broj(Number(kg))} kg` : null;
   if (k && reps != null) return `${k} × ${reps}`;
   if (k) return k;
   return reps != null ? `${reps} reps` : "-";
 };
 
-// Isti zapis kao trenerov "Prosli put" u builderu: "10 kg x 10".
-const cipTekst = (reps: number | null, kg: number | null) => {
-  const k = kg != null && Number(kg) > 0 ? `${broj(Number(kg))} kg` : null;
+// Isti zapis kao trenerov "Prosli put" u builderu: "10 kg x 10" (po ruci "2× 10 kg x 10").
+const cipTekst = (reps: number | null, kg: number | null, poRuci: boolean) => {
+  const k = kg != null && Number(kg) > 0 ? `${prefiksRuku(poRuci)}${broj(Number(kg))} kg` : null;
   if (k && reps != null) return `${k} x ${reps}`;
   if (k) return k;
   return reps != null ? `${reps} reps` : "-";
@@ -64,7 +72,7 @@ export const ProsliPutTraka = ({ prosli, serijaDanas }: Props) => {
             key={s.set_number}
             className="inline-flex items-center rounded-full bg-surface-2 px-2.5 py-1 text-[13px] font-medium tnum"
           >
-            {cipTekst(s.reps, s.weight_kg)}
+            {cipTekst(s.reps, s.weight_kg, poRuciSerije(s, prosli))}
           </span>
         ))}
       </div>

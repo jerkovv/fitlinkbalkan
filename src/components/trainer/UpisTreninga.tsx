@@ -12,6 +12,7 @@ import {
   FullScreenSheetFooter,
 } from "@/components/ui/full-screen-sheet";
 import { ExercisePickerSheet } from "@/components/exercises/ExercisePickerSheet";
+import { cn } from "@/lib/utils";
 
 type Serija = { reps: string; kg: string };
 type Vezba = {
@@ -25,6 +26,8 @@ type Vezba = {
   serije: Serija[];
   /** NULL = obicna vezba. Isti broj = jedan superset krug. */
   superset: number | null;
+  /** Dve tegle (bucice): kilaza se upisuje po ruci, volumen je broji duplo. */
+  poRuci: boolean;
 };
 
 /** Najvise vezbi po treningu - ista granica kao na serveru. */
@@ -148,6 +151,7 @@ export const UpisTreninga = ({
             minuti: "20",
             serije: [{ reps: "10", kg: "" }, { reps: "10", kg: "" }, { reps: "10", kg: "" }],
             superset: null,
+            poRuci: false,
           };
         }),
       ];
@@ -243,6 +247,8 @@ export const UpisTreninga = ({
         p_exercises: vezbe.map((v) => ({
           exercise_id: v.exercise_id,
           superset_group: v.superset,
+          // Samo kad je ukljuceno: stariji server polje ne poznaje.
+          ...(v.poRuci && !v.kardio ? { kg_po_ruci: true } : {}),
           sets: v.kardio
             ? [{ duration_minutes: Math.round(broj(v.minuti) as number) }]
             : v.serije.map((r) => ({
@@ -416,7 +422,7 @@ export const UpisTreninga = ({
                   <div className="grid grid-cols-[24px_1fr_1fr_32px] gap-2 items-center pb-1 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                     <span />
                     <span className="text-center">Ponav.</span>
-                    <span className="text-center">Kg</span>
+                    <span className="text-center">{v.poRuci ? "2× kg" : "Kg"}</span>
                     <span />
                   </div>
 
@@ -435,7 +441,7 @@ export const UpisTreninga = ({
                         onChange={(e) => promeniSeriju(vi, si, "kg", e.target.value)}
                         inputMode="decimal"
                         placeholder="-"
-                        aria-label={`Kilaža, serija ${si + 1}`}
+                        aria-label={v.poRuci ? `Kilaža po ruci, serija ${si + 1}` : `Kilaža, serija ${si + 1}`}
                         className="h-9 px-1 text-[13px] text-center tnum"
                       />
                       <button
@@ -449,14 +455,47 @@ export const UpisTreninga = ({
                     </div>
                   ))}
 
-                  <button
-                    type="button"
-                    onClick={() => dodajSeriju(vi)}
-                    className="mt-2 h-9 w-full rounded-lg bg-surface-2 text-[12px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 transition"
-                  >
-                    <Plus className="h-3.5 w-3.5" strokeWidth={2.6} />
-                    Dodaj seriju
-                  </button>
+                  <div className="mt-2 flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => dodajSeriju(vi)}
+                      className="h-9 flex-1 rounded-lg bg-surface-2 text-[12px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 transition"
+                    >
+                      <Plus className="h-3.5 w-3.5" strokeWidth={2.6} />
+                      Dodaj seriju
+                    </button>
+                    {/* Dve tegle (bucice): kilaza je za jednu ruku, volumen je broji duplo. */}
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={v.poRuci}
+                      onClick={() =>
+                        setVezbe((s) => s.map((ex, i) => (i !== vi ? ex : { ...ex, poRuci: !ex.poRuci })))
+                      }
+                      className={cn(
+                        "h-9 shrink-0 rounded-lg px-2.5 inline-flex items-center gap-1.5 whitespace-nowrap text-[12px] font-semibold transition",
+                        v.poRuci
+                          ? "bg-primary-soft text-primary-soft-foreground"
+                          : "bg-surface-2 text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      <span
+                        aria-hidden
+                        className={cn(
+                          "h-4 w-4 shrink-0 rounded-[5px] border flex items-center justify-center transition",
+                          v.poRuci ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/50",
+                        )}
+                      >
+                        {v.poRuci && <Check className="h-3 w-3" strokeWidth={3.2} />}
+                      </span>
+                      2× (po ruci)
+                    </button>
+                  </div>
+                  {v.poRuci && (
+                    <p className="mt-1.5 text-[11.5px] text-muted-foreground">
+                      Kilaža je za jednu ruku, broji se duplo.
+                    </p>
+                  )}
                 </>
               )}
             </div>

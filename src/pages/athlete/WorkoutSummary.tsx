@@ -19,6 +19,7 @@ import { HRZonesChart } from "@/components/wearables/HRZonesChart";
 import { HRTimeSeriesChart } from "@/components/wearables/HRTimeSeriesChart";
 import type { HRSample, ZoneBucket } from "@/lib/wearable/hrZones";
 import { paroviUUzorke } from "@/lib/wearable/hrParovi";
+import { faktorRuku, jePoRuci, nemaKoloneKgPoRuci, poRuciSerije, prefiksRuku } from "@/lib/kgPoRuci";
 
 type SessionRow = {
   id: string;
@@ -42,6 +43,8 @@ type SetRow = {
   reps: number | null;
   weight_kg: number | null;
   done: boolean;
+  /** Snimak sa serije: kilaza po ruci. Nema ga dok migracija ne stigne. */
+  kg_po_ruci?: boolean | null;
 };
 
 type ExRow = {
@@ -49,6 +52,8 @@ type ExRow = {
   position: number;
   sets: number;
   duration_minutes: number | null;
+  /** Dve tegle: kilaza je po ruci ("2× 15 kg"), volumen se broji duplo. */
+  kg_po_ruci: boolean;
   exercises: { name: string; primary_muscle: string | null; is_duration_based: boolean | null } | null;
 };
 
@@ -164,13 +169,15 @@ const WorkoutSummary = () => {
 
       // 2) SETS (best-effort): ne obara ekran ako padne; serije/volumen se dopune.
       try {
-        const setRes: any = await fetchWithRetry(() =>
-          supabase
-            .from("set_logs")
-            .select("id, exercise_id, set_number, reps, weight_kg, done")
-            .eq("session_log_id", sid),
-          2
-        );
+        // Sa kg_po_ruci, pa bez nje dok migracija nije primenjena.
+        const setRes: any = await fetchWithRetry(async () => {
+          const upit = (kolone: string) =>
+            supabase.from("set_logs").select(kolone).eq("session_log_id", sid);
+          const prvi = await upit("id, exercise_id, set_number, reps, weight_kg, done, kg_po_ruci");
+          return nemaKoloneKgPoRuci(prvi.error)
+            ? await upit("id, exercise_id, set_number, reps, weight_kg, done")
+            : prvi;
+        }, 2);
         if (!cancelled) setSets(((setRes.data as any[]) ?? []) as SetRow[]);
       } catch (e: any) {
       }
@@ -190,6 +197,7 @@ const WorkoutSummary = () => {
         );
         const plan = (Array.isArray(planRes.data) ? planRes.data[0] : planRes.data) as
           | { exercises?: Array<{ id: string; position: number; sets: number; duration_minutes: number | null;
+                                 kg_po_ruci?: boolean | null;
                                  exercise: { name: string; primary_muscle: string | null; is_duration_based: boolean | null } | null }> }
           | null;
         const red: ExRow[] = (plan?.exercises ?? []).map((e) => ({
@@ -197,6 +205,7 @@ const WorkoutSummary = () => {
           position: e.position,
           sets: e.sets,
           duration_minutes: e.duration_minutes,
+          kg_po_ruci: jePoRuci(e),
           exercises: e.exercise,
         }));
         if (!cancelled) setExercises(red);
@@ -294,12 +303,18 @@ const WorkoutSummary = () => {
     const end = session.completed_at ? new Date(session.completed_at).getTime() : Date.now();
     const completedSets = sets.filter((s) => s.done).length;
     const totalReps = sets.reduce((a, s) => a + (s.done ? Number(s.reps ?? 0) : 0), 0);
+    // Rezerva dok server ne upise total_volume_kg. Dve tegle se broje duplo, kao na serveru.
+    const vezbaPo = new Map(exercises.map((e) => [e.id, e]));
     const totalVolume =
       session.total_volume_kg != null
         ? Number(session.total_volume_kg)
         : sets.reduce(
             (a, s) =>
-              a + (s.done ? Number(s.reps ?? 0) * Number(s.weight_kg ?? 0) : 0),
+              a +
+              (s.done
+                ? Number(s.reps ?? 0) * Number(s.weight_kg ?? 0) *
+                  faktorRuku(poRuciSerije(s, vezbaPo.get(s.exercise_id)))
+                : 0),
             0
           );
     return {
@@ -311,7 +326,7 @@ const WorkoutSummary = () => {
       hrMax: session.live_hr_max,
       kcal: session.active_calories,
     };
-  }, [session, sets]);
+  }, [session, sets, exercises]);
 
   const exerciseSummaries = useMemo(() => {
     return exercises.map((ex) => {
@@ -319,6 +334,7 @@ const WorkoutSummary = () => {
       const done = exSets.filter((s) => s.done);
       const reps = done.reduce((a, s) => a + Number(s.reps ?? 0), 0);
       const maxW = done.reduce((a, s) => Math.max(a, Number(s.weight_kg ?? 0)), 0);
+      const najteza = done.find((s) => Number(s.weight_kg ?? 0) === maxW);
       return {
         id: ex.id,
         name: ex.exercises?.name ?? "Vežba",
@@ -329,6 +345,7 @@ const WorkoutSummary = () => {
         totalSets: ex.sets,
         reps,
         maxWeight: maxW,
+        poRuci: najteza ? poRuciSerije(najteza, ex) : ex.kg_po_ruci,
       };
     });
   }, [exercises, sets]);
@@ -551,7 +568,7 @@ const WorkoutSummary = () => {
                   ) : (
                     <div className="text-[12px] text-muted-foreground">
                       {ex.doneSets}/{ex.totalSets} serija · {ex.reps} ponavljanja
-                      {ex.maxWeight > 0 ? ` · ${ex.maxWeight} kg` : ""}
+                      {ex.maxWeight > 0 ? ` · ${prefiksRuku(ex.poRuci)}${ex.maxWeight} kg` : ""}
                     </div>
                   )}
                 </div>

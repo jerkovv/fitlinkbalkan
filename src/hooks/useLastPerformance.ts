@@ -5,6 +5,8 @@ export type LastPerformanceSet = {
   set_number: number;
   reps: number | null;
   weight_kg: number | null;
+  /** Snimak sa serije: kilaza po ruci. Nema ga dok migracija ne stigne. */
+  kg_po_ruci?: boolean | null;
 };
 
 export type LastPerformance = {
@@ -15,8 +17,10 @@ export type LastPerformance = {
   sets: LastPerformanceSet[];
   /** Najteze u toj poslednjoj sesiji. */
   top_weight_kg: number | null;
-  /** Licni rekord ikad, za kontekst. */
+  /** Licni rekord ikad, za kontekst. Po ruci kad je vezba sa dve tegle. */
   best_weight_kg: number | null;
+  /** Kilaza u tom treningu je po ruci ("2× 15 kg"). Nema ga dok migracija ne stigne. */
+  kg_po_ruci?: boolean | null;
 };
 
 /**
