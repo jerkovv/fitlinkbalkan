@@ -277,7 +277,7 @@ const Payments = () => {
 
   const rejectPurchase = async (p: Purchase) => {
     if (locked) return openLock();
-    if (!(await confirm({ title: `Odbiti zahtev "${p.package_name}"?`, destructive: true }))) return;
+    if (!(await confirm({ title: `Odbiti zahtev "${p.package_name}"?`, confirmLabel: "Odbij", destructive: true }))) return;
     setBusyId(p.id);
     const { error } = await supabase.rpc("reject_membership_purchase", {
       p_purchase_id: p.id,
@@ -396,9 +396,41 @@ const Payments = () => {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+                <div className="grid grid-cols-[300px_minmax(0,1fr)] gap-4">
+                  {/* Vrh (Ponoc): koliko novca ceka potvrdu i koliko od toga u kesu, a koliko na racun. */}
+                  {(() => {
+                    const ukupno = pending.reduce((s2, x) => s2 + (x.price_rsd ?? 0), 0);
+                    const kes = pending.filter((x) => x.payment_method === "cash").reduce((s2, x) => s2 + (x.price_rsd ?? 0), 0);
+                    const racun = ukupno - kes;
+                    return (
+                      <div className="relative flex min-h-[212px] flex-col justify-between overflow-hidden rounded-[28px] bg-gradient-brand p-6 text-white shadow-[0_30px_60px_-28px_hsl(267_81%_58%/0.9),inset_0_0_0_1px_hsl(0_0%_100%/0.18)]">
+                        <span aria-hidden className="absolute -right-16 -top-24 h-80 w-80 rounded-full bg-white/15 blur-[50px]" />
+                        <div className="relative">
+                          <span className="text-[10px] font-semibold uppercase tracking-[0.13em] text-white/85">Zahtevi na čekanju</span>
+                          <div className="mt-1.5 flex items-baseline gap-2">
+                            <span className="fig text-[40px] leading-none">{ukupno.toLocaleString("sr-Latn-RS")}</span>
+                            <span className="text-[11px] font-semibold tracking-[0.14em] text-white/80">RSD</span>
+                          </div>
+                          <p className="mt-1.5 text-[13px] text-white/90">
+                            {pending.length === 1 ? "1 zahtev čeka tvoju potvrdu" : `${pending.length} zahteva čekaju tvoju potvrdu`}
+                          </p>
+                        </div>
+                        <div className="relative">
+                          <div className="flex h-2.5 gap-[3px] overflow-hidden rounded-full">
+                            {kes > 0 && <i className="rounded-full bg-white/90" style={{ flex: kes }} />}
+                            {racun > 0 && <i className="rounded-full bg-white/40" style={{ flex: racun }} />}
+                          </div>
+                          <div className="mt-2 flex justify-between text-[12px] tnum text-white/90">
+                            <span>Keš · {kes.toLocaleString("sr-Latn-RS")}</span>
+                            <span>Račun · {racun.toLocaleString("sr-Latn-RS")}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  <div className="grid grid-cols-2 gap-4">
                   {pending.map((p) => (
-                    <div key={p.id} className="card-premium flex flex-col p-5">
+                    <div key={p.id} className="card-premium flex flex-col rounded-[24px] p-5">
                       <div className="flex items-start justify-between gap-3">
                         <div className="h-11 w-11 rounded-xl bg-gradient-brand-soft text-primary flex items-center justify-center">
                           {p.payment_method === "cash" ? (
@@ -411,12 +443,12 @@ const Payments = () => {
                           {p.payment_method === "cash" ? "Keš" : "Račun"}
                         </Chip>
                       </div>
-                      <div className="mt-4 font-display text-[17px] font-bold leading-snug tracking-tight truncate">
+                      <div className="mt-4 font-display text-[16px] font-semibold leading-snug tracking-tight">
                         {p.athlete_name}
                       </div>
-                      <div className="text-[13px] text-muted-foreground truncate">{p.package_name}</div>
+                      <div className="text-[13px] text-muted-foreground">{p.package_name}</div>
                       <div className="mt-3 flex items-baseline gap-1.5">
-                        <span className="font-display text-[24px] font-bold leading-none tracking-tightest text-primary tnum">
+                        <span className="fig text-[30px] leading-none">
                           {p.price_rsd.toLocaleString("sr-Latn-RS")}
                         </span>
                         <span className="text-[12px] font-semibold text-muted-foreground">RSD</span>
@@ -459,6 +491,7 @@ const Payments = () => {
                       </div>
                     </div>
                   ))}
+                  </div>
                 </div>
               )}
             </section>

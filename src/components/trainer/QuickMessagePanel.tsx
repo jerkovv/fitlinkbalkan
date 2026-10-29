@@ -41,6 +41,9 @@ export const QuickMessagePanel = ({ sessionId }: QuickMessagePanelProps) => {
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<SentMessage[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Jedinstven kanal po prikazu: removeChannel je asinhron, pa bi novi panel za istu
+  // sesiju (npr. Uzivo pa Ceo trening) dobio stari kanal koji se upravo gasi.
+  const kanalId = useRef(Math.random().toString(36).slice(2, 10));
 
   // Initial fetch
   useEffect(() => {
@@ -67,7 +70,7 @@ export const QuickMessagePanel = ({ sessionId }: QuickMessagePanelProps) => {
   useEffect(() => {
     if (!sessionId) return;
     const channel = supabase
-      .channel(`live-msg-trainer:${sessionId}`)
+      .channel(`live-msg-trainer:${sessionId}:${kanalId.current}`)
       .on(
         "postgres_changes",
         {

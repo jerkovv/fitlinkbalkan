@@ -159,6 +159,37 @@ const Calendar = () => {
 
   useEffect(() => { load(); }, [user, selectedDate]);
 
+  // Racunar (Ponoc): traka nedelje sa brojem rezervacija po danu iznad termina.
+  const [poDanu, setPoDanu] = useState<Record<string, number>>({});
+  const ponedeljak = useMemo(() => {
+    const d = new Date(selectedDate);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return d;
+  }, [selectedDate]);
+  const nedelja = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => { const d = new Date(ponedeljak); d.setDate(d.getDate() + i); return d; }),
+    [ponedeljak],
+  );
+  useEffect(() => {
+    if (!desktop || !user) return;
+    let ziv = true;
+    (async () => {
+      const { data } = await supabase
+        .from("session_bookings")
+        .select("date")
+        .eq("trainer_id", user.id)
+        .eq("status", "booked")
+        .gte("date", toIsoDate(nedelja[0]))
+        .lte("date", toIsoDate(nedelja[6]));
+      if (!ziv) return;
+      const m: Record<string, number> = {};
+      for (const r of (data as { date: string }[]) ?? []) m[r.date] = (m[r.date] ?? 0) + 1;
+      setPoDanu(m);
+    })();
+    return () => { ziv = false; };
+  }, [desktop, user, nedelja, bookings]);
+
   // Lenjo dohvati listu cekanja kad se otvori slot koji ima nekoga na cekanju.
   useEffect(() => {
     if (!user || !openSlot || openSlot.waitlist_count <= 0) {
@@ -296,8 +327,10 @@ const Calendar = () => {
           // Racunar: levo mesecni kalendar i pregled dana, desno termini izabranog
           // dana kao vremenska osa. Traka dana i uske trake preko cele sirine su
           // na sirokom ekranu izgledale izduzeno.
-          <div className="grid grid-cols-[288px_minmax(0,1fr)] items-start gap-6">
-            <div className="sticky top-24 space-y-4">
+          // Uzi ekran (do 1279 px): mesec i pregled dana idu gore u dve kolone, da
+          // traka nedelje ima mesta za reci.
+          <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[288px_minmax(0,1fr)]">
+            <div className="grid grid-cols-2 items-start gap-4 xl:sticky xl:top-24 xl:block xl:space-y-4">
               <div className="card-premium p-4">
                 <div className="mb-3 flex items-center justify-between">
                   <button
@@ -372,6 +405,33 @@ const Calendar = () => {
             </div>
 
             <div className="min-w-0 space-y-4">
+              <div className="grid grid-cols-7 gap-2">
+                {nedelja.map((d) => {
+                  const iso = toIsoDate(d);
+                  const izabran = iso === toIsoDate(selectedDate);
+                  const n = poDanu[iso] ?? 0;
+                  return (
+                    <button
+                      key={iso}
+                      onClick={() => selectDay(d)}
+                      className={cn(
+                        "rounded-[18px] px-3 pb-2.5 pt-3 text-left transition",
+                        izabran
+                          ? "bg-gradient-brand text-white shadow-[0_18px_34px_-18px_hsl(267_81%_58%/0.95),inset_0_0_0_1px_hsl(0_0%_100%/0.18)]"
+                          : "border border-hairline bg-white/[0.02] hover:border-primary/40",
+                      )}
+                    >
+                      <span className={cn("text-[9.5px] font-semibold tracking-[0.13em]", izabran ? "text-white/85" : "text-muted-foreground/70")}>
+                        {weekdayLabelsShort[(d.getDay() + 6) % 7]} {d.getDate()}
+                      </span>
+                      <span className="fig mt-0.5 block text-[24px] leading-[1.1]">{n}</span>
+                      <span className={cn("mt-1 block text-[10.5px]", izabran ? "text-white/90" : "text-muted-foreground")}>
+                        {n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? "rezervacije" : "rezervacija"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
               <div className="flex items-end justify-between gap-4">
                 <div className="min-w-0">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
@@ -429,7 +489,7 @@ const Calendar = () => {
                 </div>
               ) : (
                 <ul className="space-y-3">
-                  {slots.map((s) => {
+                  {slots.map((s, i) => {
                     const slotBookings = bookingsForSlot(s);
                     const colors = sessionColorClasses(s.type_color);
                     const start = formatTime(s.start_time);
@@ -438,10 +498,20 @@ const Calendar = () => {
                     const popunjeno = s.capacity > 0
                       ? Math.min(100, Math.round((slotBookings.length / s.capacity) * 100))
                       : 0;
+                    const sadaHM = new Date().toTimeString().slice(0, 5);
+                    const linijaSada =
+                      isToday && formatTime(s.start_time) > sadaHM && (i === 0 || formatTime(slots[i - 1].start_time) <= sadaHM);
                     return (
-                      <li key={slotKey(s)} className="grid grid-cols-[64px_minmax(0,1fr)] gap-4">
+                      <li key={slotKey(s)} className="space-y-3">
+                      {linijaSada && (
+                        <div className="grid grid-cols-[64px_minmax(0,1fr)] items-center gap-4" aria-label={`Sada ${sadaHM}`}>
+                          <span className="text-right text-[11px] font-bold text-[hsl(322_72%_59%)]">sada {sadaHM}</span>
+                          <i className="h-0.5 rounded-sm bg-gradient-to-r from-[hsl(322_72%_59%)] to-transparent" />
+                        </div>
+                      )}
+                      <div className="grid grid-cols-[64px_minmax(0,1fr)] gap-4">
                         <div className="pt-4 text-right">
-                          <div className="font-display text-[17px] font-bold leading-none tracking-tight tnum">{start}</div>
+                          <div className="fig text-[17px] leading-none">{start}</div>
                           <div className="mt-1 text-[11.5px] text-muted-foreground tnum">{endTime}</div>
                         </div>
                         <button
@@ -513,6 +583,7 @@ const Calendar = () => {
                             </div>
                           )}
                         </button>
+                      </div>
                       </li>
                     );
                   })}

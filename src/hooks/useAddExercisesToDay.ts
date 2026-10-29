@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { vezbi } from "@/lib/brojReci";
 
 type Args = {
   dayId: string;
@@ -81,7 +82,7 @@ export const useAddExercisesToDay = ({ dayId, table = "program_template_exercise
       return rows.length;
     },
     onSuccess: (n) => {
-      if (n) toast.success(`Dodato ${n} ${n === 1 ? "vežba" : "vežbi"}`);
+      if (n) toast.success(`${n === 1 ? "Dodata" : "Dodato"} ${n} ${vezbi(n)}`);
       onSuccess?.();
     },
     onError: (e: any) => {

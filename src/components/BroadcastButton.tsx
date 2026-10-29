@@ -124,6 +124,9 @@ export const BroadcastButton = ({ pill = false, className, label = "Obaveštenje
           </div>
 
           <button
+            type="button"
+            role="switch"
+            aria-checked={onlyActive}
             onClick={() => setOnlyActive((v) => !v)}
             className={cn(
               "w-full flex items-center gap-3 px-4 py-3 rounded-2xl border text-left transition",
@@ -148,7 +151,8 @@ export const BroadcastButton = ({ pill = false, className, label = "Obaveštenje
                   : "Stiže svim tvojim vežbačima"}
               </div>
             </div>
-            <Switch checked={onlyActive} onCheckedChange={setOnlyActive} />
+            {/* Samo prikaz: red je vec dugme, pa bi klik na prekidac menjao stanje dvaput. */}
+            <Switch checked={onlyActive} tabIndex={-1} aria-hidden className="pointer-events-none" />
           </button>
         </FullScreenSheetScroll>
 

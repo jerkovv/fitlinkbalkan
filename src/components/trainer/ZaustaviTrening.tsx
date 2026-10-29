@@ -79,7 +79,8 @@ export const ZaboravljenTreningTraka = ({ sessionId, athleteName, startedAt, now
  * Profil vezbaca: kad vezbac ima aktivan trening, traka sa "Uzivo" i "Zaustavi".
  * Sama cita sesiju, pa se ubacuje bez diranja ostatka profila.
  */
-export const AktivanTreningBaner = ({ athleteId, athleteName }: { athleteId: string; athleteName?: string | null }) => {
+/** Aktivan trening vezbaca (osvezava se na 30 s). Deli ga baner i vrh profila na racunaru. */
+export const useAktivnaSesija = (athleteId: string) => {
   const [sesija, setSesija] = useState<{ id: string; started_at: string } | null>(null);
   const [now, setNow] = useState(Date.now());
 
@@ -106,6 +107,11 @@ export const AktivanTreningBaner = ({ athleteId, athleteName }: { athleteId: str
     };
   }, [athleteId]);
 
+  return { sesija, now, ocisti: () => setSesija(null) };
+};
+
+export const AktivanTreningBaner = ({ athleteId, athleteName }: { athleteId: string; athleteName?: string | null }) => {
+  const { sesija, now, ocisti } = useAktivnaSesija(athleteId);
   if (!sesija) return null;
   const traje = now - new Date(sesija.started_at).getTime();
   const zaboravljen = traje >= ZABORAVLJEN_POSLE_MS;
@@ -135,7 +141,7 @@ export const AktivanTreningBaner = ({ athleteId, athleteName }: { athleteId: str
         >
           Uživo
         </Link>
-        <ZaustaviTreningDugme sessionId={sesija.id} athleteName={athleteName} onStopped={() => setSesija(null)} />
+        <ZaustaviTreningDugme sessionId={sesija.id} athleteName={athleteName} onStopped={ocisti} />
       </div>
     </div>
   );

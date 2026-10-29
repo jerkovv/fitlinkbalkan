@@ -12,8 +12,7 @@ import { UserMenu } from "@/components/UserMenu";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ChatBell } from "@/components/ChatBell";
 import { ActiveAthletesList } from "@/components/trainer/ActiveAthletesList";
-import { DashboardActiveAthletes } from "@/components/trainer/web/DashboardActiveAthletes";
-import { Button } from "@/components/ui/button";
+import { DashboardDesktop } from "@/components/trainer/web/DashboardDesktop";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,18 +37,7 @@ const monthNames = [
 
 const dayNames = ["Nedelja", "Ponedeljak", "Utorak", "Sreda", "Četvrtak", "Petak", "Subota"];
 
-// Racunar: brze akcije u bocnoj koloni (telefon ih ima kao velike plocice).
-const QUICK_LINKS = [
-  { to: "/trener/vezbaci", icon: Users, label: "Vežbači", sub: "Lista i pozivi" },
-  { to: "/trener/programi", icon: ClipboardList, label: "Programi", sub: "Treninzi" },
-  { to: "/trener/ishrana", icon: Apple, label: "Ishrana", sub: "Planovi" },
-  { to: "/trener/paketi", icon: Package, label: "Paketi", sub: "Članarine" },
-  { to: "/trener/uplate", icon: Wallet, label: "Uplate", sub: "Zahtevi" },
-  { to: "/trener/termini", icon: Settings, label: "Termini", sub: "Podešavanja" },
-];
 
-// Kolone tabele danasnjih termina na racunaru.
-const SESSION_COLS = "grid-cols-[76px_minmax(0,1.2fr)_minmax(0,1fr)_104px]";
 
 const fmtTime = (t: string) => t?.slice(0, 5) ?? "";
 
@@ -217,7 +205,9 @@ const Dashboard = () => {
           .from("memberships")
           .select("id", { count: "exact", head: true })
           .in("athlete_id", athleteIds.length ? athleteIds : ["00000000-0000-0000-0000-000000000000"])
-          .eq("status", "active"),
+          .eq("status", "active")
+          // Status se ne prebacuje sam kad rok prodje, pa istekla ne sme da se broji kao aktivna.
+          .or(`ends_on.is.null,ends_on.gte.${todayISO}`),
         supabase
           .from("memberships")
           .select("id", { count: "exact", head: true })
@@ -288,6 +278,22 @@ const Dashboard = () => {
     { to: "/trener/kalendar", label: "Treninga danas", value: sessions.length, hint: "zakazanih termina", icon: Clock, tone: "text-foreground" },
   ];
 
+  if (desktop) {
+    return (
+      <DashboardDesktop
+        trainerName={trainerName}
+        studio={studio}
+        activeAthletes={activeAthletes}
+        expiringSoon={expiringSoon}
+        pendingPayments={pendingPayments}
+        sessions={sessions}
+        referrers={referrers}
+        loading={loading}
+        danasNaslov={`${dayNames[today.getDay()]}, ${todayLabel}`}
+      />
+    );
+  }
+
   return (
     <>
       <PhoneShell
@@ -321,203 +327,7 @@ const Dashboard = () => {
           </div>
         }
       >
-        {desktop ? (
-          // Racunar: red brojki, pa glavna kolona (uzivo + danasnji raspored) i
-          // bocna kolona (studio, brze akcije, ambasadori). Telefonski raspored je
-          // bio jedan dugacak stub preko celog ekrana. Uzivo monitor se ne
-          // prikazuje: Live Activity postoji samo na iOS-u.
-          <>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {kpis.map(({ to, label, value, hint, icon: Icon, tone }) => (
-                <Link key={label} to={to} className="card-premium-hover flex flex-col p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                      {label}
-                    </span>
-                    <span className="h-9 w-9 rounded-xl bg-gradient-brand-soft flex items-center justify-center shrink-0">
-                      <Icon className="h-[18px] w-[18px] text-primary" strokeWidth={2.25} />
-                    </span>
-                  </div>
-                  {loading ? (
-                    <span className="mt-3 h-[34px] w-14 rounded-lg bg-surface-2 animate-pulse" />
-                  ) : (
-                    <span className={cn("mt-3 font-display text-[34px] leading-none font-bold tracking-tightest tnum", tone)}>
-                      {value}
-                    </span>
-                  )}
-                  <span className="mt-2 text-[12.5px] text-muted-foreground">{hint}</span>
-                </Link>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-[minmax(0,1fr)_340px] items-start gap-6 pt-2">
-              <div className="min-w-0 space-y-6">
-                <DashboardActiveAthletes />
-
-                <section className="card-premium overflow-hidden">
-                  <div className="flex items-center justify-between gap-3 px-5 py-4">
-                    <div className="min-w-0">
-                      <h2 className="font-display text-[17px] font-bold tracking-tight">Današnji raspored</h2>
-                      <div className="text-[12.5px] text-muted-foreground">
-                        {dayNames[today.getDay()]}, {todayLabel}
-                      </div>
-                    </div>
-                    <Button asChild variant="outline" className="h-9 rounded-full px-3.5">
-                      <Link to="/trener/kalendar">
-                        Kalendar
-                        <ChevronRight className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </div>
-
-                  {loading ? (
-                    <div className="border-t border-hairline px-5 py-10 text-center text-[13px] text-muted-foreground">
-                      Učitavanje…
-                    </div>
-                  ) : sessions.length === 0 ? (
-                    <div className="border-t border-hairline px-5 py-10 text-center">
-                      <CalIcon className="h-8 w-8 mx-auto mb-2 text-muted-foreground/60" strokeWidth={1.5} />
-                      <div className="text-[13.5px] font-medium">Danas nema zakazanih treninga</div>
-                      <div className="text-[12px] text-muted-foreground mt-0.5">
-                        Vežbači mogu da rezervišu termine iz kalendara
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div
-                        className={cn(
-                          "grid gap-4 border-y border-hairline bg-surface-2/50 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground",
-                          SESSION_COLS,
-                        )}
-                      >
-                        <span>Vreme</span>
-                        <span>Vežbač</span>
-                        <span>Trening</span>
-                        <span className="text-right">Status</span>
-                      </div>
-                      <ul className="divide-y divide-hairline">
-                        {sessions.map((s) => (
-                          <li key={s.id}>
-                            <Link
-                              to={`/trener/vezbaci/${s.athlete_id}`}
-                              className={cn("grid items-center gap-4 px-5 py-3 transition hover:bg-surface-2", SESSION_COLS)}
-                            >
-                              <span className="font-display text-[15px] font-bold tnum">{fmtTime(s.start_time)}</span>
-                              <span className="flex min-w-0 items-center gap-2.5">
-                                <Avatar
-                                  initials={(s.athlete_name ?? "??").slice(0, 2).toUpperCase()}
-                                  tone="brand"
-                                  size="sm"
-                                  className="ring-0"
-                                />
-                                <span className="truncate text-[14px] font-semibold tracking-tight">{s.athlete_name}</span>
-                              </span>
-                              <span className="flex min-w-0 items-center gap-2 text-[13px] text-muted-foreground">
-                                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.type_color }} />
-                                <span className="truncate">{s.type_name}</span>
-                              </span>
-                              <span className="flex justify-end">
-                                <Chip tone="info">Zakazano</Chip>
-                              </span>
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
-                </section>
-              </div>
-
-              <aside className="space-y-6">
-                <div className="card-premium overflow-hidden">
-                  <div className="flex items-center gap-3 bg-gradient-brand-soft p-5">
-                    <Avatar initials={(studio || "S").slice(0, 2).toUpperCase()} tone="brand" size="md" />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-display text-[16px] font-bold tracking-tight">{studio}</div>
-                      <div className="text-[12px] text-muted-foreground">Tvoj studio</div>
-                    </div>
-                  </div>
-                  <Link
-                    to="/trener/profil"
-                    className="flex items-center justify-between gap-3 border-t border-hairline px-5 py-3.5 transition hover:bg-surface-2"
-                  >
-                    <div>
-                      <div className="text-[13.5px] font-semibold tracking-tight">Tvoj profil</div>
-                      <div className="text-[11.5px] text-muted-foreground">Studio, kontakt, naplata</div>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  </Link>
-                </div>
-
-                <section className="card-premium p-5">
-                  <h2 className="font-display text-[15px] font-bold tracking-tight">Brze akcije</h2>
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    {QUICK_LINKS.map(({ to, icon: Icon, label, sub }) => {
-                      const naCekanju = to === "/trener/uplate" ? pendingPayments : 0;
-                      return (
-                        <Link
-                          key={to}
-                          to={to}
-                          className="relative flex min-w-0 items-center gap-2.5 rounded-xl border border-hairline p-2.5 transition hover:border-primary/30 hover:bg-primary-soft/40"
-                        >
-                          <span className="h-8 w-8 rounded-lg bg-gradient-brand-soft flex items-center justify-center shrink-0">
-                            <Icon className="h-4 w-4 text-primary" strokeWidth={2.25} />
-                          </span>
-                          <span className="min-w-0">
-                            <span className="block truncate text-[13px] font-semibold tracking-tight">{label}</span>
-                            <span className="block truncate text-[11px] text-muted-foreground">
-                              {naCekanju > 0 ? `${naCekanju} na čekanju` : sub}
-                            </span>
-                          </span>
-                          {naCekanju > 0 && (
-                            <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1.5 rounded-full bg-gradient-brand text-white text-[10px] font-bold flex items-center justify-center shadow-brand">
-                              {naCekanju}
-                            </span>
-                          )}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </section>
-
-                {referrers.length > 0 && (
-                  <section className="card-premium overflow-hidden">
-                    <h2 className="px-5 pt-5 pb-3 font-display text-[15px] font-bold tracking-tight">
-                      Tvoji ambasadori 💜
-                    </h2>
-                    <div className="divide-y divide-hairline border-t border-hairline">
-                      {referrers.map((r) => (
-                        <Link
-                          key={r.referrer_id}
-                          to={`/trener/vezbaci/${r.referrer_id}`}
-                          className="flex items-center gap-3 px-5 py-3 transition hover:bg-surface-2"
-                        >
-                          <Avatar
-                            initials={(r.referrer_name ?? "??").slice(0, 2).toUpperCase()}
-                            tone="brand"
-                            size="sm"
-                            className="ring-0"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-[13.5px] font-semibold">
-                              {r.referrer_name ?? "Bez imena"}
-                            </div>
-                            <div className="text-[11.5px] text-muted-foreground">
-                              Doveo {r.referred_count} vežbača
-                              {r.referred_active > 0 && ` · ${r.referred_active} aktivnih`}
-                            </div>
-                          </div>
-                          <Chip tone="success">+{r.referred_count}</Chip>
-                        </Link>
-                      ))}
-                    </div>
-                  </section>
-                )}
-              </aside>
-            </div>
-          </>
-        ) : (
-          <>
+        <>
         <ActiveAthletesList />
 
         {/* Uzivo monitor toggle - Live Activity sa aktivnim vezbacima.
@@ -724,8 +534,7 @@ const Dashboard = () => {
           </div>
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </Link>
-          </>
-        )}
+        </>
       </PhoneShell>
       <BottomNav role="trainer" />
     </>

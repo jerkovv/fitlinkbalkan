@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label";
 import {
   Apple, ClipboardList, Wallet, Phone, Loader2, Plus, X, Check,
   Dumbbell, Scale, UserMinus, Flame, Sparkles, Mail, Copy, Pencil,
+  ChevronLeft, Clock, Trophy, BarChart3,
 } from "lucide-react";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
@@ -38,7 +39,8 @@ import { WearableTrendChart } from "@/components/wearables/WearableTrendChart";
 import { useWearableConnections } from "@/hooks/useWearableConnections";
 import { WorkoutsList } from "@/components/wearables/WorkoutsList";
 import { MembershipEditSheet } from "@/components/trainer/MembershipEditSheet";
-import { AktivanTreningBaner } from "@/components/trainer/ZaustaviTrening";
+import { AktivanTreningBaner, useAktivnaSesija, ZaustaviTreningDugme, ZABORAVLJEN_POSLE_MS } from "@/components/trainer/ZaustaviTrening";
+import { formatDuration } from "@/lib/workout/hrZone";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 
@@ -50,6 +52,7 @@ type AthleteData = {
   joined_at: string;
   full_name: string | null;
   phone: string | null;
+  avatar_url?: string | null;
 };
 
 type NutritionTemplate = {
@@ -311,7 +314,7 @@ const AthleteProfile = () => {
 
     const [aRes, pRes, planRes, progRes, metricsRes] = await Promise.all([
       supabase.from("athletes").select("*").eq("id", id).maybeSingle(),
-      supabase.from("profiles").select("full_name, phone").eq("id", id).maybeSingle(),
+      supabase.from("profiles").select("full_name, phone, avatar_url").eq("id", id).maybeSingle(),
       // Kartica prikazuje SAMO poslat plan (published_at NOT NULL). Nacrt se ne vidi.
       supabase
         .from("assigned_nutrition_plans")
@@ -341,6 +344,7 @@ const AthleteProfile = () => {
         ...(aRes.data as any),
         full_name: (pRes.data as any)?.full_name ?? null,
         phone: (pRes.data as any)?.phone ?? null,
+        avatar_url: (pRes.data as any)?.avatar_url ?? null,
       });
     }
     setActivePlan((planRes.data as any[])?.[0] ?? null);
@@ -412,7 +416,8 @@ const AthleteProfile = () => {
       const { data } = await supabase.rpc("get_athlete_stats", { p_athlete_id: id } as any);
       setStats(data ?? null);
     })();
-  }, [id]);
+    // upisKey: posle "Upisi trening" brojke na vrhu se osvezavaju zajedno sa spiskom.
+  }, [id, upisKey]);
 
   const openProgramAssign = async () => {
     setProgOpen(true);
@@ -761,59 +766,22 @@ const AthleteProfile = () => {
     <PhoneShell
       back="/trener/vezbaci"
       desktopWidth="wide"
-      // Racunar: poruka i upis treninga su dugmad sa natpisom u zaglavlju; na
-      // telefonu je poruka ikonica, a brze akcije su u kartici ispod naslova.
+      // Racunar: ime, oznake, dugmad i stanje treninga su u vrhu profila (VrhProfila).
+      hideDesktopHeader={desktop}
       action={
-        desktop ? (
-          <>
-            {/* Deljena komponenta ne prima className, pa se oblik dugmeta podesava
-                preko omotaca (samo direktno dugme, sheet ide kroz portal). */}
-            <span className="[&>button]:h-10 [&>button]:rounded-full [&>button]:px-4">
-              <SendMessageToAthlete athleteId={athlete.id} athleteName={athlete.full_name ?? undefined} />
-            </span>
-            <Button
-              onClick={guard(() => setUpisujem(true))}
-              className="h-10 rounded-full px-4 bg-gradient-brand text-white shadow-brand"
-            >
-              <Plus className="h-4 w-4 mr-1.5" />
-              Upiši trening
-            </Button>
-          </>
-        ) : (
+        desktop ? undefined : (
           <SendMessageToAthlete athleteId={athlete.id} athleteName={athlete.full_name ?? undefined} variant="icon" />
         )
       }
       title={
-        desktop ? (
-          <div className="flex min-w-0 items-center gap-4">
-            <Avatar initials={initialsOf(athlete.full_name)} tone="brand" size="lg" className="ring-0 shadow-brand" />
-            <div className="min-w-0">
-              <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Profil vežbača
-              </div>
-              <h1 className="truncate font-display text-[30px] leading-[1.1] font-bold tracking-tightest">
-                {athlete.full_name ?? "Bez imena"}
-              </h1>
-              <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                <span className={META_CHIP_PRIMARY}>{goalLabel[athlete.goal ?? "general"] ?? "Opšte"}</span>
-                {athlete.weight_kg ? <span className={cn(META_CHIP, "tnum")}>{athlete.weight_kg} kg</span> : null}
-                {athlete.height_cm ? <span className={cn(META_CHIP, "tnum")}>{athlete.height_cm} cm</span> : null}
-                <span className="ml-1 text-[12.5px] text-muted-foreground">
-                  Pridružen {new Date(athlete.joined_at).toLocaleDateString("sr-Latn-RS")}
-                </span>
-              </div>
-            </div>
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-1.5">
+            Profil vežbača
           </div>
-        ) : (
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-1.5">
-              Profil vežbača
-            </div>
-            <h1 className="font-display text-[28px] leading-[1.1] font-bold tracking-tightest">
-              {athlete.full_name ?? "Bez imena"}
-            </h1>
-          </div>
-        )
+          <h1 className="font-display text-[28px] leading-[1.1] font-bold tracking-tightest">
+            {athlete.full_name ?? "Bez imena"}
+          </h1>
+        </div>
       }
     >
       {desktop ? (
@@ -821,84 +789,79 @@ const AthleteProfile = () => {
         // levo ono sto trener menja (planovi, treninzi, zdravlje), desno kontakt,
         // clanarina, merenja i fotke. Na telefonu je sve to jedna duga kolona.
         <div className="space-y-6">
-          <AktivanTreningBaner athleteId={athlete.id} athleteName={athlete.full_name} />
+          <VrhProfila
+            athlete={athlete}
+            stats={stats}
+            tezina={latestMetric?.weight_kg ?? athlete.weight_kg}
+            sesije={
+              activeMembership?.sessions_total
+                ? { used: activeMembership.sessions_used, total: activeMembership.sessions_total }
+                : null
+            }
+            akcije={
+              <>
+                {/* Deljena komponenta ne prima className, pa se oblik dugmeta podesava
+                    preko omotaca (samo direktno dugme, sheet ide kroz portal). */}
+                <span className="[&>button]:h-10 [&>button]:rounded-full [&>button]:px-4">
+                  <SendMessageToAthlete athleteId={athlete.id} athleteName={athlete.full_name ?? undefined} />
+                </span>
+                <Button
+                  onClick={guard(() => setUpisujem(true))}
+                  className="h-10 rounded-full px-4 bg-gradient-brand text-white shadow-brand"
+                >
+                  <Plus className="h-4 w-4 mr-1.5" />
+                  Upiši trening
+                </Button>
+              </>
+            }
+          />
           {stats && stats.success === false ? (
             <Card className="p-6 text-center text-[13px] text-muted-foreground">
               Nema još podataka
             </Card>
           ) : stats ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatBox
-                  label="Ukupno treninga"
-                  value={String(stats.total_workouts ?? 0)}
-                  sub={`Ovaj mesec: ${stats.workouts_this_month ?? 0}`}
+            // Ishrana, ucestalost i paket su prstenovi u vrhu, ovde ostaje jedan red.
+            // Kalorije nisu uvek tu, pa kolone dele sirinu ravnomerno.
+            <div className="grid grid-cols-2 gap-4 lg:grid-flow-col lg:grid-cols-none lg:auto-cols-fr">
+              <KpiProfila
+                icon={<Dumbbell className="h-4 w-4" />}
+                label="Ukupno treninga"
+                value={String(stats.total_workouts ?? 0)}
+                valueClass="text-gradient-brand"
+                sub={`Ovaj mesec: ${stats.workouts_this_month ?? 0}`}
+              />
+              <KpiProfila
+                icon={<Clock className="h-4 w-4" />}
+                label="Poslednji trening"
+                value={stats.days_since_last == null
+                  ? "Nikad"
+                  : stats.days_since_last <= 0
+                    ? "Danas"
+                    : `Pre ${stats.days_since_last} d`}
+                sub={stats.days_since_last == null ? "Još nije trenirao" : undefined}
+                valueClass={RISK_TEXT[stats.risk] ?? "text-foreground"}
+              />
+              <KpiProfila
+                icon={<Trophy className="h-4 w-4" />}
+                label="PR-ovi"
+                value={String(stats.pr_count ?? 0)}
+                sub={stats.best_e1rm_kg ? `${stats.best_e1rm_kg} kg najjači` : undefined}
+              />
+              <KpiProfila
+                icon={<BarChart3 className="h-4 w-4" />}
+                label="Volumen"
+                value={fmtVolume(stats.total_volume_kg ?? 0)}
+                unit="kg ukupno"
+              />
+              {stats.kcal_sessions > 0 && (
+                <KpiProfila
+                  icon={<Flame className="h-4 w-4" />}
+                  label="Kalorije"
+                  value={Math.round(stats.total_kcal ?? 0).toLocaleString("sr-Latn-RS")}
+                  unit="kcal"
+                  sub={stats.avg_kcal ? `Prosek po treningu: ${Math.round(stats.avg_kcal)} kcal` : undefined}
                 />
-                <StatBox
-                  label="Učestalost"
-                  value={String(stats.weekly_avg ?? 0)}
-                  unit="nedeljno"
-                />
-                <StatBox
-                  label="Poslednji trening"
-                  value={stats.days_since_last == null
-                    ? "Nikad"
-                    : stats.days_since_last <= 0
-                      ? "Danas"
-                      : `Pre ${stats.days_since_last} d`}
-                  sub={stats.days_since_last == null ? "Još nije trenirao" : undefined}
-                  valueClass={cn("text-[18px]", RISK_TEXT[stats.risk] ?? "text-foreground")}
-                />
-                <StatBox
-                  label="PR-ovi"
-                  value={String(stats.pr_count ?? 0)}
-                  sub={stats.best_e1rm_kg ? `${stats.best_e1rm_kg} kg najjaci` : undefined}
-                />
-              </div>
-              {/* Broj plocica u drugom redu varira (kalorije i paket nisu uvek tu),
-                  pa kolone dele sirinu ravnomerno umesto da ostane prazna rupa. */}
-              <div className="grid grid-cols-2 gap-4 lg:grid-flow-col lg:grid-cols-none lg:auto-cols-fr">
-                <StatBox
-                  label="Ishrana"
-                  value={String(stats.nutrition_days_30 ?? 0)}
-                  unit="/ 30 dana"
-                />
-                <StatBox
-                  label="Volumen"
-                  value={fmtVolume(stats.total_volume_kg ?? 0)}
-                  unit="kg ukupno"
-                />
-                {stats.kcal_sessions > 0 && (
-                  <StatBox
-                    icon={<Flame className="h-4 w-4" />}
-                    label="Kalorije"
-                    value={Math.round(stats.total_kcal ?? 0).toLocaleString("sr-Latn-RS")}
-                    unit="kcal ukupno"
-                    sub={stats.avg_kcal ? `Prosek po treningu: ${Math.round(stats.avg_kcal)} kcal` : undefined}
-                  />
-                )}
-                {stats.sessions_total != null && stats.sessions_used != null && (
-                  <Card className="p-4">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5">
-                      Iskorišćenost paketa
-                    </div>
-                    <div className="flex items-baseline gap-1 mb-2">
-                      <span className="font-display text-[22px] font-bold tracking-tightest leading-none tnum">
-                        {stats.sessions_used}/{stats.sessions_total}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground">sesija</span>
-                    </div>
-                    <div className="h-2 rounded-full bg-surface-2 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-gradient-brand"
-                        style={{
-                          width: `${Math.min(100, Math.round((stats.sessions_used / stats.sessions_total) * 100))}%`,
-                        }}
-                      />
-                    </div>
-                  </Card>
-                )}
-              </div>
+              )}
             </div>
           ) : null}
 
@@ -1071,7 +1034,7 @@ const AthleteProfile = () => {
                   />
                   <TabsContent value="app" className="mt-3">
                     <p className="text-xs text-muted-foreground mb-3">
-                      Treninzi koje je vežbač radio kroz FitLink. Ako je nosio sat, puls i kalorije su vec ovde.
+                      Treninzi koje je vežbač radio kroz FitLink. Ako je nosio sat, puls i kalorije su već ovde.
                     </p>
                     {id && <InAppWorkoutsList key={upisKey} athleteId={id} limit={10} />}
                   </TabsContent>
@@ -1128,7 +1091,7 @@ const AthleteProfile = () => {
                       <div className="min-w-0 flex-1">
                         <div className="text-[11px] text-muted-foreground">Email</div>
                         {/* Dug email se prelama, nikad "..."; kopiranje uvek uzima ceo. */}
-                        <div className="text-[13.5px] font-medium leading-snug break-all">{athleteEmail}</div>
+                        <div className="text-[13.5px] font-medium leading-snug [overflow-wrap:anywhere]">{athleteEmail}</div>
                       </div>
                       <button
                         type="button"
@@ -1706,7 +1669,7 @@ const AthleteProfile = () => {
               </TabsList>
               <TabsContent value="app">
                 <p className="text-xs text-muted-foreground mt-2 mb-3">
-                  Treninzi koje je vežbač radio kroz FitLink. Ako je nosio sat, puls i kalorije su vec ovde.
+                  Treninzi koje je vežbač radio kroz FitLink. Ako je nosio sat, puls i kalorije su već ovde.
                 </p>
                 {/* Za trening odradjen bez telefona. Sesija koju ovo pravi je zavrsena
                     od rodjenja i nema zivi red, pa ne moze da dotakne trening u toku. */}
@@ -2079,6 +2042,191 @@ const AthleteProfile = () => {
         </AlertDialogContent>
       </AlertDialog>
     </PhoneShell>
+  );
+};
+
+// Racunar: plocica sa brojem (isti jezik kao pocetna).
+const KpiProfila = ({
+  label, value, unit, sub, valueClass, icon,
+}: {
+  label: string; value: string; unit?: string; sub?: string; valueClass?: string; icon: ReactNode;
+}) => (
+  <div className="card-premium px-[18px] pb-3.5 pt-4">
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.13em] text-muted-foreground">{label}</span>
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-soft-foreground">
+        {icon}
+      </span>
+    </div>
+    <div className="mt-2 flex items-baseline gap-1.5">
+      <span className={cn("fig whitespace-nowrap text-[30px] leading-none", valueClass ?? "text-foreground")}>{value}</span>
+      {unit && <span className="text-[11.5px] text-muted-foreground">{unit}</span>}
+    </div>
+    {sub && <div className="mt-1.5 text-[11.5px] text-muted-foreground">{sub}</div>}
+  </div>
+);
+
+// Racunar: prsten sa brojem i opisom (vrh profila).
+const Prsten = ({ deo, boja, broj, opis }: { deo: number; boja: string; broj: string; opis: string }) => {
+  const obim = 2 * Math.PI * 19;
+  const d = Math.max(0, Math.min(1, deo)) * obim;
+  return (
+    <div className="flex items-center gap-3">
+      <svg width="48" height="48" viewBox="0 0 48 48" aria-hidden className="shrink-0">
+        <circle cx="24" cy="24" r="19" fill="none" stroke="hsl(0 0% 100% / 0.1)" strokeWidth="5" />
+        <circle
+          cx="24" cy="24" r="19" fill="none" stroke={boja} strokeWidth="5" strokeLinecap="round"
+          strokeDasharray={`${d} ${obim}`} transform="rotate(-90 24 24)"
+        />
+      </svg>
+      <div>
+        <b className="block whitespace-nowrap text-[13px] font-semibold tnum">{broj}</b>
+        <small className="block whitespace-nowrap text-[11.5px] text-muted-foreground">{opis}</small>
+      </div>
+    </div>
+  );
+};
+
+// Racunar: vrh profila iz mockupa. Levo ime, oznake i prstenovi, desno slika
+// (ili inicijali) sa staklenom karticom: trening u toku ili poslednji trening.
+const VrhProfila = ({
+  athlete,
+  stats,
+  sesije,
+  akcije,
+  tezina,
+}: {
+  athlete: AthleteData;
+  stats: any | null;
+  sesije: { used: number; total: number } | null;
+  akcije: ReactNode;
+  /** Poslednje merenje ako postoji, inace tezina iz profila. */
+  tezina: number | null;
+}) => {
+  const { sesija, now, ocisti } = useAktivnaSesija(athlete.id);
+  const traje = sesija ? now - new Date(sesija.started_at).getTime() : 0;
+  const zaboravljen = traje >= ZABORAVLJEN_POSLE_MS;
+  const imaStat = stats && stats.success !== false;
+  const nedeljno = Number(stats?.weekly_avg ?? 0);
+  const ishrana = Number(stats?.nutrition_days_30 ?? 0);
+  const poslednji =
+    !imaStat || stats.days_since_last == null
+      ? "Još nije trenirao"
+      : stats.days_since_last <= 0
+        ? "Danas"
+        : stats.days_since_last === 1
+          ? "Juče"
+          : `Pre ${stats.days_since_last} dana`;
+  return (
+    <section
+      className="relative grid min-h-[214px] grid-cols-[minmax(0,1fr)_300px] overflow-hidden rounded-[28px] border border-hairline bg-surface"
+    >
+      <div className="flex flex-col justify-between gap-5 px-7 py-6">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <Link
+              to="/trener/vezbaci"
+              aria-label="Nazad"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-hairline bg-surface-2 transition hover:bg-surface active:scale-95"
+            >
+              <ChevronLeft className="h-4 w-4" strokeWidth={2.25} />
+            </Link>
+            <span className="whitespace-nowrap text-[10.5px] font-semibold uppercase tracking-[0.13em] text-muted-foreground">
+              Profil vežbača
+            </span>
+            <span className="flex-1" />
+            <div className="flex shrink-0 items-center gap-2">{akcije}</div>
+          </div>
+          <h1 className="mt-3 font-display text-[32px] font-bold leading-[1.05] tracking-[-0.03em]">
+            {athlete.full_name ?? "Bez imena"}
+          </h1>
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+            <span className="rounded-full bg-primary-soft px-2.5 py-1 text-[11px] font-semibold text-primary-soft-foreground">
+              {goalLabel[athlete.goal ?? "general"] ?? "Opšte"}
+            </span>
+            {tezina ? (
+              <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-muted-foreground tnum">
+                {String(tezina).replace(".", ",")} kg
+              </span>
+            ) : null}
+            {athlete.height_cm ? (
+              <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-muted-foreground tnum">
+                {athlete.height_cm} cm
+              </span>
+            ) : null}
+            <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-muted-foreground tnum">
+              Pridružen {new Date(athlete.joined_at).toLocaleDateString("sr-Latn-RS", { day: "numeric", month: "short", year: "numeric" })}
+            </span>
+          </div>
+        </div>
+        {imaStat && (
+          <div className="flex flex-wrap gap-x-7 gap-y-3">
+            {sesije && (
+              <Prsten
+                deo={sesije.used / sesije.total}
+                boja="hsl(var(--primary-soft-foreground))"
+                broj={`${sesije.used} / ${sesije.total}`}
+                opis="iskorišćeno sesija"
+              />
+            )}
+            <Prsten deo={ishrana / 30} boja="hsl(var(--success))" broj={`${ishrana} / 30 dana`} opis="ishrana upisana" />
+            <Prsten
+              deo={nedeljno / 4}
+              boja="hsl(var(--warning))"
+              broj={`${nedeljno.toLocaleString("sr-Latn-RS", { maximumFractionDigits: 1 })} nedeljno`}
+              opis="učestalost"
+            />
+          </div>
+        )}
+      </div>
+      <div
+        className="relative bg-cover bg-center"
+        style={
+          athlete.avatar_url
+            ? { backgroundImage: `url(${athlete.avatar_url})` }
+            : { background: "linear-gradient(135deg, hsl(267 81% 58% / 0.55), hsl(323 72% 59% / 0.35))" }
+        }
+      >
+        {!athlete.avatar_url && (
+          <span className="absolute inset-0 flex items-center justify-center font-display text-[84px] font-bold tracking-[-0.04em] text-white/85">
+            {initialsOf(athlete.full_name)}
+          </span>
+        )}
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--surface))_0%,hsl(var(--surface)/0.55)_38%,transparent_75%)]" />
+        {sesija ? (
+          // Trening u toku: uvek i Uzivo i Zaustavi (trener na racunaru inace ne nalazi zaustavljanje).
+          <div className="absolute inset-x-4 bottom-4 rounded-[18px] bg-background/60 px-3.5 py-3 shadow-[inset_0_0_0_1px_hsl(0_0%_100%/0.14)] backdrop-blur-xl">
+            <div className="flex items-center gap-2.5">
+              <span className="relative flex h-2.5 w-2.5 shrink-0">
+                <span className="absolute inset-0 animate-ping rounded-full bg-success opacity-60" />
+                <span className="relative h-2.5 w-2.5 rounded-full bg-success" />
+              </span>
+              <div className="min-w-0">
+                <b className="block text-[13px] font-semibold">Trenira sada</b>
+                <small className={cn("block text-[10.5px] tnum", zaboravljen ? "text-destructive" : "text-muted-foreground")}>
+                  traje {formatDuration(traje)}
+                  {zaboravljen && ", možda nije ugašen"}
+                </small>
+              </div>
+            </div>
+            <div className="mt-2.5 flex gap-2">
+              <Link
+                to={`/trener/vezbac/${athlete.id}/live`}
+                className="inline-flex h-8 flex-1 items-center justify-center rounded-full bg-white px-3 text-[12.5px] font-semibold text-background"
+              >
+                Uživo
+              </Link>
+              <ZaustaviTreningDugme sessionId={sesija.id} athleteName={athlete.full_name} onStopped={ocisti} className="flex-1" />
+            </div>
+          </div>
+        ) : (
+          <div className="absolute bottom-4 right-4 rounded-[18px] bg-background/60 px-3.5 py-2.5 shadow-[inset_0_0_0_1px_hsl(0_0%_100%/0.14)] backdrop-blur-xl">
+            <small className="block whitespace-nowrap text-[10.5px] text-muted-foreground">Poslednji trening</small>
+            <b className="block whitespace-nowrap text-[13px] font-semibold">{poslednji}</b>
+          </div>
+        )}
+      </div>
+    </section>
   );
 };
 

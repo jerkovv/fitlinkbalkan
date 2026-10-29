@@ -34,6 +34,7 @@ import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { LockMark } from "@/components/pretplata/LockMark";
 import { useLastPerformance } from "@/hooks/useLastPerformance";
 import { LastPerformanceHint } from "@/components/trainer/LastPerformanceHint";
+import { vezbi } from "@/lib/brojReci";
 
 type Day = { id: string; day_number: number; name: string; notes: string | null };
 type Exercise = {
@@ -308,7 +309,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
     if (mode !== "template" || !parentId) return;
     if (!(await confirm({
       title: "Obrisati program?",
-      description: "Program ce biti trajno obrisan. Vezbaci kojima je dodeljen zadrzavaju svoju kopiju.",
+      description: "Program će biti trajno obrisan. Vežbači kojima je dodeljen zadržavaju svoju kopiju.",
       destructive: true,
     }))) return;
     const { error } = await supabase.from("program_templates").delete().eq("id", parentId);
@@ -931,7 +932,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[14px] font-semibold">{d.name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {broj} {broj === 1 ? "vežba" : "vežbi"}
+                      {broj} {vezbi(broj)}
                     </div>
                   </div>
                 </button>
@@ -988,7 +989,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-[15px] truncate">{d.name}</div>
                       <div className="text-xs text-muted-foreground">
-                        {exList.length} {exList.length === 1 ? "vežba" : "vežbi"}
+                        {exList.length} {vezbi(exList.length)}
                       </div>
                     </div>
                   </button>

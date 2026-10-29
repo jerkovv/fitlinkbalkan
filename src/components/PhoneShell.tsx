@@ -29,6 +29,8 @@ interface PhoneShellProps {
    * kolona; "wide" za stranice koje na racunaru imaju mrezu ili dve kolone.
    */
   desktopWidth?: "narrow" | "wide";
+  /** Racunar: stranica crta sopstveni vrh (npr. profil vezbaca), pa se zaglavlje preskace. */
+  hideDesktopHeader?: boolean;
   children: ReactNode;
 }
 
@@ -40,6 +42,7 @@ export const PhoneShell = ({
   rightSlot,
   hasBottomNav = false,
   desktopWidth = "narrow",
+  hideDesktopHeader = false,
   children,
 }: PhoneShellProps) => {
   // fitlink.rs/dashboard (proksiran isti bundle, vidi useDesktopWeb): isti
@@ -67,6 +70,7 @@ export const PhoneShell = ({
           desktopWidth === "wide" ? "max-w-[1120px]" : "max-w-[880px]",
         )}
       >
+        {!hideDesktopHeader && (
         <header className="flex items-end justify-between gap-6 pb-6">
           <div className="flex min-w-0 items-start gap-3">
             {showBack && (
@@ -80,12 +84,12 @@ export const PhoneShell = ({
             )}
             <div className="min-w-0">
               {eyebrow && (
-                <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                <div className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.13em] text-muted-foreground">
                   {eyebrow}
                 </div>
               )}
               {typeof title === "string" ? (
-                <h1 className="font-display text-[30px] leading-[1.1] font-bold tracking-tightest truncate">
+                <h1 className="font-display text-[32px] leading-[1.05] font-bold tracking-[-0.03em]">
                   {title}
                 </h1>
               ) : (
@@ -95,6 +99,7 @@ export const PhoneShell = ({
           </div>
           {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
         </header>
+        )}
 
         <main className="space-y-4">{children}</main>
       </div>

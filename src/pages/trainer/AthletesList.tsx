@@ -337,9 +337,12 @@ const AthletesList = () => {
         }
       >
         {desktop ? (
-          // Racunar: pretraga i filteri u jednom redu, vezbaci kao tabela sa kolonama
-          // umesto tankih traka preko cele sirine.
-          <div className="space-y-6">
+          // Racunar: vrh sa krugom aktivnosti, kome da se javis i pozivnicama, pa
+          // pretraga i filteri u jednom redu i vezbaci kao tabela sa kolonama.
+          <div className="space-y-5">
+            {!loading && rows.length > 0 && (
+              <VrhVezbaca rows={rows} overview={overview} pending={pending} />
+            )}
             <div className="flex items-center justify-between gap-4">
               <div className="flex h-10 w-full max-w-sm items-center gap-2 rounded-full border border-hairline bg-surface px-4 transition focus-within:ring-2 focus-within:ring-primary/40">
                 <Search className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2} />
@@ -360,11 +363,11 @@ const AthletesList = () => {
                       aria-pressed={aktivan}
                       className={cn(
                         "inline-flex h-8 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold transition",
-                        aktivan ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground",
+                        aktivan ? "bg-surface-2 text-foreground shadow-[inset_0_0_0_1px_hsl(0_0%_100%/0.1)]" : "text-muted-foreground hover:text-foreground",
                       )}
                     >
                       {f.label}
-                      <span className={cn("tnum text-[11.5px]", aktivan ? "text-background/70" : "text-muted-foreground/70")}>
+                      <span className={cn("tnum text-[11.5px] font-bold", aktivan ? "text-primary-soft-foreground" : "text-muted-foreground/70")}>
                         {countByFilter[f.key]}
                       </span>
                     </button>
@@ -420,7 +423,7 @@ const AthletesList = () => {
                                     className="ring-0"
                                   />
                                   <div className="min-w-0">
-                                    <div className="truncate text-[14.5px] font-semibold tracking-tight">
+                                    <div className="text-[14px] font-semibold leading-tight tracking-tight">
                                       {a.profile?.full_name ?? "Bez imena"}
                                     </div>
                                     <div className="truncate text-[12px] text-muted-foreground">
@@ -429,7 +432,7 @@ const AthletesList = () => {
                                   </div>
                                 </div>
                                 <div className="min-w-0">
-                                  <div className="truncate text-[13.5px] font-medium">
+                                  <div className="text-[13.5px] font-medium leading-tight">
                                     {a.membership?.plan_name ?? "Bez članarine"}
                                   </div>
                                   {a.membership && (
@@ -759,3 +762,139 @@ const AthletesList = () => {
 };
 
 export default AthletesList;
+
+// ===== Vrh ekrana na racunaru (Ponoc) =====
+type Pregled = Map<string, { risk: string; days_since_last: number | null }>;
+
+const PRSTEN = 2 * Math.PI * 46;
+
+const VrhVezbaca = ({ rows, overview, pending }: { rows: AthleteRow[]; overview: Pregled; pending: PendingInvite[] }) => {
+  const vrednosti = Array.from(overview.values());
+  const redovno = vrednosti.filter((v) => v.risk === "low").length;
+  const usporilo = vrednosti.filter((v) => v.risk === "medium").length;
+  const nestalo = vrednosti.filter((v) => v.risk === "high").length;
+  const ukupno = Math.max(1, redovno + usporilo + nestalo);
+  const delovi = [
+    { n: redovno, boja: "hsl(var(--success))", ime: "trenira redovno" },
+    { n: usporilo, boja: "hsl(var(--warning))", ime: "usporilo" },
+    { n: nestalo, boja: "hsl(var(--destructive))", ime: "nestalo" },
+  ];
+  let pomak = 0;
+
+  // Kome treba da se javis: ko 14 dana i vise nije trenirao, pa oni koji nikad nisu
+  // (isto merilo kao prsten, gde su oboje "nestalo"); najvise dvoje u naslovu.
+  const imena = new Map(rows.map((r) => [r.id, r.profile?.full_name ?? "Bez imena"]));
+  const zaboravili = Array.from(overview.entries())
+    .filter(([, v]) => v.days_since_last == null || v.days_since_last >= 14)
+    .sort((a, b) => (b[1].days_since_last ?? -1) - (a[1].days_since_last ?? -1));
+  const prvaImena = zaboravili.slice(0, 2).map(([id]) => (imena.get(id) ?? "").split(" ")[0]);
+  const naslovJavi =
+    zaboravili.length === 0
+      ? "Svi su trenirali u poslednje dve nedelje"
+      : zaboravili.length === 1
+        ? `${prvaImena[0]} nije trenirao u poslednje dve nedelje`
+        : zaboravili.length === 2
+          ? `${prvaImena[0]} i ${prvaImena[1]} nisu trenirali u poslednje dve nedelje`
+          : `${prvaImena[0]}, ${prvaImena[1]} i još ${zaboravili.length - 2} nisu trenirali u poslednje dve nedelje`;
+
+  return (
+    // Uzi ekran (do 1279 px): pozivnice idu u svoj red ispod, da "Javi se" ne ostane bez mesta.
+    <div className="grid grid-cols-2 gap-4 xl:grid-cols-[330px_minmax(0,1fr)_300px]">
+      <section className="card-premium flex items-center gap-5 rounded-[26px] px-[22px] py-5">
+        <div className="relative shrink-0">
+          <svg width="120" height="120" viewBox="0 0 120 120" aria-hidden>
+            <circle cx="60" cy="60" r="46" fill="none" stroke="hsl(0 0% 100% / 0.06)" strokeWidth="11" />
+            {delovi.map((d) => {
+              if (d.n === 0) return null;
+              const duzina = (PRSTEN * d.n) / ukupno;
+              const el = (
+                <circle
+                  key={d.ime}
+                  cx="60"
+                  cy="60"
+                  r="46"
+                  fill="none"
+                  stroke={d.boja}
+                  strokeWidth="11"
+                  strokeLinecap="round"
+                  strokeDasharray={`${Math.max(duzina - 5, 1)} ${PRSTEN}`}
+                  strokeDashoffset={-pomak}
+                  transform="rotate(-90 60 60)"
+                />
+              );
+              pomak += duzina;
+              return el;
+            })}
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="fig text-[38px] leading-none">{rows.length}</span>
+            <span className="text-[10.5px] text-muted-foreground">vežbača</span>
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 text-[12.5px] text-muted-foreground">
+          {delovi.map((d) => (
+            <span key={d.ime} className="flex items-baseline">
+              <i className="mr-2 inline-block h-2 w-2 rounded-full" style={{ background: d.boja }} />
+              <b className="fig mr-1.5 text-[17px] text-foreground">{d.n}</b>
+              {d.ime}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      <section
+        className="card-premium flex flex-col justify-between rounded-[26px] px-[22px] py-5"
+        style={{ background: zaboravili.length ? "linear-gradient(135deg, hsl(36 100% 64% / 0.12), hsl(var(--card)) 60%)" : undefined }}
+      >
+        <div>
+          <span className={cn("text-[10px] font-semibold uppercase tracking-[0.13em]", zaboravili.length ? "text-warning" : "text-success")}>
+            {zaboravili.length ? "Javi se" : "Sve je u redu"}
+          </span>
+          <h3 className="mt-1.5 font-display text-[19px] font-semibold leading-tight tracking-tight">{naslovJavi}</h3>
+        </div>
+        {zaboravili.length > 0 && (
+          <div className="mt-3 flex items-center justify-between">
+            <div className="flex">
+              {zaboravili.slice(0, 4).map(([id], i) => (
+                <span key={id} className={cn("grid h-[38px] w-[38px] place-items-center rounded-full bg-gradient-brand text-[12px] font-bold text-white shadow-[0_0_0_3px_hsl(var(--card))]", i > 0 && "-ml-2")}>
+                  {initialsOf(imena.get(id) ?? null)}
+                </span>
+              ))}
+            </div>
+            <Link
+              to={`/trener/chat/${zaboravili[0][0]}`}
+              className="inline-flex h-[34px] items-center gap-1.5 rounded-full bg-white px-3.5 text-[12px] font-semibold text-background"
+            >
+              Poruka
+            </Link>
+          </div>
+        )}
+      </section>
+
+      <section className="card-premium col-span-2 rounded-[26px] px-[18px] py-4 xl:col-span-1">
+        <div className="mb-1 flex items-center justify-between">
+          <h3 className="font-display text-[15px] font-semibold">Poslate pozivnice</h3>
+          <span className="rounded-full bg-primary-soft px-2.5 py-0.5 text-[11px] font-semibold text-primary-soft-foreground">{pending.length}</span>
+        </div>
+        {pending.length === 0 ? (
+          <p className="mt-2 text-[12px] text-muted-foreground">Nema pozivnica koje čekaju odgovor.</p>
+        ) : (
+          pending.slice(0, 2).map((p) => {
+            const istekla = p.expires_at ? new Date(p.expires_at).getTime() < Date.now() : false;
+            return (
+              <div key={p.id} className="flex items-center gap-2.5 border-t border-hairline py-2 first-of-type:border-t-0">
+                <div className="min-w-0 flex-1">
+                  <div className="text-[12.5px] font-semibold">{p.full_name ?? p.email}</div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {p.sent_at ? `poslato ${new Date(p.sent_at).toLocaleDateString("sr-Latn-RS", { day: "numeric", month: "short" })}` : "nije poslato"}
+                  </div>
+                </div>
+                <Chip tone={istekla ? "danger" : "warning"}>{istekla ? "Istekla" : "Čeka"}</Chip>
+              </div>
+            );
+          })
+        )}
+      </section>
+    </div>
+  );
+};

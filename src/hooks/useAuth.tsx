@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Session, User } from "@supabase/supabase-js";
 import { App } from "@capacitor/app";
@@ -120,6 +120,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [role, setRole] = useState<AppRole | null>(null);
   const [initializing, setInitializing] = useState(true);
   const [roleLoading, setRoleLoading] = useState(false);
+  // Id korisnika cija je uloga vec ucitana. Isti korisnik (povratak u jezicak,
+  // osvezen token, dogadjaj iz drugog jezicka) osvezava ulogu tiho, bez
+  // roleLoading: ProtectedRoute bi inace skinuo celu stranu i trener bi
+  // izgubio otvoren prozor i sve sto je ukucao.
+  const ulogaZa = useRef<string | null>(null);
   const navigate = useNavigate();
 
   // Push tap navigacija zivi u pushNotifications.ts (van React stabla) - ovde
@@ -141,7 +146,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       setSession(newSession);
-      setUser(newSession?.user ?? null);
+      // Isti korisnik posle prijave/osvezenja tokena: zadrzi isti objekat, da
+      // efekti koji zavise od user ne krecu ispocetka. USER_UPDATED nosi nove podatke.
+      const istiObjekat = event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION";
+      setUser((prev) =>
+        istiObjekat && prev && newSession?.user && prev.id === newSession.user.id ? prev : newSession?.user ?? null,
+      );
 
       if (newSession?.user) {
         // Autentifikovana sesija → ODMAH resetuj loggedOut flag, nezavisno od
@@ -153,10 +163,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // vec null (stari se nije jos obrisao ili je ovo prvi fetch) a
         // roleLoading jos false - ProtectedRoute bi to pogresno procitao kao
         // "nalog nema ulogu" i odjavio korisnika usred normalnog refresh-a.
-        setRoleLoading(true);
+        const tiho = ulogaZa.current === newSession.user.id;
+        if (!tiho) setRoleLoading(true);
         // Defer role fetch da izbegnemo deadlock u callbacku
         setTimeout(() => {
-          fetchRole(newSession.user.id);
+          fetchRole(newSession.user.id, tiho);
         }, 0);
 
         // SIGNED_IN i TOKEN_REFRESHED: sync Watch token (ne na svaki event).
@@ -174,6 +185,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }, 300);
         }
       } else {
+        ulogaZa.current = null;
         setRole(null);
         setRoleLoading(false);
       }
@@ -246,16 +258,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [user]);
 
-  const fetchRole = async (userId: string) => {
+  // tiho: uloga istog korisnika je vec poznata, pa se osvezava bez roleLoading,
+  // a prolazna greska mreze ne brise postojecu ulogu.
+  const fetchRole = async (userId: string, tiho = false) => {
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", userId)
         .maybeSingle();
+      if (tiho && error) return;
       setRole((data?.role as AppRole) ?? null);
+      if (!error) ulogaZa.current = userId;
     } finally {
-      setRoleLoading(false);
+      if (!tiho) setRoleLoading(false);
     }
   };
 
@@ -267,6 +283,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Obrisi APNs token ovog uredjaja dok sesija jos vazi (RLS delete own).
     await clearPushToken();
     await supabase.auth.signOut();
+    ulogaZa.current = null;
     setRole(null);
   };
 

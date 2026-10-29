@@ -19,6 +19,7 @@ import { useConfirm } from "@/hooks/useConfirm";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { LockMark } from "@/components/pretplata/LockMark";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
+import { MUSCLE_LABELS } from "@/lib/muscleGroups";
 
 type Template = {
   id: string;
@@ -29,6 +30,8 @@ type Template = {
   created_at: string;
 };
 
+type VezbeProgra = { broj: number; slike: string[]; misici: Record<string, number> };
+
 const ProgramTemplates = () => {
   const { locked, openLock, guard } = usePretplataLock();
   const { user } = useAuth();
@@ -36,6 +39,7 @@ const ProgramTemplates = () => {
   const desktop = useDesktopWeb();
   const [items, setItems] = useState<Template[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
+  const [vezbe, setVezbe] = useState<Record<string, VezbeProgra>>({});
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
 
@@ -61,11 +65,33 @@ const ProgramTemplates = () => {
       if (ids.length) {
         const { data: days } = await supabase
           .from("program_template_days")
-          .select("template_id")
+          .select("id, template_id")
           .in("template_id", ids);
         const c: Record<string, number> = {};
         (days ?? []).forEach((d: any) => { c[d.template_id] = (c[d.template_id] ?? 0) + 1; });
         setCounts(c);
+        // Racunar: slicice vezbi i udeo misica po programu (vrh i kartice).
+        if (desktop && days?.length) {
+          const danUProgram = new Map<string, string>();
+          days.forEach((d: any) => danUProgram.set(d.id, d.template_id));
+          const { data: vezbe } = await supabase
+            .from("program_template_exercises")
+            .select("day_id, exercise_id, position, sets, exercises(thumbnail_url, primary_muscle)")
+            .in("day_id", days.map((d: any) => d.id))
+            .order("position");
+          const po: Record<string, VezbeProgra> = {};
+          ((vezbe as any[]) ?? []).forEach((v) => {
+            const tid = danUProgram.get(v.day_id);
+            if (!tid) return;
+            const z = (po[tid] ??= { broj: 0, slike: [], misici: {} });
+            z.broj += 1;
+            const url = v.exercises?.thumbnail_url as string | null | undefined;
+            if (url && !z.slike.includes(url)) z.slike.push(url);
+            const m = v.exercises?.primary_muscle as string | null | undefined;
+            if (m && m !== "kardio") z.misici[m] = (z.misici[m] ?? 0) + Math.max(1, v.sets ?? 1);
+          });
+          setVezbe(po);
+        }
       }
     }
     setLoading(false);
@@ -77,7 +103,7 @@ const ProgramTemplates = () => {
     if (locked) return openLock();
     if (!(await confirm({
       title: "Obrisati program?",
-      description: "Program ce biti trajno obrisan. Vezbaci kojima je dodeljen zadrzavaju svoju kopiju.",
+      description: "Program će biti trajno obrisan. Vežbači kojima je dodeljen zadržavaju svoju kopiju.",
       destructive: true,
     }))) return;
     // CASCADE brise dane/vezbe; assigned_programs.source_template_id -> SET NULL.
@@ -183,9 +209,12 @@ const ProgramTemplates = () => {
       ) : desktop ? (
         // Racunar: mreza kartica. Pune trake preko cele sirine su izgledale izduzeno
         // i prazno; kartica drzi naziv, opis i oznake zajedno.
+        <div className="space-y-5">
+        <VrhPrograma t={items[0]} dana={counts[items[0].id] ?? 0} vezbe={vezbe[items[0].id]} />
         <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
           {items.map((t) => {
             const brojDana = counts[t.id] ?? 0;
+            const slike = vezbe[t.id]?.slike.slice(0, 4) ?? [];
             return (
               <div key={t.id} className="group card-premium-hover relative flex min-h-[176px] flex-col p-5">
                 {/* Link preko cele kartice; dugme za brisanje je iznad njega (z-10). */}
@@ -195,9 +224,21 @@ const ProgramTemplates = () => {
                   className="absolute inset-0 rounded-[inherit]"
                 />
                 <div className="flex items-start justify-between gap-3">
-                  <div className="h-11 w-11 rounded-xl bg-gradient-brand-soft flex items-center justify-center">
-                    <ClipboardList className="h-5 w-5 text-primary" strokeWidth={2.25} />
-                  </div>
+                  {slike.length > 0 ? (
+                    <div className="flex">
+                      {slike.map((url, i) => (
+                        <i
+                          key={url}
+                          className={`h-[54px] w-[54px] rounded-[15px] bg-[#E9E5F2] bg-contain bg-center bg-no-repeat bg-blend-multiply shadow-[0_0_0_3px_hsl(var(--surface))] ${i ? "-ml-3" : ""}`}
+                          style={{ backgroundImage: `url(${url})` }}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="h-11 w-11 rounded-xl bg-gradient-brand-soft flex items-center justify-center">
+                      <ClipboardList className="h-5 w-5 text-primary" strokeWidth={2.25} />
+                    </div>
+                  )}
                   <button
                     onClick={() => handleDeleteTemplate(t)}
                     aria-label="Obriši program"
@@ -206,7 +247,7 @@ const ProgramTemplates = () => {
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
-                <div className="mt-4 font-display text-[17px] font-bold leading-snug tracking-tight line-clamp-2">
+                <div className="mt-4 font-display text-[17px] font-bold leading-snug tracking-tight">
                   {t.name}
                 </div>
                 {t.description && (
@@ -238,6 +279,7 @@ const ProgramTemplates = () => {
             <span className="text-sm font-semibold">Novi program</span>
           </button>
         </div>
+        </div>
       ) : (
         <div className="space-y-2">
           {items.map((t) => (
@@ -268,6 +310,68 @@ const ProgramTemplates = () => {
         </div>
       )}
     </PhoneShell>
+  );
+};
+
+// Racunar: vrh sa najnovijim programom, lepezom slicica vezbi i udelom misica.
+const VrhPrograma = ({ t, dana, vezbe }: { t: Template; dana: number; vezbe?: VezbeProgra }) => {
+  const slike = vezbe?.slike.slice(0, 5) ?? [];
+  const sredina = (slike.length - 1) / 2;
+  const misici = Object.entries(vezbe?.misici ?? {}).sort((a, b) => b[1] - a[1]);
+  const ukupno = misici.reduce((s, [, n]) => s + n, 0);
+  const vrh = misici.slice(0, 4);
+  const najveci = vrh[0]?.[1] ?? 1;
+  return (
+    <section
+      className="relative grid min-h-[216px] grid-cols-[minmax(0,1fr)_290px_220px] items-center gap-8 overflow-hidden rounded-[28px] border border-hairline px-7 py-6"
+      style={{ background: "linear-gradient(120deg, hsl(267 81% 58% / 0.24), hsl(258 22% 9% / 0.1) 55%, hsl(323 72% 59% / 0.12))" }}
+    >
+      <div>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.13em] text-muted-foreground">
+          Najnoviji program · {dana} {dana === 1 ? "dan" : "dana"}
+        </span>
+        <h2 className="mt-1.5 font-display text-[32px] font-bold leading-[1.05] tracking-[-0.03em]">{t.name}</h2>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {t.goal && <span className="rounded-full bg-primary-soft px-2.5 py-1 text-[11px] font-semibold text-primary-soft-foreground">{t.goal}</span>}
+          {t.level && <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">{t.level}</span>}
+          {(vezbe?.broj ?? 0) > 0 && (
+            <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-muted-foreground tnum">
+              {vezbe!.broj} {vezbe!.broj % 10 === 1 && vezbe!.broj % 100 !== 11 ? "vežba" : [2, 3, 4].includes(vezbe!.broj % 10) && ![12, 13, 14].includes(vezbe!.broj % 100) ? "vežbe" : "vežbi"}
+            </span>
+          )}
+        </div>
+        <Link to={`/trener/programi/${t.id}`} className="mt-5 inline-flex h-[42px] items-center rounded-full bg-white px-5 text-[13px] font-semibold text-background">
+          Otvori program
+        </Link>
+      </div>
+      <div className="relative h-[168px]">
+        {slike.map((url, i) => {
+          const k = i - sredina;
+          return (
+            <i
+              key={url}
+              className="absolute left-1/2 top-3.5 -ml-[52px] h-[140px] w-[104px] rounded-[18px] bg-[#E9E5F2] bg-contain bg-center bg-no-repeat bg-blend-multiply shadow-[0_22px_40px_-18px_rgba(0,0,0,0.9),0_0_0_3px_hsl(258_22%_9%/0.9)]"
+              style={{ backgroundImage: `url(${url})`, zIndex: 10 - Math.round(Math.abs(k) * 2), transform: `translateX(${k * 46}px) rotate(${k * 9}deg) translateY(${Math.abs(k) * 7}px)` }}
+            />
+          );
+        })}
+      </div>
+      <div className="flex flex-col gap-[11px]">
+        {vrh.length === 0 ? (
+          <span className="text-[12px] text-muted-foreground">Dodaj vežbe u program da vidiš udeo mišića.</span>
+        ) : (
+          vrh.map(([m, n]) => (
+            <div key={m} className="grid grid-cols-[74px_1fr_38px] items-center gap-2.5 text-[12px] text-muted-foreground">
+              <span>{MUSCLE_LABELS[m] ?? m}</span>
+              <span className="h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
+                <i className="block h-full rounded-full bg-gradient-brand" style={{ width: `${Math.round((n / najveci) * 90)}%` }} />
+              </span>
+              <b className="text-right font-semibold text-foreground tnum">{Math.round((n / ukupno) * 100)}%</b>
+            </div>
+          ))
+        )}
+      </div>
+    </section>
   );
 };
 

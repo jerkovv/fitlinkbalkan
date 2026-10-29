@@ -25,6 +25,8 @@ type Template = {
   goal: string | null;
   target_kcal: number | null;
   target_protein: number | null;
+  target_carbs?: number | null;
+  target_fat?: number | null;
   created_at: string;
 };
 
@@ -181,8 +183,10 @@ const NutritionTemplates = () => {
           </Button>
         </div>
       ) : desktop ? (
-        // Racunar: mreza kartica kao kod programa - pune trake preko cele sirine su
-        // izgledale izduzeno, a kartica drzi naziv i ciljeve plana zajedno.
+        // Racunar: najnoviji plan kao vrh sa krugom makroa (Ponoc), pa mreza kartica
+        // kao kod programa; kartica drzi naziv i ciljeve plana zajedno.
+        <div className="space-y-4">
+        {items[0] && <VrhPlana t={items[0]} dana={counts[items[0].id] ?? 0} />}
         <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
           {items.map((t) => {
             const brojDana = counts[t.id] ?? 0;
@@ -195,7 +199,7 @@ const NutritionTemplates = () => {
                 <div className="h-11 w-11 rounded-xl bg-gradient-brand-soft flex items-center justify-center">
                   <Apple className="h-5 w-5 text-primary" strokeWidth={2.25} />
                 </div>
-                <div className="mt-4 font-display text-[17px] font-bold leading-snug tracking-tight line-clamp-2">
+                <div className="mt-4 font-display text-[17px] font-bold leading-snug tracking-tight">
                   {t.name}
                 </div>
                 {t.target_kcal != null && (
@@ -224,6 +228,7 @@ const NutritionTemplates = () => {
             <Plus className="h-5 w-5" />
             <span className="text-sm font-semibold">Novi plan</span>
           </button>
+        </div>
         </div>
       ) : (
         <div className="space-y-2">
@@ -254,3 +259,70 @@ const NutritionTemplates = () => {
 };
 
 export default NutritionTemplates;
+
+// ===== Vrh ekrana na racunaru (Ponoc) =====
+// Najnoviji plan: naziv, ciljevi i krug makroa na staklu. Kalorije makroa se
+// racunaju 4/4/9 kcal po gramu, pa krug pokazuje udeo u kalorijama, ne u gramima.
+const MAKRO = [
+  { kljuc: "target_protein", ime: "proteini", boja: "hsl(262 100% 82%)", kcal: 4 },
+  { kljuc: "target_carbs", ime: "ugljeni hidrati", boja: "hsl(154 70% 55%)", kcal: 4 },
+  { kljuc: "target_fat", ime: "masti", boja: "hsl(36 100% 64%)", kcal: 9 },
+] as const;
+
+const VrhPlana = ({ t, dana }: { t: Template; dana: number }) => {
+  const delovi = MAKRO.map((m) => ({ ...m, g: (t[m.kljuc] as number | null | undefined) ?? 0 }));
+  const ukupno = delovi.reduce((s2, d) => s2 + d.g * d.kcal, 0);
+  const obim = 2 * Math.PI * 40;
+  let pomak = 0;
+  return (
+    <section
+      className="relative grid min-h-[220px] grid-cols-[minmax(0,1fr)_auto] items-center gap-6 overflow-hidden rounded-[28px] border border-hairline px-7 py-6"
+      style={{ background: "linear-gradient(120deg, hsl(258 22% 9%) 30%, hsl(154 70% 55% / 0.08) 70%, hsl(267 81% 58% / 0.18))" }}
+    >
+      <div>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.13em] text-muted-foreground">
+          Najnoviji plan · {dana} {dana === 1 ? "dan" : "dana"}
+        </span>
+        <h2 className="mt-1.5 font-display text-[32px] font-bold leading-[1.05] tracking-[-0.03em]">{t.name}</h2>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {t.goal && <span className="rounded-full bg-primary-soft px-2.5 py-1 text-[11px] font-semibold text-primary-soft-foreground">{t.goal}</span>}
+          {t.target_kcal != null && <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">{t.target_kcal} kcal dnevno</span>}
+        </div>
+        <Link to={`/trener/ishrana/${t.id}`} className="mt-5 inline-flex h-[42px] items-center rounded-full bg-white px-5 text-[13px] font-semibold text-background">
+          Otvori plan
+        </Link>
+      </div>
+      {ukupno > 0 && (
+        <div className="flex items-center gap-5 rounded-[24px] bg-background/60 px-5 py-4 shadow-[inset_0_0_0_1px_hsl(0_0%_100%/0.12)] backdrop-blur-xl">
+          <div className="relative">
+            <svg width="104" height="104" viewBox="0 0 104 104" aria-hidden>
+              {delovi.map((d) => {
+                if (!d.g) return null;
+                const l = (obim * d.g * d.kcal) / ukupno;
+                const el = (
+                  <circle key={d.kljuc} cx="52" cy="52" r="40" fill="none" stroke={d.boja} strokeWidth="10" strokeLinecap="round"
+                    strokeDasharray={`${Math.max(l - 5, 1)} ${obim}`} strokeDashoffset={-pomak} transform="rotate(-90 52 52)" />
+                );
+                pomak += l;
+                return el;
+              })}
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="fig text-[22px] leading-none">{t.target_kcal ?? Math.round(ukupno)}</span>
+              <span className="text-[9.5px] text-muted-foreground">kcal</span>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 text-[12.5px] text-muted-foreground">
+            {delovi.map((d) => (
+              <span key={d.kljuc} className="flex items-baseline">
+                <i className="mr-2 inline-block h-2 w-2 rounded-full" style={{ background: d.boja }} />
+                <b className="fig mr-1.5 text-[17px] text-foreground">{d.g} g</b>
+                {d.ime}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+};

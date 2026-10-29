@@ -168,6 +168,7 @@ const DesktopKpi = ({
   badge,
   hint,
   hover = false,
+  istaknut = false,
 }: {
   label: string;
   value: string;
@@ -176,23 +177,36 @@ const DesktopKpi = ({
   badge?: ReactNode;
   hint?: ReactNode;
   hover?: boolean;
-}) => (
-  <Card hover={hover} className="flex h-full flex-col p-5">
-    <div className="flex items-center justify-between gap-2">
-      <span className="truncate text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-        {label}
-      </span>
-      {badge}
+  /** Prvi KPI (ovaj mesec) kao gradijent kartica iz Ponoc mockupa. */
+  istaknut?: boolean;
+}) =>
+  istaknut ? (
+    <div className="relative flex h-full flex-col overflow-hidden rounded-[24px] bg-gradient-brand p-5 text-white shadow-[0_24px_44px_-20px_hsl(267_81%_58%/0.85),inset_0_0_0_1px_hsl(0_0%_100%/0.18)]">
+      <span aria-hidden className="absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/15 blur-[30px]" />
+      <div className="relative flex items-center justify-between gap-2">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.13em] text-white/85">{label}</span>
+        {/* Rast meseca je na gradijentu beo, u svetloj piluli; zelena tu ne bi bila citljiva. */}
+        {badge && <span className="rounded-full bg-white/20 px-2 py-0.5 [&>span]:!text-white">{badge}</span>}
+      </div>
+      <div className="relative mt-3 flex items-baseline gap-1.5">
+        <span className="fig text-[40px] leading-none">{value}</span>
+        {unit && <span className="text-[10px] font-semibold tracking-[0.14em] text-white/75">{unit}</span>}
+      </div>
+      {hint && <div className="relative mt-auto pt-2 text-[12.5px] text-white/85">{hint}</div>}
     </div>
-    <div className="mt-3 flex items-baseline gap-1.5">
-      <span className={cn("font-display text-[28px] font-bold leading-none tracking-tightest tnum", TONE_TEXT[tone])}>
-        {value}
-      </span>
-      {unit && <span className="text-[12px] font-semibold text-muted-foreground">{unit}</span>}
-    </div>
-    {hint && <div className="mt-auto pt-3 text-[12.5px] text-muted-foreground">{hint}</div>}
-  </Card>
-);
+  ) : (
+    <Card hover={hover} className="flex h-full flex-col rounded-[24px] p-5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.13em] text-muted-foreground">{label}</span>
+        {badge}
+      </div>
+      <div className="mt-3 flex items-baseline gap-1.5">
+        <span className={cn("fig text-[26px] leading-none", TONE_TEXT[tone])}>{value}</span>
+        {unit && <span className="text-[10px] font-semibold tracking-[0.14em] text-muted-foreground/80">{unit}</span>}
+      </div>
+      {hint && <div className="mt-auto pt-3 text-[12.5px] text-muted-foreground">{hint}</div>}
+    </Card>
+  );
 
 const Finances = () => {
   const { user } = useAuth();
@@ -270,6 +284,8 @@ const Finances = () => {
       let rr = 0;
       for (const m of activeMems) {
         if (!m.price || !m.starts_on || !m.ends_on) continue;
+        // Status "active" se ne prebacuje sam kad rok prodje; istekla ne ulazi u mesecni prihod.
+        if (m.ends_on < todayISO) continue;
         const days = (new Date(m.ends_on).getTime() - new Date(m.starts_on).getTime()) / 86_400_000;
         if (!days || days <= 0) continue;
         rr += m.price / (days / 30);
@@ -428,8 +444,9 @@ const Finances = () => {
           // Racunar: KPI red, pa grafikon uz raspodelu, pa dve liste jedna pored
           // druge, pa tabela uplata. Na telefonu je sve jedan dug stub kartica.
           <div className="space-y-6">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-[1.32fr_1fr_1fr_1fr] gap-4">
               <DesktopKpi
+                istaknut
                 label="Ovaj mesec"
                 tone="brand"
                 value={thisMonth.toLocaleString("sr-Latn-RS")}
@@ -506,10 +523,10 @@ const Finances = () => {
                         tickLine={false}
                         tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))", fontWeight: 600 }}
                       />
-                      <Tooltip cursor={{ fill: "hsl(268 60% 96%)" }} content={<RevenueTooltip />} />
+                      <Tooltip cursor={{ fill: "hsl(var(--primary) / 0.08)" }} content={<RevenueTooltip />} />
                       <Bar dataKey="sum" radius={[8, 8, 0, 0]} maxBarSize={56}>
                         {chartData.map((d, i) => (
-                          <Cell key={i} fill={d.isLast ? "hsl(268 80% 56%)" : "hsl(268 45% 88%)"} />
+                          <Cell key={i} fill={d.isLast ? "hsl(268 80% 56%)" : "hsl(var(--primary) / 0.32)"} />
                         ))}
                       </Bar>
                     </BarChart>

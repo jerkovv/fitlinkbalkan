@@ -98,11 +98,12 @@ const Packages = () => {
     setSaving(true);
     const payload = {
       trainer_id: user.id,
-      name, sessions_count: sc, duration_days: dd, price_rsd: pr, is_active: true,
+      name, sessions_count: sc, duration_days: dd, price_rsd: pr,
     };
+    // Nov paket je aktivan; izmena ne dira prekidac (ugasen paket ostaje ugasen).
     const { error } = editing
       ? await supabase.from("membership_packages").update(payload).eq("id", editing.id)
-      : await supabase.from("membership_packages").insert(payload);
+      : await supabase.from("membership_packages").insert({ ...payload, is_active: true });
     setSaving(false);
     if (error) return toast.error(porukaGreske(error));
     toast.success(editing ? "Sačuvano" : "Paket dodat");
@@ -209,8 +210,10 @@ const Packages = () => {
             )}
           </Card>
         ) : desktop ? (
-          // Racunar: mreza kartica. Tanke trake preko cele sirine su izgledale
-          // izduzeno; kartica drzi cenu, sadrzaj paketa i kontrole zajedno.
+          // Racunar: vrh sa paketom koji je najjeftiniji po treningu i poredjenjem cene
+          // po treningu (Ponoc), pa mreza kartica sa cenom, sadrzajem i kontrolama.
+          <div className="space-y-4">
+          <VrhPaketa paketi={packages.filter((x) => x.is_active)} />
           <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
             {packages.map((p) => (
               <div key={p.id} className="group card-premium-hover flex min-h-[208px] flex-col p-5">
@@ -233,11 +236,11 @@ const Packages = () => {
 
                 {/* Neaktivan paket bledi samo sadrzajem; prekidac i dugmad ostaju jasni. */}
                 <div className={cn("transition", !p.is_active && "opacity-60")}>
-                  <div className="mt-4 font-display text-[17px] font-bold leading-snug tracking-tight line-clamp-2">
+                  <div className="mt-4 font-display text-[16px] font-semibold leading-snug tracking-tight">
                     {p.name}
                   </div>
                   <div className="mt-2 flex items-baseline gap-1.5">
-                    <span className="font-display text-[26px] font-bold leading-none tracking-tightest text-primary tnum">
+                    <span className="fig text-gradient-brand text-[30px] leading-none">
                       {p.price_rsd.toLocaleString("sr-Latn-RS")}
                     </span>
                     <span className="text-[12px] font-semibold text-muted-foreground">RSD</span>
@@ -286,6 +289,7 @@ const Packages = () => {
                 <span className="text-sm font-semibold">Novi paket</span>
               </button>
             )}
+          </div>
           </div>
         ) : (
           <div className="space-y-2">
@@ -404,3 +408,57 @@ const Packages = () => {
 };
 
 export default Packages;
+
+// ===== Vrh ekrana na racunaru (Ponoc) =====
+// Paket sa najnizom cenom po treningu kao istaknuta kartica, pored poredjenje cene
+// po treningu za sve aktivne pakete. Paketi bez broja treninga se ne porede.
+const VrhPaketa = ({ paketi }: { paketi: Pkg[] }) => {
+  const saTreninzima = paketi.filter((x) => x.sessions_count > 0);
+  if (saTreninzima.length === 0) return null;
+  const poTreningu = (x: Pkg) => Math.round(x.price_rsd / x.sessions_count);
+  const poredjani = [...saTreninzima].sort((a, b) => poTreningu(a) - poTreningu(b));
+  const najbolji = poredjani[0];
+  // Bar 1, da paketi sa cenom 0 ne daju deljenje nulom (NaN sirinu trake).
+  const najvise = Math.max(1, ...poredjani.map(poTreningu));
+  const rsd = (n: number) => n.toLocaleString("sr-Latn-RS");
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_400px] gap-4">
+      <section className="relative flex min-h-[206px] flex-col justify-between overflow-hidden rounded-[28px] bg-gradient-brand p-6 text-white shadow-[0_30px_60px_-28px_hsl(267_81%_58%/0.9),inset_0_0_0_1px_hsl(0_0%_100%/0.18)]">
+        <span aria-hidden className="absolute -right-16 -top-24 h-80 w-80 rounded-full bg-white/15 blur-[50px]" />
+        <div className="relative">
+          <span className="inline-flex rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-semibold">Najbolja cena po treningu</span>
+          <h2 className="mt-2.5 font-display text-[26px] font-bold tracking-[-0.025em]">{najbolji.name}</h2>
+          <p className="mt-1 text-[13px] text-white/90">
+            {najbolji.sessions_count} treninga · {najbolji.duration_days} dana
+          </p>
+        </div>
+        <div className="relative">
+          <div className="flex items-baseline gap-2">
+            <span className="fig text-[40px] leading-none">{rsd(najbolji.price_rsd)}</span>
+            <span className="text-[11px] font-semibold tracking-[0.14em] text-white/80">RSD</span>
+          </div>
+          <p className="mt-1.5 text-[13px] text-white/90">
+            {rsd(poTreningu(najbolji))} RSD po treningu
+            {najbolji.duration_days > 0 && ` · ${rsd(Math.round(najbolji.price_rsd / najbolji.duration_days))} RSD po danu`}
+          </p>
+        </div>
+      </section>
+      <section className="card-premium rounded-[26px]">
+        <h2 className="px-5 py-4 font-display text-[16.5px] font-semibold tracking-tight">Cena po treningu</h2>
+        <div className="flex flex-col gap-3.5 px-5 pb-5">
+          {poredjani.map((x) => (
+            <div key={x.id}>
+              <div className="flex justify-between text-[12.5px]">
+                <b className="font-semibold">{x.name}</b>
+                <span className="tnum text-muted-foreground">{rsd(poTreningu(x))} RSD</span>
+              </div>
+              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+                <i className="block h-full rounded-full bg-gradient-brand" style={{ width: `${(poTreningu(x) / najvise) * 100}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+};

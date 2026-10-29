@@ -290,3 +290,109 @@
 /* Hide scrollbars on horizontal pill rows */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
+
+/* ===== Ponoc: trenerov dashboard na racunaru (fitlink.rs/dashboard) =====
+   TrainerWebShell dodaje klase "dark ponoc" na <html> dok je montiran, pa ista
+   stranica i svi njeni prozori (Radix ih crta van #root) dobijaju tamnu paletu
+   iz mockupa. Telefonska veb verzija (app.fitlink.rs) nikad ne montira taj okvir. */
+@layer base {
+  .ponoc {
+    /* Sistemske kontrole (trake za skrol, polja za datum i broj) u tamnoj varijanti. */
+    color-scheme: dark;
+    --background: 250 23% 5%;
+    --foreground: 264 50% 97%;
+    --surface: 258 22% 9%;
+    --surface-2: 258 19% 13%;
+    --surface-3: 258 16% 17%;
+    --hairline: 258 15% 16%;
+    --card: 258 22% 9%;
+    --card-foreground: 264 50% 97%;
+    --popover: 258 19% 12%;
+    --popover-foreground: 264 50% 97%;
+
+    --primary: 267 81% 58%;
+    --primary-foreground: 0 0% 100%;
+    --primary-soft: 266 37% 18%;
+    --primary-soft-foreground: 262 100% 82%;
+    --trainer-soft: 266 37% 18%;
+    --trainer-soft-foreground: 262 100% 82%;
+    --athlete-soft: 252 37% 18%;
+    --athlete-soft-foreground: 250 100% 84%;
+
+    --success: 154 70% 55%;
+    --success-foreground: 250 23% 5%;
+    --success-soft: 154 40% 13%;
+    --success-soft-foreground: 154 70% 62%;
+    --warning: 36 100% 64%;
+    --warning-foreground: 250 23% 5%;
+    --warning-soft: 36 45% 13%;
+    --warning-soft-foreground: 36 100% 68%;
+    --destructive: 3 100% 61%;
+    --destructive-foreground: 0 0% 100%;
+    --destructive-soft: 3 45% 14%;
+    --destructive-soft-foreground: 3 100% 74%;
+
+    --secondary: 258 19% 13%;
+    --secondary-foreground: 264 50% 97%;
+    --muted: 258 19% 13%;
+    --muted-foreground: 259 16% 69%;
+    --accent: 252 80% 62%;
+    --accent-foreground: 0 0% 100%;
+    --border: 258 15% 16%;
+    --input: 258 14% 19%;
+    --ring: 267 81% 62%;
+    --radius: 1.25rem;
+
+    --gradient-brand-soft: linear-gradient(135deg, hsl(268 45% 16%) 0%, hsl(252 45% 15%) 55%, hsl(322 40% 15%) 100%);
+    --gradient-hero: radial-gradient(ellipse at top, hsl(268 45% 14%) 0%, hsl(250 23% 5%) 60%);
+    --shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.35);
+    --shadow-sm: 0 2px 6px hsl(0 0% 0% / 0.35);
+    --shadow-md: 0 10px 24px -10px hsl(0 0% 0% / 0.6);
+    --shadow-lg: 0 30px 60px -24px hsl(0 0% 0% / 0.7);
+    --shadow-brand: 0 14px 30px -14px hsl(267 81% 58% / 0.95), inset 0 0 0 1px hsl(0 0% 100% / 0.18);
+    --shadow-glow: 0 0 60px hsl(267 81% 58% / 0.25);
+
+    --session-violet-bg: 268 40% 17%;  --session-violet-fg: 266 100% 80%;
+    --session-indigo-bg: 240 40% 17%;  --session-indigo-fg: 236 100% 80%;
+    --session-emerald-bg: 154 40% 13%; --session-emerald-fg: 154 70% 62%;
+    --session-amber-bg: 36 45% 13%;    --session-amber-fg: 36 100% 68%;
+    --session-rose-bg: 348 40% 15%;    --session-rose-fg: 348 100% 78%;
+    --session-sky-bg: 205 45% 14%;     --session-sky-fg: 205 100% 72%;
+
+    --sidebar-background: 258 22% 8%;
+    --sidebar-foreground: 264 50% 97%;
+    --sidebar-primary: 267 81% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 258 19% 13%;
+    --sidebar-accent-foreground: 264 50% 97%;
+    --sidebar-border: 258 15% 16%;
+    --sidebar-ring: 267 81% 62%;
+  }
+
+  .ponoc body {
+    font-family: "Poppins", system-ui, -apple-system, sans-serif;
+    font-feature-settings: normal;
+  }
+  .ponoc h1, .ponoc h2, .ponoc h3, .ponoc h4, .ponoc .font-display, .ponoc .eyebrow {
+    font-family: "Poppins", system-ui, -apple-system, sans-serif;
+  }
+  .ponoc h1, .ponoc h2, .ponoc h3, .ponoc h4, .ponoc .font-display {
+    font-weight: 700;
+    letter-spacing: -0.025em;
+  }
+}
+
+@layer components {
+  /* Brojke kao u aplikaciji: sistemski kurziv sa ciframa jednake sirine, da kolone
+     stoje u ravni (Poppins nema takve cifre). */
+  .fig {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+    font-style: italic;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .ponoc .card-premium {
+    box-shadow: 0 0 0 1px hsl(var(--hairline));
+  }
+}

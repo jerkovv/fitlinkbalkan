@@ -38,6 +38,7 @@ type Exercise = {
   is_global: boolean;
   created_by: string | null;
   video_url: string | null;
+  thumbnail_url?: string | null;
 };
 
 const MUSCLE_GROUPS = [
@@ -47,6 +48,8 @@ const MUSCLE_GROUPS = [
   { value: "ramena", label: "Ramena" },
   { value: "biceps", label: "Biceps" },
   { value: "triceps", label: "Triceps" },
+  // 187 globalnih vezbi ima ovu grupu; bez nje nisu imale filter ni pravi naziv.
+  { value: "podlaktice", label: "Podlaktice" },
   { value: "kvadriceps", label: "Kvadriceps" },
   { value: "zadnja_loza", label: "Zadnja loža" },
   { value: "glutei", label: "Glutei" },
@@ -71,7 +74,7 @@ const EQUIPMENT = [
 ];
 
 /** Kolone koje kartica u listi stvarno koristi. Ceo red ide tek na otvaranje vezbe. */
-const KOLONE_LISTE = "id, name, name_en, primary_muscle, equipment, is_global, created_by";
+const KOLONE_LISTE = "id, name, name_en, primary_muscle, equipment, is_global, created_by, thumbnail_url";
 const STRANA = 60;
 
 const OPSEZI = [
@@ -247,18 +250,15 @@ const ExerciseLibrary = () => {
           "+" dobija rec, jer na sirokom ekranu gola ikonica nema susede da je
           objasne. Isti oblik zaglavlja kao PhoneShell na racunaru. */}
       {desktop ? (
+        <>
         <header className="flex items-end justify-between gap-6 pb-6">
           <div className="min-w-0">
-            <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            <div className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.13em] text-muted-foreground">
               Treninzi
             </div>
-            <h1 className="font-display text-[30px] leading-[1.1] font-bold tracking-tightest truncate">
+            <h1 className="font-display text-[32px] leading-[1.05] font-bold tracking-[-0.03em]">
               Biblioteka vežbi
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground tnum">
-              {ukupno != null ? `${ukupno} vežbi` : "Učitavam..."}
-              {ukupno != null && items.length < ukupno && ` · prikazano ${items.length}`}
-            </p>
           </div>
           <Button
             onClick={guard(() => setOpen(true))}
@@ -268,6 +268,29 @@ const ExerciseLibrary = () => {
             Nova vežba
           </Button>
         </header>
+        {/* Vrh (Ponoc): broj vezbi i mozaik ilustracija iz same baze. */}
+        <section className="relative mb-5 grid h-[176px] grid-cols-[330px_minmax(0,1fr)] overflow-hidden rounded-[28px] border border-hairline bg-surface">
+          <div className="relative z-10 flex flex-col justify-center px-[26px]">
+            <span className="fig text-gradient-brand text-[62px] leading-[0.9]">
+              {ukupno != null ? ukupno.toLocaleString("sr-Latn-RS") : "-"}
+            </span>
+            <p className="mt-2.5 text-[13px] text-muted-foreground tnum">
+              {query.trim() || muscleFilter !== "all" || scopeFilter !== "all" ? "vežbi za ovaj izbor" : "vežbi u biblioteci"}
+              {ukupno != null && items.length < ukupno && ` · prikazano ${items.length}`}
+            </p>
+          </div>
+          <div className="relative grid translate-x-3.5 -skew-x-6 grid-cols-6 gap-2 py-3 pr-3">
+            <span aria-hidden className="absolute -left-10 inset-y-0 z-10 w-[200px] bg-gradient-to-r from-surface to-transparent" />
+            {items.filter((x) => x.thumbnail_url).slice(0, 6).map((x) => (
+              <span
+                key={x.id}
+                className="rounded-2xl bg-[#E9E5F2] bg-contain bg-center bg-no-repeat bg-blend-multiply"
+                style={{ backgroundImage: `url(${x.thumbnail_url})` }}
+              />
+            ))}
+          </div>
+        </section>
+        </>
       ) : (
         <div className="flex items-center justify-between mb-5">
           <Link to="/trener" className="h-9 w-9 rounded-full bg-surface-2 flex items-center justify-center">
@@ -473,7 +496,7 @@ const ExerciseLibrary = () => {
       ) : desktop ? (
         // Racunar: mreza kartica iste visine - ime u dva reda, misic i oprema kao
         // oznake. Tanke trake preko pola ekrana su izgledale razvuceno i prazno.
-        <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 xl:grid-cols-4 gap-3.5">
           {filtered.map((ex) => {
             const ime = ex.name_en?.trim() || ex.name;
             const drugoIme = !!ex.name_en?.trim() && ex.name_en.trim() !== ex.name;
@@ -481,12 +504,19 @@ const ExerciseLibrary = () => {
               <button
                 key={ex.id}
                 onClick={() => void otvori(ex)}
-                className="card-premium-hover flex min-h-[156px] w-full flex-col p-5 text-left"
+                className="card-premium-hover flex min-h-[156px] w-full flex-col overflow-hidden rounded-[22px] p-0 text-left"
               >
-                <div className="flex w-full items-start justify-between gap-3">
-                  <div className="h-11 w-11 rounded-xl bg-gradient-brand-soft flex items-center justify-center shrink-0">
-                    <Dumbbell className="h-5 w-5 text-primary" strokeWidth={2.25} />
-                  </div>
+                {/* Ilustracija iz baze je na beloj podlozi: svetla ploca i mnozenje, da ne bode oci. */}
+                <div
+                  className="relative h-[124px] w-full bg-[#E9E5F2] bg-contain bg-center bg-no-repeat bg-blend-multiply"
+                  style={ex.thumbnail_url ? { backgroundImage: `url(${ex.thumbnail_url})` } : undefined}
+                >
+                  {!ex.thumbnail_url && (
+                    <span className="absolute inset-0 grid place-items-center bg-surface-2">
+                      <Dumbbell className="h-7 w-7 text-primary-soft-foreground/70" strokeWidth={1.8} />
+                    </span>
+                  )}
+                  <span className="absolute right-2.5 top-2.5">
                   {ex.is_global ? (
                     <span
                       title="Globalna vežba"
@@ -504,20 +534,23 @@ const ExerciseLibrary = () => {
                       Moja
                     </span>
                   )}
+                  </span>
                 </div>
-                <div className="mt-4 font-display text-[17px] font-bold leading-snug tracking-tight line-clamp-2">
+                <div className="flex flex-1 flex-col px-3.5 pb-3.5 pt-3">
+                <div className="font-display text-[13.5px] font-semibold leading-snug">
                   {ime}
                 </div>
                 {drugoIme && (
-                  <div className="mt-0.5 w-full truncate text-[12.5px] text-muted-foreground">{ex.name}</div>
+                  <div className="mt-0.5 w-full text-[11.5px] leading-snug text-muted-foreground">{ex.name}</div>
                 )}
-                <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-4">
+                <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-2.5">
                   <span className="inline-flex items-center rounded-full bg-surface-2 px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground">
                     {muscleLabel(ex.primary_muscle)}
                   </span>
                   <span className="inline-flex items-center rounded-full bg-surface-2 px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground">
                     {equipLabel(ex.equipment)}
                   </span>
+                </div>
                 </div>
               </button>
             );

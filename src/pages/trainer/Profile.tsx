@@ -175,7 +175,7 @@ const Profile = () => {
           .select("id", { count: "exact", head: true })
           .eq("trainer_id", user.id),
         supabase
-          .from("nutrition_templates")
+          .from("nutrition_plan_templates")
           .select("id", { count: "exact", head: true })
           .eq("trainer_id", user.id),
         supabase

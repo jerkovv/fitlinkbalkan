@@ -261,6 +261,35 @@ const SessionSettings = () => {
         // kolona (pon-ned), kao pravi kalendar. Sedam kartica jedna ispod druge je
         // na sirokom ekranu bilo dugacko i prazno.
         <div className="space-y-8">
+          {/* Vrh (Ponoc): koliko termina i mesta nedeljni sablon daje. */}
+          {templates.length > 0 && (() => {
+            const kap = new Map(types.map((t) => [t.id, t.capacity]));
+            const mesta = templates.reduce((s2, x) => s2 + (kap.get(x.session_type_id) ?? 0), 0);
+            return (
+              <section className="relative flex items-center gap-10 overflow-hidden rounded-[28px] bg-gradient-brand px-7 py-6 text-white shadow-[0_30px_60px_-28px_hsl(267_81%_58%/0.9),inset_0_0_0_1px_hsl(0_0%_100%/0.18)]">
+                <span aria-hidden className="absolute -right-16 -top-24 h-80 w-80 rounded-full bg-white/15 blur-[50px]" />
+                <div className="relative">
+                  <span className="fig block text-[48px] leading-[0.95]">{templates.length}</span>
+                  <small className="mt-1.5 block text-[12px] text-white/88">termina nedeljno</small>
+                </div>
+                <div className="relative">
+                  <span className="fig block text-[48px] leading-[0.95]">{mesta}</span>
+                  <small className="mt-1.5 block text-[12px] text-white/88">mesta nedeljno</small>
+                </div>
+                <div className="relative ml-auto flex flex-wrap justify-end gap-1.5">
+                  {types.map((t) => {
+                    const n = templates.filter((x) => x.session_type_id === t.id).length;
+                    if (n === 0) return null;
+                    return (
+                      <span key={t.id} className="rounded-full bg-white/20 px-2.5 py-1 text-[11.5px] font-semibold">
+                        {t.name} · {n}×
+                      </span>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })()}
           <section>
             <div className="mb-3">
               <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Tipovi</div>
@@ -349,7 +378,7 @@ const SessionSettings = () => {
                         <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                           {weekdayLabelsShort[wd]}
                         </div>
-                        <div className="truncate text-[13px] font-semibold">{label}</div>
+                        <div className="text-[13px] font-semibold [overflow-wrap:anywhere]">{label}</div>
                       </div>
                       <div className="flex min-h-[260px] flex-1 flex-col gap-1.5 p-2">
                         {dayTemplates.length === 0 ? (
@@ -367,7 +396,7 @@ const SessionSettings = () => {
                                 <div className={cn("font-display text-[14px] font-bold leading-none tnum", colors.fg)}>
                                   {formatTime(tpl.start_time)}
                                 </div>
-                                <div className="mt-1 truncate text-[11.5px] font-semibold">{type.name}</div>
+                                <div className="mt-1 text-[11.5px] font-semibold leading-tight [overflow-wrap:anywhere]">{type.name}</div>
                                 <div className="text-[11px] text-muted-foreground tnum">{type.capacity} mesta</div>
                                 <button
                                   onClick={() => deleteSlot(tpl.id)}
