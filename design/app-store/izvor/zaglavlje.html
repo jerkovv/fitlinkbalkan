@@ -16,42 +16,43 @@
       radial-gradient(2600px 2400px at 4700px 900px, rgba(226,76,166,.32), transparent 70%),
       radial-gradient(3600px 2600px at 3600px 2900px, rgba(91,75,239,.50), transparent 70%),
       linear-gradient(#0B0A10, #140C26); }
-  .tekst { position: absolute; left: 640px; top: 990px; width: 2050px; }
-  .znacka { display: inline-flex; align-items: center; height: 120px; padding: 0 56px; border-radius: 60px;
-    font-weight: 700; font-size: 52px; letter-spacing: .22em; text-transform: uppercase;
-    background: linear-gradient(90deg, #8B3DEB, #5B4BEF 50%, #E24CA6); }
-  h1 { margin-top: 70px; font-family: "Plus Jakarta Sans"; font-weight: 800; font-size: 205px;
+  /* Sigurna zona iz Apple-ovog sablona (Figma, okvir Universal): x 1921..3323, y 660..1622.
+     Samo ona se vidi svuda (iPhone, iPad, Mac, pretraga). Naslov i gornji deo telefona sa
+     pulsom su u njoj; zadnji telefon i sat su ukras i smeju da se iseku. */
+  .tekst { position: absolute; left: 0; right: 0; top: 690px; text-align: center; }
+  h1 { font-family: "Plus Jakarta Sans"; font-weight: 800; font-size: 156px;
     line-height: 1.04; letter-spacing: -.03em; white-space: nowrap; }
   h1 .z { margin-left: -.13em; }
   h1 em { font-style: normal; background: linear-gradient(90deg, #C482FF, #9A86FF 45%, #FF6EC7);
     -webkit-background-clip: text; background-clip: text; color: transparent; }
-  p { margin-top: 64px; font-size: 92px; line-height: 1.3; font-weight: 500; color: #B9B2C9; text-wrap: balance; }
   .sl { position: absolute; }
   .senka { filter: drop-shadow(0 120px 160px rgba(0,0,0,.6)) drop-shadow(0 0 300px rgba(139,61,235,.22)); }
-  .zadnji { left: 3640px; top: 640px; width: 1080px; transform: rotate(6deg); transform-origin: 50% 0;
-    filter: drop-shadow(0 120px 160px rgba(0,0,0,.6)) brightness(.86); }
-  .prednji { left: 2860px; top: 470px; width: 1180px; }
-  .sat { left: 2560px; top: 1640px; width: 560px; transform: rotate(-8deg); }
+  .zadnji { left: 1600px; top: 1190px; width: 730px; transform: rotate(-9deg); transform-origin: 50% 0;
+    filter: drop-shadow(0 90px 120px rgba(0,0,0,.6)) brightness(.78); }
+  .prednji { left: 2217px; top: 1045px; width: 810px; }
+  .sat { left: 2950px; top: 1150px; width: 410px; transform: rotate(9deg); }
+  .zona { position: absolute; left: 1921px; top: 660px; width: 1402px; height: 962px;
+    outline: 8px dashed #39FF6A; display: none; }
+  .prikazi-zonu .zona { display: block; }
   .greska { outline: 40px solid red; outline-offset: -40px; }
 </style>
 </head>
 <body>
 <div class="tekst" id="tekst">
-  <div class="znacka">Za trenere i vežbače</div>
   <h1>Vidiš ko trenira<span class="z">,</span><br><em>dok trenira<span class="z">.</span></em></h1>
-  <p>Puls, kalorije i serija svakog klijenta uživo, sa sata ili narukvice.</p>
 </div>
 <img class="sl zadnji" src="slojevi/tel-a-trening.png" alt="">
 <img class="sl prednji senka" src="slojevi/tel-t-uzivo-detalj.png" alt="">
 <img class="sl sat senka" src="slojevi/sat-prsten.png" alt="">
+<div class="zona"></div>
 <script>
-  // Provera: tekst mora biti u zoni koja ostaje posle oba isecanja.
+  // ?zona=1 crta sigurnu zonu. Provera: naslov mora ceo da stane u sigurnu zonu, inace crveni okvir.
+  if (new URLSearchParams(location.search).get("zona")) document.body.classList.add("prikazi-zonu");
   document.fonts.ready.then(() => {
-    const r = document.getElementById("tekst").getBoundingClientRect();
-    const h = document.querySelector("h1");
-    if (r.left < 409 || r.top < 351 || r.bottom > 2598 || h.scrollWidth > h.clientWidth + 1) {
-      document.body.classList.add("greska");
-    }
+    const r = document.createRange(); r.selectNodeContents(document.querySelector("h1"));
+    const b = r.getBoundingClientRect();
+    document.title = [b.left, b.right, b.top, b.bottom].map(Math.round).join(",");
+    if (b.left < 1921 || b.right > 3323 || b.top < 660 || b.bottom > 1622) document.body.classList.add("greska");
   });
 </script>
 </body>
