@@ -11,6 +11,7 @@
 # 3. Tekst i oznake slaze slajd.html (Chrome), pa se slika smanji i na 1206 x 2622.
 #
 # Zakljucan ekran se slaze u zakljucan-ekran.html (simulator na njemu pise engleski datum).
+# Zaglavlje (vrh stranice i pretraga, 5244 x 2950) je zaglavlje.html, iz istih slojeva.
 
 from PIL import Image, ImageDraw, ImageFilter
 import numpy as np
@@ -43,7 +44,7 @@ SATOVI_SNIMCI = ["01-v-set", "03-prsten"]
 REDOSLED = [1, 8, 3, 4, 5, 9, 2, 7, 10, 6]
 
 SNIMCI = ["t-pocetna", "zakljucan-ekran", "t-kalendar", "t-uplate", "t-finansije",
-          "t-biblioteka", "t-ishrana", "a-trening", "a-napredak"]
+          "t-biblioteka", "t-ishrana", "a-trening", "a-napredak", "t-uzivo-detalj"]
 
 
 def bez_pozadine(c):
@@ -167,6 +168,24 @@ def satovi():
     return sl
 
 
+def jedan_sat():
+    """Desni sat sa starog slajda (ekran zone pulsa), za zaglavlje (zaglavlje.html)."""
+    m = np.asarray(Image.open(os.path.join(OVDE, "okvir-satovi.png")).convert("RGB")).astype(np.float32)
+    x0, y0, x1, y1 = SATOVI_OBLAST[1]
+    c = m[y0:y1, x0:x1]
+    a = bez_pozadine(c)
+    boja = obojeno(c, a, m[y0:y1, 40][:, None, :])
+    sl = Image.fromarray(np.dstack([boja, a * 255]).astype(np.uint8), "RGBA")
+    x, y, w, h = SATOVI_EKRAN[1]
+    e = Image.open(os.path.join(SAT, SATOVI_SNIMCI[1] + ".png")).convert("RGB").resize((w, h), Image.LANCZOS)
+    sl.paste(e, (x - x0, y - y0), maska(w, h, round(w * 0.21)))
+    sl = sl.crop(sl.getbbox())
+    p = np.asarray(sl).copy()
+    p[:185, :100, 3] = 0          # komadic levog sata koji upadne u oblast
+    sl = Image.fromarray(p)
+    return sl.crop(sl.getbbox())
+
+
 def snimi(adresa, izlaz):
     with tempfile.TemporaryDirectory() as profil:
         subprocess.run([CHROME, "--headless=new", f"--user-data-dir={profil}", "--disable-gpu", "--hide-scrollbars",
@@ -185,6 +204,7 @@ if __name__ == "__main__":
         telefon(okvir, kriva, ostrvo, s).save(os.path.join(SLOJEVI, f"tel-{s}.png"))
         print("telefon", s)
     satovi().save(os.path.join(SLOJEVI, "satovi.png"))
+    jedan_sat().save(os.path.join(SLOJEVI, "sat-prsten.png"))
     print("satovi")
 
     v = int(time.time())
