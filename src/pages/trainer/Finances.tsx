@@ -3,13 +3,17 @@ import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from "rechar
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Card, SectionTitle } from "@/components/ui-bits";
-import { ArrowUpRight, ArrowDownRight, Loader2, Wallet, Banknote, Landmark, Clock, Trophy, ChevronRight } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Loader2, Wallet, Banknote, Landmark, Clock, Trophy, ChevronRight, Check, CircleAlert } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { SendMessageToAthlete } from "@/components/SendMessageToAthlete";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { LockMark } from "@/components/pretplata/LockMark";
+import { porukaGreske } from "@/lib/errorMessage";
+import { toast } from "sonner";
 import {
   FullScreenSheet,
   FullScreenSheetScroll,
@@ -22,6 +26,8 @@ type Purchase = {
   package_name: string;
   payment_method: "cash" | "bank";
   decided_at: string;
+  // null = nije placeno; prihod broji samo placeno, po ovom datumu
+  paid_at: string | null;
   sessions_count: number | null;
   duration_days: number | null;
   status: string | null;
@@ -80,6 +86,9 @@ const daysUntil = (iso: string) => {
   today.setHours(0, 0, 0, 0);
   return Math.round((d.getTime() - today.getTime()) / 86_400_000);
 };
+
+// Datum uplate; decided_at samo kao rezerva.
+const paidDate = (p: Purchase) => p.paid_at ?? p.decided_at;
 
 const statusLabel = (s: string | null) => {
   if (s === "confirmed") return "Potvrđeno";
@@ -157,6 +166,8 @@ const PERIOD_LABEL: Record<Period, string> = { 3: "3 meseca", 6: "6 meseci", 12:
 
 // Kolone tabele poslednjih uplata; zaglavlje i redovi dele isti sablon.
 const PAY_GRID = "grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_110px_130px_150px_16px] items-center gap-4 px-5";
+// Kolone tabele neplacenih clanarina.
+const UNPAID_GRID = "grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_130px_140px_190px] items-center gap-4 px-5";
 
 // Na racunaru ima mesta za pun iznos i jedan red objasnjenja, pa KPI nosi i
 // vrednosti koje telefon prikazuje u zasebnim malim karticama.
@@ -211,8 +222,12 @@ const DesktopKpi = ({
 const Finances = () => {
   const { user } = useAuth();
   const desktop = useDesktopWeb();
+  const { locked, openLock } = usePretplataLock();
   const [loading, setLoading] = useState(true);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
+  // Potvrdjene clanarine za koje novac jos nije stigao
+  const [unpaid, setUnpaid] = useState<Purchase[]>([]);
+  const [payingId, setPayingId] = useState<string | null>(null);
   const [athleteNames, setAthleteNames] = useState<Map<string, string>>(new Map());
   const [activeAthletes, setActiveAthletes] = useState<number>(0);
   const [pendingCount, setPendingCount] = useState<number>(0);
@@ -222,26 +237,38 @@ const Finances = () => {
   const [period, setPeriod] = useState<Period>(6);
   const [selected, setSelected] = useState<Purchase | null>(null);
 
+  // Brojac za tiho osvezavanje posle oznake "placeno".
+  const [reloadKey, setReloadKey] = useState(0);
+
   useEffect(() => {
     if (!user) return;
     (async () => {
-      setLoading(true);
+      if (reloadKey === 0) setLoading(true);
 
       const now = new Date();
-      // Uvek povuci poslednjih 12 meseci potvrdjenih uplata; period (3/6/12) se
-      // bira klijentski, bez ponovnog upita.
+      // Uvek povuci poslednjih 12 meseci placenih uplata (po datumu uplate); period
+      // (3/6/12) se bira klijentski, bez ponovnog upita.
       const since12 = startOfMonth(new Date(now.getFullYear(), now.getMonth() - 11, 1)).toISOString();
       const todayISO = new Date().toISOString().slice(0, 10);
       const in14 = new Date(); in14.setDate(in14.getDate() + 14);
       const in14ISO = in14.toISOString().slice(0, 10);
 
-      const [purRes, pendRes, expRes, activeMemRes, athRes] = await Promise.all([
+      const PUR_COLS = "id, athlete_id, price_rsd, package_name, payment_method, decided_at, paid_at, sessions_count, duration_days, status, payment_marked_at, notes";
+      const [purRes, unpaidRes, pendRes, expRes, activeMemRes, athRes] = await Promise.all([
         supabase
           .from("membership_purchases")
-          .select("id, athlete_id, price_rsd, package_name, payment_method, decided_at, sessions_count, duration_days, status, payment_marked_at, notes")
+          .select(PUR_COLS)
           .eq("trainer_id", user.id)
           .eq("status", "confirmed")
-          .gte("decided_at", since12)
+          .not("paid_at", "is", null)
+          .gte("paid_at", since12)
+          .order("paid_at", { ascending: false }),
+        supabase
+          .from("membership_purchases")
+          .select(PUR_COLS)
+          .eq("trainer_id", user.id)
+          .eq("status", "confirmed")
+          .is("paid_at", null)
           .order("decided_at", { ascending: false }),
         supabase
           .from("membership_purchases")
@@ -269,6 +296,8 @@ const Finances = () => {
 
       const rows = (purRes.data as any[]) ?? [];
       setPurchases(rows as Purchase[]);
+      const unpaidRows = (unpaidRes.data ?? []) as Purchase[];
+      setUnpaid(unpaidRows);
       setActiveAthletes(athRes.count ?? 0);
 
       const pendRows = (pendRes.data as any[]) ?? [];
@@ -294,7 +323,11 @@ const Finances = () => {
 
       // Imena za uplate + clanarine na isteku
       const ids = Array.from(
-        new Set([...rows.map((r: any) => r.athlete_id), ...expRows.map((e) => e.athlete_id)]),
+        new Set([
+          ...rows.map((r: any) => r.athlete_id),
+          ...unpaidRows.map((r) => r.athlete_id),
+          ...expRows.map((e) => e.athlete_id),
+        ]),
       );
       if (ids.length) {
         const { data: profs } = await supabase
@@ -310,13 +343,45 @@ const Finances = () => {
 
       setLoading(false);
     })();
-  }, [user]);
+  }, [user, reloadKey]);
+
+  const markPaid = async (p: Purchase) => {
+    if (locked) return openLock();
+    if (payingId) return;
+    setPayingId(p.id);
+    const { error } = await supabase.rpc("trainer_set_purchase_paid", {
+      p_purchase_id: p.id,
+      p_paid: true,
+    });
+    setPayingId(null);
+    if (error) return toast.error(porukaGreske(error));
+    toast.success("Označeno kao plaćeno");
+    setReloadKey((k) => k + 1);
+  };
+
+  const unpaidTotal = useMemo(() => unpaid.reduce((s, p) => s + (p.price_rsd ?? 0), 0), [unpaid]);
+
+  const markPaidButton = (p: Purchase, className?: string) => (
+    <button
+      type="button"
+      onClick={() => markPaid(p)}
+      disabled={payingId === p.id}
+      className={cn(
+        "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full bg-gradient-brand px-3.5 text-[12.5px] font-semibold text-white shadow-brand transition active:scale-[0.98] disabled:opacity-60",
+        className,
+      )}
+    >
+      {payingId === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+      <LockMark />
+      Označi kao plaćeno
+    </button>
+  );
 
   const months = useMemo(() => monthsBack(period), [period]);
 
   // Uplate unutar izabranog perioda
   const periodPurchases = useMemo(
-    () => purchases.filter((p) => new Date(p.decided_at) >= months[0]),
+    () => purchases.filter((p) => new Date(paidDate(p)) >= months[0]),
     [purchases, months],
   );
 
@@ -324,7 +389,7 @@ const Finances = () => {
   const byMonth = useMemo(() => {
     const sums = months.map(() => 0);
     for (const p of purchases) {
-      const d = new Date(p.decided_at);
+      const d = new Date(paidDate(p));
       const idx = months.findIndex(
         (m) => m.getFullYear() === d.getFullYear() && m.getMonth() === d.getMonth(),
       );
@@ -372,7 +437,7 @@ const Finances = () => {
     const m = months[months.length - 1];
     const set = new Set<string>();
     for (const p of purchases) {
-      const d = new Date(p.decided_at);
+      const d = new Date(paidDate(p));
       if (d.getFullYear() === m.getFullYear() && d.getMonth() === m.getMonth()) {
         set.add(p.athlete_id);
       }
@@ -486,6 +551,58 @@ const Finances = () => {
                 />
               </Link>
             </div>
+
+            {unpaid.length > 0 && (
+              <Card className="overflow-hidden">
+                <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-destructive-soft text-destructive-soft-foreground flex items-center justify-center shrink-0">
+                      <CircleAlert className="h-[18px] w-[18px]" />
+                    </div>
+                    <div className="min-w-0">
+                      <h2 className="font-display text-[15px] font-semibold tracking-tighter">Nije plaćeno</h2>
+                      <p className="text-[12.5px] text-muted-foreground">
+                        Potvrđene članarine bez uplate. Ne ulaze u prihod dok ih ne označiš kao plaćene.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className="flex items-baseline justify-end gap-1.5">
+                      <span className="fig text-[26px] leading-none text-destructive-soft-foreground">
+                        {unpaidTotal.toLocaleString("sr-Latn-RS")}
+                      </span>
+                      <span className="text-[10px] font-semibold tracking-[0.14em] text-muted-foreground/80">RSD</span>
+                    </div>
+                    <div className="mt-1 text-[12px] text-muted-foreground tnum">
+                      {unpaid.length === 1 ? "1 članarina" : `${unpaid.length} članarina`}
+                    </div>
+                  </div>
+                </div>
+                <div className={cn(UNPAID_GRID, "border-y border-hairline bg-surface-2/60 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground")}>
+                  <span>Vežbač</span>
+                  <span>Paket</span>
+                  <span>Potvrđeno</span>
+                  <span className="text-right">Iznos</span>
+                  <span />
+                </div>
+                <div className="divide-y divide-hairline">
+                  {unpaid.map((p) => (
+                    <div key={p.id} className={cn(UNPAID_GRID, "py-3")}>
+                      <span className="truncate text-[14px] font-semibold tracking-tight">
+                        {athleteNames.get(p.athlete_id) ?? "Vežbač"}
+                      </span>
+                      <span className="truncate text-[13px] text-muted-foreground">{p.package_name}</span>
+                      <span className="text-[13px] text-muted-foreground tnum">{fmtWhen(p.decided_at)}</span>
+                      <span className="text-right text-[14px] font-bold tracking-tight tnum">
+                        {(p.price_rsd ?? 0).toLocaleString("sr-Latn-RS")}{" "}
+                        <span className="text-[11px] text-muted-foreground font-semibold">RSD</span>
+                      </span>
+                      <span className="flex justify-end">{markPaidButton(p)}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
 
             <div className="grid grid-cols-[minmax(0,1fr)_340px] items-stretch gap-6">
               <Card className="p-6">
@@ -690,7 +807,7 @@ const Finances = () => {
                           </div>
                           <span className="truncate text-[13px] text-muted-foreground">{p.package_name}</span>
                           <span className="text-[13px] text-muted-foreground">{isCash ? "Keš" : "Račun"}</span>
-                          <span className="text-[13px] text-muted-foreground tnum">{fmtWhen(p.decided_at)}</span>
+                          <span className="text-[13px] text-muted-foreground tnum">{fmtWhen(paidDate(p))}</span>
                           <span className="text-right text-[14px] font-bold tracking-tight tnum">
                             {p.price_rsd.toLocaleString("sr-Latn-RS")}{" "}
                             <span className="text-[11px] text-muted-foreground font-semibold">RSD</span>
@@ -761,6 +878,50 @@ const Finances = () => {
               unit="RSD/mes"
               label="Aktivni prihod/mes"
             />
+
+            {/* Potvrdjeno a nije placeno */}
+            {unpaid.length > 0 && (
+              <section>
+                <SectionTitle>Nije plaćeno</SectionTitle>
+                <Card className="p-4 mb-2">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <div className="flex items-baseline gap-1">
+                      <span className="font-display text-[24px] font-bold tracking-tightest leading-none text-destructive-soft-foreground tnum">
+                        {unpaidTotal.toLocaleString("sr-Latn-RS")}
+                      </span>
+                      <span className="text-[11px] font-medium text-muted-foreground">RSD</span>
+                    </div>
+                    <span className="text-[12px] text-muted-foreground tnum">
+                      {unpaid.length === 1 ? "1 članarina" : `${unpaid.length} članarina`}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-[12px] text-muted-foreground">
+                    Ne ulazi u prihod dok ne označiš kao plaćeno.
+                  </p>
+                </Card>
+                <ul className="space-y-2">
+                  {unpaid.map((p) => (
+                    <li key={p.id} className="card-premium px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[14px] font-semibold tracking-tight truncate">
+                            {athleteNames.get(p.athlete_id) ?? "Vežbač"}
+                          </div>
+                          <div className="text-[12px] text-muted-foreground truncate">
+                            {p.package_name} · {fmtWhen(p.decided_at)}
+                          </div>
+                        </div>
+                        <div className="text-[15px] font-bold tracking-tight tnum shrink-0">
+                          {(p.price_rsd ?? 0).toLocaleString("sr-Latn-RS")}{" "}
+                          <span className="text-[11px] text-muted-foreground font-semibold">RSD</span>
+                        </div>
+                      </div>
+                      {markPaidButton(p, "mt-2.5 w-full")}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
 
             {/* Chart */}
             <Card className="p-5">
@@ -927,7 +1088,7 @@ const Finances = () => {
                               {athleteNames.get(p.athlete_id) ?? "Vežbač"}
                             </div>
                             <div className="text-[12px] text-muted-foreground truncate">
-                              {p.package_name} · {fmtWhen(p.decided_at)} · {isCash ? "Keš" : "Račun"}
+                              {p.package_name} · {fmtWhen(paidDate(p))} · {isCash ? "Keš" : "Račun"}
                             </div>
                           </div>
                           <div className="text-[15px] font-bold tracking-tight tnum shrink-0">
@@ -986,7 +1147,10 @@ const Finances = () => {
                 )}
                 <DetailRow label="Status" value={statusLabel(selected.status)} />
                 <DetailRow label="Način plaćanja" value={selected.payment_method === "cash" ? "Keš" : "Račun"} />
-                <DetailRow label="Datum uplate" value={fmtFull(selected.decided_at)} />
+                <DetailRow label="Datum uplate" value={fmtFull(paidDate(selected))} />
+                {selected.paid_at && selected.decided_at && fmtFull(selected.paid_at) !== fmtFull(selected.decided_at) && (
+                  <DetailRow label="Potvrđeno" value={fmtFull(selected.decided_at)} />
+                )}
                 {selected.payment_marked_at && (
                   <DetailRow label="Označeno plaćeno" value={fmtFull(selected.payment_marked_at)} />
                 )}

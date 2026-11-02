@@ -38,6 +38,7 @@ const KIND_META: Record<
   membership_rejected:  { icon: AlertTriangle, tone: "text-[hsl(var(--session-rose-fg))] bg-[hsl(var(--session-rose-bg))]",       label: "Zahtev odbijen" },
   broadcast:            { icon: Megaphone,     tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]",   label: "Obaveštenje" },
   booking_canceled_by_trainer: { icon: CalendarX, tone: "text-[hsl(var(--session-rose-fg))] bg-[hsl(var(--session-rose-bg))]",     label: "Termin otkazan" },
+  booking_added_by_trainer: { icon: CalendarPlus, tone: "text-[hsl(var(--session-emerald-fg))] bg-[hsl(var(--session-emerald-bg))]", label: "Upisan na termin" },
   workout_forgotten:    { icon: AlertTriangle, tone: "text-[hsl(var(--session-amber-fg))] bg-[hsl(var(--session-amber-bg))]",     label: "Trening još traje" },
   // waitlist
   waitlist_promoted:    { icon: CalendarClock, tone: "text-[hsl(var(--session-violet-fg))] bg-[hsl(var(--session-violet-bg))]",   label: "Lista čekanja" },
@@ -169,7 +170,9 @@ export const NotificationDetail = ({ notification, open, onOpenChange }: Props) 
               ? "Otkazano: "
               : notification.kind === "booking_created"
                 ? "Rezervisano: "
-                : ""}
+                : notification.kind === "booking_added_by_trainer"
+                  ? "Upisano: "
+                  : ""}
             {formatDateTime(notification.created_at)}
           </div>
         )}

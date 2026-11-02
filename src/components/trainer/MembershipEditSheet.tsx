@@ -89,10 +89,13 @@ interface MembershipEditSheetProps {
   // Koristi se SAMO kad membershipId nije prosledjen - tad sheet radi u
   // rezimu kreiranja nove clanarine za ovog vezbaca umesto izmene postojece.
   athleteId?: string;
+  // Zahtev iz kog je clanarina nastala; sa njim sheet nudi i placeno / nije placeno.
+  purchaseId?: string | null;
+  paid?: boolean | null;
   onSaved: () => void;
 }
 
-export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, onSaved }: MembershipEditSheetProps) => {
+export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, purchaseId, paid, onSaved }: MembershipEditSheetProps) => {
   const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
   const isCreate = !membershipId;
@@ -108,6 +111,11 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, on
   // popuni formu; ostala polja ostaju rucno editabilna i posle izbora.
   const [packages, setPackages] = useState<MembershipPackageRow[]>([]);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
+  const [paidForm, setPaidForm] = useState<boolean | null>(paid ?? null);
+
+  useEffect(() => {
+    if (open) setPaidForm(paid ?? null);
+  }, [open, paid]);
 
   useEffect(() => {
     if (!open) return;
@@ -240,8 +248,22 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, on
           trainer_id: user!.id,
           athlete_id: athleteId,
         });
+    if (error) {
+      setSaving(false);
+      return toast.error(porukaGreske(error));
+    }
+    if (membershipId && purchaseId && paidForm != null && paidForm !== paid) {
+      const { error: paidError } = await supabase.rpc("trainer_set_purchase_paid", {
+        p_purchase_id: purchaseId,
+        p_paid: paidForm,
+      });
+      if (paidError) {
+        setSaving(false);
+        onSaved();
+        return toast.error(porukaGreske(paidError));
+      }
+    }
     setSaving(false);
-    if (error) return toast.error(porukaGreske(error));
     toast.success(membershipId ? "Članarina sačuvana" : "Članarina dodata");
     onSaved();
     onClose();
@@ -334,6 +356,32 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, on
                 ))}
               </div>
             </div>
+
+            {membershipId && purchaseId && paidForm != null && (
+              <div className="space-y-1.5">
+                <Label>Uplata</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: true, label: "Plaćeno" },
+                    { value: false, label: "Nije plaćeno" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.label}
+                      type="button"
+                      onClick={() => setPaidForm(opt.value)}
+                      className={cn(
+                        "h-11 rounded-2xl text-[13px] font-semibold border transition",
+                        paidForm === opt.value
+                          ? "bg-foreground text-background border-foreground"
+                          : "bg-surface border-hairline text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label htmlFor="mem-starts">Početak</Label>

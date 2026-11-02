@@ -11,6 +11,8 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   ChevronLeft, ChevronRight, Loader2, Users, Clock, Settings, X, Ban, Plus, Calendar as CalIcon,
 } from "lucide-react";
@@ -20,6 +22,7 @@ import {
   sessionColorClasses, dateToWeekday, toIsoDate, formatTime, addMinutesToTime, weekdayLabelsShort,
 } from "@/lib/session";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { LockMark } from "@/components/pretplata/LockMark";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 
 type Slot = {
@@ -47,7 +50,13 @@ type WaitlistRow = {
 
 type Booking = {
   id: string;
-  athlete_id: string;
+  // null za gosta (trener ga upisao samo po imenu)
+  athlete_id: string | null;
+  guest_name: string | null;
+  // trener koji je upisao; null kad je vezbac rezervisao sam
+  added_by: string | null;
+  // da li je trening skinut sa clanarine
+  charged: boolean | null;
   date: string;
   start_time: string;
   session_type_id: string;
@@ -55,6 +64,16 @@ type Booking = {
 };
 
 type AthleteOpt = { id: string; full_name: string | null };
+
+type AddMode = "klijent" | "gost";
+
+// Poruke iz trainer_add_booking su vec na srpskom (RAISE EXCEPTION).
+const porukaUpisa = (error: { code?: string; message?: string }) =>
+  error.code === "P0001" && error.message ? error.message : porukaGreske(error);
+
+// Pretraga bez obzira na velika slova i kvacice.
+const bezKvacica = (t: string) =>
+  t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "dj");
 
 const monthNames = [
   "Januar", "Februar", "Mart", "April", "Maj", "Jun",
@@ -137,7 +156,7 @@ const Calendar = () => {
       }),
       supabase
         .from("session_bookings")
-        .select("id, athlete_id, date, start_time, session_type_id, status")
+        .select("id, athlete_id, guest_name, added_by, charged, date, start_time, session_type_id, status")
         .eq("trainer_id", user.id)
         .eq("date", dateISO),
       supabase.from("athletes").select("id").eq("trainer_id", user.id),
@@ -217,6 +236,10 @@ const Calendar = () => {
   const athleteName = (id: string) =>
     athletes.find((a) => a.id === id)?.full_name ?? "Vežbač";
 
+  // Ime za prikaz: klijent sa spiska ili gost po imenu.
+  const bookingName = (b: Booking) =>
+    b.athlete_id ? athleteName(b.athlete_id) : b.guest_name?.trim() || "Gost";
+
   const slotKey = (s: Slot) => `${formatTime(s.start_time)}__${s.session_type_id}`;
 
   const bookingsForSlot = (s: Slot) =>
@@ -244,10 +267,62 @@ const Calendar = () => {
     load();
   };
 
+  // Trener upisuje u termin: klijenta sa spiska ili gosta po imenu.
+  const [addOpen, setAddOpen] = useState(false);
+  const [addMode, setAddMode] = useState<AddMode>("klijent");
+  const [addQuery, setAddQuery] = useState("");
+  const [addAthleteId, setAddAthleteId] = useState<string | null>(null);
+  const [addGuest, setAddGuest] = useState("");
+  const [addCharge, setAddCharge] = useState(true);
+  const [adding, setAdding] = useState(false);
+
+  const resetAdd = () => {
+    setAddOpen(false);
+    setAddMode("klijent");
+    setAddQuery("");
+    setAddAthleteId(null);
+    setAddGuest("");
+    setAddCharge(true);
+  };
+
+  useEffect(() => { resetAdd(); }, [openSlot]);
+
+  const addToSlot = async (s: Slot) => {
+    if (locked) return openLock();
+    if (adding) return;
+    const gost = addMode === "gost";
+    const ime = addGuest.trim();
+    if (gost && !ime) { toast.error("Upiši ime gosta"); return; }
+    if (!gost && !addAthleteId) { toast.error("Izaberi klijenta"); return; }
+    setAdding(true);
+    const { data, error } = await supabase.rpc("trainer_add_booking", {
+      p_date: toIsoDate(selectedDate),
+      p_start_time: formatTime(s.start_time),
+      p_session_type_id: s.session_type_id,
+      p_athlete_id: gost ? null : addAthleteId,
+      p_guest_name: gost ? ime : null,
+      p_charge: gost ? false : addCharge,
+    });
+    setAdding(false);
+    if (error) { toast.error(porukaUpisa(error)); return; }
+    const r = (data ?? {}) as { naplaceno?: boolean; razlog?: string | null; vec_upisan?: boolean };
+    if (r.vec_upisan) toast("Već je upisan");
+    else if (gost) toast.success("Gost je upisan");
+    else if (r.naplaceno) toast.success("Upisan, skinut 1 trening");
+    else if (r.razlog === "bez_naplate") toast.success("Upisan bez skidanja treninga");
+    else if (r.razlog === "nema_clanarinu") toast.success("Upisan, nema aktivnu članarinu");
+    else if (r.razlog === "nema_treninga") toast.success("Upisan, nema slobodnih treninga u članarini");
+    else toast.success("Upisan");
+    resetAdd();
+    load();
+  };
+
   const removeBooking = async (id: string) => {
     if (locked) return openLock();
     if (removingBookingId) return;
-    if (!(await confirm({ title: "Ukloniti ovog vežbača iz termina?", destructive: true }))) return;
+    const b = bookings.find((x) => x.id === id);
+    const title = b && !b.athlete_id ? "Ukloniti gosta iz termina?" : "Ukloniti ovog vežbača iz termina?";
+    if (!(await confirm({ title, destructive: true }))) return;
     setRemovingBookingId(id);
     const { error } = await supabase.from("session_bookings").delete().eq("id", id);
     setRemovingBookingId(null);
@@ -570,9 +645,9 @@ const Calendar = () => {
                                   className="inline-flex max-w-[180px] items-center gap-1.5 rounded-full bg-surface-2 py-1 pl-1 pr-2.5 text-[11.5px] font-semibold"
                                 >
                                   <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold", colors.bg, colors.fg)}>
-                                    {(athleteName(b.athlete_id)[0] ?? "?").toUpperCase()}
+                                    {(bookingName(b)[0] ?? "?").toUpperCase()}
                                   </span>
-                                  <span className="truncate">{athleteName(b.athlete_id)}</span>
+                                  <span className="truncate">{bookingName(b)}</span>
                                 </span>
                               ))}
                               {slotBookings.length > 6 && (
@@ -747,7 +822,7 @@ const Calendar = () => {
                                 key={b.id}
                                 className="text-[10.5px] font-semibold px-1.5 py-0.5 rounded-md bg-surface-2 text-foreground"
                               >
-                                {athleteName(b.athlete_id)}
+                                {bookingName(b)}
                               </span>
                             ))}
                             {slotBookings.length > 3 && (
@@ -819,22 +894,38 @@ const Calendar = () => {
                     </div>
                   ) : (
                     <ul className="space-y-1.5">
-                      {slotBookings.map((b) => (
+                      {slotBookings.map((b) => {
+                        const ime = (
+                          <>
+                            <div className={cn("h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0", colors.bg, colors.fg)}>
+                              {(bookingName(b)[0] ?? "?").toUpperCase()}
+                            </div>
+                            <span className="font-semibold text-[13px] truncate">
+                              {bookingName(b)}
+                            </span>
+                            {!b.athlete_id && (
+                              <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-[10.5px] font-semibold text-muted-foreground">
+                                Gost
+                              </span>
+                            )}
+                          </>
+                        );
+                        return (
                         <li
                           key={b.id}
                           className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-surface-2"
                         >
-                          <Link
-                            to={`/trener/vezbaci/${b.athlete_id}`}
-                            className="flex items-center gap-2.5 flex-1 min-w-0 hover:text-primary transition"
-                          >
-                            <div className={cn("h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0", colors.bg, colors.fg)}>
-                              {(athleteName(b.athlete_id)[0] ?? "?").toUpperCase()}
-                            </div>
-                            <span className="font-semibold text-[13px] truncate">
-                              {athleteName(b.athlete_id)}
-                            </span>
-                          </Link>
+                          {/* Gost nema profil, pa ni link. */}
+                          {b.athlete_id ? (
+                            <Link
+                              to={`/trener/vezbaci/${b.athlete_id}`}
+                              className="flex items-center gap-2.5 flex-1 min-w-0 hover:text-primary transition"
+                            >
+                              {ime}
+                            </Link>
+                          ) : (
+                            <div className="flex items-center gap-2.5 flex-1 min-w-0">{ime}</div>
+                          )}
                           <button
                             onClick={() => removeBooking(b.id)}
                             disabled={removingBookingId === b.id}
@@ -848,10 +939,133 @@ const Calendar = () => {
                             )}
                           </button>
                         </li>
-                      ))}
+                        );
+                      })}
                     </ul>
                   )}
                 </div>
+
+                {/* Trener upisuje: samo u termin koji nije otkazan i ima mesta */}
+                {!openSlot.is_canceled && openSlot.capacity - slotBookings.length > 0 && (
+                  addOpen ? (() => {
+                    const zauzeti = new Set(slotBookings.map((b) => b.athlete_id).filter(Boolean) as string[]);
+                    const q = bezKvacica(addQuery.trim());
+                    const ponuda = athletes
+                      .filter((a) => !zauzeti.has(a.id))
+                      .filter((a) => !q || bezKvacica(a.full_name ?? "").includes(q))
+                      .sort((a, b) => (a.full_name ?? "").localeCompare(b.full_name ?? "", "sr"));
+                    return (
+                      <div className="space-y-3 rounded-xl border border-hairline p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="eyebrow text-muted-foreground">Dodaj u termin</div>
+                          <button
+                            onClick={resetAdd}
+                            className="h-7 w-7 rounded-full hover:bg-surface-2 flex items-center justify-center text-muted-foreground"
+                            title="Zatvori"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-1 rounded-full bg-surface-2 p-1">
+                          {(["klijent", "gost"] as AddMode[]).map((m) => (
+                            <button
+                              key={m}
+                              type="button"
+                              onClick={() => setAddMode(m)}
+                              aria-pressed={addMode === m}
+                              className={cn(
+                                "h-8 rounded-full text-[12.5px] font-semibold transition",
+                                addMode === m ? "bg-surface text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                              )}
+                            >
+                              {m === "klijent" ? "Klijent" : "Gost"}
+                            </button>
+                          ))}
+                        </div>
+
+                        {addMode === "klijent" ? (
+                          <>
+                            {athletes.length > 6 && (
+                              <Input
+                                value={addQuery}
+                                onChange={(e) => setAddQuery(e.target.value)}
+                                placeholder="Pretraži klijente"
+                                className="h-10 rounded-xl"
+                              />
+                            )}
+                            {ponuda.length === 0 ? (
+                              <div className="text-[13px] text-muted-foreground bg-surface-2 rounded-xl p-3 text-center">
+                                {athletes.length === 0 ? "Nemaš klijente na spisku." : "Nema klijenata za ovu pretragu."}
+                              </div>
+                            ) : (
+                              <ul className="max-h-52 overflow-y-auto space-y-1">
+                                {ponuda.map((a) => (
+                                  <li key={a.id}>
+                                    <button
+                                      type="button"
+                                      onClick={() => setAddAthleteId(a.id)}
+                                      aria-pressed={addAthleteId === a.id}
+                                      className={cn(
+                                        "w-full flex items-center gap-2.5 rounded-xl border px-3 py-2 text-left transition",
+                                        addAthleteId === a.id
+                                          ? "border-primary bg-primary-soft"
+                                          : "border-transparent bg-surface-2 hover:border-primary/30",
+                                      )}
+                                    >
+                                      <div className={cn("h-7 w-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0", colors.bg, colors.fg)}>
+                                        {((a.full_name ?? "?")[0] ?? "?").toUpperCase()}
+                                      </div>
+                                      <span className="font-semibold text-[13px] truncate">{a.full_name ?? "Vežbač"}</span>
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                            <label className="flex items-center gap-2.5 text-[13px] font-medium cursor-pointer">
+                              <Checkbox checked={addCharge} onCheckedChange={(v) => setAddCharge(v === true)} />
+                              Skini trening sa članarine
+                            </label>
+                          </>
+                        ) : (
+                          <Input
+                            value={addGuest}
+                            onChange={(e) => setAddGuest(e.target.value)}
+                            placeholder="Ime gosta"
+                            maxLength={80}
+                            autoFocus
+                            className="h-10 rounded-xl"
+                            onKeyDown={(e) => { if (e.key === "Enter") addToSlot(openSlot); }}
+                          />
+                        )}
+
+                        <Button
+                          className="w-full bg-gradient-brand text-white shadow-brand"
+                          onClick={() => addToSlot(openSlot)}
+                          disabled={adding || (addMode === "klijent" ? !addAthleteId : !addGuest.trim())}
+                        >
+                          {adding ? (
+                            <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                          ) : (
+                            <Plus className="h-3.5 w-3.5 mr-1.5" />
+                          )}
+                          <LockMark className="mr-1.5" />
+                          Upiši
+                        </Button>
+                      </div>
+                    );
+                  })() : (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => { if (locked) { openLock(); return; } setAddOpen(true); }}
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1.5" />
+                      <LockMark className="mr-1.5" />
+                      Dodaj
+                    </Button>
+                  )
+                )}
 
                 {/* Lista cekanja (samo citanje, po redu prijave) */}
                 {openSlot.waitlist_count > 0 && (

@@ -21,6 +21,7 @@ export type NotificationKind =
   | "membership_rejected"
   | "broadcast"
   | "booking_canceled_by_trainer" // ka vežbaču: trener otkazao njegov termin
+  | "booking_added_by_trainer" // ka vežbaču: trener ga upisao na termin
   // waitlist
   | "waitlist_promoted" // ka vežbaču: oslobodilo se mesto, rezervisan termin
   | "waitlist_joined" // ka treneru: neko se prijavio na listu čekanja

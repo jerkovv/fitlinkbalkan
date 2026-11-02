@@ -21,7 +21,8 @@ export type TerminDanas = {
   start_time: string;
   type_name: string;
   type_color: string;
-  athlete_id: string;
+  // null za gosta koga je trener upisao samo po imenu
+  athlete_id: string | null;
   athlete_name: string | null;
 };
 
@@ -62,12 +63,14 @@ function useDodatno(): Dodatno | null {
       const od = new Date(sad.getFullYear(), sad.getMonth() - 5, 1);
       const [pend, potv, ath, prog, plan, pak, slot] = await Promise.all([
         supabase.from("membership_purchases").select("price_rsd").eq("trainer_id", user.id).eq("status", "pending"),
+        // Prihod broji samo placeno, po datumu uplate.
         supabase
           .from("membership_purchases")
-          .select("price_rsd, decided_at")
+          .select("price_rsd, paid_at")
           .eq("trainer_id", user.id)
           .eq("status", "confirmed")
-          .gte("decided_at", od.toISOString()),
+          .not("paid_at", "is", null)
+          .gte("paid_at", od.toISOString()),
         supabase.from("athletes").select("id", { count: "exact", head: true }).eq("trainer_id", user.id),
         supabase.from("program_templates").select("id", { count: "exact", head: true }),
         supabase.from("nutrition_plan_templates").select("id", { count: "exact", head: true }),
@@ -80,8 +83,8 @@ function useDodatno(): Dodatno | null {
         return { god: m.getFullYear(), mes: m.getMonth(), oznaka: MESECI_KRATKO[m.getMonth()], iznos: 0 };
       });
       for (const r of (potv.data as any[]) ?? []) {
-        if (!r.decided_at) continue;
-        const dt = new Date(r.decided_at);
+        if (!r.paid_at) continue;
+        const dt = new Date(r.paid_at);
         const m = meseci.find((x) => x.god === dt.getFullYear() && x.mes === dt.getMonth());
         if (m) m.iznos += r.price_rsd ?? 0;
       }
@@ -241,16 +244,17 @@ export const DashboardDesktop = (p: Props) => {
                   <span className="text-right">Status</span>
                 </div>
                 <ul className="divide-y divide-hairline">
-                  {p.sessions.map((s) => (
-                    <li key={s.id}>
-                      <Link
-                        to={`/trener/vezbaci/${s.athlete_id}`}
-                        className={cn("grid items-center gap-4 px-5 py-3 transition hover:bg-white/[0.02]", SESSION_COLS)}
-                      >
+                  {p.sessions.map((s) => {
+                    const red = cn("grid items-center gap-4 px-5 py-3", SESSION_COLS);
+                    const sadrzaj = (
+                      <>
                         <span className="fig text-[15px]">{fmtTime(s.start_time)}</span>
                         <span className="flex min-w-0 items-center gap-2.5">
                           <Avatar initials={(s.athlete_name ?? "??").slice(0, 2).toUpperCase()} tone="brand" size="sm" className="ring-0" />
-                          <span className="text-[13.5px] font-semibold">{s.athlete_name}</span>
+                          <span className="truncate text-[13.5px] font-semibold">{s.athlete_name}</span>
+                          {!s.athlete_id && (
+                            <span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[10.5px] font-semibold text-muted-foreground">Gost</span>
+                          )}
                         </span>
                         <span className="flex min-w-0 items-center gap-2 text-[13px] text-muted-foreground">
                           <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.type_color }} />
@@ -259,9 +263,21 @@ export const DashboardDesktop = (p: Props) => {
                         <span className="flex justify-end">
                           <span className="rounded-full bg-primary-soft px-2.5 py-1 text-[11px] font-semibold text-primary-soft-foreground">Zakazano</span>
                         </span>
-                      </Link>
-                    </li>
-                  ))}
+                      </>
+                    );
+                    return (
+                      <li key={s.id}>
+                        {/* Gost nema profil, pa ni link. */}
+                        {s.athlete_id ? (
+                          <Link to={`/trener/vezbaci/${s.athlete_id}`} className={cn(red, "transition hover:bg-white/[0.02]")}>
+                            {sadrzaj}
+                          </Link>
+                        ) : (
+                          <div className={red}>{sadrzaj}</div>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               </>
             )}

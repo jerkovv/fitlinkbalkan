@@ -49,7 +49,8 @@ export const getActionTarget = (
   if (n.kind === "membership_expiring" || n.kind === "membership_expired"
       || n.kind === "membership_activated" || n.kind === "membership_rejected")
     return { path: "/vezbac/clanarina", label: "Otvori članarinu" };
-  if (n.kind === "waitlist_promoted" || n.kind === "booking_canceled_by_trainer") {
+  if (n.kind === "waitlist_promoted" || n.kind === "booking_canceled_by_trainer"
+      || n.kind === "booking_added_by_trainer") {
     const slotDate = n.meta?.slot_date as string | undefined;
     return { path: slotDate ? `/vezbac/rezervacija?date=${slotDate}` : "/vezbac/rezervacija", label: "Otvori zakazivanje" };
   }

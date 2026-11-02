@@ -26,7 +26,8 @@ type SessionRow = {
   type_name: string;
   type_color: string;
   status: string;
-  athlete_id: string;
+  // null za gosta koga je trener upisao samo po imenu
+  athlete_id: string | null;
   athlete_name: string | null;
 };
 
@@ -230,14 +231,15 @@ const Dashboard = () => {
       // Današnje sesije
       const { data: book } = await supabase
         .from("session_bookings")
-        .select("id, start_time, type_name, type_color, status, athlete_id")
+        .select("id, start_time, type_name, type_color, status, athlete_id, guest_name")
         .eq("trainer_id", user.id)
         .eq("date", todayISO)
-        .neq("status", "canceled")
+        // U bazi postoje oba zapisa otkazivanja.
+        .not("status", "in", "(canceled,cancelled)")
         .order("start_time", { ascending: true });
 
       const bookings = (book ?? []) as any[];
-      const aIds = Array.from(new Set(bookings.map((b) => b.athlete_id)));
+      const aIds = Array.from(new Set(bookings.map((b) => b.athlete_id).filter(Boolean)));
       const { data: profs } = aIds.length
         ? await supabase.from("profiles").select("id, full_name").in("id", aIds)
         : { data: [] as any[] };
@@ -253,8 +255,8 @@ const Dashboard = () => {
           type_name: b.type_name,
           type_color: b.type_color,
           status: b.status,
-          athlete_id: b.athlete_id,
-          athlete_name: nameMap.get(b.athlete_id) ?? "Vežbač",
+          athlete_id: b.athlete_id ?? null,
+          athlete_name: b.athlete_id ? nameMap.get(b.athlete_id) ?? "Vežbač" : b.guest_name ?? "Gost",
         }))
       );
 
@@ -383,12 +385,9 @@ const Dashboard = () => {
             </Card>
           ) : (
             <ul className="space-y-2">
-              {sessions.map((s) => (
-                <li key={s.id}>
-                  <Link
-                    to={`/trener/vezbaci/${s.athlete_id}`}
-                    className="flex items-center gap-3 card-premium-hover px-4 py-3.5"
-                  >
+              {sessions.map((s) => {
+                const sadrzaj = (
+                  <>
                     <div
                       className="h-11 w-11 rounded-2xl flex items-center justify-center"
                       style={{ background: `${s.type_color}22`, color: s.type_color }}
@@ -400,13 +399,28 @@ const Dashboard = () => {
                         {fmtTime(s.start_time)} · {s.athlete_name}
                       </div>
                       <div className="text-[12.5px] text-muted-foreground mt-0.5 truncate">
-                        {s.type_name}
+                        {s.athlete_id ? s.type_name : `Gost · ${s.type_name}`}
                       </div>
                     </div>
                     <Chip tone="info">Zakazano</Chip>
-                  </Link>
-                </li>
-              ))}
+                  </>
+                );
+                return (
+                  <li key={s.id}>
+                    {/* Gost nema profil, pa ni link. */}
+                    {s.athlete_id ? (
+                      <Link
+                        to={`/trener/vezbaci/${s.athlete_id}`}
+                        className="flex items-center gap-3 card-premium-hover px-4 py-3.5"
+                      >
+                        {sadrzaj}
+                      </Link>
+                    ) : (
+                      <div className="flex items-center gap-3 card-premium px-4 py-3.5">{sadrzaj}</div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>

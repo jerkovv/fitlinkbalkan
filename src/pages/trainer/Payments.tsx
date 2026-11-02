@@ -3,8 +3,18 @@ import { Link } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Card, Chip, Avatar } from "@/components/ui-bits";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useConfirm } from "@/hooks/useConfirm";
@@ -16,7 +26,7 @@ import { toast } from "sonner";
 import { MembershipEditSheet } from "@/components/trainer/MembershipEditSheet";
 import { LockMark } from "@/components/pretplata/LockMark";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
-import type { ReactNode } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 
 type Purchase = {
   id: string;
@@ -50,6 +60,9 @@ type MembershipOverviewRow = {
   days_since_last: number | null;
   workouts_30d: number | null;
   risk: string | null;
+  // Zahtev iz kog je nastala clanarina; paid je null kad je clanarina uneta rucno.
+  purchase_id: string | null;
+  paid: boolean | null;
 };
 
 type OverviewCategory = "active" | "expiringSoon" | "expired" | "none";
@@ -261,16 +274,26 @@ const Payments = () => {
 
   useEffect(() => { load(); }, [user]);
 
-  const confirmPurchase = async (p: Purchase) => {
+  // Potvrda zahteva pita da li je novac stigao.
+  const [confirmFor, setConfirmFor] = useState<Purchase | null>(null);
+
+  const confirmPurchase = (p: Purchase) => {
+    if (locked) return openLock();
+    setConfirmFor(p);
+  };
+
+  const doConfirm = async (p: Purchase, paid: boolean) => {
+    setConfirmFor(null);
     if (locked) return openLock();
     setBusyId(p.id);
     const { error } = await supabase.rpc("confirm_membership_purchase", {
       p_purchase_id: p.id,
       p_starts_on: new Date().toISOString().split("T")[0],
+      p_paid: paid,
     });
     setBusyId(null);
     if (error) return toast.error(porukaGreske(error));
-    toast.success("Uplata potvrđena, članarina aktivirana");
+    toast.success(paid ? "Uplata potvrđena, članarina aktivirana" : "Članarina aktivirana, uplata se čeka");
     load();
     loadOverview();
   };
@@ -341,11 +364,59 @@ const Payments = () => {
     return arr;
   }, [overview, ovFilter, sortKey]);
 
-  const openEdit = (membershipId: string) => {
+  const [editPurchase, setEditPurchase] = useState<{ id: string | null; paid: boolean | null }>({ id: null, paid: null });
+
+  const openEdit = (m: MembershipOverviewRow) => {
     if (locked) return openLock();
-    setEditMembershipId(membershipId);
+    setEditMembershipId(m.membership_id);
+    setEditPurchase({ id: m.purchase_id ?? null, paid: m.paid ?? null });
     setEditOpen(true);
   };
+
+  // Brza oznaka sa reda: neplacena clanarina postaje placena.
+  const [payingId, setPayingId] = useState<string | null>(null);
+  const markPaid = async (m: MembershipOverviewRow) => {
+    if (locked) return openLock();
+    if (!m.purchase_id || payingId) return;
+    if (!(await confirm({
+      title: "Označiti kao plaćeno?",
+      description: m.plan_name ? `${m.athlete_name} · ${m.plan_name}` : m.athlete_name,
+      confirmLabel: "Plaćeno",
+    }))) return;
+    setPayingId(m.purchase_id);
+    const { error } = await supabase.rpc("trainer_set_purchase_paid", {
+      p_purchase_id: m.purchase_id,
+      p_paid: true,
+    });
+    setPayingId(null);
+    if (error) return toast.error(porukaGreske(error));
+    toast.success("Označeno kao plaćeno");
+    loadOverview();
+  };
+
+  // Red sa clanarinom je div (ne button) da bi oznaka "Nije placeno" mogla da bude dugme.
+  const rowKeyDown = (e: ReactKeyboardEvent, m: MembershipOverviewRow) => {
+    if (e.target !== e.currentTarget) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      openEdit(m);
+    }
+  };
+
+  const unpaidChip = (m: MembershipOverviewRow) =>
+    m.paid === false ? (
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); markPaid(m); }}
+        disabled={payingId === m.purchase_id}
+        title="Označi kao plaćeno"
+        className="pill inline-flex items-center gap-1 bg-destructive-soft px-2.5 py-0.5 text-[11px] font-semibold text-destructive-soft-foreground transition hover:opacity-80 disabled:opacity-50"
+      >
+        {payingId === m.purchase_id && <Loader2 className="h-3 w-3 animate-spin" />}
+        <LockMark />
+        Nije plaćeno
+      </button>
+    ) : null;
 
   return (
     <>
@@ -575,12 +646,13 @@ const Payments = () => {
                                 </div>
                               </div>
 
-                              <div>
+                              <div className="flex flex-col items-start gap-1">
                                 {noMembership ? (
                                   <Chip tone="muted">Bez članarine</Chip>
                                 ) : (
                                   <Chip tone={badge.tone}>{badge.label}</Chip>
                                 )}
+                                {!noMembership && unpaidChip(m)}
                               </div>
 
                               <div className="min-w-0">
@@ -651,14 +723,16 @@ const Payments = () => {
                               {cells}
                             </Link>
                           ) : (
-                            <button
+                            <div
                               key={m.athlete_id}
-                              type="button"
-                              onClick={() => openEdit(m.membership_id!)}
-                              className={cn(OV_GRID, "w-full py-3 text-left transition hover:bg-surface-2")}
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => openEdit(m)}
+                              onKeyDown={(e) => rowKeyDown(e, m)}
+                              className={cn(OV_GRID, "w-full cursor-pointer py-3 text-left transition hover:bg-surface-2")}
                             >
                               {cells}
-                            </button>
+                            </div>
                           );
                         })}
                       </div>
@@ -873,7 +947,12 @@ const Payments = () => {
                             </>
                           )}
                         </div>
-                        {!noMembership && <Chip tone={badge.tone}>{badge.label}</Chip>}
+                        {!noMembership && (
+                          <div className="flex shrink-0 flex-col items-end gap-1">
+                            <Chip tone={badge.tone}>{badge.label}</Chip>
+                            {unpaidChip(m)}
+                          </div>
+                        )}
                         <ChevronRight className="h-4 w-4 text-muted-foreground/60 shrink-0" />
                       </>
                     );
@@ -887,14 +966,16 @@ const Payments = () => {
                         {rowContent}
                       </Link>
                     ) : (
-                      <button
+                      <div
                         key={m.athlete_id}
-                        type="button"
-                        onClick={() => openEdit(m.membership_id!)}
-                        className="w-full flex items-center gap-3 card-premium-hover px-4 py-3 text-left"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => openEdit(m)}
+                        onKeyDown={(e) => rowKeyDown(e, m)}
+                        className="w-full flex items-center gap-3 card-premium-hover px-4 py-3 text-left cursor-pointer"
                       >
                         {rowContent}
-                      </button>
+                      </div>
                     );
                   })}
                   {sortedOverview.length === 0 && (
@@ -920,8 +1001,39 @@ const Payments = () => {
         open={editOpen}
         onClose={() => setEditOpen(false)}
         membershipId={editMembershipId}
+        purchaseId={editPurchase.id}
+        paid={editPurchase.paid}
         onSaved={loadOverview}
       />
+
+      {/* Potvrda zahteva: placeno ili nije placeno */}
+      <AlertDialog open={!!confirmFor} onOpenChange={(o) => { if (!o) setConfirmFor(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Potvrditi "{confirmFor?.package_name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmFor
+                ? `${confirmFor.athlete_name} · ${confirmFor.price_rsd.toLocaleString("sr-Latn-RS")} RSD. Da li je novac stigao?`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel className="mt-0">Otkaži</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => confirmFor && doConfirm(confirmFor, false)}
+              className={buttonVariants({ variant: "outline" })}
+            >
+              Nije plaćeno
+            </AlertDialogAction>
+            <AlertDialogAction
+              onClick={() => confirmFor && doConfirm(confirmFor, true)}
+              className="bg-gradient-brand text-white shadow-brand"
+            >
+              Plaćeno
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
