@@ -111,11 +111,18 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, pu
   // popuni formu; ostala polja ostaju rucno editabilna i posle izbora.
   const [packages, setPackages] = useState<MembershipPackageRow[]>([]);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
-  const [paidForm, setPaidForm] = useState<boolean | null>(paid ?? null);
+  // Uplata: nova clanarina je po pravilu placena. Stara bez zapisa o uplati (null)
+  // se ne dira dok trener ne izabere, da izmena ne ubaci njenu cenu u ovaj mesec.
+  const [paidForm, setPaidForm] = useState<boolean | null>(paid ?? (membershipId ? null : true));
+  const [hasPurchase, setHasPurchase] = useState<boolean>(!!purchaseId);
+  const [paidTouched, setPaidTouched] = useState(false);
 
   useEffect(() => {
-    if (open) setPaidForm(paid ?? null);
-  }, [open, paid]);
+    if (!open) return;
+    setPaidForm(paid ?? (membershipId ? null : true));
+    setHasPurchase(!!purchaseId);
+    setPaidTouched(false);
+  }, [open, paid, purchaseId, membershipId]);
 
   useEffect(() => {
     if (!open) return;
@@ -152,7 +159,7 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, pu
     (async () => {
       const { data, error } = await supabase
         .from("memberships")
-        .select("id, plan_name, price, status, starts_on, ends_on, sessions_total, sessions_used")
+        .select("id, plan_name, price, status, starts_on, ends_on, sessions_total, sessions_used, purchase_id, membership_purchases(paid_at)")
         .eq("id", membershipId)
         .maybeSingle();
       setLoading(false);
@@ -162,6 +169,12 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, pu
         return;
       }
       const row = data as MembershipRow;
+      const uplata = data as unknown as {
+        purchase_id: string | null;
+        membership_purchases: { paid_at: string | null } | null;
+      };
+      setHasPurchase(!!uplata.purchase_id);
+      setPaidForm(uplata.purchase_id ? !!uplata.membership_purchases?.paid_at : null);
       setOriginalStatus(row.status);
       setForm({
         plan_name: row.plan_name ?? "",
@@ -241,20 +254,30 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, pu
       sessions_total: sessionsTotal,
       sessions_used: sessionsUsed,
     };
-    const { error } = membershipId
-      ? await supabase.from("memberships").update(patch).eq("id", membershipId)
-      : await supabase.from("memberships").insert({
-          ...patch,
-          trainer_id: user!.id,
-          athlete_id: athleteId,
-        });
-    if (error) {
-      setSaving(false);
-      return toast.error(porukaGreske(error));
+    let savedId = membershipId;
+    if (membershipId) {
+      const { error } = await supabase.from("memberships").update(patch).eq("id", membershipId);
+      if (error) {
+        setSaving(false);
+        return toast.error(porukaGreske(error));
+      }
+    } else {
+      const { data: created, error } = await supabase
+        .from("memberships")
+        .insert({ ...patch, trainer_id: user!.id, athlete_id: athleteId })
+        .select("id")
+        .single();
+      if (error || !created) {
+        setSaving(false);
+        return toast.error(porukaGreske(error));
+      }
+      savedId = (created as { id: string }).id;
     }
-    if (membershipId && purchaseId && paidForm != null && paidForm !== paid) {
-      const { error: paidError } = await supabase.rpc("trainer_set_purchase_paid", {
-        p_purchase_id: purchaseId,
+    // Uplata: nova i ona sa zapisom uvek (cena se uskladi), stara bez zapisa samo
+    // kad je trener izabrao.
+    if (savedId && paidForm != null && (isCreate || hasPurchase || paidTouched)) {
+      const { error: paidError } = await supabase.rpc("trainer_set_membership_paid", {
+        p_membership_id: savedId,
         p_paid: paidForm,
       });
       if (paidError) {
@@ -357,9 +380,12 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, pu
               </div>
             </div>
 
-            {membershipId && purchaseId && paidForm != null && (
+            {(
               <div className="space-y-1.5">
                 <Label>Uplata</Label>
+                {paidForm == null && (
+                  <p className="text-[12px] text-muted-foreground">Uplata nije zabeležena. Izaberi kad znaš.</p>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { value: true, label: "Plaćeno" },
@@ -368,7 +394,10 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, pu
                     <button
                       key={opt.label}
                       type="button"
-                      onClick={() => setPaidForm(opt.value)}
+                      onClick={() => {
+                        setPaidForm(opt.value);
+                        setPaidTouched(true);
+                      }}
                       className={cn(
                         "h-11 rounded-2xl text-[13px] font-semibold border transition",
                         paidForm === opt.value
