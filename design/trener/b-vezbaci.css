@@ -1,0 +1,21 @@
+/* trener: vezbaci */
+.fpills{display:flex;gap:6px;overflow:hidden;margin-right:-22px}
+.fpills span{flex:none;height:32px;padding:0 13px;border-radius:999px;display:grid;place-items:center;font-size:12.5px;font-weight:600;background:var(--s1);border:1px solid var(--line);color:var(--tx2)}
+.fpills span.on{background:var(--tx);color:var(--ink);border-color:transparent}
+.rd{display:inline-block;flex:none;width:7px;height:7px;border-radius:50%}
+.riskbar{display:flex;gap:3px;height:10px;border-radius:999px;overflow:hidden}
+.riskbar i{display:block;height:100%}
+.ring3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ring3>div{display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 6px 10px;border-radius:20px;background:var(--s1);border:1px solid var(--line);text-align:center}
+.ring3 small{font-size:10.5px;color:var(--tx2)}
+.vbars{display:flex;align-items:flex-end;gap:5px;height:66px}
+.vbars i{flex:1;border-radius:6px 6px 3px 3px;background:rgba(196,162,255,.28)}
+.vbars i.on{background:var(--g);box-shadow:0 8px 16px -6px rgba(139,61,235,.9)}
+.qa3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.qa3 span{display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 6px;border-radius:18px;font-size:11.5px;font-weight:600}
+.qa3 svg{width:18px;height:18px;color:var(--v-lt)}
+.fsh{position:relative;z-index:2;display:flex;align-items:center;gap:10px;padding:6px 16px 12px;border-bottom:1px solid var(--line)}
+.fsh b{flex:1;margin-right:40px;text-align:center;font-size:15px;font-weight:600}
+.mailc{position:relative;overflow:hidden;padding:16px;border-radius:24px;background:#F7F5FC;color:#1A1523;box-shadow:0 30px 60px -30px rgba(139,61,235,.8)}
+.mailc .otp6{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-top:12px}
+.mailc .otp6 span{height:40px;border-radius:10px;background:#EEE8FA;display:grid;place-items:center;font-size:19px;font-weight:700;font-style:italic;color:#4B2BA8}

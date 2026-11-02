@@ -252,8 +252,12 @@ Deno.serve(async (req) => {
     }
     const payload = { aps };
 
-    // Live Activity apns-topic = "{bundle}.push-type.liveactivity".
-    const topic = `${bundleId}.push-type.liveactivity`;
+    // Live Activity apns-topic = "{bundle}.push-type.liveactivity". Paket stize
+    // uz znak (triger ga cita iz reda), jer dve aplikacije dele isti APNs kljuc
+    // a imaju razlicite pakete; sve sto ne lici na ime paketa se odbacuje.
+    const trazen = (body?.bundle ?? "").toString().trim();
+    const paket = /^[A-Za-z0-9.-]{3,128}$/.test(trazen) ? trazen : bundleId;
+    const topic = `${paket}.push-type.liveactivity`;
     const jwt = await getApnsJwt();
     const tail = token.slice(-6);
 

@@ -1,0 +1,1045 @@
+id,name,category,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g,unit,grams_per_unit,serving_size_g,is_global,is_vegan,is_gluten_free,is_posno,za_trenera,icon,created_by,created_at
+59562344-0a5f-41bb-bbfd-2fea792f2d0f,505 sa crtom,Slatkiši,386,0,96,0,g,1,20,true,true,false,true,false,🍬,NULL,2026-10-09 17:19:20.819071+00
+a720db86-b1cb-4e33-a140-fcebc365e046,7UP,Pića,43,0,11,0,ml,1,330,true,true,true,true,false,🥤,NULL,2026-10-10 07:18:40.217049+00
+99515d0f-93a0-4bd5-a848-f1a645657af9,Agave sirup,Slatkiši,310,0.1,76.4,0.5,g,1,15,true,true,true,true,false,🍯,NULL,2026-04-28 10:24:12.606892+00
+ccdeabe2-a263-4de9-9af9-cd2afbb6dddc,Ajvar (blagi domaći),Povrće,110,1.5,11.0,7.0,g,1,30,true,true,true,true,true,🫑,NULL,2026-04-28 10:24:12.606892+00
+93d3a48d-109e-4d93-9fb6-b7717cc95750,Ajvar (ljuti),Povrće,115,1.5,11.5,7.5,g,1,30,true,true,true,true,true,🫑,NULL,2026-04-28 10:24:12.606892+00
+fd4d856c-d718-422b-9f42-6fccf6317674,Ajvar light,Povrće,75,1.4,8.0,4.0,g,1,30,true,true,true,true,true,🫑,NULL,2026-04-28 10:24:12.606892+00
+24ee2ad6-9ca4-4815-9205-88ecf36647cd,Ajvar sa patlidžanom Bakina tajna,Povrće,136,1.2,4,12,g,1,30,true,true,true,true,true,🫑,NULL,2026-10-09 17:19:20.819071+00
+dceaa0a4-f8b6-459a-ac1e-a94bd20f09ec,Aleva paprika dimljena,Začini i dodaci,282,14.1,53.9,12.9,g,1,2,true,true,true,true,true,🌶️,NULL,2026-04-28 10:24:12.606892+00
+57312e1d-3376-4356-80fc-4674024562e4,Aleva paprika ljuta,Začini i dodaci,282,12.0,57.0,17.0,g,1,2,true,true,true,true,true,🌶️,NULL,2026-04-28 10:24:12.606892+00
+be2c6d2f-8030-4983-84b4-dffd9953c8c2,Aleva paprika slatka,Začini i dodaci,282,14.1,53.9,12.9,g,1,2,true,true,true,true,true,🌶️,NULL,2026-04-28 10:24:12.606892+00
+6d860dd9-0469-4282-b3bf-e2278d89ecae,Alpska kobasica Carnex,Meso,218,14,1.8,17,g,1,30,true,false,false,false,false,🌭,NULL,2026-10-09 17:19:20.819071+00
+b2fc4515-2b15-4a14-a332-1786d7fa635b,Amarant (kuvan),Ugljeni hidrati,102,3.8,18.7,1.6,g,1,150,true,true,true,true,true,🌾,NULL,2026-04-28 10:24:12.606892+00
+4dac704d-6355-4ba7-8280-650dc34c039d,Ananas,Voće,50,0.5,13.1,0.1,g,1,100,true,true,true,true,true,🍍,NULL,2026-04-28 10:24:12.606892+00
+b7bff72d-6f3e-4e2d-b32f-3343d55f127c,"Ananas (konzerva, u soku)",Voće,60,0.4,15.7,0.1,g,1,100,true,true,true,true,true,🍍,NULL,2026-10-09 17:19:20.819071+00
+7d81185f-9246-48ad-acda-18be0e9bb7ff,Arginin,Suplementi,0,0.0,0.0,0.0,g,1,3,true,true,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+e6e92ab8-24f4-4308-87ca-6637c6237f74,Aronija,Voće,47,1.4,9.6,0.5,g,1,100,true,true,true,true,true,🫐,NULL,2026-04-28 10:24:12.606892+00
+13b50a43-91cf-4043-83ff-108405a5d274,Artičoka,Povrće,47,3.3,10.5,0.2,g,1,100,true,true,true,true,true,🥬,NULL,2026-04-28 10:24:12.606892+00
+0ffac047-ccdc-41c6-9d3a-98e3b812b404,Ašvaganda,Suplementi,300,3.9,75.0,0.3,g,1,1,true,true,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+ca829a4f-b284-49fd-be30-a29bae866b92,Avokado,Masnoće i ulja,160,2.0,9.0,15.0,kom,115,115,true,true,true,true,true,🥑,NULL,2026-04-28 10:24:12.606892+00
+b426066c-8476-4020-bb5a-0706ef46e516,Avokado (voće),Voće,160,2.0,8.5,14.7,kom,115,115,true,true,true,true,true,🥑,NULL,2026-04-28 10:24:12.606892+00
+7231ebbd-72b8-4b30-8a33-f5f1029a841d,Bademi,Orašasti plodovi,579,21.2,21.6,49.9,g,1,30,true,true,true,true,true,🌰,NULL,2026-04-28 10:24:12.606892+00
+5deb8d1f-60b4-48bd-9e92-cd1fe037e51f,Bademi (pečeni),Orašasti plodovi,598,21,21,52.5,g,1,30,true,true,true,true,true,🌰,NULL,2026-10-09 17:19:20.819071+00
+db6757f5-baf9-4817-a903-6e7eeb15267a,Bademov puter,Orašasti plodovi,614,21.0,18.8,55.5,g,1,30,true,true,true,true,true,🌰,NULL,2026-04-28 10:24:12.606892+00
+daa14b79-3f82-4f09-8b43-772c29306003,Bademovo brašno,Ugljeni hidrati,571,21.4,17.9,50.0,g,1,30,true,true,true,true,true,🌰,NULL,2026-04-28 10:24:12.606892+00
+fc7083ce-47bb-4f2c-80ed-7587a735cc3f,Bademovo mleko (nezaslađeno),Jaja i mleko,17,0.6,0.6,1.5,ml,1,200,true,true,true,true,true,🥛,NULL,2026-04-28 10:24:12.606892+00
+e1569e14-725b-4b24-a982-d1d512172b60,Baget,Pekarski,272,10.8,51.9,2.4,g,1,60,true,true,false,true,false,🥖,NULL,2026-10-09 17:19:20.819071+00
+8ab86d3d-2248-4205-b3b4-02232e1751f6,Bajadera,Slatkiši,560,7.0,55.0,35.0,g,1,30,true,false,true,false,false,🍫,NULL,2026-04-28 10:24:12.606892+00
+375424a3-e74c-4a32-b1d8-dc062efe0cd0,Bakalar,Riba,82,18.0,0.0,0.7,g,1,150,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+69f026fd-f151-4dc8-bac1-8637eed6a883,Bakalar (pečen),Riba,105,22.8,0,0.9,g,1,150,true,false,true,true,true,🐟,NULL,2026-10-10 07:18:40.217049+00
+5fb4c1e9-3383-4061-a4df-0a31c10a6916,"Bakalar (sušeni, soljeni)",Riba,290,62.8,0,2.4,g,1,50,true,false,true,true,true,🐟,NULL,2026-10-10 07:18:40.217049+00
+0baac7e3-79f8-4390-9447-dfc43dfef934,Baklava,Slatkiši,440,5.9,40.0,29.6,g,1,80,true,false,false,false,false,🍮,NULL,2026-04-28 10:24:12.606892+00
+2da26ccf-3505-42b5-aeb0-5847879185ff,Balzamiko sirće,Začini i dodaci,88,0.5,17.0,0.0,g,1,15,true,true,true,true,true,🫗,NULL,2026-04-28 10:24:12.606892+00
+d4c0e94e-a12d-43a9-8687-ec84c07debeb,Bamija,Povrće,33,1.9,7.5,0.2,g,1,100,true,true,true,true,true,🫛,NULL,2026-10-10 07:18:40.217049+00
+9410aad5-6a60-46f1-b8d3-1059b30fc632,Banana,Voće,89,1.1,22.8,0.3,kom,120,120,true,true,true,true,true,🍌,NULL,2026-04-28 10:24:12.606892+00
+f32b8e90-c3cd-41e5-9c8d-8ff61198f6aa,Bananica,Slatkiši,370,1.5,74,7.4,kom,25,25,true,false,false,false,false,🍫,NULL,2026-10-09 17:19:20.819071+00
+863c5cd1-2e82-436b-9bbc-3fb568380c2a,Bananko,Slatkiši,369,1.2,71.9,8.4,kom,30,30,true,false,false,false,false,🍫,NULL,2026-10-09 17:19:20.819071+00
+c1fbab90-124f-4f50-a55f-0d211728568c,BCAA (prah),Suplementi,40,10.0,0.0,0.0,g,1,10,true,true,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+b5fc3dc8-cff0-4950-9512-6fdbe5f16b49,"Bečka šnicla (teleća, pohovana)",Brza hrana,238,27.3,9.9,9.2,g,1,150,true,false,false,false,false,🥩,NULL,2026-10-09 17:19:20.819071+00
+a028da2f-be1e-4c99-ab1e-c718e8da4d89,Bela riba (zubatac),Riba,105,20.0,0.0,2.5,g,1,150,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+7f74022a-8830-4561-b3d3-ea2c777e71af,Belance,Jaja i mleko,52,10.9,0.7,0.2,kom,33,33,true,false,true,false,true,🥚,NULL,2026-04-28 10:24:12.606892+00
+481c2460-009a-475d-ace2-d49c3e993fa9,Beli čaj,Pića,1,0.0,0.0,0.0,ml,1,250,true,true,true,true,true,🍵,NULL,2026-04-28 10:24:12.606892+00
+a67afd27-405d-4a05-93ba-11f2b7af0f07,Beli luk u prahu,Začini i dodaci,331,16.6,72.7,0.7,g,1,1,true,true,true,true,true,🧄,NULL,2026-04-28 10:24:12.606892+00
+e55cfa69-84af-4ce9-9bc3-f7f7518abff7,Beli sir (domaći),Jaja i mleko,264,17.0,1.5,21.0,g,1,40,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+81cdbcaa-45e2-492b-8804-f2ab2da56d31,Beli sir light,Jaja i mleko,160,18.0,2.0,9.0,g,1,40,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+1fe9fba8-c4bf-443c-aa12-978d7e2dfeac,Beli sir polumasni 35% mm,Jaja i mleko,155,13,1.3,11,g,1,40,true,false,true,false,true,🧀,NULL,2026-10-09 17:19:20.819071+00
+cf6c326a-a30c-45f9-8467-96c44fffdb54,Beli sir punomasni 45% mm,Jaja i mleko,197,11.8,2.6,15.5,g,1,40,true,false,true,false,true,🧀,NULL,2026-10-09 17:19:20.819071+00
+27d4da46-85dc-48d6-a311-170a9759dea1,Beta alanin,Suplementi,0,0.0,0.0,0.0,g,1,3,true,true,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+91590a66-099e-40eb-baea-efcb8717ecc3,Bevita keks,Slatkiši,407,7,70,11,g,1,30,true,false,false,false,false,🍪,NULL,2026-10-09 17:19:20.819071+00
+e0935cb7-e4eb-4f40-9118-ceaecd47ebd2,Biber beli,Začini i dodaci,296,10.4,68.6,2.1,g,1,1,true,true,true,true,true,🧂,NULL,2026-04-28 10:24:12.606892+00
+70287980-0ea2-4495-a030-a347f6a9e030,Biber crni,Začini i dodaci,251,10.4,63.9,3.3,g,1,1,true,true,true,true,true,🧂,NULL,2026-04-28 10:24:12.606892+00
+bfb48b56-793b-4794-aa3c-860a2622d742,Big Mac,Brza hrana,257,12.0,21.0,14.0,g,1,215,true,false,false,false,false,🍔,NULL,2026-04-28 10:24:12.606892+00
+b19aef81-6a75-419b-8769-a56e29f711cb,Biljna mast (biljni mrs),Masnoće i ulja,897,0,0,99,g,1,10,true,true,true,true,false,🧈,NULL,2026-10-09 17:19:20.819071+00
+7763174f-90d6-43ed-bc38-bb9722bb6762,Biljni čaj (kamilica),Pića,1,0.0,0.2,0.0,ml,1,250,true,true,true,true,true,🍵,NULL,2026-04-28 10:24:12.606892+00
+1c30242f-4234-4ce2-8b7c-3ba823e4c8d0,Biljni protein (prah),Suplementi,375,70.0,12.0,6.0,g,1,30,true,true,true,true,true,🥤,NULL,2026-04-28 10:24:12.606892+00
+15293c62-a26b-498d-8cce-557576fac611,Blitva,Povrće,19,1.8,3.7,0.2,g,1,100,true,true,true,true,true,🥬,NULL,2026-04-28 10:24:12.606892+00
+63005e83-40ec-4245-b88a-7257c8312bd2,Blitva (kuvana),Povrće,20,1.9,4.1,0.1,g,1,100,true,true,true,true,true,🥬,NULL,2026-10-09 17:19:20.819071+00
+889f81da-1bb3-4745-9112-7723221221ab,Bob,Mahunarke,88,7.6,17.6,0.4,g,1,100,true,true,true,true,true,🫛,NULL,2026-04-28 10:24:12.606892+00
+c9deb079-a445-4990-8f7a-2e084a25c24a,"Bob (suvo zrno, kuvan)",Mahunarke,110,7.6,19.6,0.4,g,1,150,true,true,true,true,true,🫛,NULL,2026-10-09 17:19:20.819071+00
+386bad9c-8804-42ff-b1b1-73377e4246a7,Bombone gumene,Slatkiši,329,6.9,77.6,0.0,g,1,30,true,false,true,false,false,🍬,NULL,2026-04-28 10:24:12.606892+00
+82279090-b684-434b-a275-c4a33fa0de77,Boranija,Mahunarke,31,1.8,7.0,0.2,g,1,150,true,true,true,true,true,🫛,NULL,2026-04-28 10:24:12.606892+00
+462d6acb-902b-4c2f-9c13-a5278c714238,Boranija (gotovo jelo),Gotova jela,85,3.5,11.0,3.5,g,1,250,true,true,true,true,true,🍲,NULL,2026-04-28 10:24:12.606892+00
+976ecb7e-4a79-408f-9bcb-9f2c3752d36f,Boranija (kuvana),Mahunarke,35,1.9,7.9,0.3,g,1,150,true,true,true,true,true,🫛,NULL,2026-10-09 17:19:20.819071+00
+22f5eec6-18c3-4d54-8fe7-f6f0a8b7b4d9,Boranija sa svinjskim mesom Carnex (konzerva),Gotova jela,66,5.7,7.4,1.5,g,1,250,true,false,false,false,true,🍲,NULL,2026-10-09 17:19:20.819071+00
+76f9d1b0-ba69-4e7f-a0b2-4b4b62001394,Boranija žuta,Mahunarke,31,1.8,7.1,0.1,g,1,150,true,true,true,true,true,🫛,NULL,2026-10-09 17:19:20.819071+00
+fb73e5d1-d782-4e96-b328-ad6204d14e22,Borovnice,Voće,57,0.7,14.5,0.3,g,1,100,true,true,true,true,true,🫐,NULL,2026-04-28 10:24:12.606892+00
+9eb592d0-fb8a-4b65-a916-0362a2e019ba,Bosiljak sušen,Začini i dodaci,233,22.9,47.7,4.1,g,1,1,true,true,true,true,true,🌿,NULL,2026-04-28 10:24:12.606892+00
+56dff71c-0dbc-40b0-84a6-c1e215c892ee,Bosiljak svež,Povrće,23,3.2,2.6,0.6,g,1,10,true,true,true,true,true,🌿,NULL,2026-04-28 10:24:12.606892+00
+d225d585-078b-4e88-adb7-ebb999622cc4,Brancin,Riba,97,18.4,0.0,2.0,g,1,150,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+24ce1d38-5ca0-4f10-a69c-7bb78758ff4e,Bravo Sunny pomorandža,Pića,33,0.5,7.4,0.2,ml,1,250,true,true,true,true,false,🧃,NULL,2026-10-10 07:18:40.217049+00
+9ca8b53e-d2ee-4739-949e-24ced29d692e,Brazilski orah,Orašasti plodovi,659,14.3,11.7,67.1,kom,5,5,true,true,true,true,true,🌰,NULL,2026-04-28 10:24:12.606892+00
+b067b529-3591-4509-a7df-52a8c314dd90,Breskva,Voće,39,0.9,9.5,0.3,kom,150,150,true,true,true,true,true,🍑,NULL,2026-04-28 10:24:12.606892+00
+95e06fdc-ec7b-456e-b472-5219e50c467f,Brie,Jaja i mleko,334,20.8,0.5,27.7,g,1,30,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+0bd593cf-2ea4-4198-961a-6ffa87f06dc0,Brokoli,Povrće,34,2.8,7.0,0.4,g,1,100,true,true,true,true,true,🥦,NULL,2026-04-28 10:24:12.606892+00
+298d869b-7304-4af4-95c8-4c09434fc43c,Brokoli (kuvan),Povrće,35,2.4,7.2,0.4,g,1,100,true,true,true,true,true,🥦,NULL,2026-10-09 17:19:20.819071+00
+daeebc49-39a0-485c-bbe9-1870a63bb441,Bronhi bombone,Slatkiši,413,0.7,88.8,6.1,g,1,20,true,false,false,false,false,🍬,NULL,2026-10-09 17:19:20.819071+00
+44cc697c-0084-4682-8304-b32a00df096c,Brusnice,Voće,46,0.4,12.2,0.1,g,1,100,true,true,true,true,true,🍒,NULL,2026-04-28 10:24:12.606892+00
+4ce054f0-944a-41e9-9b73-981405494753,Budimska kobasica Carnex,Meso,442,24,0.2,38,g,1,30,true,false,false,false,false,🌭,NULL,2026-10-09 17:19:20.819071+00
+1ca979c5-6350-4276-92b5-386524f9d5bd,Bukovače,Povrće,33,3.3,6.1,0.4,g,1,100,true,true,true,true,true,🍄,NULL,2026-04-28 10:24:12.606892+00
+a7873ea9-15c8-401c-a61e-830a1243ec18,Bulgur (kuvan),Ugljeni hidrati,83,3.1,18.6,0.2,g,1,150,true,true,false,true,true,🌾,NULL,2026-04-28 10:24:12.606892+00
+a4dcb131-54b5-4b86-84ba-b2dfbf5ca380,Bulgur (suv),Ugljeni hidrati,342,12.3,75.9,1.3,g,1,60,true,true,false,true,true,🌾,NULL,2026-10-09 17:19:20.819071+00
+3663941d-2032-4e5b-a766-a1bff4783078,Bundeva,Povrće,26,1.0,6.5,0.1,g,1,100,true,true,true,true,true,🎃,NULL,2026-04-28 10:24:12.606892+00
+1c55d5fb-cd10-458a-8706-0794bc5afbcf,Bundeva (pečena),Povrće,37,0.9,8.9,0.4,g,1,150,true,true,true,true,true,🎃,NULL,2026-10-09 17:19:20.819071+00
+79cde007-15d6-4a07-a8bd-186cce3ec12c,Bundevino seme,Orašasti plodovi,559,30.2,10.7,49.0,g,1,30,true,true,true,true,true,🌰,NULL,2026-04-28 10:24:12.606892+00
+f8f40cf9-dae0-434c-b049-275b662c62d9,"Bundevino seme (pečeno, slano, oljušteno)",Orašasti plodovi,574,29.8,14.7,49,g,1,30,true,true,true,true,false,🌰,NULL,2026-10-09 17:19:20.819071+00
+2e504636-06c6-4218-8e2a-37a44bb3cab6,Bundevino ulje,Masnoće i ulja,884,0.0,0.0,100.0,g,1,10,true,true,true,true,true,🫗,NULL,2026-04-28 10:24:12.606892+00
+b0fe8531-e014-4dd4-8edd-05876e7658f5,Burata,Jaja i mleko,330,18.0,2.0,28.0,g,1,30,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+853dabcd-05be-4e31-9a72-17cc9560db8a,Burek sa krompirom,Pekarski,235,5.5,30.0,11.0,g,1,200,true,true,false,true,false,🥧,NULL,2026-04-28 10:24:12.606892+00
+129c7bbe-a692-480e-992a-4a219f912c6a,Burek sa mesom,Pekarski,290,9.0,28.0,16.0,g,1,200,true,false,false,false,false,🥧,NULL,2026-04-28 10:24:12.606892+00
+f5832756-7e21-41f2-8f43-3249c6bd2cdc,Burek sa sirom,Pekarski,275,8.5,27.0,15.0,g,1,200,true,false,false,false,false,🥧,NULL,2026-04-28 10:24:12.606892+00
+39802359-4425-4662-9cc8-9afb8c1ab5a5,Burek sa spanaćem,Pekarski,240,7.0,28.0,12.0,g,1,200,true,false,false,true,false,🥧,NULL,2026-04-28 10:24:12.606892+00
+31ac6143-b510-4d9d-b324-9024a4c09610,Ćabata,Pekarski,254,7.6,50.2,2,g,1,75,true,false,false,false,false,🍞,NULL,2026-10-09 17:19:20.819071+00
+046df121-0018-4c42-9364-5bc92e206961,Čaj od nane,Pića,1,0.0,0.2,0.0,ml,1,250,true,true,true,true,true,🍵,NULL,2026-04-28 10:24:12.606892+00
+23e15b60-8a93-44c9-af5d-f69d29ab66ba,Čaj od šipka,Pića,2,0.1,0.5,0.0,ml,1,250,true,true,true,true,true,🍵,NULL,2026-04-28 10:24:12.606892+00
+cab64ff3-c7a6-48dd-9ea1-d622296db333,Čajna kobasica,Meso,455,23.2,0.2,40.1,g,1,30,true,false,true,false,false,🌭,NULL,2026-10-09 17:19:20.819071+00
+b7d9fbb9-a61f-47cf-94d0-683055ba9fdf,Čajna pašteta,Meso,324,9.2,1.9,31,g,1,30,true,false,false,false,false,🥫,NULL,2026-10-09 17:19:20.819071+00
+5ec40f94-2e82-4fd3-9520-a7a98a470601,Čajni kolutići,Slatkiši,472,7.2,73.7,16.4,g,1,30,true,false,false,false,false,🍪,NULL,2026-10-10 07:18:40.217049+00
+f8f22fba-89c6-4708-b7ff-7e3a82f7d80c,Camembert,Jaja i mleko,300,19.8,0.5,24.3,g,1,30,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+fef8a6fe-9a6b-441c-a6dd-a14d2e22efd3,Cappuccino,Pića,52,2.5,4.5,2.5,ml,1,150,true,false,true,false,true,☕,NULL,2026-04-28 10:24:12.606892+00
+cf035838-066b-4a4f-9a14-615f95d91e61,Cedevita,Pića,360,0.0,90.0,0.0,ml,1,15,true,true,true,true,false,🧃,NULL,2026-04-28 10:24:12.606892+00
+e72da28a-fb69-4c4b-815e-694536696f72,Cedevita (pripremljena),Pića,26,0,6.4,0,ml,1,250,true,true,true,true,false,🧃,NULL,2026-10-09 17:19:20.819071+00
+0eee590f-6bd2-4df6-a9bb-8d46be09afe2,Cedevita Go,Pića,17,0.0,4.0,0.0,ml,1,330,true,true,true,true,false,🧃,NULL,2026-04-28 10:24:12.606892+00
+efc71db3-a929-4199-aeb2-c5209a553280,Celer (koren),Povrće,42,1.5,9.2,0.3,g,1,100,true,true,true,true,true,🥕,NULL,2026-04-28 10:24:12.606892+00
+d7e4f464-1da6-4db9-9cd8-e0a7d96d4bf0,Celer (stabljika),Povrće,16,0.7,3.0,0.2,g,1,50,true,true,true,true,true,🥬,NULL,2026-04-28 10:24:12.606892+00
+b41fe956-5e33-4125-9baa-f703e9707447,Čeri paradajz,Povrće,18,0.9,3.9,0.2,kom,17,17,true,true,true,true,true,🍅,NULL,2026-04-28 10:24:12.606892+00
+02961572-dac7-4aa6-b194-a39bceb8c5e6,Ćevapi,Brza hrana,234,17.0,2.0,18.0,g,1,100,true,false,true,false,false,🍖,NULL,2026-04-28 10:24:12.606892+00
+b0eb457b-6d10-41b9-a028-61a0131e764e,Cheddar,Jaja i mleko,402,25.0,1.3,33.1,g,1,30,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+5d842afe-4673-46d9-b6cc-2a18075a91ed,Cheeseburger,Brza hrana,303,15.6,30.3,13.5,g,1,200,true,false,false,false,false,🍔,NULL,2026-04-28 10:24:12.606892+00
+66b47c6d-7983-4268-992e-5993905df903,Chia semenke,Orašasti plodovi,486,16.5,42.1,30.7,g,1,15,true,true,true,true,true,🌰,NULL,2026-04-28 10:24:12.606892+00
+45a96931-3bf1-488c-9c01-cb9a65834515,Čičoka,Povrće,73,2,17.4,0,g,1,100,true,true,true,true,true,🥔,NULL,2026-10-10 07:18:40.217049+00
+8c93b929-501f-4aaa-abe3-4a4d8aa43087,Cider,Pića,49,0.0,4.5,0.0,ml,1,330,true,true,true,true,false,🍺,NULL,2026-04-28 10:24:12.606892+00
+2c6b5599-c5a7-410f-b479-30830255abbd,Cimet,Začini i dodaci,247,4.0,80.6,1.2,g,1,2,true,true,true,true,true,🌿,NULL,2026-04-28 10:24:12.606892+00
+7265ffff-af3a-419c-bcac-369d76879411,Cink,Suplementi,0,0.0,0.0,0.0,g,1,1,true,true,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+98caa45c-b324-40a3-8d54-402bffdbafab,Cipal,Riba,117,19.4,0,3.8,g,1,150,true,false,true,true,true,🐟,NULL,2026-10-10 07:18:40.217049+00
+7892a01a-4e70-48e7-93ec-4affff19df29,Čips slani Chipsy,Slatkiši,547,6.1,53,33,g,1,40,true,true,true,true,false,🥔,NULL,2026-10-09 17:19:20.819071+00
+9f5a70ed-ada4-49e9-b16a-ac1f6d25bd42,Citrulin malat,Suplementi,0,0.0,0.0,0.0,g,1,6,true,true,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+32cde538-00e9-46b7-9edc-291cccf525b7,CLA,Suplementi,902,0.0,0.0,100.0,g,1,1,true,false,true,false,true,💊,NULL,2026-04-28 10:24:12.606892+00
+a97b8c1f-1751-467f-ac18-7fc378fed15b,Coca Cola,Pića,42,0.0,10.6,0.0,ml,1,330,true,true,true,true,false,🥤,NULL,2026-04-28 10:24:12.606892+00
+884b9a19-3e83-4bff-923c-0876db0e7b67,Coca Cola Zero,Pića,0,0.0,0.0,0.0,ml,1,330,true,true,true,true,true,🥤,NULL,2026-04-28 10:24:12.606892+00
+2f60ddcb-1c27-4894-8e2b-77d029f73aa9,Cockta,Pića,40,0,9.7,0,ml,1,330,true,true,true,true,false,🥤,NULL,2026-10-09 17:19:20.819071+00
+61d2ab24-78b8-4169-82e6-c82a6c9e13d6,Čoko Smoki,Slatkiši,496,8.7,59,25,g,1,40,true,false,false,false,false,🍫,NULL,2026-10-09 17:19:20.819071+00
+ad77c458-7c81-4fa2-b37b-7c6a1a65172c,Čokolada bela,Slatkiši,539,5.9,59.2,32.1,g,1,30,true,false,true,false,false,🍫,NULL,2026-04-28 10:24:12.606892+00
+ef78390e-b604-4e86-9c91-90b68e8821c8,Čokolada crna 70%,Slatkiši,598,7.8,45.9,42.6,g,1,30,true,true,true,true,false,🍫,NULL,2026-04-28 10:24:12.606892+00
+01fdf3c7-10e5-4ed5-9778-e891cc662f11,Čokolada crna 85%,Slatkiši,604,8.1,28.7,52.6,g,1,30,true,true,true,true,false,🍫,NULL,2026-04-28 10:24:12.606892+00
+a78d501b-8b1b-4a71-a662-823bfc0eacad,Čokolada Dorina sa rižom,Slatkiši,522,7.6,59,28,g,1,30,true,false,false,false,false,🍫,NULL,2026-10-09 17:19:20.819071+00
+dbec4809-7f10-4832-a79f-3b83ce9f8c7a,Čokolada Milka mlečna,Slatkiši,539,6.5,57,31,g,1,30,true,false,false,false,false,🍫,NULL,2026-10-10 07:18:40.217049+00
+831b9b4d-9586-4a15-93db-553ec2cf07cc,Čokolada Milka sa celim lešnicima,Slatkiši,563,8.2,47,37,g,1,30,true,false,false,false,false,🍫,NULL,2026-10-10 07:18:40.217049+00
+6954d3eb-aa33-456c-a83f-da19986fc2bd,Čokolada mlečna,Slatkiši,535,7.6,59.4,29.7,g,1,30,true,false,true,false,false,🍫,NULL,2026-04-28 10:24:12.606892+00
+3ca18765-e368-4fda-9239-d750c399c5c1,Čokolada Najlepše želje crna 75%,Slatkiši,552,10,33,40,g,1,30,true,true,false,true,false,🍫,NULL,2026-10-09 17:19:20.819071+00
+0d381ede-b86c-4525-af7c-71813c3ca545,Čokolada Najlepše želje mlečna,Slatkiši,540,9,54,32,g,1,30,true,false,false,false,false,🍫,NULL,2026-10-09 17:19:20.819071+00
+763ec337-7959-4c83-b2c8-a20762e5bf74,Čokolada Najlepše želje sa keksom,Slatkiši,521,9,56,29,g,1,30,true,false,false,false,false,🍫,NULL,2026-10-09 17:19:20.819071+00
+5dc9c493-8c84-4627-bbbf-b3c163cbfaf6,Čokolada Najlepše želje sa lešnikom,Slatkiši,565,10,48,37,g,1,30,true,false,false,false,false,🍫,NULL,2026-10-09 17:19:20.819071+00
+3f653388-18d4-423a-8d3e-d1cc1b1e75fd,Čokoladne žitarice (Nesquik),Ugljeni hidrati,369,8.4,75.8,1.7,g,1,30,true,false,false,false,false,🥣,NULL,2026-10-10 07:18:40.217049+00
+c0f7e134-7ef2-40c3-8bc6-12db80de15e0,Čokoladno mleko,Jaja i mleko,62,3.3,10,1,ml,1,250,true,false,true,false,false,🥛,NULL,2026-10-09 17:19:20.819071+00
+799f6c60-ee9d-4b61-a68c-a1c67ef072c8,Čokolino,Ugljeni hidrati,411,7,84,4.1,g,1,30,true,true,false,true,false,🥣,NULL,2026-10-09 17:19:20.819071+00
+caed0455-3d34-4ba0-8159-aaae71e806fa,Cole slaw,Gotova jela,170,1.5,15.0,12.0,g,1,150,true,false,true,true,false,🥗,NULL,2026-04-28 10:24:12.606892+00
+366f256f-97a0-4c97-a6c4-5f01739fe224,Crna kafa (bez šećera),Pića,2,0.1,0.0,0.0,ml,1,30,true,true,true,true,true,☕,NULL,2026-04-28 10:24:12.606892+00
+23cc1aaa-2bd0-4548-b6b1-d46ae00b3305,Crna rotkva,Povrće,18,0.7,4.1,0.1,g,1,50,true,true,true,true,true,🥕,NULL,2026-04-28 10:24:12.606892+00
+b6071989-d7c3-43c6-a4a8-fba285cd492d,Crni čaj (nezaslađen),Pića,1,0.0,0.3,0.0,ml,1,250,true,true,true,true,true,🍵,NULL,2026-04-28 10:24:12.606892+00
+0d67a0de-34ce-4ac2-960f-e038c98b04c4,Crni luk u prahu,Začini i dodaci,341,10.4,79.1,1.0,g,1,1,true,true,true,true,true,🧅,NULL,2026-04-28 10:24:12.606892+00
+8c5d1d36-9b78-41d4-a0ed-1efc572a1623,Crveni kupus,Povrće,31,1.4,7.4,0.2,g,1,100,true,true,true,true,true,🥬,NULL,2026-04-28 10:24:12.606892+00
+289b3176-f60b-46e3-8778-95c33e7caad2,Čubar sušen,Začini i dodaci,272,6.7,68.7,5.9,g,1,1,true,true,true,true,true,🌿,NULL,2026-10-09 17:19:20.819071+00
+9853a94f-c149-4b30-ba63-c445356dff84,Ćufte u paradajz sosu Carnex (konzerva),Gotova jela,155,5.3,8.8,11,g,1,250,true,false,false,false,false,🍲,NULL,2026-10-09 17:19:20.819071+00
+7c56cbd4-fc3b-48ed-9a63-892c9830d626,Čupavci,Slatkiši,423,3.9,54.4,20.4,g,1,50,true,false,false,false,false,🧁,NULL,2026-10-09 17:19:20.819071+00
+2591dde0-9adc-4cbc-b826-e5f45d88c56a,Ćureća džigerica,Meso,228,17.8,2.3,16.4,g,1,100,true,false,true,false,true,🍗,NULL,2026-04-28 10:24:12.606892+00
+ca1b76bf-a11d-4c23-8c8b-1b74f6dbf3b5,Ćureća pašteta,Meso,305,12,2.9,27,g,1,30,true,false,false,false,false,🥫,NULL,2026-10-09 17:19:20.819071+00
+822fb8ef-6439-49c3-abf2-2bc277d264b4,Ćureće belo meso,Meso,135,30.1,0.0,1.0,g,1,150,true,false,true,false,true,🍗,NULL,2026-04-28 10:24:12.606892+00
+1b10fad2-2ad4-47fb-b4fd-dcdc5ef60c4a,Ćureći batak,Meso,144,24.4,0.0,4.4,g,1,150,true,false,true,false,true,🍗,NULL,2026-04-28 10:24:12.606892+00
+cd602432-7c42-4b25-95c2-9feed49589a3,Ćureći file u crevu Yuhor,Meso,67,12.2,1.5,1.3,g,1,30,true,false,true,false,true,🍖,NULL,2026-10-09 17:19:20.819071+00
+bc5182d8-6b8f-41e8-9f89-be95d9f3a5c1,Ćuretina mlevena,Meso,148,19.7,0,7.7,g,1,150,true,false,true,false,true,🍗,NULL,2026-10-09 17:19:20.819071+00
+d2dfdc5d-98c4-4354-a119-f06d4fc17dbb,Čvarci,Meso,575,30.0,1.0,50.0,g,1,30,true,false,true,false,false,🥓,NULL,2026-04-28 10:24:12.606892+00
+02d30a8e-0dbe-402b-abda-57383d76a020,Cvekla,Povrće,43,1.6,9.6,0.2,g,1,100,true,true,true,true,true,🥕,NULL,2026-04-28 10:24:12.606892+00
+69a1f532-8e32-49b7-ba15-038b51947f23,"Cvekla (kisela, u tegli)",Povrće,30,0.8,6.1,0.1,g,1,100,true,true,true,true,true,🫙,NULL,2026-10-09 17:19:20.819071+00
+069c7abf-2f5a-4ed5-8489-fb514918988a,Cvekla (kuvana),Povrće,44,1.7,10,0.2,g,1,100,true,true,true,true,true,🥕,NULL,2026-10-09 17:19:20.819071+00
+6961fced-8837-4f7d-854e-68b45aec0244,Dagnje,Riba,86,11.9,3.7,2.2,g,1,150,true,false,true,true,true,🦪,NULL,2026-04-28 10:24:12.606892+00
+089ef4ba-241b-4d86-bbb1-3b4d06057a3c,Debrecinska kobasica Gavrilović,Meso,301,9,1,29,g,1,80,true,false,false,false,false,🌭,NULL,2026-10-09 17:19:20.819071+00
+60080a69-c217-4e06-b5f9-f9a0cf8bc597,Dekstroza (glukoza prah),Suplementi,374,0,100,0,g,1,30,true,true,true,true,true,💊,NULL,2026-06-14 20:09:44.99651+00
+85ee78c9-48bc-49c7-9ee5-09b1049c50b8,Đevrek,Pekarski,330,10.0,60.0,5.0,g,1,80,true,false,false,false,false,🥨,NULL,2026-04-28 10:24:12.606892+00
+aa990f69-afd0-44da-8200-f1e22f63a27d,Dimljena pečenica,Meso,86,17,1.1,1.7,g,1,30,true,false,false,false,true,🍖,NULL,2026-10-09 17:19:20.819071+00
+78a105e5-63d4-4dac-b45c-ff910123d3e8,Dinja,Voće,34,0.8,8.2,0.2,g,1,200,true,true,true,true,true,🍈,NULL,2026-04-28 10:24:12.606892+00
+a18d5520-58e4-4195-adaa-3b5fd4371708,Divlja patka,Meso,211,17.4,0.0,15.2,g,1,150,true,false,true,false,true,🍗,NULL,2026-04-28 10:24:12.606892+00
+1b548021-a1cd-42ef-ac3c-ae90110174b0,Divljač (divlja svinja),Meso,122,21.5,0,3.3,g,1,150,true,false,true,false,true,🥩,NULL,2026-10-10 07:18:40.217049+00
+0f0e09af-5957-4a86-b914-17338bf8575f,Divljač (srnetina),Meso,158,30.2,0.0,3.2,g,1,150,true,false,true,false,true,🥩,NULL,2026-04-28 10:24:12.606892+00
+072a4b5c-26bd-4e26-b8fa-c6e2cf968748,Divlji pirinač (kuvan),Ugljeni hidrati,101,4.0,21.3,0.3,g,1,150,true,true,true,true,true,🍚,NULL,2026-04-28 10:24:12.606892+00
+61da2cbc-1b9e-4ea2-ae5b-4eed11b19958,Domaći keks (čajni),Slatkiši,420,6.0,72.0,12.0,g,1,30,true,false,false,false,false,🍪,NULL,2026-04-28 10:24:12.606892+00
+0dde2408-0cae-482c-bb19-6087b663cbf2,Domaćica,Slatkiši,498,6,63,24,g,1,30,true,true,false,true,false,🍪,NULL,2026-10-09 17:19:20.819071+00
+f4af13d1-2a41-403b-9aa8-5eb12454c3f4,Doner kebab,Brza hrana,215,15.0,18.0,9.5,g,1,300,true,false,false,false,false,🥙,NULL,2026-04-28 10:24:12.606892+00
+0c4c4191-23b5-41e4-8976-fb5688a3f47b,Drenjak,Voće,46,0.5,12.0,0.0,g,1,100,true,true,true,true,true,🍒,NULL,2026-04-28 10:24:12.606892+00
+07fb4f1f-f73e-463c-a09e-a33ed7ae44d0,Dud,Voće,43,1.4,9.8,0.4,g,1,100,true,true,true,true,true,🫐,NULL,2026-10-09 17:19:20.819071+00
+7e66c9cc-b834-4b8f-b983-a208839c894c,Đumbir prah,Začini i dodaci,335,8.9,71.6,4.2,g,1,1,true,true,true,true,true,🫚,NULL,2026-04-28 10:24:12.606892+00
+bfb8ca31-2524-420d-9e91-7fb3a12edc8e,Đumbir svež,Začini i dodaci,80,1.8,17.8,0.8,g,1,5,true,true,true,true,true,🫚,NULL,2026-04-28 10:24:12.606892+00
+36b77e16-cba2-4a55-8cae-2fb98abe741d,Dunja,Voće,57,0.4,15.3,0.1,g,1,150,true,true,true,true,true,🍐,NULL,2026-04-28 10:24:12.606892+00
+ca8757f9-a383-4999-84da-b360b12b35ec,Duvan čvarci Zlatiborac,Meso,438,40.2,0.1,30.8,g,1,30,true,false,true,false,false,🥓,NULL,2026-10-09 17:19:20.819071+00
+de5edc99-cec7-429f-b987-520d2ba420d3,Đuveč,Gotova jela,95,4.0,15.0,2.5,g,1,250,true,false,true,false,false,🍲,NULL,2026-04-28 10:24:12.606892+00
+1f9a31da-c3f8-41b3-9341-40b2ba34fd63,Dvopek,Ugljeni hidrati,380,11.1,77.2,2.3,g,1,20,true,true,false,true,false,🍞,NULL,2026-10-09 17:19:20.819071+00
+7c571950-574b-4b80-89b3-e35a7d3cced9,Dvopek integralni,Ugljeni hidrati,397,11,70.8,6.8,g,1,20,true,true,false,true,true,🍞,NULL,2026-10-10 07:18:40.217049+00
+8ee53ee8-d793-4e63-b423-ca54a7d64ee5,Džem od maline,Slatkiši,236,1.2,57,0,g,1,20,true,true,true,true,false,🫙,NULL,2026-10-09 17:19:20.819071+00
+fdb912a4-1f98-4134-a0c7-698f86194ae6,Džem od šipurka,Slatkiši,260,0.6,63,0,g,1,20,true,true,true,true,false,🫙,NULL,2026-10-09 17:19:20.819071+00
+09cb8f66-c752-4880-baf3-e59ec80151de,Džem od višanja,Slatkiši,262,0.2,65,0,g,1,20,true,true,true,true,false,🫙,NULL,2026-10-09 17:19:20.819071+00
+47e93d98-39b3-4fce-9ffc-ba4c27f3c998,EAA (prah),Suplementi,40,10.0,0.0,0.0,g,1,10,true,true,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+500f9c9c-0899-4dc9-bbec-a0e182f2bab9,Edamam (kuvani),Mahunarke,121,11.9,8.9,5.2,g,1,100,true,true,true,true,true,🫛,NULL,2026-04-28 10:24:12.606892+00
+a212317a-cc20-489a-accb-f0ecbdc69cba,Edamer,Jaja i mleko,357,25.0,1.4,28.0,g,1,30,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+207483f6-30e9-4ba1-918d-a476a30a3085,Ementaler,Jaja i mleko,380,28.0,1.4,29.7,g,1,30,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+97e0936b-28d7-43aa-a3fc-c01e17586a91,Endivija,Povrće,17,1.3,3.4,0.2,g,1,50,true,true,true,true,true,🥬,NULL,2026-04-28 10:24:12.606892+00
+ad0b3dda-5bfa-4427-b867-f9fe1b7dd3d1,Energetski gel (za trcanje),Suplementi,310,0,77,0,g,1,40,true,true,true,true,true,💊,NULL,2026-06-14 20:09:44.99651+00
+75ebdbdc-a0ac-41b0-b685-c813971e9739,Energetski napitak,Pića,45,0.4,11.0,0.0,ml,1,250,true,true,true,true,false,🥤,NULL,2026-04-28 10:24:12.606892+00
+8b658b9d-49ec-4469-ad3f-c26b5eeaf90b,Energetski napitak Sugar Free,Pića,3,0.0,0.5,0.0,ml,1,250,true,true,true,true,true,🥤,NULL,2026-04-28 10:24:12.606892+00
+a1a9eb9e-80b1-4c0e-b8a0-ffb9a4aacc99,Eritritol,Slatkiši,0,0.0,0.0,0.0,g,1,5,true,true,true,true,true,🍬,NULL,2026-04-28 10:24:12.606892+00
+b9ff75d2-d766-4839-aec3-98cabc9d264d,Espresso,Pića,2,0.1,0.0,0.0,ml,1,30,true,true,true,true,true,☕,NULL,2026-04-28 10:24:12.606892+00
+bbae43b3-8cb8-48e8-aa80-272ee69e8239,Eurocrem blok,Slatkiši,539,7,59,30.5,g,1,50,true,false,true,false,false,🍫,NULL,2026-10-09 17:19:20.819071+00
+15df0121-26d3-4efb-8791-b3c58cefce61,Eurokrem,Slatkiši,530,5.0,55.0,32.0,g,1,20,true,false,true,false,false,🍫,NULL,2026-04-28 10:24:12.606892+00
+4cd2cdb6-3bf7-4c84-8952-0fc90a9fa8e8,Falafel,Brza hrana,333,13.3,31.8,17.8,g,1,100,true,true,false,true,true,🧆,NULL,2026-04-28 10:24:12.606892+00
+df7739fa-36fe-4e71-ac51-4c604ef4e524,Fanta,Pića,46,0.0,11.4,0.0,ml,1,330,true,true,true,true,false,🥤,NULL,2026-04-28 10:24:12.606892+00
+15008d1e-bb77-4108-a0aa-18cba215e5ce,Fanta Shokata,Pića,30,0,7.1,0,ml,1,330,true,true,true,true,false,🥤,NULL,2026-10-10 07:18:40.217049+00
+e38f3e78-b772-471a-af4b-80dadb0de477,Fazan,Meso,133,22.7,0.0,3.6,g,1,150,true,false,true,false,true,🍗,NULL,2026-04-28 10:24:12.606892+00
+7002166a-6bfc-4d95-b3dc-4ac11a0ae4f6,Feferone,Povrće,40,1.9,8.8,0.4,g,1,30,true,true,true,true,true,🌶️,NULL,2026-04-28 10:24:12.606892+00
+9b9cf963-b2e7-401b-be00-971733797a08,"Feferoni (kiseli, ljuti)",Povrće,26,1.3,4,0.5,g,1,30,true,true,true,true,true,🌶️,NULL,2026-10-09 17:19:20.819071+00
+2944a02c-3cf3-408b-92b5-eca48948979b,Fenjel (komorač),Povrće,31,1.2,7.3,0.2,g,1,100,true,true,true,true,true,🥬,NULL,2026-04-28 10:24:12.606892+00
+96d5a87c-3866-4ad1-9797-033cc9559cad,Flekice (suve),Ugljeni hidrati,360,11.6,72.7,2.1,g,1,80,true,false,false,false,true,🍝,NULL,2026-10-09 17:19:20.819071+00
+a79c877c-91e4-40f1-aa05-d618289b206b,Gauda,Jaja i mleko,356,24.9,2.2,27.4,g,1,30,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+0bbb8e4e-eb6b-4424-b64c-32122aaa8376,Ghee (pročišćeni maslac),Masnoće i ulja,900,0.3,0.0,100.0,g,1,10,true,false,true,false,true,🧈,NULL,2026-04-28 10:24:12.606892+00
+243a901b-1fe6-430b-a4a1-02487f190618,Gin,Pića,263,0.0,0.0,0.0,ml,1,30,true,true,true,true,false,🥃,NULL,2026-04-28 10:24:12.606892+00
+5ea39e7d-1efe-439d-92cf-ad60981a0eb2,Glutamin (prah),Suplementi,0,0.0,0.0,0.0,g,1,5,true,true,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+1e1f3390-dd0a-46d0-8f6a-55ed05cfc9d3,Goveđa džigerica,Meso,135,20.4,3.9,3.6,g,1,100,true,false,true,false,true,🥩,NULL,2026-04-28 10:24:12.606892+00
+5c9911e8-5a9d-48e7-b75e-375b0b7562ad,Goveđa džigerica (pržena),Meso,175,26.5,5.2,4.7,g,1,100,true,false,true,false,true,🥩,NULL,2026-10-09 17:19:20.819071+00
+c7dd8e3e-04b7-4a2f-b642-c54d2fbcd117,Goveđa pršuta Zlatiborac,Meso,171,36,0.2,3,g,1,30,true,false,true,false,true,🍖,NULL,2026-10-09 17:19:20.819071+00
+2e3a2403-50c1-4128-ba74-6338c84804fa,Goveđa supa,Gotova jela,30,3.5,2.0,1.0,g,1,300,true,false,true,true,true,🍲,NULL,2026-04-28 10:24:12.606892+00
+a6a5233c-a7bb-47c7-b2aa-ef5dd518a1ad,Goveđi gulaš Carnex (konzerva),Gotova jela,98,11,4.6,4,g,1,250,true,false,false,false,true,🍲,NULL,2026-10-09 17:19:20.819071+00
+6f9c1a1a-6e8b-4961-ae60-37e13417d92c,Goveđi jezik,Meso,224,16.1,3.7,16.1,g,1,100,true,false,true,false,false,🥩,NULL,2026-04-28 10:24:12.606892+00
+1297b0a6-a76d-4acd-87be-77c8785690b5,Goveđi narezak,Meso,205,15,7,13,g,1,50,true,false,false,false,false,🥫,NULL,2026-10-09 17:19:20.819071+00
+b68a5ac8-2097-43a6-9a5f-f23eaabefaed,Goveđi škembići (kuvani),Meso,94,11.7,2,4.1,g,1,150,true,false,true,false,true,🥩,NULL,2026-10-09 17:19:20.819071+00
+6a86a7b2-64f7-477d-9370-6140a612a1d7,Govedina (mršava),Meso,217,26.0,0.0,12.0,g,1,150,true,false,true,false,true,🥩,NULL,2026-04-28 10:24:12.606892+00
+e39e23c8-2663-49f2-b2b3-e41e55f1ade0,Granola domaća,Ugljeni hidrati,471,10.5,64.0,20.3,g,1,50,true,true,false,true,true,🥣,NULL,2026-04-28 10:24:12.606892+00
+906cfa7c-1cdc-4fa5-80a9-7589abd9453f,Granola sa medom,Ugljeni hidrati,489,9.0,67.0,21.0,g,1,50,true,true,false,true,false,🥣,NULL,2026-04-28 10:24:12.606892+00
+d93ee0ec-d8a0-43d1-b942-fc1e93c71f70,Grašak (gotovo jelo),Gotova jela,90,4.5,12.0,3.0,g,1,250,true,true,true,true,true,🍲,NULL,2026-04-28 10:24:12.606892+00
+7e0daebe-43fc-4161-ac92-7e8d9121eb5d,"Grašak (konzerva, oceđen)",Mahunarke,68,4.5,11.4,0.8,g,1,100,true,true,true,true,true,🫛,NULL,2026-10-09 17:19:20.819071+00
+b1a1c4ef-8a50-49d6-8505-41e4bd5527a2,Grašak (kuvan),Mahunarke,84,5.4,15.6,0.2,g,1,100,true,true,true,true,true,🫛,NULL,2026-10-09 17:19:20.819071+00
+8ff36fd3-7641-4cf4-8304-94152f06551f,Grašak i šargarepa (smrznuto),Povrće,55,2.6,10,0.4,g,1,150,true,true,true,true,true,🫛,NULL,2026-10-09 17:19:20.819071+00
+0dab7c2b-7407-4f0a-9183-5d9abcfcc283,Grašak sa piletinom Yuhor (konzerva),Gotova jela,86,9.8,7,2,g,1,250,true,false,false,false,true,🍲,NULL,2026-10-09 17:19:20.819071+00
+37755596-d6ad-45cd-b22d-a6dbf44434fe,Grašak sa svinjskim mesom Carnex (konzerva),Gotova jela,99,7.1,7.1,4.7,g,1,250,true,false,false,false,true,🍲,NULL,2026-10-09 17:19:20.819071+00
+e070e219-dda0-428c-875f-bc035f046d3e,Grašak smrznut,Mahunarke,77,5.2,13.7,0.4,g,1,100,true,true,true,true,true,🫛,NULL,2026-04-28 10:24:12.606892+00
+517469e9-1ed2-46d3-b302-6ff779934600,Grašak suvi (lomljeni),Mahunarke,364,23.1,61.6,3.9,g,1,80,true,true,true,true,true,🫛,NULL,2026-10-09 17:19:20.819071+00
+7ee7ff65-16ab-4008-a439-2dba4971dda4,Grašak svež,Mahunarke,81,5.4,14.5,0.4,g,1,100,true,true,true,true,true,🫛,NULL,2026-04-28 10:24:12.606892+00
+aa0f307b-006a-4575-ba10-5f9206b09995,Grčki jogurt 0%,Jaja i mleko,59,10.3,3.6,0.4,g,1,150,true,false,true,false,true,🥛,NULL,2026-04-28 10:24:12.606892+00
+ee64458a-3415-470a-80d5-bb81d1324287,Grčki jogurt 2%,Jaja i mleko,73,9.9,3.6,1.9,g,1,150,true,false,true,false,true,🥛,NULL,2026-04-28 10:24:12.606892+00
+4e61169d-0fde-4c7e-997b-0e641cedac3e,Grčki jogurt 5%,Jaja i mleko,97,9.0,3.6,5.0,g,1,150,true,false,true,false,true,🥛,NULL,2026-04-28 10:24:12.606892+00
+22635009-a05b-41fe-89c7-02aeaa1059bc,Grejpfrut,Voće,42,0.8,10.7,0.1,kom,246,246,true,true,true,true,true,🍊,NULL,2026-04-28 10:24:12.606892+00
+b5b0b55e-1951-42ac-ab50-c14a2a8715ab,Grgeč,Riba,79,18,0,0.7,g,1,150,true,false,true,true,true,🐟,NULL,2026-10-10 07:18:40.217049+00
+7f6dbcc7-8f4b-4fbc-bc4b-91eaffae510a,Griotte,Slatkiši,424,2.2,61,15,g,1,25,true,true,false,true,false,🍫,NULL,2026-10-10 07:18:40.217049+00
+480d31b1-b8a5-4115-aed7-85c956fc97da,Grožđe belo,Voće,69,0.7,18.1,0.2,g,1,100,true,true,true,true,true,🍇,NULL,2026-04-28 10:24:12.606892+00
+21813dc1-f9c9-4ea6-80d1-daffb24605ca,Grožđe crno,Voće,69,0.7,18.1,0.2,g,1,100,true,true,true,true,true,🍇,NULL,2026-04-28 10:24:12.606892+00
+5f686393-a34a-440c-8a37-00755e229691,Grožđice,Voće,299,3.1,79.2,0.5,g,1,30,true,true,true,true,true,🍇,NULL,2026-04-28 10:24:12.606892+00
+32385f60-f5b3-4465-a8e4-68286a01180e,Guacamole,Povrće,150,2.0,8.6,13.0,g,1,30,true,true,true,true,true,🥑,NULL,2026-04-28 10:24:12.606892+00
+165225d8-9306-4fd6-a1c3-bff0cda0a9c6,Guarana,Pića,47,0,11.5,0,ml,1,250,true,true,true,true,false,🥤,NULL,2026-10-09 17:19:20.819071+00
+ccf55092-f2e3-4f59-b354-c54acaa6721b,Guarana Zero,Pića,2,0,0,0,ml,1,250,true,false,true,true,true,🥤,NULL,2026-10-10 07:18:40.217049+00
+f01100bb-691c-4a94-bf66-21d50983a335,Guava,Voće,68,2.6,14.3,1.0,g,1,100,true,true,true,true,true,🍐,NULL,2026-04-28 10:24:12.606892+00
+b03253ab-2ef4-4228-85e6-7a7889772fe5,"Guščetina (pečena, sa kožom)",Meso,305,25.2,0,21.9,g,1,150,true,false,true,false,false,🍗,NULL,2026-10-10 07:18:40.217049+00
+b3ff7a2f-60e6-42c1-b171-2c30fe54576a,Guščija mast,Masnoće i ulja,900,0,0,99.8,g,1,10,true,false,true,false,false,🧈,NULL,2026-10-09 17:19:20.819071+00
+0dabcbe3-7018-4d87-a732-66c2511c0411,Gustin (kukuruzni skrob),Ugljeni hidrati,342,0.4,85,0.1,g,1,10,true,true,true,true,true,🌽,NULL,2026-10-09 17:19:20.819071+00
+997167f0-6f21-4edc-b7ed-fdbf8173b052,Gvožđe,Suplementi,0,0.0,0.0,0.0,g,1,1,true,true,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+ff471d45-bb98-4c4a-8cd9-751cc8c12eaa,Halumi,Jaja i mleko,317,20,3,25,g,1,50,true,false,true,false,true,🧀,NULL,2026-10-10 07:18:40.217049+00
+64db4843-c2b2-4022-b818-15faf2a126f7,Halva,Slatkiši,469,12.5,57.0,21.5,g,1,30,true,true,true,true,false,🍬,NULL,2026-04-28 10:24:12.606892+00
+0ff71fcf-eedf-4f0b-a79a-f4f28e8e75d5,Hamburger (klasični),Brza hrana,295,17.0,30.0,12.0,g,1,200,true,false,false,false,false,🍔,NULL,2026-04-28 10:24:12.606892+00
+48ee5111-05e3-4940-a5b6-63535a20807b,Hamburška slanina Gavrilović (rolana),Meso,224,17,0.7,17,g,1,20,true,false,false,false,false,🥓,NULL,2026-10-09 17:19:20.819071+00
+10b3afe5-3994-4242-aa0a-2d46f0fad0df,Haringa,Riba,158,18.0,0.0,9.0,g,1,150,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+30acd64c-c7b7-4097-8107-dbd23abd9c2b,Haringa (dimljena),Riba,217,24.6,0,12.4,g,1,80,true,false,true,true,true,🐟,NULL,2026-10-10 07:18:40.217049+00
+2f0545f4-1f27-44ab-8bdf-87aa4003bf6c,Heljda (kuvana),Ugljeni hidrati,92,3.4,19.9,0.6,g,1,150,true,true,true,true,true,🌾,NULL,2026-04-28 10:24:12.606892+00
+94e9c2c1-7fbb-432f-a910-d56453e16eeb,Heljda (suva),Ugljeni hidrati,343,13.3,71.5,3.4,g,1,50,true,true,true,true,true,🌾,NULL,2026-04-28 10:24:12.606892+00
+2fff50b6-bf57-45a0-a458-385cce21b033,Heljdino brašno,Ugljeni hidrati,335,12.6,70.6,3.1,g,1,30,true,true,true,true,true,🌾,NULL,2026-04-28 10:24:12.606892+00
+7d359a55-80f2-409d-92c3-3551e1d7f229,Hleb beli,Ugljeni hidrati,265,9.0,49.0,3.2,g,1,40,true,true,false,false,false,🍞,NULL,2026-04-28 10:24:12.606892+00
+4f784f96-98cb-4d17-8934-0299e1205bd2,Hleb beskvasni,Ugljeni hidrati,261,5.9,49,3.7,g,1,40,true,false,false,false,true,🍞,NULL,2026-10-09 17:19:20.819071+00
+0955ae54-6fad-441a-9460-5d5497241ca0,Hleb bezglutenski,Ugljeni hidrati,250,3.5,49.0,4.0,g,1,40,true,true,true,true,true,🍞,NULL,2026-04-28 10:24:12.606892+00
+ad359e17-d96a-4497-ba15-509b107336b9,Hleb crni (raženi),Ugljeni hidrati,259,8.5,48.0,3.3,g,1,40,true,true,false,true,true,🍞,NULL,2026-04-28 10:24:12.606892+00
+39aedc92-9042-4de7-a6e5-5ee1da337337,Hleb integralni,Ugljeni hidrati,247,13.0,41.0,3.4,g,1,40,true,true,false,false,true,🍞,NULL,2026-04-28 10:24:12.606892+00
+eb0fcf9d-01eb-42f4-94e6-614611995a63,Hleb kukuruzni (mešani),Ugljeni hidrati,256,9.2,46.4,2.7,g,1,40,true,true,false,true,true,🍞,NULL,2026-10-09 17:19:20.819071+00
+28d049ca-dec7-460e-85f0-ee9ca32cfb9e,Hleb od heljde,Ugljeni hidrati,265,8.0,46.0,3.5,g,1,40,true,true,true,true,true,🍞,NULL,2026-04-28 10:24:12.606892+00
+bd1e0a5b-a5bd-4f64-9c70-987609ac069e,Hleb od ovsa,Ugljeni hidrati,260,10.0,46.0,4.0,g,1,40,true,true,false,true,true,🍞,NULL,2026-04-28 10:24:12.606892+00
+c9494596-1e2a-41bb-b2d0-8cbc1697f83f,Hleb od spelte,Ugljeni hidrati,250,11.0,45.0,2.5,g,1,40,true,true,false,false,true,🍞,NULL,2026-04-28 10:24:12.606892+00
+b0810ea3-4e36-497f-a5c2-4df48b339c3d,Hleb polubeli,Ugljeni hidrati,255,9.5,48.0,2.8,g,1,40,true,true,false,false,true,🍞,NULL,2026-04-28 10:24:12.606892+00
+eb29188c-ac48-4e97-9818-d199d5c0678a,Hleb proteinski,Ugljeni hidrati,265,22.0,18.0,9.0,g,1,40,true,false,false,false,true,🍞,NULL,2026-04-28 10:24:12.606892+00
+fbafe2a6-8e47-4916-b829-3d3828bb6922,Hleb sa semenkama,Ugljeni hidrati,269,9.8,41.4,5.6,g,1,40,true,false,false,false,true,🍞,NULL,2026-10-09 17:19:20.819071+00
+87624599-8e58-4338-9b70-68a1d5140304,HMB,Suplementi,0,0.0,0.0,0.0,g,1,3,true,true,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+96b52386-2182-4514-a794-cbc0b1c316bc,Hobotnica,Riba,82,14.9,2.2,1.0,g,1,150,true,false,true,true,true,🐙,NULL,2026-04-28 10:24:12.606892+00
+c3a800cd-0a67-4daa-9395-e8bfacccd443,Hobotnica (kuvana),Riba,164,29.8,4.4,2.1,g,1,150,true,false,true,true,true,🐙,NULL,2026-10-09 17:19:20.819071+00
+2769dd8d-f268-42ef-988b-bd26c5b79986,Hot dog,Brza hrana,290,11.0,18.0,18.0,g,1,100,true,false,false,false,false,🌭,NULL,2026-04-28 10:24:12.606892+00
+a0c21368-892b-453d-893e-c2861ffae680,Humus,Povrće,166,7.9,14.3,9.6,g,1,30,true,true,true,true,true,🫘,NULL,2026-04-28 10:24:12.606892+00
+b986f7d1-b379-48d4-8dcf-4ca7f77a7e9b,Inćuni,Riba,131,20.4,0.0,4.8,g,1,30,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+c50684d5-c8af-4e1d-9f1f-d8e278a0135b,Inćuni u ulju,Riba,210,28.9,0,9.7,g,1,30,true,false,true,true,true,🐟,NULL,2026-10-09 17:19:20.819071+00
+dad10b58-c94a-48dc-b10f-b1d73dfc1f29,Indijski orah,Orašasti plodovi,553,18.2,30.2,43.9,g,1,30,true,true,true,true,true,🌰,NULL,2026-04-28 10:24:12.606892+00
+f2f6178c-c1a4-42d7-807f-ff671538bbaf,"Indijski orah (pečen, slan)",Orašasti plodovi,574,15.3,32.7,46.4,g,1,30,true,true,true,true,false,🌰,NULL,2026-10-09 17:19:20.819071+00
+d6cc2d58-a450-4a43-90a8-dbdcc11a8166,Išleri (posni),Slatkiši,524,4,64,28,g,1,30,true,true,false,true,false,🍪,NULL,2026-10-09 17:19:20.819071+00
+3bae805e-b989-4909-8472-03a433b0a926,Izotonicni napitak (sportski),Pića,26,0,6.4,0,ml,1,500,true,true,true,true,true,🥤,NULL,2026-06-14 20:09:44.99651+00
+68bc1797-9c29-4bb0-886c-e2604a57b344,Jabuka,Voće,52,0.3,14.0,0.2,kom,150,150,true,true,true,true,true,🍎,NULL,2026-04-28 10:24:12.606892+00
+634f20dd-9f73-436f-a140-ce167fd29f43,Jaffa keks,Slatkiši,378,4.1,69,9,g,1,25,true,false,false,false,false,🍪,NULL,2026-10-09 17:19:20.819071+00
+76bf6fb8-a4b0-4856-a14f-50374b5bf2d3,Jaffa napolitanke sa lešnikom,Slatkiši,564,4,56,36,g,1,30,true,true,false,true,false,🍪,NULL,2026-10-09 17:19:20.819071+00
+2c7c579c-c871-4023-9fe5-12e94f5cf025,Jagnjeća džigerica,Meso,139,20.4,1.8,5,g,1,100,true,false,true,false,true,🥩,NULL,2026-10-10 07:18:40.217049+00
+2b9f1565-929e-4e5e-8555-a99709044f12,Jagnjeća plećka (pečena),Meso,276,22.5,0,20,g,1,150,true,false,true,false,false,🥩,NULL,2026-10-09 17:19:20.819071+00
+d67e96c1-4780-4117-b843-67487cbcf6b9,Jagnjeća rebra,Meso,294,16.6,0.0,25.0,g,1,150,true,false,true,false,false,🥩,NULL,2026-04-28 10:24:12.606892+00
+b3fcdb7f-a532-4f16-919a-c2480c7ead18,Jagnjeći kotlet (pečen),Meso,316,25.2,0,23.1,g,1,150,true,false,true,false,false,🥩,NULL,2026-10-09 17:19:20.819071+00
+2cdc2830-6315-44e3-99be-6c08cc25bf68,Jagnjetina but,Meso,201,26.0,0.0,10.5,g,1,150,true,false,true,false,true,🥩,NULL,2026-04-28 10:24:12.606892+00
+1ed4f49a-8e40-401c-82be-76742ecfbcaf,Jagode,Voće,32,0.7,7.7,0.3,g,1,150,true,true,true,true,true,🍓,NULL,2026-04-28 10:24:12.606892+00
+65cd09bd-660a-488c-b7b8-ec237586f3dc,Jaje celo,Jaja i mleko,155,13.0,1.1,11.0,kom,55,55,true,false,true,false,true,🥚,NULL,2026-04-28 10:24:12.606892+00
+b104efde-932d-4d06-8969-6b63a518f695,Jaje guščije,Jaja i mleko,185,13.9,1.4,13.3,kom,144,144,true,false,true,false,true,🥚,NULL,2026-10-10 07:18:40.217049+00
+af243fdc-c1fe-428f-a42e-e4235ad5d122,Jaje pačje,Jaja i mleko,185,13.0,1.5,14.0,kom,70,70,true,false,true,false,true,🥚,NULL,2026-04-28 10:24:12.606892+00
+cf03e38d-8d79-4455-9f1a-13101bf9d501,Jaje poširano,Jaja i mleko,143,12.5,0.7,9.5,kom,50,50,true,false,true,false,true,🥚,NULL,2026-10-10 07:18:40.217049+00
+84c0d310-6596-48a4-863d-2f2dca1e0cc4,Jaje prepelice,Jaja i mleko,158,13.1,0.4,11.1,kom,10,10,true,false,true,false,true,🥚,NULL,2026-04-28 10:24:12.606892+00
+ff09f521-9f23-4ba0-861b-0ae7d11b0433,Jaje prženo,Jaja i mleko,196,13.6,0.8,14.8,kom,46,46,true,false,true,false,true,🍳,NULL,2026-10-09 17:19:20.819071+00
+2709b36f-1c03-452b-bf8f-835cef5e97b6,Jastog,Riba,89,19.0,0.0,0.9,g,1,150,true,false,true,true,true,🦞,NULL,2026-04-28 10:24:12.606892+00
+93a4ff19-f826-4bc1-bbcc-5da58fc1904f,Javorov sirup,Slatkiši,260,0.0,67.0,0.1,g,1,15,true,true,true,true,false,🍁,NULL,2026-04-28 10:24:12.606892+00
+be8b8716-df8f-4662-8329-d7b9b2e05b33,Ječam (kuvan),Ugljeni hidrati,123,2.3,28.2,0.4,g,1,150,true,true,false,true,true,🌾,NULL,2026-10-09 17:19:20.819071+00
+f6f2fc13-5343-4066-aaa0-697fa078919b,Ječam oljušten (suv),Ugljeni hidrati,352,9.9,77.7,1.2,g,1,50,true,true,false,true,true,🌾,NULL,2026-10-09 17:19:20.819071+00
+a316e060-e695-4a2b-87d7-dc015cc7c841,Ječmeno brašno,Ugljeni hidrati,345,10.5,74.5,1.6,g,1,30,true,true,false,true,true,🌾,NULL,2026-10-10 07:18:40.217049+00
+f5b61379-e96a-461e-8684-676d422003b5,Jetrena pašteta,Meso,319,14.2,1.7,28.5,g,1,30,true,false,true,false,false,🥫,NULL,2026-04-28 10:24:12.606892+00
+4dcd58d0-84b1-45b9-8670-213fc3fe7e96,Jogurt 0.1%,Jaja i mleko,32,3.2,4.6,0.1,g,1,200,true,false,true,false,true,🥛,NULL,2026-10-09 17:19:20.819071+00
+eb27c0e5-2a4e-44d6-b78c-f22f7409159a,Jogurt 1.5%,Jaja i mleko,46,3.5,4.8,1.5,ml,1,180,true,false,true,false,true,🥛,NULL,2026-04-28 10:24:12.606892+00
+3b1bac32-b35e-4031-aa8d-2dc35a76063b,Jogurt 1%,Jaja i mleko,38,3.1,4.2,1,g,1,200,true,false,true,false,true,🥛,NULL,2026-10-09 17:19:20.819071+00
+5af0fb8a-8093-4a40-b45f-b5e4f9093df3,Jogurt 2.8%,Jaja i mleko,58,3.3,4.7,2.8,ml,1,180,true,false,true,false,true,🥛,NULL,2026-04-28 10:24:12.606892+00
+b5997789-ae3b-402a-9e5e-a461869909c9,Jogurt 3.2%,Jaja i mleko,61,3.5,4.7,3.2,ml,1,180,true,false,true,false,true,🥛,NULL,2026-04-28 10:24:12.606892+00
+e4c5475e-8412-4fb4-9ef8-e2c1972b33e6,Jogurt bez laktoze 2.8%,Jaja i mleko,52,3.1,3.5,2.8,g,1,200,true,false,true,false,true,🥛,NULL,2026-10-09 17:19:20.819071+00
+d141c074-8d62-4fba-a7f1-2e9a63d1209a,Jogurt grčkog tipa 9%,Jaja i mleko,112,3.7,4,9,g,1,150,true,false,true,false,true,🥛,NULL,2026-10-09 17:19:20.819071+00
+fdf7bc75-c7bb-483c-be54-5f9cc9a4415d,Jogurt voćni,Jaja i mleko,95,3.5,15.0,2.5,ml,1,150,true,false,true,false,false,🥛,NULL,2026-04-28 10:24:12.606892+00
+5e2406fc-5c98-4fa8-80f6-412cb478fb4e,"Juneći but (šol, pečen)",Meso,160,29.9,0,4.5,g,1,150,true,false,true,false,true,🥩,NULL,2026-10-09 17:19:20.819071+00
+c9511c54-b1d5-4944-b851-9163af40ff41,"Juneći but (šol, sirov)",Meso,125,23.4,0,3.5,g,1,150,true,false,true,false,true,🥩,NULL,2026-10-09 17:19:20.819071+00
+9b918596-26cb-4a89-bac1-f97a735df4c6,Junetina biftek,Meso,217,26.0,0.0,12.0,g,1,150,true,false,true,false,true,🥩,NULL,2026-04-28 10:24:12.606892+00
+1417a08b-25ca-43ab-9b19-ca2dcc60f510,Junetina mlevena (10% mm),Meso,176,21.0,0.0,10.0,g,1,150,true,false,true,false,true,🥩,NULL,2026-04-28 10:24:12.606892+00
+c390b634-4f39-4439-9a59-74a5496e42bf,Junetina mlevena (20% mm),Meso,250,18.0,0.0,20.0,g,1,150,true,false,true,false,true,🥩,NULL,2026-04-28 10:24:12.606892+00
+30ca72f4-2048-491d-9ce0-93194b45750a,Junetina rebra,Meso,310,18.0,0.0,26.0,g,1,150,true,false,true,false,false,🥩,NULL,2026-04-28 10:24:12.606892+00
+248cdf13-2c1f-4f4b-924c-faf45f1a29b5,Kačkavalj,Jaja i mleko,392,25.0,2.0,32.0,g,1,30,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+673497af-4670-4999-baab-62546bf2a9eb,Kačkavalj sjenički,Jaja i mleko,350,27,0.1,27,g,1,30,true,false,true,false,true,🧀,NULL,2026-10-09 17:19:20.819071+00
+92da5080-980a-43e8-a0da-a56ee2508b98,Kafa belim sa mlekom (bez šećera),Pića,35,1.7,2.6,2.0,ml,1,200,true,false,true,false,true,☕,NULL,2026-04-28 10:24:12.606892+00
+10c1e3cf-1b25-4da9-a61c-7d6ca38bfae2,Kafa sa mlekom,Pića,40,2.0,3.5,1.8,ml,1,200,true,false,true,false,true,☕,NULL,2026-04-28 10:24:12.606892+00
+ce5d0ad3-4fda-4536-ac70-b89b19d0e8b0,Kajenski biber (čili mleveni),Začini i dodaci,318,12,56.6,17.3,g,1,1,true,true,true,true,true,🌶️,NULL,2026-10-10 07:18:40.217049+00
+27fe9f0b-572f-4059-a15c-772d4fe72231,Kajgana,Jaja i mleko,149,10,1.6,11,g,1,120,true,false,true,false,true,🍳,NULL,2026-10-09 17:19:20.819071+00
+9c42e136-46c8-4ce0-b826-17061334876f,Kajmak mladi,Jaja i mleko,310,8.0,2.5,30.0,g,1,30,true,false,true,false,true,🧈,NULL,2026-04-28 10:24:12.606892+00
+1377b3a2-db43-4f60-8d46-ce08784f8bfd,Kajmak stari,Jaja i mleko,580,5.5,2.0,60.0,g,1,20,true,false,true,false,false,🧈,NULL,2026-04-28 10:24:12.606892+00
+d6ea1d1b-1729-48a3-85bf-c3f970c04741,Kajsija,Voće,48,1.4,11.1,0.4,g,1,100,true,true,true,true,true,🍑,NULL,2026-04-28 10:24:12.606892+00
+e1201d04-567b-418f-a4fb-39edaff5066d,Kajzerica,Pekarski,293,9.9,52.7,4.3,g,1,60,true,false,false,false,false,🍞,NULL,2026-10-09 17:19:20.819071+00
+ef2d8881-1ecd-4135-bcb9-e06dc93b79af,Kakao (sa vodom),Pića,12,0.8,3.0,0.3,ml,1,250,true,true,true,true,true,☕,NULL,2026-04-28 10:24:12.606892+00
+a4f706d8-8eeb-40bf-8fc8-e1d4dee6e6f3,Kakao sa mlekom,Pića,76,3.5,8.5,3.0,ml,1,250,true,false,true,false,true,☕,NULL,2026-04-28 10:24:12.606892+00
+1d9aeed3-b928-4960-bbb5-e0dca4fbcf72,Kaki (japanska jabuka),Voće,70,0.6,18.6,0.2,g,1,150,true,true,true,true,true,🍊,NULL,2026-10-10 07:18:40.217049+00
+8f28bbd9-78cf-4fc9-8087-2a49e59a1509,Kalcijum,Suplementi,0,0.0,0.0,0.0,g,1,1,true,true,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+bc1cbe06-6975-4fd5-8717-8bd857c401ac,Kapari,Povrće,23,2.4,4.9,0.9,g,1,15,true,true,true,true,true,🫙,NULL,2026-04-28 10:24:12.606892+00
+a720ad85-da11-43c5-85db-713b353a771d,Karambola,Voće,31,1.0,6.7,0.3,g,1,100,true,true,true,true,true,🍎,NULL,2026-04-28 10:24:12.606892+00
+d22f26c6-e787-42c6-bd7b-e3e4f1d94a75,Karamela,Slatkiši,382,4.0,77.0,8.1,g,1,20,true,false,true,false,false,🍬,NULL,2026-04-28 10:24:12.606892+00
+bb21ab6a-6216-42b0-8a4d-3dc688c34d63,Karanfilić,Začini i dodaci,274,6.0,65.5,13.0,g,1,1,true,true,true,true,true,🌿,NULL,2026-04-28 10:24:12.606892+00
+6151c3c1-6447-4898-8720-2c3e4c204c66,Kardamom,Začini i dodaci,311,10.8,68.5,6.7,g,1,1,true,true,true,true,true,🌿,NULL,2026-04-28 10:24:12.606892+00
+b8a0d219-23ca-41a4-aba9-f7f25a9c7791,Karfiol,Povrće,25,1.9,5.0,0.3,g,1,100,true,true,true,true,true,🥦,NULL,2026-04-28 10:24:12.606892+00
+aaaa30ea-03d6-4a20-af8a-04c19fc3b9ed,Karfiol (kuvan),Povrće,23,1.8,4.1,0.5,g,1,100,true,true,true,true,true,🥦,NULL,2026-10-09 17:19:20.819071+00
+b1f788a2-e7ed-419a-8ffd-3f11c5b2697f,Kari (prah),Začini i dodaci,325,14.3,55.8,14,g,1,2,true,true,true,true,true,🫚,NULL,2026-10-10 07:18:40.217049+00
+b70c0302-db37-4567-bd0d-4fdc1fc38a1b,Kavijar,Riba,264,24.6,4.0,17.9,g,1,15,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+d5b1a395-3f3f-4a02-a12f-ad0c8b24b883,Kazein (prah),Suplementi,360,80.0,5.0,1.0,g,1,30,true,false,true,false,true,🥤,NULL,2026-04-28 10:24:12.606892+00
+cf2f5d2d-7fc8-4ed4-ad4e-d13f7131e17a,Kebab (giros),Brza hrana,220,15.0,15.0,11.0,g,1,250,true,false,false,false,false,🥙,NULL,2026-04-28 10:24:12.606892+00
+b7de6ac9-073b-4117-b64f-940c5a838212,Kečap,Začini i dodaci,112,1.7,25.8,0.4,g,1,15,true,true,true,true,false,🥫,NULL,2026-04-28 10:24:12.606892+00
+ef5d6ee4-8d1f-431c-a689-4547296152c8,Kečap ljuti,Začini i dodaci,85,0.9,20,0.5,g,1,15,true,true,true,true,false,🥫,NULL,2026-10-09 17:19:20.819071+00
+297742a2-2b1f-4414-ad41-ea6901079d32,Kečiga,Riba,90,17.0,0.0,2.5,g,1,150,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+8de5fee6-d26d-46f6-9c48-fdbd3c09e6cc,Kefir,Jaja i mleko,55,3.8,4.5,2.5,ml,1,200,true,false,true,false,true,🥛,NULL,2026-04-28 10:24:12.606892+00
+09555abc-20cb-4390-a9f3-5f376bdaf65f,Kefir (piće),Pića,55,3.8,4.5,2.5,ml,1,250,true,false,true,false,true,🥛,NULL,2026-04-28 10:24:12.606892+00
+9cda1c12-3d83-48a4-9168-cf67b66970ee,Keleraba,Povrće,27,1.7,6.2,0.1,g,1,100,true,true,true,true,true,🥬,NULL,2026-10-09 17:19:20.819071+00
+4fe5625d-8e24-4d52-9a40-13408d24bbc7,Kelj,Povrće,49,4.3,9.0,0.9,g,1,100,true,true,true,true,true,🥬,NULL,2026-04-28 10:24:12.606892+00
+bfe2a6e6-68a4-40f4-9b4c-eb2232fd8d3a,Kelj listasti (kale),Povrće,49,4.3,8.8,0.9,g,1,100,true,true,true,true,true,🥬,NULL,2026-04-28 10:24:12.606892+00
+866172b9-2dd3-4c9d-ad28-105401c48576,Kesten (kuvan),Orašasti plodovi,131,2,27.8,1.4,g,1,100,true,true,true,true,true,🌰,NULL,2026-10-09 17:19:20.819071+00
+49e1ce96-0a20-425e-85dd-ad1e230c41b1,Kesten (pečen),Orašasti plodovi,245,3.2,53,2.2,g,1,100,true,true,true,true,true,🌰,NULL,2026-10-09 17:19:20.819071+00
+bbaf3cb5-b735-40f4-a4af-c96e9b9e81c7,Kesten (sirov),Orašasti plodovi,196,1.6,44.2,1.3,g,1,100,true,true,true,true,true,🌰,NULL,2026-10-10 07:18:40.217049+00
+61054888-1731-4ca3-8c53-436d4fe55296,Ki-Ki bombone,Slatkiši,396,0.9,82,7,g,1,20,true,false,false,false,false,🍬,NULL,2026-10-09 17:19:20.819071+00
+09aae7cf-4449-409b-9ad1-fd6e156c6bf8,Kikiriki,Orašasti plodovi,567,25.8,16.1,49.2,g,1,30,true,true,true,true,true,🥜,NULL,2026-04-28 10:24:12.606892+00
+f4ca8dc0-b391-42f0-9eec-30a3472a6b96,Kikiriki slani pržen,Orašasti plodovi,599,26.0,16.0,52.0,g,1,30,true,true,true,true,false,🥜,NULL,2026-04-28 10:24:12.606892+00
+164eacf0-9cec-45dd-913b-0117ab513380,Kim (kumin),Začini i dodaci,375,17.8,44.2,22.3,g,1,1,true,true,true,true,true,🌿,NULL,2026-04-28 10:24:12.606892+00
+a9aecea7-49d7-4b73-85b9-4d9ddbf44b7d,Kim pravi (seme),Začini i dodaci,333,19.8,49.9,14.6,g,1,1,true,true,true,true,true,🌿,NULL,2026-10-09 17:19:20.819071+00
+b00848bd-7c96-42fe-b811-51c2028b066b,Kimchi,Povrće,15,1.1,2.4,0.5,g,1,100,true,true,true,true,true,🥬,NULL,2026-04-28 10:24:12.606892+00
+cc734a0f-1650-43cd-a75d-e566a7e87622,Kinder Bueno (2 štanglice),Slatkiši,572,8.6,49.5,37.3,kom,43,43,true,false,false,false,false,🍫,NULL,2026-10-10 07:18:40.217049+00
+3468978e-fda3-4a02-8b6e-cbc2814732d3,Kinder čokolada (mala štanglica),Slatkiši,566,8.7,53.5,35,kom,12.5,12.5,true,false,true,false,false,🍫,NULL,2026-10-10 07:18:40.217049+00
+c7c59019-4a55-44d0-80c1-1d1f44683472,Kinder Maxi King,Slatkiši,521,6.7,38.2,37.5,kom,35,35,true,false,false,false,false,🍫,NULL,2026-10-10 07:18:40.217049+00
+133f7d41-d01f-48a5-9fdb-72b1fb1e0bba,Kinder Milch-Schnitte,Slatkiši,421,7.9,34,27.9,kom,28,28,true,false,false,false,false,🍫,NULL,2026-10-10 07:18:40.217049+00
+4b191afe-1eb2-4803-a747-d1aaf480dd0d,Kinder Pingui,Slatkiši,450,7,37.8,29.7,kom,30,30,true,false,false,false,false,🍫,NULL,2026-10-10 07:18:40.217049+00
+18c18bfe-3617-44ab-aa1d-17d352d23e55,Kinder Surprise,Slatkiši,561,8.4,52.6,34.9,kom,20,20,true,false,true,false,false,🍫,NULL,2026-10-10 07:18:40.217049+00
+55305b01-06b8-4cb1-86b7-0df28859d40e,Kineski kupus,Povrće,13,1.5,2.2,0.2,g,1,100,true,true,true,true,true,🥬,NULL,2026-04-28 10:24:12.606892+00
+43cc2c74-95d7-4783-b421-29351f630062,Kinoa (kuvana),Ugljeni hidrati,120,4.4,21.3,1.9,g,1,150,true,true,true,true,true,🌾,NULL,2026-04-28 10:24:12.606892+00
+40835651-43ce-452a-836a-db1da2a70ee8,Kinoa (suva),Ugljeni hidrati,368,14.1,64.2,6.1,g,1,50,true,true,true,true,true,🌾,NULL,2026-04-28 10:24:12.606892+00
+b4580400-e85c-40ad-bf15-ef70ecf40246,Kinoa crvena (kuvana),Ugljeni hidrati,120,4.4,21.3,1.9,g,1,150,true,true,true,true,true,🌾,NULL,2026-04-28 10:24:12.606892+00
+4b38bd9a-846b-4afc-ae14-9f3747df9400,Kiseli kupus,Povrće,19,0.9,4.3,0.1,g,1,100,true,true,true,true,true,🥬,NULL,2026-04-28 10:24:12.606892+00
+45a3d263-883a-4d3b-9dba-d4d466ec24ea,Kiselo mleko,Jaja i mleko,55,3.3,4.0,3.0,ml,1,200,true,false,true,false,true,🥛,NULL,2026-04-28 10:24:12.606892+00
+140e92e7-78a7-4622-b9e7-0bd3a220cb67,Kiselo mleko 6% mm,Jaja i mleko,89,3.7,5.1,6,g,1,180,true,false,true,false,true,🥛,NULL,2026-10-09 17:19:20.819071+00
+16c78af7-6fec-45f1-8c3d-d722e072da43,KitKat Chunky,Slatkiši,529,7.7,59.5,28.6,kom,40,40,true,false,false,false,false,🍫,NULL,2026-10-10 07:18:40.217049+00
+8921042e-bf11-48f8-b70a-c402d297efad,Kivi,Voće,61,1.1,14.7,0.5,kom,69,69,true,true,true,true,true,🥝,NULL,2026-04-28 10:24:12.606892+00
+36db8a0d-2643-4089-ac02-48cebb716763,Kivi zlatni,Voće,63,1.0,15.8,0.6,kom,81,81,true,true,true,true,true,🥝,NULL,2026-04-28 10:24:12.606892+00
+5ea00911-309f-4e53-8639-7a9138ea8cff,Klementina,Voće,47,0.9,12.0,0.2,kom,74,74,true,true,true,true,true,🍊,NULL,2026-04-28 10:24:12.606892+00
+230ab075-8e7f-43db-803d-cd21b964ce9b,Klorela,Suplementi,410,58.0,23.2,9.3,g,1,5,true,true,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+a5408379-1ce6-4d0d-9bdb-0cf8f7fd9b80,Knäckebrot,Ugljeni hidrati,366,11.0,68.0,4.0,g,1,15,true,true,false,false,true,🍞,NULL,2026-04-28 10:24:12.606892+00
+172e13e3-b30a-4c2c-a0e9-a4ada74c1f0e,"Knedle sa šljivama (smrznute, nekuvane)",Pekarski,159,4,32,0.8,g,1,150,true,false,false,false,false,🥟,NULL,2026-10-10 07:18:40.217049+00
+585d3b23-b472-4d59-b5a9-b4a442bfb497,Knjaz Miloš ReMix narandža,Pića,49,0,12,0,ml,1,330,true,true,true,true,false,🥤,NULL,2026-10-09 17:19:20.819071+00
+de4546bc-079a-41f5-be36-2a982326de0c,Kobasica domaća,Meso,350,15.0,2.0,32.0,g,1,80,true,false,true,false,false,🌭,NULL,2026-04-28 10:24:12.606892+00
+ab5ceeb8-3437-4456-8788-7838a0c05fb3,Kobasica kranjska,Meso,310,13.0,2.0,28.0,g,1,80,true,false,true,false,false,🌭,NULL,2026-04-28 10:24:12.606892+00
+94a9b174-f919-4fdd-81ac-67573ab456df,Kokice slane (gotove),Slatkiši,475,8.9,55,22,g,1,35,true,true,false,true,false,🍿,NULL,2026-10-09 17:19:20.819071+00
+56738322-f108-45ef-80f6-4205ac767427,Kokos (svež),Voće,354,3.3,15.2,33.5,g,1,30,true,true,true,true,true,🥥,NULL,2026-04-28 10:24:12.606892+00
+ac542529-9f09-4a66-88be-16e08106456a,Kokos suvi (sušeni),Voće,660,6.9,23.7,64.5,g,1,30,true,true,true,true,true,🥥,NULL,2026-04-28 10:24:12.606892+00
+a8f7268b-4524-49ff-9691-0edb1f59be00,Kokosovo brašno,Ugljeni hidrati,400,20.0,60.0,15.0,g,1,30,true,true,true,true,true,🥥,NULL,2026-04-28 10:24:12.606892+00
+36241ab0-f35d-4512-bf83-7f349578e6ed,Kokosovo mleko (kuhinjsko),Jaja i mleko,230,2.3,5.5,24.0,g,1,100,true,true,true,true,true,🥥,NULL,2026-04-28 10:24:12.606892+00
+9ab2a384-394f-479d-b672-3a9d787ed705,Kokosovo ulje,Masnoće i ulja,862,0.0,0.0,100.0,g,1,10,true,true,true,true,true,🥥,NULL,2026-04-28 10:24:12.606892+00
+7ae11e35-05a9-4635-b1e5-904f65f3326b,Kolagen (prah),Suplementi,360,90.0,0.0,0.0,g,1,10,true,false,true,false,true,💊,NULL,2026-04-28 10:24:12.606892+00
+10aee784-8097-4c5a-aa84-895f73435be1,Kombuča (nezaslađena),Pića,14,0.0,3.5,0.0,ml,1,250,true,true,true,true,true,🥤,NULL,2026-04-28 10:24:12.606892+00
+032b9e60-09c6-42ed-8985-a3f0f646ebcb,Kompot od breskve,Voće,62,0.5,14,0.2,g,1,150,true,true,true,true,false,🫙,NULL,2026-10-09 17:19:20.819071+00
+6057f936-2895-43c8-baa5-c2beaf3b0c7a,Kompot od kajsija (u blagom sirupu),Voće,63,0.5,16.5,0.1,g,1,200,true,true,true,true,false,🫙,NULL,2026-10-09 17:19:20.819071+00
+e632474b-5c13-4dbf-8d29-7bbff557e8ed,Kompot od šljiva (u blagom sirupu),Voće,63,0.4,16.3,0.1,g,1,200,true,true,true,true,false,🫙,NULL,2026-10-09 17:19:20.819071+00
+ed8b3926-8c5d-4935-b583-aa9ab7cbbfb2,Kompot od višanja,Voće,68,0.6,16.2,0.1,g,1,150,true,true,true,true,false,🫙,NULL,2026-10-09 17:19:20.819071+00
+bc5a4ef8-6949-4373-b835-69a03216fd17,Kondenzovano mleko (zaslađeno),Jaja i mleko,321,7.9,54.4,8.7,g,1,20,true,false,true,false,false,🥛,NULL,2026-10-10 07:18:40.217049+00
+ec57adc4-2436-4dbf-ada9-6091a13e84fd,Konopljin protein (prah),Suplementi,377,50.0,18.0,11.0,g,1,30,true,true,true,true,true,🥤,NULL,2026-04-28 10:24:12.606892+00
+c9acee63-fe68-4830-80f1-76179e8be7cf,Konopljine semenke,Orašasti plodovi,553,31.6,8.7,48.8,g,1,30,true,true,true,true,true,🌰,NULL,2026-04-28 10:24:12.606892+00
+708d3cd0-efcc-4b9f-86df-c480cadb27bb,Kopriva (blanširana),Povrće,42,2.7,7.5,0.1,g,1,100,true,true,true,true,true,🥬,NULL,2026-10-09 17:19:20.819071+00
+d4bed671-2da4-416f-80d8-eaa44941a3e9,Kordon blu (pileći),Brza hrana,238,25.2,10.2,10.6,g,1,150,true,false,false,false,false,🍗,NULL,2026-10-09 17:19:20.819071+00
+9a347170-c6d5-4c50-be0e-e8a2d22075e3,Kordon blu (svinjski),Brza hrana,241,23.2,10.3,11.8,g,1,150,true,false,false,false,false,🥩,NULL,2026-10-09 17:19:20.819071+00
+c99e02b5-5455-46db-9ca1-287d55e96dc8,Kore za pitu i gibanicu (sirove),Pekarski,277,6.9,59.3,0.7,g,1,100,true,false,false,true,false,🥧,NULL,2026-10-09 17:19:20.819071+00
+e5af52ae-7edf-4053-a14d-19717ebec852,Korijander seme,Začini i dodaci,298,12.4,55.0,17.8,g,1,1,true,true,true,true,true,🌿,NULL,2026-04-28 10:24:12.606892+00
+846860b0-e610-4113-8ee9-fdd23688a9b1,Korijander svež,Povrće,23,2.1,3.7,0.5,g,1,10,true,true,true,true,true,🌿,NULL,2026-04-28 10:24:12.606892+00
+16099948-8a78-4cea-8a3a-9c2890cfe272,Kornfleks,Ugljeni hidrati,357,7.5,84.0,0.9,g,1,30,true,true,false,false,false,🥣,NULL,2026-04-28 10:24:12.606892+00
+4f4e1948-7093-45b0-a682-7b6693a7df15,Kornišoni (kiseli),Povrće,12,0.5,2.5,0.1,g,1,30,true,true,true,true,true,🥒,NULL,2026-04-28 10:24:12.606892+00
+3d2fb8cf-9331-4289-a63e-1d9a07bda6b0,Kotidž sir,Jaja i mleko,98,11.0,3.4,4.3,g,1,100,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+6cd024eb-a4a5-4afd-9ce9-bec5bcfed45e,Kozje kiselo mleko,Jaja i mleko,60,3.4,3.5,3.6,g,1,180,true,false,true,false,true,🥛,NULL,2026-10-09 17:19:20.819071+00
+3ad4e5e6-344b-4b40-a783-5e5bce861b5a,Kozje meso,Meso,109,20.6,0.0,2.3,g,1,150,true,false,true,false,true,🥩,NULL,2026-04-28 10:24:12.606892+00
+3ba745e7-4a3b-4f1f-ba41-ec7ca996f39a,Kozje mleko,Jaja i mleko,69,3.6,4.5,4.1,ml,1,200,true,false,true,false,true,🥛,NULL,2026-10-09 17:19:20.819071+00
+d153c4a0-e45f-4629-b479-6c34e03079ed,Kozji sir (meki),Jaja i mleko,264,18.5,0,21.1,g,1,40,true,false,true,false,true,🧀,NULL,2026-10-09 17:19:20.819071+00
+57e6dc1a-75b2-47c3-b562-a954128409ba,Kozji sir (polutvrdi),Jaja i mleko,364,21.6,0.1,29.8,g,1,30,true,false,true,false,true,🧀,NULL,2026-10-09 17:19:20.819071+00
+0de4ca99-d7ec-4ed1-85b0-9b529e522981,Kraš Express (prah),Pića,349,5.6,73,2.5,g,1,15,true,false,true,true,false,☕,NULL,2026-10-09 17:19:20.819071+00
+472bfca7-7354-4321-9552-279508f41f5d,Krastavac,Povrće,16,0.7,3.6,0.1,kom,250,250,true,true,true,true,true,🥒,NULL,2026-04-28 10:24:12.606892+00
+11b4b2c1-80f6-40c7-86c6-c473d246a43a,Kreatin monohidrat,Suplementi,0,0.0,0.0,0.0,g,1,5,true,true,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+f05d6646-1461-4de2-9d88-96b95f08df37,Krekeri integralni,Ugljeni hidrati,420,10.0,68.0,12.0,g,1,30,true,true,false,false,true,🥨,NULL,2026-04-28 10:24:12.606892+00
+b85c5931-c267-41c2-b89e-9b836e06dcf5,Krekeri rižani,Ugljeni hidrati,387,8.0,82.0,3.0,g,1,15,true,true,true,true,true,🍘,NULL,2026-04-28 10:24:12.606892+00
+dab7139a-a55d-4c70-a7c5-fb1370a6d60b,Krem čorba od povrća,Gotova jela,75,2.5,9.0,3.5,g,1,250,true,true,true,true,true,🍲,NULL,2026-04-28 10:24:12.606892+00
+dea4bfc9-853d-41e8-9bff-497af7b71c10,Krem sir ABC,Jaja i mleko,234,6.1,3,22,g,1,30,true,false,true,false,false,🧀,NULL,2026-10-09 17:19:20.819071+00
+78d7312c-59be-47aa-a372-637873341bed,Krem sir Moja Kravica,Jaja i mleko,185,5,3,17,g,1,30,true,false,true,false,false,🧀,NULL,2026-10-09 17:19:20.819071+00
+92752c82-c852-49f9-990d-8254bccc0697,Kremni sir (Philadelphia),Jaja i mleko,342,5.9,4.1,34.0,g,1,30,true,false,true,false,false,🧀,NULL,2026-04-28 10:24:12.606892+00
+ebb65ad2-2bcc-4e05-a695-60d746a2df2c,Krempita,Slatkiši,290,4.5,32.0,16.0,g,1,150,true,false,false,false,false,🍰,NULL,2026-04-28 10:24:12.606892+00
+6a3c03cb-59d9-406d-9b44-92f356d78926,Krilca pohovana,Brza hrana,290,18.0,15.0,18.0,g,1,150,true,false,false,false,false,🍗,NULL,2026-04-28 10:24:12.606892+00
+110d47e1-a136-499b-bec3-36e799ba9682,Kroasan,Pekarski,406,8.2,45.8,21.0,g,1,60,true,false,false,false,false,🥐,NULL,2026-04-28 10:24:12.606892+00
+a6de7b76-8f02-41fc-b414-e94738478400,Kroasan 7Days sa kakao kremom,Pekarski,453,6,43,28,kom,60,60,true,false,false,false,false,🥐,NULL,2026-10-10 07:18:40.217049+00
+e2949a94-cea0-4fd7-a3a1-0610be8ed855,Kroasan sa čokoladom,Pekarski,449,8.0,46.0,25.0,g,1,70,true,false,false,false,false,🥐,NULL,2026-04-28 10:24:12.606892+00
+38841363-4930-42b3-be79-b0e40e013589,Krofna,Pekarski,420,7.0,52.0,21.0,g,1,70,true,false,false,false,false,🍩,NULL,2026-04-28 10:24:12.606892+00
+0c9e57c5-f43c-48ba-92c4-233a800c03d3,Krompir (sirov),Povrće,77,2.1,17.5,0.1,g,1,150,true,true,true,true,true,🥔,NULL,2026-10-09 17:19:20.819071+00
+04ac3ae1-67df-4449-bf23-00678e5a0415,Krompir kuvan,Povrće,87,1.9,20.1,0.1,g,1,150,true,true,true,true,true,🥔,NULL,2026-04-28 10:24:12.606892+00
+83ebde36-d03d-498f-b659-7e1a70f32885,Krompir mladi,Povrće,70,1.7,15.7,0.1,g,1,150,true,true,true,true,true,🥔,NULL,2026-04-28 10:24:12.606892+00
+074be585-5704-4f1e-b1a0-95cde527c7c9,Krompir pečen,Povrće,93,2.5,21.1,0.1,g,1,150,true,true,true,true,true,🥔,NULL,2026-04-28 10:24:12.606892+00
+da0e3965-b2e3-4bb8-9463-74c7dac24033,Kruška,Voće,57,0.4,15.2,0.1,kom,178,178,true,true,true,true,true,🍐,NULL,2026-04-28 10:24:12.606892+00
+b8fab72b-33e6-447c-b5a2-14ede458d682,Ksilitol,Slatkiši,240,0.0,99.8,0.0,g,1,5,true,true,true,true,true,🍬,NULL,2026-04-28 10:24:12.606892+00
+32264b59-5b65-406f-b0f3-9d9be7308276,Kuglof mramorni,Slatkiši,446,6.6,55,22.5,g,1,60,true,false,false,false,false,🧁,NULL,2026-10-09 17:19:20.819071+00
+7bc05f61-3037-473a-81c8-66d5d278e4ac,Kukuruz šećerac (kuvan),Povrće,96,3.4,21,1.5,kom,103,103,true,true,true,true,true,🌽,NULL,2026-10-09 17:19:20.819071+00
+16c0e335-3295-4010-ab83-981908807a45,Kukuruz test,Brza hrana,1,1,1,1,g,1,100,false,false,false,false,true,🌽,55d9c686-f014-41d3-a4af-f2c256d8df92,2026-07-31 16:05:33.452924+00
+a1d26963-1581-437f-8be0-e1630df846ba,"Kukuruzni griz (palenta, suv)",Ugljeni hidrati,336,6.4,72,1.3,g,1,60,true,true,true,true,true,🌽,NULL,2026-10-09 17:19:20.819071+00
+5b5046e5-e591-4b61-b735-d07b8cbaf0f0,Kukuruzno brašno,Ugljeni hidrati,361,6.9,76.9,3.9,g,1,50,true,true,true,true,true,🌽,NULL,2026-04-28 10:24:12.606892+00
+e633d782-00d5-4d68-917d-8e169e187461,Kukuruzno ulje,Masnoće i ulja,900,0,0,100,g,1,10,true,true,true,true,true,🫗,NULL,2026-10-09 17:19:20.819071+00
+f7dc4e0d-e899-4c80-8d1b-2c11cbe1805a,Kulen,Meso,375,22.0,1.5,32.0,g,1,40,true,false,true,false,false,🍖,NULL,2026-04-28 10:24:12.606892+00
+4d9784be-e88b-44e1-a0e8-0e9aa39730ed,Kupine,Voće,43,1.4,9.6,0.5,g,1,100,true,true,true,true,true,🫐,NULL,2026-04-28 10:24:12.606892+00
+12f89e6f-3d34-40d0-8bd0-ec8ca3c7e234,Kupus,Povrće,25,1.3,5.8,0.1,g,1,100,true,true,true,true,true,🥬,NULL,2026-04-28 10:24:12.606892+00
+7c3b660c-66d4-4cfd-82ba-653a47e9c04c,Kupus (kuvan),Povrće,23,1.3,5.5,0.1,g,1,100,true,true,true,true,true,🥬,NULL,2026-10-09 17:19:20.819071+00
+b53a71e1-249d-435d-9d09-a144915c7aaa,Kurkuma,Začini i dodaci,354,7.8,64.9,9.9,g,1,2,true,true,true,true,true,🫚,NULL,2026-04-28 10:24:12.606892+00
+c7004872-715a-4d40-96ed-5d4890a5e56b,Kuskus (kuvan),Ugljeni hidrati,112,3.8,23.2,0.2,g,1,150,true,true,false,true,true,🌾,NULL,2026-04-28 10:24:12.606892+00
+006cf253-95b7-465d-a60e-a7bd771885a8,Kuskus (suv),Ugljeni hidrati,376,12.8,77.4,0.6,g,1,60,true,true,false,true,true,🌾,NULL,2026-10-09 17:19:20.819071+00
+cbb89963-08b2-4be5-ae74-75873b287db7,Kvasac (suvi),Začini i dodaci,295,40.0,41.0,7.6,g,1,5,true,true,true,true,true,🍞,NULL,2026-04-28 10:24:12.606892+00
+c5da5430-a9cd-48b3-ba99-2b668c81e553,Kvass,Pića,27,0.2,5.0,0.0,ml,1,250,true,true,false,false,true,🥤,NULL,2026-04-28 10:24:12.606892+00
+7f0023bc-3256-4b20-9b82-d0c2e3843779,L-karnitin,Suplementi,0,0.0,0.0,0.0,g,1,3,true,true,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+21c7cb31-3416-4996-9e69-06c3c527d043,Lanene semenke,Orašasti plodovi,534,18.3,28.9,42.2,g,1,15,true,true,true,true,true,🌰,NULL,2026-04-28 10:24:12.606892+00
+0db0d696-a4bf-4ab1-a259-6cfcd315a3bb,Laneno ulje,Masnoće i ulja,884,0.0,0.0,100.0,g,1,10,true,true,true,true,true,🫗,NULL,2026-04-28 10:24:12.606892+00
+44b60398-d06a-4c41-be14-011576692f8b,Latte,Pića,55,3.2,5.0,2.6,ml,1,250,true,false,true,false,true,☕,NULL,2026-04-28 10:24:12.606892+00
+73e415a9-36d2-491a-9cf9-6e17d2a2d98f,Lazanje,Gotova jela,180,10.0,22.0,6.5,g,1,250,true,false,false,false,false,🍝,NULL,2026-04-28 10:24:12.606892+00
+9a097fbe-269a-4eb5-9774-52975685a661,Ledena salata (ajsberg),Povrće,14,0.9,3.0,0.1,g,1,50,true,true,true,true,true,🥬,NULL,2026-04-28 10:24:12.606892+00
+556b51fa-a4a6-47f1-80cc-94efc56c191e,Ledeni čaj,Pića,33,0.0,8.0,0.0,ml,1,330,true,true,true,true,false,🧃,NULL,2026-04-28 10:24:12.606892+00
+f3c81c22-4a25-463d-9600-1c69bf6c1eb0,Lepinja,Pekarski,280,9.0,55.0,2.5,g,1,100,true,false,false,false,false,🫓,NULL,2026-04-28 10:24:12.606892+00
+a35a7025-0796-4976-b34d-c8014e66527e,Lešnici,Orašasti plodovi,628,15.0,16.7,60.8,g,1,30,true,true,true,true,true,🌰,NULL,2026-04-28 10:24:12.606892+00
+ed13fccb-745b-41bf-9089-4f312cbb519b,Lešnici (pečeni),Orašasti plodovi,646,15,17.6,62.4,g,1,30,true,true,true,true,true,🌰,NULL,2026-10-09 17:19:20.819071+00
+54ae2e27-c682-438e-9a4e-3c81fca94b01,Lešnik karamela,Slatkiši,433,2.4,78.8,12.9,g,1,20,true,false,false,false,false,🍬,NULL,2026-10-09 17:19:20.819071+00
+313a1b08-65bc-4819-a3ce-7ffeff1af646,Liči,Voće,66,0.8,16.5,0.4,g,1,100,true,true,true,true,true,🍒,NULL,2026-04-28 10:24:12.606892+00
+a3828b44-b629-4509-a950-757c84ce519f,Lignje,Riba,92,15.6,3.1,1.4,g,1,150,true,false,true,true,true,🦑,NULL,2026-04-28 10:24:12.606892+00
+a975d0b9-3844-4b4a-b2b5-237ca05c2d99,Lignje (pržene),Riba,175,17.9,7.8,7.5,g,1,150,true,false,false,true,false,🦑,NULL,2026-10-09 17:19:20.819071+00
+8478461e-b6ca-4468-ade8-ef5f8e67887a,Lignje pohovane (pržene),Riba,301,10.8,28.8,15.6,g,1,150,true,false,false,false,false,🦑,NULL,2026-10-10 07:18:40.217049+00
+dc7726d3-491f-4503-9abd-c893f1f1456c,Liker (prosečan),Pića,300,0.0,30.0,0.0,ml,1,30,true,true,true,true,false,🥃,NULL,2026-04-28 10:24:12.606892+00
+5dee2d2f-482e-4571-ae53-3d77a5c90c82,Limeta,Voće,30,0.7,10.5,0.2,g,1,30,true,true,true,true,true,🍋,NULL,2026-04-28 10:24:12.606892+00
+1165c5e5-158a-429b-89bb-905800b3dab1,Limun,Voće,29,1.1,9.3,0.3,kom,58,58,true,true,true,true,true,🍋,NULL,2026-04-28 10:24:12.606892+00
+9685d50c-e579-419b-9a57-7019d2ffc5fe,Limunov sok,Začini i dodaci,22,0.4,6.9,0.2,g,1,15,true,true,true,true,true,🍋,NULL,2026-04-28 10:24:12.606892+00
+9183aaa9-7e42-4c04-96af-f62ac2b741d7,Limunova kora,Začini i dodaci,47,1.5,16.0,0.3,g,1,2,true,true,true,true,true,🍋,NULL,2026-04-28 10:24:12.606892+00
+4a030baf-fd24-4068-94f4-f3c6ab714d98,Lino lada,Slatkiši,521,7.7,55.5,28.5,g,1,20,true,false,true,false,false,🍫,NULL,2026-04-28 10:24:12.606892+00
+838eba0e-f649-4413-a68b-9e484293548c,Lisičarke,Povrće,38,1.5,6.9,0.5,g,1,100,true,true,true,true,true,🍄,NULL,2026-04-28 10:24:12.606892+00
+f9925b66-4746-4f62-af30-36b9bd3aca8d,"Lisnato testo (Maxi, smrznuto)",Pekarski,328,6.2,44.6,13.9,g,1,100,true,false,false,false,false,🥐,NULL,2026-10-10 07:18:40.217049+00
+ecb20086-c8ec-441e-91a6-93f1e1ea3f98,List (riba),Riba,86,18.4,0.0,1.2,g,1,150,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+fcbcdf8d-5c7a-474f-82a9-939889c5ca34,Ljuta papričica,Povrće,40,1.9,8.8,0.4,g,1,30,true,true,true,true,true,🌶️,NULL,2026-04-28 10:24:12.606892+00
+3d6747c3-0fdf-4892-ad50-deeaa2662d7f,Losos,Riba,208,20.0,0.0,13.0,g,1,150,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+fe4b5be0-9ef3-4009-bd6c-88567da7bee6,Losos dimljeni,Riba,117,18.3,0.0,4.3,g,1,50,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+ce8b56b7-6992-4479-bc27-7ba8f46ad2bc,Lovorov list,Začini i dodaci,313,7.6,75.0,8.4,g,1,1,true,true,true,true,true,🌿,NULL,2026-04-28 10:24:12.606892+00
+8e355906-9f66-4951-a2be-582d21cdcb66,Lubenica,Voće,30,0.6,7.6,0.2,g,1,250,true,true,true,true,true,🍉,NULL,2026-04-28 10:24:12.606892+00
+1f4da422-e625-433f-bee3-7db99e65db31,Luk beli,Povrće,149,6.4,33.1,0.5,g,1,5,true,true,true,true,true,🧄,NULL,2026-04-28 10:24:12.606892+00
+044f4e14-e5bc-4603-a441-0ef1d30cde7d,Luk crni,Povrće,40,1.1,9.3,0.1,kom,110,110,true,true,true,true,true,🧅,NULL,2026-04-28 10:24:12.606892+00
+eb1571e8-c627-40bd-9705-c2b45425f684,Luk crveni (ljubičasti),Povrće,44,0.9,9.9,0.1,kom,110,110,true,true,true,true,true,🧅,NULL,2026-10-09 17:19:20.819071+00
+f2ae760e-43f8-4ac7-9fbc-603a811a989f,Lutenica,Povrće,90,1.2,9.0,5.5,g,1,30,true,true,true,true,true,🫑,NULL,2026-04-28 10:24:12.606892+00
+11438d92-0852-419f-a29c-fe8f19624778,Macchiato,Pića,18,1.0,1.5,1.0,ml,1,60,true,false,true,false,true,☕,NULL,2026-04-28 10:24:12.606892+00
+2c3bca1f-8abd-4fef-8646-2a21b3cb5db5,Magnezijum,Suplementi,0,0.0,0.0,0.0,g,1,1,true,true,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+5d52484a-1a35-4f0d-9f87-8a901e5bfe34,Majonez,Začini i dodaci,680,1.0,0.6,75.0,g,1,15,true,false,true,false,false,🥫,NULL,2026-04-28 10:24:12.606892+00
+0ff068bc-fa9e-4adf-978e-4f21bfa57d15,Majonez light,Začini i dodaci,250,0.5,8.0,23.0,g,1,15,true,false,true,false,false,🥫,NULL,2026-04-28 10:24:12.606892+00
+cc3e35e9-64da-4810-90e4-6e4cd073b5c6,Majonez vegan,Začini i dodaci,594,0.5,2.0,65.0,g,1,15,true,true,true,true,true,🥫,NULL,2026-04-28 10:24:12.606892+00
+8576fc2b-8bed-40a0-936a-4891aa3678e1,Majoran sušen,Začini i dodaci,271,12.7,60.6,7,g,1,1,true,true,true,true,true,🌿,NULL,2026-10-10 07:18:40.217049+00
+e48fb709-5471-4d46-91a4-e7d90a5f8605,Makadamija,Orašasti plodovi,718,7.9,13.8,75.8,g,1,30,true,true,true,true,true,🌰,NULL,2026-04-28 10:24:12.606892+00
+6d7c66e8-cf39-43d7-b493-33c325dc166d,Makovo seme,Orašasti plodovi,525,17.9,28.1,41.6,g,1,15,true,true,true,true,true,🌰,NULL,2026-04-28 10:24:12.606892+00
+5ff77ab2-9214-4022-a6fd-22809d86e47c,Maline,Voće,52,1.2,11.9,0.7,g,1,100,true,true,true,true,true,🍓,NULL,2026-04-28 10:24:12.606892+00
+5d15867a-900c-44e0-8d08-94f4d5fbb263,Maltodekstrin (prah),Suplementi,380,0,95,0,g,1,30,true,true,true,true,true,💊,NULL,2026-06-14 20:09:44.99651+00
+06b76c33-04b0-4813-806f-c4df2301b184,Mandarina,Voće,53,0.8,13.3,0.3,kom,76,76,true,true,true,true,true,🍊,NULL,2026-04-28 10:24:12.606892+00
+ba5971b5-b4b3-4d37-a7a5-cbebaaeaab6f,Mango,Voće,60,0.8,15.0,0.4,g,1,150,true,true,true,true,true,🥭,NULL,2026-04-28 10:24:12.606892+00
+326601d1-c3cf-4d6e-9e8d-dd506c6925a1,Marakuja,Voće,97,2.2,23.4,0.7,g,1,100,true,true,true,true,true,🍎,NULL,2026-04-28 10:24:12.606892+00
+69502b08-1c66-4ea4-a59a-4889445b1888,Margarin,Masnoće i ulja,626,0.2,0.7,70.0,g,1,10,true,true,true,true,false,🧈,NULL,2026-04-28 10:24:12.606892+00
+444ac37f-e8be-4294-ac06-8510f4f1134d,Margarin namazni light (25% masti),Masnoće i ulja,225,0,0,25,g,1,10,true,true,true,true,false,🧈,NULL,2026-10-09 17:19:20.819071+00
+a6ed9da6-c087-4042-a152-8e8bb96d8bdf,Margarin stoni (82% masti),Masnoće i ulja,734,0,0,81.5,g,1,10,true,true,true,true,false,🧈,NULL,2026-10-09 17:19:20.819071+00
+f75795b5-0a12-4563-a3d8-b6abfe1a6800,Margarin test,Gotova jela,100,5,0,0,g,1,100,false,false,false,false,true,🧈,fe6f5f4c-e96f-4d05-9e53-0d3b1ed6c5df,2026-08-12 18:51:35.007028+00
+7ea22544-14e4-4f04-95b0-79b3b8a20784,Marmelada od jagode,Slatkiši,250,0.4,62.0,0.1,g,1,20,true,true,true,true,false,🫙,NULL,2026-04-28 10:24:12.606892+00
+f1f34c6c-5fa2-42be-9691-c2c020f3674d,Marmelada od kajsije,Slatkiši,250,0.5,62.0,0.1,g,1,20,true,true,true,true,false,🫙,NULL,2026-04-28 10:24:12.606892+00
+ab7b7ee7-4912-4349-9d6d-2f60ed6bc5b3,Mascarpone,Jaja i mleko,453,4.8,4.8,46.0,g,1,30,true,false,true,false,false,🧀,NULL,2026-04-28 10:24:12.606892+00
+3db25fa9-407d-44fb-b1bb-32a8b1f44c14,Masdamer,Jaja i mleko,361,26.5,0.1,28,g,1,30,true,false,true,false,true,🧀,NULL,2026-10-10 07:18:40.217049+00
+3ecddde7-5530-4de0-9a8f-55b364887086,Maslac,Masnoće i ulja,717,0.9,0.1,81.0,g,1,10,true,false,true,false,true,🧈,NULL,2026-04-28 10:24:12.606892+00
+fb34a71d-f137-4099-a101-86a93f002528,Maslinke crne,Povrće,115,0.8,6.3,10.7,g,1,30,true,true,true,true,true,🫒,NULL,2026-04-28 10:24:12.606892+00
+fdf08835-d8e2-44e0-a37b-ed65f6d47600,Maslinke zelene,Povrće,145,1.0,3.8,15.3,g,1,30,true,true,true,true,true,🫒,NULL,2026-04-28 10:24:12.606892+00
+806333d1-12c2-4ac4-84e0-a364b0c660aa,Maslinovo ulje (extra virgin),Masnoće i ulja,884,0.0,0.0,100.0,g,1,10,true,true,true,true,true,🫒,NULL,2026-04-28 10:24:12.606892+00
+7a3e6b31-0527-4728-8bf1-fc17fd76370f,Mass gainer (prah),Suplementi,380,30.0,55.0,5.0,g,1,100,true,false,true,false,true,🥤,NULL,2026-04-28 10:24:12.606892+00
+c4215b9a-a2db-43da-9b99-a0f16bd3c3e2,Mast svinjska,Masnoće i ulja,902,0.0,0.0,100.0,g,1,10,true,false,true,false,false,🧈,NULL,2026-04-28 10:24:12.606892+00
+ce0ad1af-fa17-4ee6-8536-3f6a33d1faea,Matcha čaj (sa vodom),Pića,3,0.5,0.0,0.0,ml,1,250,true,true,true,true,true,🍵,NULL,2026-04-28 10:24:12.606892+00
+17f6b8fa-775b-4322-a192-f59270da8fcd,Matovilac,Povrće,21,2,3.6,0.4,g,1,50,true,true,true,true,true,🥬,NULL,2026-10-10 07:18:40.217049+00
+38867a9e-a745-4a1b-bf32-9af644e4351d,McChicken,Brza hrana,235,11.0,22.0,11.5,g,1,160,true,false,false,false,false,🍔,NULL,2026-04-28 10:24:12.606892+00
+d54acc8e-d385-41d1-8b5f-79179cc9a29d,MCT ulje,Masnoće i ulja,855,0.0,0.0,100.0,g,1,10,true,true,true,true,true,🫗,NULL,2026-04-28 10:24:12.606892+00
+a5195cff-792d-43b4-8f4d-bb5021f7e55e,Med,Slatkiši,304,0.3,82.4,0.0,g,1,20,true,true,true,true,true,🍯,NULL,2026-04-28 10:24:12.606892+00
+36109ccb-f4bd-4479-8394-5aa868c19981,Med bagremov,Slatkiši,304,0.3,82.4,0.0,g,1,20,true,true,true,true,true,🍯,NULL,2026-04-28 10:24:12.606892+00
+7932ae6e-42a5-4926-9d92-22493fd1489c,Med od livadskog cveća,Slatkiši,304,0.3,82.4,0.0,g,1,20,true,true,true,true,true,🍯,NULL,2026-04-28 10:24:12.606892+00
+99cacc14-f9c4-4520-ab84-092fac45bd86,Medeno srce,Slatkiši,370,5.7,66.1,8.5,g,1,30,true,false,false,true,false,🍪,NULL,2026-10-09 17:19:20.819071+00
+4ccc8fad-6849-4a67-b907-fd342cadc452,Mentol bombone,Slatkiši,392,0,98,0,g,1,20,true,true,false,true,false,🍬,NULL,2026-10-09 17:19:20.819071+00
+c1264f5c-940d-409a-9795-801f38379331,Mesni narezak,Meso,191,14,2.6,14,g,1,50,true,false,false,false,false,🥫,NULL,2026-10-09 17:19:20.819071+00
+3bc7fb5f-8af4-4501-9364-76c14bf19e7b,Mileram 22% mm,Jaja i mleko,222,2.2,3.5,22,g,1,30,true,false,true,false,true,🥛,NULL,2026-10-09 17:19:20.819071+00
+10ceef33-c8ea-48fd-8d53-9bdf5ecc7315,Mineralna voda,Pića,0,0.0,0.0,0.0,ml,1,250,true,true,true,true,true,💧,NULL,2026-04-28 10:24:12.606892+00
+efb1964d-923d-45fd-b43f-cd409f7984f4,Mineralna voda gazirana,Pića,0,0.0,0.0,0.0,ml,1,250,true,true,true,true,true,💧,NULL,2026-04-28 10:24:12.606892+00
+3651f095-53c3-43c7-90dd-ad3e110b903f,Minjoni,Slatkiši,396,5.8,69.1,10.7,g,1,30,true,false,false,false,false,🧁,NULL,2026-10-09 17:19:20.819071+00
+8fd192d8-7d14-4336-8658-3f12c9185a64,Mirinda,Pića,44,0,11.3,0,ml,1,330,true,true,true,true,false,🥤,NULL,2026-10-10 07:18:40.217049+00
+7ee36b01-d209-410d-bf30-53d0445d1262,Mirođija,Povrće,43,3.5,7.0,1.1,g,1,15,true,true,true,true,true,🌿,NULL,2026-04-28 10:24:12.606892+00
+d3cf7f2a-7752-4f17-89a2-9cf8df2a738a,Mirođija sušena,Začini i dodaci,253,20,55.8,4.4,g,1,1,true,true,true,true,true,🌿,NULL,2026-10-09 17:19:20.819071+00
+17f223fa-d9af-4bb2-b26c-f1e0f21bd552,Mlaćenica,Jaja i mleko,40,3.3,4.8,1.1,ml,1,200,true,false,true,false,true,🥛,NULL,2026-10-09 17:19:20.819071+00
+f8dc80ac-d9f6-4f48-9563-7d892c9fc0c9,Mladi luk,Povrće,32,1.8,7.3,0.2,g,1,30,true,true,true,true,true,🧅,NULL,2026-04-28 10:24:12.606892+00
+9b0c0728-26ce-4621-896b-8c7c39297f20,Mladi sir,Jaja i mleko,174,18.0,2.5,10.5,g,1,40,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+240cb407-09d7-4d9a-be00-275343c23e5a,Mleko 0.5% mm,Jaja i mleko,35,3,4.5,0.5,ml,1,200,true,false,true,false,true,🥛,NULL,2026-10-09 17:19:20.819071+00
+ec4a70a6-61c8-4426-8385-db86db49e4fd,Mleko 1.5% mm,Jaja i mleko,42,3.4,4.8,1.5,ml,1,200,true,false,true,false,true,🥛,NULL,2026-04-28 10:24:12.606892+00
+e0f8754e-3251-488d-9e0c-c33fea4be7b0,Mleko 2.8% mm,Jaja i mleko,50,3.3,4.7,2.8,ml,1,200,true,false,true,false,true,🥛,NULL,2026-04-28 10:24:12.606892+00
+bb5e0799-7fff-44c4-83fe-c8d888b5bbbb,Mleko 2% mm,Jaja i mleko,48,3,4.5,2,ml,1,200,true,false,true,false,true,🥛,NULL,2026-10-09 17:19:20.819071+00
+2c7df398-4ef8-42d7-b254-59080c3508b0,Mleko 3.2% mm,Jaja i mleko,61,3.2,4.8,3.2,ml,1,200,true,false,true,false,true,🥛,NULL,2026-04-28 10:24:12.606892+00
+ff281bb6-1bde-46cf-b8c0-60d389d63e03,Mleko 3.5% mm,Jaja i mleko,62,3.1,4.5,3.5,ml,1,200,true,false,true,false,true,🥛,NULL,2026-10-09 17:19:20.819071+00
+0ee05ee5-0bc6-437e-9394-f4a7cdbc7476,Mleko bez laktoze 1.5%,Jaja i mleko,42,3.4,4.8,1.5,ml,1,200,true,false,true,false,true,🥛,NULL,2026-04-28 10:24:12.606892+00
+e67d4664-a9e6-4bfd-8716-47b8d029d4cc,Mleko proteinsko 0.5% mm,Jaja i mleko,43,6,3.7,0.5,ml,1,250,true,false,true,false,true,🥛,NULL,2026-10-09 17:19:20.819071+00
+3f0d7df3-7132-49d1-af0e-7559c98c79c0,Mleko u prahu (punomasno),Jaja i mleko,496,26.3,38.4,26.7,g,1,25,true,false,true,false,true,🥛,NULL,2026-10-10 07:18:40.217049+00
+2dc20677-2d05-45a0-bde6-13d33bda81b0,"Mleveno mešano meso (svinjsko-juneće, 16% mm)",Meso,202,17,1.4,15.7,g,1,150,true,false,true,false,true,🥩,NULL,2026-10-09 17:19:20.819071+00
+c029dfe1-5efa-44b3-9084-31e679ebc135,Mocarela,Jaja i mleko,280,22.2,2.2,22.4,g,1,30,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+755573d1-510e-4022-96a0-5dbd7d7b76bc,Mocarela buffalo,Jaja i mleko,288,17.0,0.9,24.4,g,1,30,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+9daac8a1-ae1a-41f9-91c7-7b0895d5abf3,Mocarela light,Jaja i mleko,150,24.0,2.2,6.0,g,1,30,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+26ff0ced-71b3-4fa6-a5c9-2b7a6070f616,Monte,Slatkiši,195,2.8,15.9,13.3,g,1,100,true,false,true,false,false,🍮,NULL,2026-10-10 07:18:40.217049+00
+d5e64e8f-d0c3-4aaa-8505-b23f17d7885a,Mortadela,Meso,311,16.4,3.0,25.4,g,1,30,true,false,true,false,false,🍖,NULL,2026-04-28 10:24:12.606892+00
+a913280b-4a19-4c8a-9c12-8ad5b0f5d93e,Multivitamin,Suplementi,0,0.0,0.0,0.0,g,1,1,true,true,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+5d5f3650-2f16-4263-a85d-ce59c57e84d7,Munchmallow,Slatkiši,416,4.3,61,17,g,1,35,true,false,false,false,false,🍫,NULL,2026-10-09 17:19:20.819071+00
+2b8d9d96-b79e-4fe1-a919-b2f018a2c1f6,Musaka,Gotova jela,160,7.5,12.0,9.0,g,1,250,true,false,true,false,false,🍲,NULL,2026-04-28 10:24:12.606892+00
+492d70c8-fb1f-420f-b199-8f27d28644a1,Muskatni oraščić,Začini i dodaci,525,5.8,49.3,36.3,g,1,1,true,true,true,true,true,🌿,NULL,2026-04-28 10:24:12.606892+00
+4edc4cd0-368e-4d83-a79d-ff884c521ce8,Müsli (bez šećera),Ugljeni hidrati,367,10.0,60.0,8.0,g,1,50,true,true,false,true,true,🥣,NULL,2026-04-28 10:24:12.606892+00
+f569c3c8-5397-4aee-927a-428cb5c5fbde,Müsli sa čokoladom,Ugljeni hidrati,440,8.0,65.0,15.0,g,1,50,true,true,false,false,false,🥣,NULL,2026-04-28 10:24:12.606892+00
+a0da2213-d164-4190-83d2-6537beed072f,Mušmula,Voće,47,0.4,12.1,0.2,g,1,100,true,true,true,true,true,🍎,NULL,2026-04-28 10:24:12.606892+00
+e40145fc-213e-4341-8416-399a10c8eff5,Mušule,Riba,86,11.9,3.7,2.2,g,1,100,true,false,true,true,true,🦪,NULL,2026-04-28 10:24:12.606892+00
+cfc72ffc-ce17-4191-8f16-8eed686a080e,Namaz a la kajmak,Jaja i mleko,240,6.1,1.1,23.5,g,1,30,true,false,true,false,false,🧀,NULL,2026-10-09 17:19:20.819071+00
+02dde7d4-dfb0-40a2-bbac-a2a8493240ec,Nana sušena (klasasta),Začini i dodaci,285,19.9,52,6,g,1,1,true,true,true,true,true,🌿,NULL,2026-10-10 07:18:40.217049+00
+60fedafe-4fd8-46b3-ac9b-b549c5ee0173,Nana sveža (klasasta),Povrće,44,3.3,8.4,0.7,g,1,5,true,true,true,true,true,🌿,NULL,2026-10-10 07:18:40.217049+00
+8cdb91e4-aa4e-4c09-8679-0f134d9cbd80,Napolitanke Kraš (čokoladni krem),Slatkiši,514,5,57,29,g,1,30,true,true,false,true,false,🍪,NULL,2026-10-10 07:18:40.217049+00
+c0e58665-3ecd-40b5-98b7-f85473aa1468,Napolitanke Štark,Slatkiši,539,4,60,31,g,1,30,true,true,false,true,false,🍪,NULL,2026-10-09 17:19:20.819071+00
+db990fa6-835b-4e2a-bbc3-84999ac8c06d,Nar,Voće,83,1.7,18.7,1.2,g,1,100,true,true,true,true,true,🍎,NULL,2026-04-28 10:24:12.606892+00
+fca9812a-dac2-4d72-a3a1-93115c5c2875,Negro bombone,Slatkiši,390,1,95.5,1,g,1,20,true,false,true,false,false,🍬,NULL,2026-10-09 17:19:20.819071+00
+46d9248a-a5f7-4e68-8b60-8ded08ac737b,Nektar od višnje,Pića,57,0.3,13.5,0,ml,1,200,true,true,true,true,false,🧃,NULL,2026-10-09 17:19:20.819071+00
+a93085dd-28ec-4a39-b8f4-b5a1149df30f,Nektarina,Voće,44,1.1,10.6,0.3,kom,142,142,true,true,true,true,true,🍑,NULL,2026-04-28 10:24:12.606892+00
+8d8b48e9-84c6-49c1-8376-bd1e19a13350,Nescafé 3u1 (prah),Pića,433,1.3,75,13.6,kom,15.5,15.5,true,false,true,false,false,☕,NULL,2026-10-10 07:18:40.217049+00
+65cae9e9-946e-4f70-96ba-d84d2b73be3e,Nescafé Cappuccino (prah),Pića,399,8.7,67.1,9.5,kom,13.5,13.5,true,false,true,false,false,☕,NULL,2026-10-10 07:18:40.217049+00
+004f7bc4-c831-470b-ad27-731f56d18ba7,Nesquik (prah),Pića,383,5,80,3.3,g,1,15,true,false,true,true,false,☕,NULL,2026-10-10 07:18:40.217049+00
+b149f76f-0207-4423-b9bb-d0f0ad497c1d,Njoke (krompir),Ugljeni hidrati,131,2.7,28.0,1.0,g,1,150,true,true,false,false,true,🍝,NULL,2026-04-28 10:24:12.606892+00
+42f922b7-9107-4abf-847d-9c930f90a7bb,Noblice,Slatkiši,494,6,69,22,g,1,30,true,false,false,false,false,🍪,NULL,2026-10-09 17:19:20.819071+00
+94b4d3ce-cd03-4495-8109-d29880fa5dde,Nutella,Slatkiši,539,6.3,57.5,30.9,g,1,20,true,false,true,false,false,🍫,NULL,2026-04-28 10:24:12.606892+00
+993e2510-c48e-4d7d-8124-bfb8fe00a692,Nutritivni kvasac,Začini i dodaci,325,45.0,36.0,5.0,g,1,10,true,true,true,true,true,🧂,NULL,2026-04-28 10:24:12.606892+00
+ace23c36-e22c-478b-867f-6026a5d8e42a,O la la tortica (kakao),Slatkiši,465,4.7,58.5,22.6,kom,35,35,true,false,false,false,false,🍰,NULL,2026-10-09 17:19:20.819071+00
+16b163f9-1821-40df-ae34-75def7ff0e36,Ogrozd,Voće,44,0.9,10.2,0.6,g,1,100,true,true,true,true,true,🫐,NULL,2026-04-28 10:24:12.606892+00
+d6d42a53-cca2-4711-a7a3-c4cd7701e951,Omega 3 (riblje ulje),Suplementi,902,0.0,0.0,100.0,g,1,1,true,false,true,false,true,💊,NULL,2026-04-28 10:24:12.606892+00
+141c5b0a-abe8-489a-bf97-5ddde7597cbe,Omega 3 vegan (algalno ulje),Suplementi,902,0.0,0.0,100.0,g,1,1,true,true,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+1f8ba488-6c0a-4c0c-a728-ebd8693a9079,Omlet,Jaja i mleko,154,10.6,0.6,11.7,g,1,120,true,false,true,false,true,🍳,NULL,2026-10-09 17:19:20.819071+00
+de2699ca-62b1-421b-9d69-eca436bf31e1,Orada,Riba,96,19.8,0.0,1.8,g,1,150,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+3d5a0b3a-564b-423d-bb8d-5befddbb2283,Orasi,Orašasti plodovi,654,15.2,13.7,65.2,g,1,30,true,true,true,true,true,🌰,NULL,2026-04-28 10:24:12.606892+00
+63997072-a8be-41b7-8e9f-9d6e112cf665,Origano sušen,Začini i dodaci,265,9.0,68.9,4.3,g,1,1,true,true,true,true,true,🌿,NULL,2026-04-28 10:24:12.606892+00
+3b6802c2-f68d-45d8-ad90-ff9f33acd4a7,Oslić,Riba,88,18.3,0.0,1.3,g,1,150,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+65d90ca4-af04-40a3-8316-59a24017daff,Oslić (pečen),Riba,116,23.5,0,1.7,g,1,150,true,false,true,true,true,🐟,NULL,2026-10-09 17:19:20.819071+00
+bd6468d7-869e-4eec-8f85-b0e71015a690,"Oslić (pohovan, pržen)",Riba,233,15.8,11.7,13.2,g,1,150,true,false,false,false,false,🐟,NULL,2026-10-09 17:19:20.819071+00
+275794bf-e3d8-490c-8017-ab6515c20c74,Ostrige,Riba,68,7.0,3.9,2.5,g,1,100,true,false,true,true,true,🦪,NULL,2026-04-28 10:24:12.606892+00
+71016c7b-0e44-42a9-9cc6-7561db35cfea,Ovčetina,Meso,294,25.6,0.0,21.0,g,1,150,true,false,true,false,false,🥩,NULL,2026-04-28 10:24:12.606892+00
+7a949ac1-3afd-43f2-b813-1a819f4edb2f,Ovčije kiselo mleko,Jaja i mleko,95,6,4.3,6,g,1,180,true,false,true,false,true,🥛,NULL,2026-10-09 17:19:20.819071+00
+531959f7-c2d4-48f0-93c4-85fb1812f4f6,Ovsena kaša (kuvana sa vodom),Ugljeni hidrati,71,2.5,12.0,1.5,g,1,250,true,true,false,true,true,🥣,NULL,2026-04-28 10:24:12.606892+00
+ffce25d8-6c3e-4a76-9f54-c42c1bbefc47,Ovsene mekinje,Ugljeni hidrati,246,17.3,66.2,7.0,g,1,30,true,true,false,true,true,🌾,NULL,2026-04-28 10:24:12.606892+00
+7caf8645-a3d0-4bd3-8368-6c7606d52a2c,Ovsene pahuljice,Ugljeni hidrati,389,16.9,66.3,6.9,g,1,50,true,true,false,true,true,🥣,NULL,2026-04-28 10:24:12.606892+00
+9a03ada6-8d27-4983-96eb-78be4d74719f,Ovsene pahuljice (instant),Ugljeni hidrati,375,12.0,67.0,7.0,g,1,40,true,true,false,true,true,🥣,NULL,2026-04-28 10:24:12.606892+00
+bb91f990-ee1c-4adf-a64a-f69ad7b8f5e9,Ovseno brašno,Ugljeni hidrati,404,14.7,65.7,9.1,g,1,30,true,true,false,true,true,🌾,NULL,2026-10-10 07:18:40.217049+00
+a20e07b1-bfd3-4c7e-ad03-9ca2a70ed60c,Ovseno mleko,Jaja i mleko,46,1.0,7.0,1.5,ml,1,200,true,true,false,true,true,🥛,NULL,2026-04-28 10:24:12.606892+00
+be05042e-4ae7-4d39-a119-0fb10bf39c9e,"Pačetina (pečena, sa kožom)",Meso,337,19,0,28.4,g,1,150,true,false,true,false,false,🍗,NULL,2026-10-09 17:19:20.819071+00
+8ec787ac-adf4-4f12-a0a9-fba50d91bcf6,Padobranci,Slatkiši,472,5.3,53.6,26.3,g,1,30,true,false,false,false,false,🧁,NULL,2026-10-09 17:19:20.819071+00
+a0d34b0b-75b8-482f-a0ab-ac16f427c2e1,Palačinka (sama),Pekarski,224,6.4,33.5,7.0,g,1,60,true,false,false,false,false,🥞,NULL,2026-04-28 10:24:12.606892+00
+e5a3b084-edf0-4137-9138-a82f59b3a2ee,Papaja,Voće,43,0.5,10.8,0.3,g,1,150,true,true,true,true,true,🥭,NULL,2026-04-28 10:24:12.606892+00
+b4192dde-061e-4ee8-9b57-fc4044574c3a,Paprika babura,Povrće,28,1.0,5.5,0.3,kom,119,119,true,true,true,true,true,🫑,NULL,2026-04-28 10:24:12.606892+00
+7be6aec3-4ff0-4b1e-a469-0eb781b58505,Paprika crvena,Povrće,31,1.0,6.0,0.3,kom,119,119,true,true,true,true,true,🫑,NULL,2026-04-28 10:24:12.606892+00
+8ed61007-256d-4831-a32c-9077a74be4b9,"Paprika fileti (kisela, u tegli)",Povrće,18,1.4,2.9,0.1,g,1,100,true,true,true,true,true,🫙,NULL,2026-10-09 17:19:20.819071+00
+d7a25c0e-358b-4afb-9e3e-13c5dd0066d3,Paprika zelena,Povrće,20,0.9,4.6,0.2,kom,119,119,true,true,true,true,true,🫑,NULL,2026-04-28 10:24:12.606892+00
+f0e25b6c-8627-4ddc-a725-c50b19ab190d,Paprika žuta,Povrće,27,1.0,6.3,0.2,kom,119,119,true,true,true,true,true,🫑,NULL,2026-04-28 10:24:12.606892+00
+ad618186-38c4-4748-97ae-1a08ac7c8c3e,Paradajz,Povrće,18,0.9,3.9,0.2,kom,123,123,true,true,true,true,true,🍅,NULL,2026-04-28 10:24:12.606892+00
+c93a0257-2409-4a9d-acde-11ceb71d9c2c,Paradajz pelat,Povrće,20,1.4,3.3,0.2,g,1,100,true,true,true,true,true,🍅,NULL,2026-10-09 17:19:20.819071+00
+b1041a18-8345-4559-910b-d00b885d41cc,Paradajz pire (koncentrat),Začini i dodaci,97,4.6,16,0.2,g,1,15,true,true,true,true,true,🍅,NULL,2026-10-09 17:19:20.819071+00
+c2468d72-6081-4774-8fe4-8a8fc5156dfd,Paradajz sos za testeninu Podravka (napoletana),Začini i dodaci,58,1.7,8.9,1.2,g,1,100,true,true,true,true,true,🥫,NULL,2026-10-09 17:19:20.819071+00
+ca9b242e-08b9-4179-9241-f3159eec01d8,Parizer,Meso,212,12,1.2,18,g,1,30,true,false,false,false,false,🍖,NULL,2026-10-09 17:19:20.819071+00
+7ed31ef5-13b2-460e-b5ed-884a486dc54d,Parmezan,Jaja i mleko,431,38.0,4.1,29.0,g,1,15,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+267a7371-007a-40bc-9864-c40916604a6e,Pasirani paradajz (pasata),Povrće,31,1.3,5.4,0.1,g,1,100,true,true,true,true,true,🍅,NULL,2026-10-09 17:19:20.819071+00
+55103ece-2e98-4fb2-b713-4cf4d10d31d3,Pasta bolonjeze,Gotova jela,170,9.0,22.0,5.5,g,1,250,true,false,false,false,false,🍝,NULL,2026-04-28 10:24:12.606892+00
+e311a414-3db8-4eca-bfde-c4bb109ab316,Pasta karbonara,Gotova jela,210,9.5,25.0,8.5,g,1,250,true,false,false,false,false,🍝,NULL,2026-04-28 10:24:12.606892+00
+7d3e0c5b-69af-4263-a132-9d029b973eaf,Pašteta sa šunkom,Meso,318,9.7,1.6,30,g,1,30,true,false,false,false,false,🥫,NULL,2026-10-09 17:19:20.819071+00
+d74d3900-a5f7-4440-b2d0-4fc8af86d6cb,"Paštete sa sirom (smrznute, nepečene)",Pekarski,334,5.8,32,20,g,1,100,true,false,false,false,false,🥐,NULL,2026-10-10 07:18:40.217049+00
+a8b53d07-d575-4c8e-9a04-776f116b8d02,Pastrmka,Riba,119,20.5,0.0,3.5,g,1,150,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+a02e0cec-1255-42ac-908e-2b87afca5b58,Pastrmka (dimljena),Riba,142,20.1,0,6.9,g,1,100,true,false,true,true,true,🐟,NULL,2026-10-09 17:19:20.819071+00
+2041a14f-61f3-4475-80d0-667ad29f83ea,Pastrmka (pečena),Riba,168,23.8,0,7.4,g,1,150,true,false,true,true,true,🐟,NULL,2026-10-09 17:19:20.819071+00
+93584a59-c4ec-4800-a60e-de9729abff70,Pastrnak,Povrće,75,1.2,18.0,0.3,g,1,100,true,true,true,true,true,🥕,NULL,2026-04-28 10:24:12.606892+00
+1397fbed-0ab8-4fa3-9e2b-e5553b974cf7,Pasulj beli (kuvan),Mahunarke,127,8.7,22.8,0.5,g,1,150,true,true,true,true,true,🫘,NULL,2026-04-28 10:24:12.606892+00
+4d9d6dfc-04cd-42a1-8557-9de122efec05,Pasulj beli (suv),Mahunarke,333,23.4,60.3,0.9,g,1,80,true,true,true,true,true,🫘,NULL,2026-10-09 17:19:20.819071+00
+b486e74f-c8e4-4c91-a9c9-7370b3c7c923,Pasulj crni (kuvan),Mahunarke,132,8.9,23.7,0.5,g,1,150,true,true,true,true,true,🫘,NULL,2026-04-28 10:24:12.606892+00
+e43a521a-30bb-4eba-a514-34fd1f56fbdd,Pasulj crveni (kuvan),Mahunarke,127,8.7,22.8,0.5,g,1,150,true,true,true,true,true,🫘,NULL,2026-04-28 10:24:12.606892+00
+ea1b052c-2601-4a67-8c43-1607cf26e6c3,Pasulj crveni (suv),Mahunarke,337,22.5,61.3,1.1,g,1,80,true,true,true,true,true,🫘,NULL,2026-10-09 17:19:20.819071+00
+1df323ca-4a8f-482a-8a16-e12e3cb68dc7,Pasulj prebranac,Gotova jela,140,6.0,18.0,4.5,g,1,250,true,true,true,true,true,🍲,NULL,2026-04-28 10:24:12.606892+00
+51ccb5ae-874e-4d1a-994e-5e623eff2b4a,Pasulj sa kobasicom,Gotova jela,180,8.5,17.0,8.5,g,1,250,true,false,true,false,false,🍲,NULL,2026-04-28 10:24:12.606892+00
+17c57e43-83e3-46eb-a91c-ffcf13a0f3fe,Pasulj sa slaninom Carnex (konzerva),Gotova jela,159,8.3,9.8,9.6,g,1,250,true,false,false,false,false,🍲,NULL,2026-10-09 17:19:20.819071+00
+4e1cf0d5-7017-41cc-a5d4-c2f6b364265e,Pasulj šareni (kuvan),Mahunarke,143,9.1,25.6,0.6,g,1,150,true,true,true,true,true,🫘,NULL,2026-04-28 10:24:12.606892+00
+15cfc303-667e-462d-ad9b-61ffd5404d96,Pasulj šareni (suv),Mahunarke,347,21.4,62.6,1.2,g,1,80,true,true,true,true,true,🫘,NULL,2026-10-10 07:18:40.217049+00
+f9bfa91e-70cd-48db-b7af-1d8c86f352b0,Pasulj tetovac (suv),Mahunarke,341,21.6,62.4,1.4,g,1,80,true,true,true,true,true,🫘,NULL,2026-10-10 07:18:40.217049+00
+c364a6b2-5e88-4b43-9604-5b7f891984bb,Pavlaka 12%,Jaja i mleko,130,3.0,3.5,12.0,g,1,30,true,false,true,false,true,🥛,NULL,2026-04-28 10:24:12.606892+00
+28eb60df-d433-4a7c-b423-5a5b5d3e3e97,Pavlaka 20%,Jaja i mleko,200,2.7,3.4,20.0,g,1,30,true,false,true,false,true,🥛,NULL,2026-04-28 10:24:12.606892+00
+234f5507-d135-47a3-89ad-4d0914255e00,Pavlaka za kuvanje 10% mm,Jaja i mleko,118,2.9,4.1,10,ml,1,50,true,false,true,false,true,🥫,NULL,2026-10-09 17:19:20.819071+00
+583026a4-cb46-4cb4-be1e-2989ab4fb648,Pavlaka za kuvanje 20% mm,Jaja i mleko,206,2.4,4.1,20,ml,1,50,true,false,true,false,true,🥫,NULL,2026-10-09 17:19:20.819071+00
+6a007be7-6acc-48b4-91dd-1472714a9299,Pečena paprika (u tegli),Povrće,37,1.4,7,0.3,g,1,100,true,true,true,true,true,🫑,NULL,2026-10-09 17:19:20.819071+00
+6826e9b6-ef3e-4c36-8159-e07916cb1231,Pečurke šampinjoni,Povrće,22,3.1,3.3,0.3,g,1,100,true,true,true,true,true,🍄,NULL,2026-04-28 10:24:12.606892+00
+234d5098-6dd3-449c-aa1e-902dea868f39,Pekan orah,Orašasti plodovi,691,9.2,13.9,72.0,g,1,30,true,true,true,true,true,🌰,NULL,2026-04-28 10:24:12.606892+00
+a45dbdbc-c848-4326-8522-3ecd795464c4,Pekarski kvasac (svež),Začini i dodaci,105,12.7,18.1,1.9,g,1,10,true,true,true,true,true,🍞,NULL,2026-04-28 10:24:12.606892+00
+15198b6b-5c2c-4558-9237-5fa992e8bc2a,Pekmez od šljiva,Slatkiši,260,0.4,64.0,0.1,g,1,20,true,true,true,true,false,🫙,NULL,2026-04-28 10:24:12.606892+00
+b9e3213f-8a15-488d-9d14-6fd3b33fef4b,Pepsi,Pića,41,0.0,10.4,0.0,ml,1,330,true,true,true,true,false,🥤,NULL,2026-04-28 10:24:12.606892+00
+4c026807-159d-42aa-bd17-a31fe366a8ee,Pepsi Max,Pića,0,0.1,0.1,0,ml,1,330,true,true,true,true,true,🥤,NULL,2026-10-10 07:18:40.217049+00
+3dee6969-2b80-448a-af2b-93fd64bc538d,Peršun koren,Povrće,55,2.9,11.0,0.6,g,1,50,true,true,true,true,true,🥕,NULL,2026-04-28 10:24:12.606892+00
+d2f99f26-f101-439d-8601-b61545c11df8,Peršun list,Povrće,36,3.0,6.3,0.8,g,1,15,true,true,true,true,true,🌿,NULL,2026-04-28 10:24:12.606892+00
+3797342f-0ac4-4078-9685-a06e57b33f20,Peršun sušen,Začini i dodaci,292,26.6,50.6,5.5,g,1,1,true,true,true,true,true,🌿,NULL,2026-10-09 17:19:20.819071+00
+30ea6953-1b40-46bc-81ed-d76c9e3db9cc,Pesto đenovesko,Povrće,418,4.4,5.8,42.5,g,1,20,true,false,true,false,true,🌿,NULL,2026-04-28 10:24:12.606892+00
+144d5be2-8ed3-49a1-992e-9932e8df449c,Petit beurre,Slatkiši,433,7.6,71.0,13.0,g,1,20,true,false,false,false,false,🍪,NULL,2026-04-28 10:24:12.606892+00
+d11ebd68-5b7c-404c-b356-ca4cf198b495,Pica kapričoza,Pekarski,287,12.5,30.0,13.0,g,1,200,true,false,false,false,false,🍕,NULL,2026-04-28 10:24:12.606892+00
+1ebfd046-bf32-4825-a207-0ed143045ae7,Pica margarita,Pekarski,266,11.0,33.0,10.0,g,1,200,true,false,false,false,false,🍕,NULL,2026-04-28 10:24:12.606892+00
+9b058414-eeea-40f4-9f28-74c28c7867e5,Pica peperoni,Pekarski,298,12.0,32.0,14.0,g,1,200,true,false,false,false,false,🍕,NULL,2026-04-28 10:24:12.606892+00
+49cdfca7-79a5-4454-b421-1aac0d679be3,Pica šunka,Meso,98,12,3.2,4.2,g,1,30,true,false,false,false,true,🍖,NULL,2026-10-09 17:19:20.819071+00
+815c80cd-dc0a-4584-9411-bf68274c1a05,Pileća džigerica,Meso,119,16.9,0.7,4.8,g,1,100,true,false,true,false,true,🍗,NULL,2026-04-28 10:24:12.606892+00
+75839cc9-d163-41f1-ac3c-19313ca985e2,Pileća džigerica (pržena),Meso,172,25.8,1.1,6.4,g,1,100,true,false,true,false,true,🍗,NULL,2026-10-09 17:19:20.819071+00
+d953bfea-49f3-4cd8-8ddb-a4cdc62eaf38,Pileća krilca,Meso,203,30.5,0.0,8.1,g,1,100,true,false,true,false,false,🍗,NULL,2026-04-28 10:24:12.606892+00
+2156273c-1a0f-4a07-ade6-cc73ba4834ce,"Pileća krilca (sa kožom, pečena)",Meso,254,23.8,0,16.9,g,1,100,true,false,true,false,false,🍗,NULL,2026-10-09 17:19:20.819071+00
+7d3c0e57-86eb-4ac6-a3ee-ded5230d15f7,Pileća pašteta,Meso,280,12.0,3.0,25.0,g,1,30,true,false,true,false,false,🥫,NULL,2026-04-28 10:24:12.606892+00
+7e55dcd5-411e-45a3-801e-54a10c03557c,Pileća prsa u konzervi,Meso,110,23,0,1.5,g,1,100,true,false,true,false,true,🥫,NULL,2026-06-14 20:09:44.99651+00
+19addd07-cba9-4d16-860a-380ea8b4f3a4,Pileća prsa u omotu,Meso,81,12.5,3.8,1.5,g,1,30,true,false,false,false,true,🍖,NULL,2026-10-09 17:19:20.819071+00
+15414612-ec81-4031-913b-55ae83a54d37,Pileća supa,Gotova jela,38,3.8,2.5,1.5,g,1,300,true,false,true,true,true,🍲,NULL,2026-04-28 10:24:12.606892+00
+a17778b9-9bb9-4e72-b364-4d5dc059d34b,Pileće belo meso (kuvano),Meso,165,31.0,0.0,3.6,g,1,150,true,false,true,false,true,🍗,NULL,2026-04-28 10:24:12.606892+00
+4cbaf056-6f56-455b-9732-9102a1e63cb3,Pileće belo meso (na žaru),Meso,151,30.5,0,3.2,g,1,150,true,false,true,false,true,🍗,NULL,2026-10-09 17:19:20.819071+00
+2ef07637-eff2-4d38-b5b9-ecd8fee44b66,Pileće belo meso (sirovo),Meso,120,22.5,0.0,2.6,g,1,150,true,false,true,false,true,🍗,NULL,2026-04-28 10:24:12.606892+00
+fd7ddf23-9e8d-4ccb-935f-eaa5c3d3ae31,Pileće srce (kuvano),Meso,185,26.4,0.1,7.9,g,1,100,true,false,true,false,true,🍗,NULL,2026-10-09 17:19:20.819071+00
+8ba7ce65-84eb-472e-9a33-e17ed609d425,Pileće srce (sirovo),Meso,153,15.6,0.7,9.3,g,1,100,true,false,true,false,true,🍗,NULL,2026-10-09 17:19:20.819071+00
+ccabbda6-c7a2-4159-b010-e1dd8e55aeb4,Pileće viršle,Meso,230,13.7,1.6,18.7,g,1,100,true,false,false,false,false,🌭,NULL,2026-10-09 17:19:20.819071+00
+33d08f0b-c801-4925-a8c7-1f6a5ee39d10,Pileći batak (bez kože),Meso,172,28.3,0.0,5.7,g,1,150,true,false,true,false,true,🍗,NULL,2026-04-28 10:24:12.606892+00
+b57ea473-a137-442c-a363-a70fda463938,Pileći batak (sa kožom),Meso,229,25.9,0.0,13.0,g,1,150,true,false,true,false,true,🍗,NULL,2026-04-28 10:24:12.606892+00
+5954fedb-fe87-4a09-bb2e-0768cd32c83c,"Pileći karabatak (bez kože, pečen)",Meso,179,24.8,0,8.2,g,1,150,true,false,true,false,true,🍗,NULL,2026-10-09 17:19:20.819071+00
+518a87c5-f0a0-4e73-92e5-4fad392e5748,"Pileći karabatak (bez kože, sirov)",Meso,121,19.7,0,4.1,g,1,150,true,false,true,false,true,🍗,NULL,2026-10-09 17:19:20.819071+00
+8a952092-db9c-4468-a652-ea337976e727,"Pileći karabatak (sa kožom, pečen)",Meso,232,23.3,0,14.7,g,1,150,true,false,true,false,true,🍗,NULL,2026-10-09 17:19:20.819071+00
+55ed9153-608d-4e0b-9993-3786cb262717,"Pileći karabatak (sa kožom, sirov)",Meso,221,16.5,0.3,16.6,g,1,150,true,false,true,false,true,🍗,NULL,2026-10-10 07:18:40.217049+00
+e44e3f4b-aab3-4850-adf5-52b8c66a66b4,Pileći nuggetsi,Brza hrana,296,15.0,18.0,18.0,g,1,150,true,false,false,false,false,🍗,NULL,2026-04-28 10:24:12.606892+00
+1c3dc9d3-4d5d-4434-b744-7bd72300c586,Pileći parizer,Meso,204,13,1.3,16,g,1,30,true,false,false,false,false,🍖,NULL,2026-10-09 17:19:20.819071+00
+080145b0-9581-4ef9-b132-8207f715a56b,Pileći vrat,Meso,297,14.0,0.0,27.0,g,1,100,true,false,true,false,false,🍗,NULL,2026-04-28 10:24:12.606892+00
+167c3b40-781f-405e-958a-d2cce0ab821f,Pileći želudac (kuvan),Meso,154,30.4,0,2.7,g,1,100,true,false,true,false,true,🍗,NULL,2026-10-09 17:19:20.819071+00
+656a9fb6-36a4-4c4a-bf65-084eb0cfb2ee,Pileći želudac (sirov),Meso,94,17.7,0,2.1,g,1,100,true,false,true,false,true,🍗,NULL,2026-10-09 17:19:20.819071+00
+600c0a76-d9f2-4440-9688-1ca943fa4fdb,Piletina mlevena,Meso,143,17.4,0,8.1,g,1,150,true,false,true,false,true,🍗,NULL,2026-10-09 17:19:20.819071+00
+45da00f8-6b33-4f47-a210-9a1ebdbd5cdd,Piment (najgvirc),Začini i dodaci,263,6.1,72.1,8.7,g,1,1,true,true,true,true,true,🌿,NULL,2026-10-10 07:18:40.217049+00
+aed376e9-c89f-4821-a127-e78c5260e0e2,Pinđur,Povrće,95,1.3,9.5,6.0,g,1,30,true,true,true,true,true,🫑,NULL,2026-04-28 10:24:12.606892+00
+d62403b8-3490-4ac0-861c-885de0610b3b,Pinjoli (pine nuts),Orašasti plodovi,673,13.7,13.1,68.4,g,1,15,true,true,true,true,true,🌰,NULL,2026-04-28 10:24:12.606892+00
+8ccaebba-24cc-46c7-8b59-1a12133749ec,Pire krompir (sa mlekom i puterom),Gotova jela,113,1.9,16.8,4.2,g,1,200,true,false,true,false,true,🥔,NULL,2026-10-09 17:19:20.819071+00
+95eac819-5adf-47a7-ad96-307433621359,Pirinač basmati (kuvan),Ugljeni hidrati,121,3.0,25.0,0.4,g,1,150,true,true,true,true,true,🍚,NULL,2026-04-28 10:24:12.606892+00
+03e0eafb-2cdb-4291-a2cf-870b76251ff0,Pirinač beli (kuvan),Ugljeni hidrati,130,2.7,28.0,0.3,g,1,150,true,true,true,true,true,🍚,NULL,2026-04-28 10:24:12.606892+00
+eb458da7-0217-4dc2-887c-5ec67b9ae900,Pirinač beli (suv),Ugljeni hidrati,365,7.1,80.0,0.7,g,1,50,true,true,true,true,true,🍚,NULL,2026-04-28 10:24:12.606892+00
+e92ca6a7-06b7-4c53-b378-2a4cb223815b,Pirinač crni (kuvan),Ugljeni hidrati,135,3.9,28.5,1.0,g,1,150,true,true,true,true,true,🍚,NULL,2026-04-28 10:24:12.606892+00
+3054b7fa-6051-405c-a0cc-065b9568a7ed,Pirinač integralni (kuvan),Ugljeni hidrati,112,2.6,23.0,0.9,g,1,150,true,true,true,true,true,🍚,NULL,2026-04-28 10:24:12.606892+00
+84247671-cbbf-4e4d-8e88-61eef34d49d1,Pirinač integralni (suv),Ugljeni hidrati,370,7.9,77.2,2.9,g,1,50,true,true,true,true,true,🍚,NULL,2026-04-28 10:24:12.606892+00
+abd2da2b-211a-4d69-8299-6df71be20c2f,Pirinač jasmin (kuvan),Ugljeni hidrati,129,2.9,28.2,0.2,g,1,150,true,true,true,true,true,🍚,NULL,2026-04-28 10:24:12.606892+00
+c8c74f61-e012-43e1-8a29-508a957b3023,Pirinčane mekinje,Ugljeni hidrati,316,13.4,49.7,20.8,g,1,15,true,true,true,true,true,🌾,NULL,2026-04-28 10:24:12.606892+00
+790376f1-ef2a-4705-bdbc-6c04fbb77471,Pirinčani protein (prah),Suplementi,380,80.0,7.0,3.0,g,1,30,true,true,true,true,true,🥤,NULL,2026-04-28 10:24:12.606892+00
+ffe59aea-e711-47c6-97c6-12859971287b,Pirinčani vafli,Ugljeni hidrati,387,8.0,82.0,3.0,g,1,15,true,true,true,true,true,🍘,NULL,2026-04-28 10:24:12.606892+00
+7e54e12c-b9aa-4a50-b3a0-8931da147e12,Pirinčano brašno,Ugljeni hidrati,366,6,80.1,1.4,g,1,30,true,true,true,true,true,🌾,NULL,2026-10-10 07:18:40.217049+00
+b93c59c9-bff3-4fd5-9484-9888fc9bbb6c,Pirinčano mleko,Jaja i mleko,47,0.3,9.2,1.0,ml,1,200,true,true,true,true,true,🥛,NULL,2026-04-28 10:24:12.606892+00
+348cc711-ccc6-44a9-b9b4-317cddbbb0a6,Piškote,Slatkiši,397,9,78,5,g,1,30,true,false,false,false,false,🍪,NULL,2026-10-09 17:19:20.819071+00
+4a258c6a-c706-409e-b833-6ed8d76badcd,Pistaći (bez ljuske),Orašasti plodovi,560,20.2,27.2,45.3,g,1,30,true,true,true,true,true,🌰,NULL,2026-04-28 10:24:12.606892+00
+4873ec23-b9cf-4588-bee7-cf10b4fd4cbc,"Pistaći (pečeni, slani, bez ljuske)",Orašasti plodovi,569,21,27.6,45.8,g,1,30,true,true,true,true,false,🌰,NULL,2026-10-09 17:19:20.819071+00
+b770501a-ca8b-415b-86c2-fae1fe20b4d9,Pita (lepinja) integralna,Ugljeni hidrati,260,9.7,49.0,2.5,g,1,60,true,true,false,false,true,🫓,NULL,2026-04-28 10:24:12.606892+00
+9fd67c09-7ac3-4263-9170-f32d27783221,Pita gibanica,Pekarski,310,11.0,25.0,19.0,g,1,200,true,false,false,false,false,🥧,NULL,2026-04-28 10:24:12.606892+00
+a990c27e-a5ed-4037-b57f-509059d7a0ae,Pita sa jabukama,Pekarski,250,3.5,42.0,8.0,g,1,150,true,false,false,true,false,🥧,NULL,2026-04-28 10:24:12.606892+00
+16d464da-0325-4be1-9be0-15beb87aa708,Pita sa višnjama,Pekarski,260,4.0,40.0,9.0,g,1,150,true,false,false,true,false,🥧,NULL,2026-04-28 10:24:12.606892+00
+6783c19a-7d03-4dca-9a49-f9fefa1f6840,Pita zeljanica,Pekarski,220,7.0,25.0,10.0,g,1,200,true,false,false,false,false,🥧,NULL,2026-04-28 10:24:12.606892+00
+05468406-f633-4a55-aad1-b717119b5bea,Pitaja (zmajevo voće),Voće,60,1.2,13.0,0.0,g,1,100,true,true,true,true,true,🍎,NULL,2026-04-28 10:24:12.606892+00
+d30f6511-14c5-45ba-8d47-8ebaff296f46,Pivo (svetlo),Pića,43,0.5,3.6,0.0,ml,1,330,true,true,false,false,false,🍺,NULL,2026-04-28 10:24:12.606892+00
+3cf0a4d0-fac3-424e-9f87-96c82d6bf4cf,Pivo crno,Pića,55,0.5,4.6,0.0,ml,1,330,true,true,false,false,false,🍺,NULL,2026-04-28 10:24:12.606892+00
+c869fc5c-1704-4e7a-8982-4904d3342ddb,Pivo nealkoholno,Pića,29,0.6,5.6,0.0,ml,1,330,true,true,false,false,false,🍺,NULL,2026-04-28 10:24:12.606892+00
+f0d8f6af-2356-453c-a191-af75d2e8ed39,Plavi patlidžan,Povrće,25,1.0,5.9,0.2,g,1,100,true,true,true,true,true,🍆,NULL,2026-04-28 10:24:12.606892+00
+0b3db7be-51f3-4bc7-b572-b5a0119df67f,Plavi sir (rokfor),Jaja i mleko,353,21.4,2.3,28.7,g,1,30,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+c56f0fb0-ccf6-42cb-89f0-87161586f090,Plazma Diet,Slatkiši,405,11,69,12,g,1,25,true,false,false,false,false,🍪,NULL,2026-10-09 17:19:20.819071+00
+d9021ae5-463d-437c-b116-d549ab7ffcd5,Plazma keks,Slatkiši,440,7.5,75.0,12.0,g,1,30,true,false,false,false,false,🍪,NULL,2026-04-28 10:24:12.606892+00
+b9ee79df-5e0c-4785-ab5f-cf64edd597df,Plazma keks posna,Slatkiši,426,10,68,12,g,1,30,true,false,false,true,false,🍪,NULL,2026-10-09 17:19:20.819071+00
+caa2f0bd-5b7e-4a88-866a-f994a22b9ca7,Plazma Kocka,Slatkiši,521,7.1,60,27,g,1,34,true,false,false,false,false,🍪,NULL,2026-10-10 07:18:40.217049+00
+c885072c-d4ad-4d92-b328-a82f128c7c35,Plazma mlevena,Slatkiši,430,11,68,12,g,1,50,true,false,false,false,false,🍪,NULL,2026-10-09 17:19:20.819071+00
+ed6e0a2a-7a9e-42e0-84f4-c765d14b04a7,Plazma mlevena posna,Slatkiši,426,10,68,12,g,1,50,true,false,false,true,false,🍪,NULL,2026-10-09 17:19:20.819071+00
+a731d25b-c3f1-4c30-9f84-8731af19fbf2,Plazma Plus čoko,Slatkiši,459,9.9,65,17,g,1,25,true,false,false,false,false,🍪,NULL,2026-10-09 17:19:20.819071+00
+5a8f4871-5271-4014-9cbf-897cdb82579f,Plazma Stiksi,Slatkiši,494,8,62,23,kom,15.6,15.6,true,false,false,false,false,🍪,NULL,2026-10-10 07:18:40.217049+00
+80ef41f7-4660-4f1c-a47a-035b00eecf16,Pljeskavica,Brza hrana,250,17.0,1.0,20.0,g,1,150,true,false,true,false,false,🍖,NULL,2026-04-28 10:24:12.606892+00
+7f061e2c-c1eb-49b5-9275-ed0d0345f6ca,Pljeskavica (gurmanska),Brza hrana,290,15.0,3.0,25.0,g,1,200,true,false,false,false,false,🍖,NULL,2026-04-28 10:24:12.606892+00
+ac278c63-a8ab-409a-82e6-dffddc322bf6,Pogača,Pekarski,290,8.5,52.0,5.5,g,1,100,true,false,false,false,false,🍞,NULL,2026-04-28 10:24:12.606892+00
+8ba82853-717a-4d53-aa62-726a8c11280a,"Pogačice lisnate (smrznute, nepečene)",Pekarski,367,5.1,36,22,g,1,100,true,false,false,false,false,🥐,NULL,2026-10-10 07:18:40.217049+00
+830373f5-b4d0-46b1-bee4-3803dfcac91f,Pogačice sa sirom,Pekarski,330,9.5,38.0,15.5,g,1,80,true,false,false,false,false,🥐,NULL,2026-04-28 10:24:12.606892+00
+2080e206-09d8-4afd-948c-1b13ceefc2a2,Pohovana piletina,Brza hrana,292,18.0,17.0,17.0,g,1,150,true,false,false,false,false,🍗,NULL,2026-04-28 10:24:12.606892+00
+247010cc-5518-42ab-bc43-c3442c8ce845,Pohovana šnicla,Brza hrana,229,23.9,10.2,10.2,g,1,150,true,false,false,false,false,🥩,NULL,2026-10-09 17:19:20.819071+00
+3f68a424-3f99-48df-a76d-7d03c393afaf,Pohovani sir,Brza hrana,360,17.0,20.0,23.0,g,1,150,true,false,false,false,false,🧀,NULL,2026-04-28 10:24:12.606892+00
+3ad811cf-b69b-4875-878a-b501df762ddf,Polenta (kuvana),Ugljeni hidrati,85,2.0,18.0,0.4,g,1,150,true,true,true,true,true,🌽,NULL,2026-04-28 10:24:12.606892+00
+dc5abd6f-8e6d-47c0-83ed-495391182456,Pomelo,Voće,38,0.8,9.6,0.0,g,1,150,true,true,true,true,true,🍊,NULL,2026-04-28 10:24:12.606892+00
+4ffa3780-0cbb-4423-8f7c-8aad1704b56c,Pomfrit,Brza hrana,312,3.4,41.0,15.0,g,1,150,true,true,true,true,false,🍟,NULL,2026-04-28 10:24:12.606892+00
+3812149d-f91b-4b0a-8a59-a72370b1c965,Pomorandža,Voće,47,0.9,11.8,0.1,kom,140,140,true,true,true,true,true,🍊,NULL,2026-04-28 10:24:12.606892+00
+e975a056-7dc7-433b-bc23-8ea70fb13369,Posebna kobasica Carnex,Meso,255,16,2.5,20,g,1,30,true,false,false,false,false,🌭,NULL,2026-10-09 17:19:20.819071+00
+b9ecc825-59d1-4aae-a3b8-25ef85ef6f5d,Posna sarma Carnex (konzerva),Gotova jela,68,2.9,10,1.6,g,1,250,true,true,false,true,true,🍲,NULL,2026-10-09 17:19:20.819071+00
+b8ef29e0-fa1d-4f11-8afa-52a149702fc2,Prašak za pecivo,Začini i dodaci,53,0.1,27.7,0.0,g,1,3,true,true,true,true,true,🧂,NULL,2026-04-28 10:24:12.606892+00
+a6b2090a-3b89-4557-a403-32556a6e4953,Praziluk,Povrće,61,1.5,14.2,0.3,g,1,100,true,true,true,true,true,🧅,NULL,2026-04-28 10:24:12.606892+00
+be3fe11a-5aec-4700-8768-bfcf3883a873,Pre-workout,Suplementi,20,0.0,5.0,0.0,g,1,10,true,true,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+c41a7337-0a0a-40bd-bcb1-eea30100e4f0,Prepelica,Meso,134,21.8,0.0,4.5,g,1,150,true,false,true,false,true,🍗,NULL,2026-04-28 10:24:12.606892+00
+e04970ff-9f9c-4a48-9032-dfddb30d268a,Prezle,Ugljeni hidrati,370,11.7,74.7,1.9,g,1,30,true,true,false,true,false,🍞,NULL,2026-10-09 17:19:20.819071+00
+665d3d9e-b3d1-497e-98ee-b7425d7aae5c,Prima štapići sa kikirikijem,Slatkiši,472,15,58,19,g,1,40,true,true,false,true,false,🥨,NULL,2026-10-09 17:19:20.819071+00
+82b3bca3-6691-4916-b919-d95b7813bfef,Prima štapići slani,Slatkiši,418,12,73,8,g,1,40,true,true,false,true,false,🥨,NULL,2026-10-09 17:19:20.819071+00
+dc4af906-5c61-4fa5-b96a-3b061e10bb02,Proja,Pekarski,267,8.0,40.0,8.0,g,1,100,true,false,true,false,false,🌽,NULL,2026-04-28 10:24:12.606892+00
+4e091185-484c-4346-a868-a5cd4f1b7d3b,Prokelj (kuvan),Povrće,36,2.6,7.1,0.5,g,1,100,true,true,true,true,true,🥬,NULL,2026-10-09 17:19:20.819071+00
+e094d2ab-cd44-4f10-9017-ca1216f0b935,Prokelj (prokulice),Povrće,43,3.4,9.0,0.3,g,1,100,true,true,true,true,true,🥬,NULL,2026-04-28 10:24:12.606892+00
+337a9c39-3609-40f9-9477-3eca4514fc1e,Proso (kuvano),Ugljeni hidrati,119,3.5,23.7,1.0,g,1,150,true,true,true,true,true,🌾,NULL,2026-04-28 10:24:12.606892+00
+5ab0558d-339a-435b-8ed7-f91ee5ebad65,Proso (suvo),Ugljeni hidrati,378,11,72.8,4.2,g,1,50,true,true,true,true,true,🌾,NULL,2026-10-10 07:18:40.217049+00
+cc4572d5-cdc3-4db4-a09f-cfe011785836,Protein bar (prosečan),Suplementi,380,30.0,35.0,12.0,g,1,60,true,false,false,false,true,🍫,NULL,2026-04-28 10:24:12.606892+00
+4b1f985a-c7f2-43ef-bef6-05c9432bfc94,Protein bar vegan,Suplementi,375,25.0,40.0,11.0,g,1,60,true,true,false,true,true,🍫,NULL,2026-04-28 10:24:12.606892+00
+cbdbce25-1a3d-41f7-a41d-188d509f87ce,Protein chips,Suplementi,420,40.0,30.0,15.0,g,1,30,true,false,true,false,true,🥔,NULL,2026-04-28 10:24:12.606892+00
+6eb49de5-3b03-4694-849f-85305e93e8ac,Protein cookie,Suplementi,400,30.0,35.0,15.0,g,1,60,true,false,false,false,true,🍪,NULL,2026-04-28 10:24:12.606892+00
+f120037c-4a11-4a6b-b00f-8ac7e24f23b7,Protein puding,Suplementi,75,8.0,8.0,1.5,g,1,150,true,false,true,false,true,🍮,NULL,2026-04-28 10:24:12.606892+00
+21684f31-e75c-42df-ac45-0cfd6c8f075c,Protein shake (sa mlekom 1.5%),Pića,180,30.0,12.0,4.0,ml,1,300,true,false,true,false,true,🥤,NULL,2026-04-28 10:24:12.606892+00
+08e27be4-5da2-4c13-9b5b-ff36cbf43144,Protein shake (sa vodom),Pića,135,25.0,5.0,2.0,ml,1,300,true,false,true,false,true,🥤,NULL,2026-04-28 10:24:12.606892+00
+6b4ca66d-68cc-4c88-a82e-428ff443642c,Proteinske palacinke (gotove),Pekarski,200,14,22,6,g,1,120,true,false,false,false,true,🥞,NULL,2026-06-14 20:09:44.99651+00
+81893325-0e02-4d0a-b7dd-8a5246fb7a41,Proteinski jogurt napitak,Jaja i mleko,60,10,5,0.3,ml,1,250,true,false,true,false,true,🥛,NULL,2026-06-14 20:09:44.99651+00
+dab07082-2b8e-469e-a984-adb1a2574727,Proteinski namaz čokoladni,Slatkiši,500,20,26,35,g,1,30,true,false,true,false,true,🍫,NULL,2026-06-14 20:09:44.99651+00
+9ae3d0cd-9d82-43c5-97aa-062dcc743913,Pršuta,Meso,250,28.0,0.5,15.0,g,1,30,true,false,true,false,true,🍖,NULL,2026-04-28 10:24:12.606892+00
+bd210617-27d6-4b0d-9aac-9e36ce921491,Prženice,Pekarski,229,7.7,25,10.8,g,1,130,true,false,false,false,false,🍞,NULL,2026-10-09 17:19:20.819071+00
+4bc23c79-acab-4034-a74c-93f4f42b200c,Pšenične klice,Ugljeni hidrati,360,23.2,51.8,9.7,g,1,15,true,true,false,true,true,🌾,NULL,2026-10-10 07:18:40.217049+00
+5ca18ead-300c-4721-8571-aaba59df4158,Pšenične mekinje,Ugljeni hidrati,216,15.5,64.5,4.3,g,1,15,true,true,false,false,true,🌾,NULL,2026-04-28 10:24:12.606892+00
+414f2f7f-cfaa-4608-8244-4e35216d9f3d,Pšenični griz (suv),Ugljeni hidrati,369,10.6,78,0.5,g,1,40,true,true,false,true,true,🌾,NULL,2026-10-09 17:19:20.819071+00
+288733e3-44ab-4d17-a8a1-f88e80c9448c,Pšenično brašno T-400,Ugljeni hidrati,364,10.3,76.3,1.0,g,1,30,true,true,false,false,true,🌾,NULL,2026-04-28 10:24:12.606892+00
+054bb495-c0ed-4d79-b2c9-9108eb9f602d,Pšenično brašno T-500,Ugljeni hidrati,350,9.5,73.9,1.3,g,1,30,true,true,false,true,true,🌾,NULL,2026-10-09 17:19:20.819071+00
+4a7fb5d5-2904-4c59-ae2c-12c552125292,Pšenično brašno T-850 (integralno),Ugljeni hidrati,340,13.2,71.0,2.5,g,1,30,true,true,false,false,true,🌾,NULL,2026-04-28 10:24:12.606892+00
+3ffadb92-2790-4d71-bcfd-fa50dd3c0c26,Puding od čokolade Moja Kravica,Slatkiši,109,3.2,17,3.1,kom,125,125,true,false,false,false,false,🍮,NULL,2026-10-09 17:19:20.819071+00
+c721e6ed-4ec2-4e22-baf2-f97fae6c1933,Puding od vanile Moja Kravica,Slatkiši,107,2.9,17,3,kom,125,125,true,false,false,false,false,🍮,NULL,2026-10-09 17:19:20.819071+00
+462e7a52-2558-4c93-90e1-b7d7d10eaa09,Punjene paprike,Gotova jela,135,7.0,13.0,5.5,g,1,250,true,false,true,false,false,🍲,NULL,2026-04-28 10:24:12.606892+00
+92f490b6-c4ac-47f1-812e-ca46d491d190,Putar od kikirikija (100% kikiriki),Orašasti plodovi,588,25.0,20.0,50.0,g,1,30,true,true,true,true,true,🥜,NULL,2026-04-28 10:24:12.606892+00
+c959cbc6-4684-4330-bb38-9db4b973ba5c,Putar od lešnika,Orašasti plodovi,646,15.0,16.0,62.0,g,1,30,true,true,true,true,true,🌰,NULL,2026-04-28 10:24:12.606892+00
+67fce63b-b002-453b-8a85-dc886a927d8a,Račići,Riba,71,13.6,0.9,1.0,g,1,100,true,false,true,true,true,🦐,NULL,2026-04-28 10:24:12.606892+00
+b483ab1e-c902-468e-9914-e4a983a65c64,Radič,Povrće,23,1.4,4.7,0.3,g,1,50,true,true,true,true,true,🥬,NULL,2026-04-28 10:24:12.606892+00
+8c1062ea-1015-4577-8f1c-51e1f7f6d0d8,Rak,Riba,87,18.1,0.0,1.1,g,1,150,true,false,true,true,true,🦀,NULL,2026-04-28 10:24:12.606892+00
+813e2417-da4f-46c7-b044-d0b62c04ba97,Rakija dunjevača,Pića,235,0.0,0.0,0.0,ml,1,30,true,true,true,true,false,🥃,NULL,2026-04-28 10:24:12.606892+00
+a7ac0f47-9cba-45aa-bd00-b76183f28625,Rakija kajsijevača,Pića,221,0,0,0,ml,1,30,true,true,true,true,false,🥃,NULL,2026-10-09 17:19:20.819071+00
+9ce5fccd-2902-4048-9ceb-a78e133067d8,Rakija lozovača,Pića,235,0.0,0.0,0.0,ml,1,30,true,true,true,true,false,🥃,NULL,2026-04-28 10:24:12.606892+00
+738baebe-0871-4e25-adee-29caf45af92c,Rakija šljivovica,Pića,235,0.0,0.0,0.0,ml,1,30,true,true,true,true,false,🥃,NULL,2026-04-28 10:24:12.606892+00
+2e647dc4-c1ec-4701-aac7-2a61b29b4342,Rakija viljamovka,Pića,221,0,0,0,ml,1,30,true,true,true,true,false,🥃,NULL,2026-10-09 17:19:20.819071+00
+2546b4cb-d929-4bef-8bb2-a0780a57c8f8,Raštan,Povrće,32,3,5.4,0.6,g,1,100,true,true,true,true,true,🥬,NULL,2026-10-10 07:18:40.217049+00
+7450a09a-037f-4183-8d84-b43144cdcc28,Ražene pahuljice,Ugljeni hidrati,327,9.7,62,1.5,g,1,50,true,true,false,true,true,🥣,NULL,2026-10-10 07:18:40.217049+00
+e459f569-75b8-4967-888e-d23d8f1c16df,Raženo brašno,Ugljeni hidrati,349,10.9,75.4,1.5,g,1,30,true,true,false,true,true,🌾,NULL,2026-10-09 17:19:20.819071+00
+c4a58fca-e171-48e7-bf7b-acd88d79570c,Ražnjići,Brza hrana,205,21.0,1.0,13.0,g,1,150,true,false,true,false,false,🍖,NULL,2026-04-28 10:24:12.606892+00
+911446d6-2178-4901-b6cd-ebc8f7cced37,"Ren (rendani, u tegli)",Začini i dodaci,94,3.3,10.8,3.1,g,1,15,true,false,true,false,true,🫚,NULL,2026-10-09 17:19:20.819071+00
+a13e1bd7-d8f2-419e-b4de-0672da9afabc,Repa bela,Povrće,28,0.9,6.4,0.1,g,1,100,true,true,true,true,true,🥕,NULL,2026-04-28 10:24:12.606892+00
+7bad5745-19f8-4666-8983-4843e6cbe8a2,Repa žuta,Povrće,36,1.2,8.7,0.2,g,1,100,true,true,true,true,true,🥕,NULL,2026-04-28 10:24:12.606892+00
+df01309a-faea-4afa-9e08-f1e991230d27,Repičino ulje,Masnoće i ulja,884,0.0,0.0,100.0,g,1,10,true,true,true,true,true,🫗,NULL,2026-04-28 10:24:12.606892+00
+67ba9dc5-8e81-4c58-b954-57030cdcf101,Rezanci sa jajima (kuvani),Ugljeni hidrati,138,4.5,25.2,2.1,g,1,150,true,false,false,false,true,🍝,NULL,2026-10-09 17:19:20.819071+00
+cb8b25c4-a6cf-4bce-a967-f30f8921347b,Rezanci sa jajima (suvi),Ugljeni hidrati,365,13.1,75.5,1.2,g,1,30,true,false,false,false,true,🍝,NULL,2026-10-09 17:19:20.819071+00
+861b5a9b-692e-4cfc-ace9-79bf409ab666,Ribizla crna,Voće,63,1.4,15.4,0.4,g,1,100,true,true,true,true,true,🫐,NULL,2026-04-28 10:24:12.606892+00
+7526eaf0-0218-4b49-88fb-f99af09c8011,Ribizla crvena,Voće,56,1.4,13.8,0.2,g,1,100,true,true,true,true,true,🍒,NULL,2026-04-28 10:24:12.606892+00
+885b3b49-332e-4eff-a49a-086647eb0dff,Riblja čorba,Gotova jela,55,5.0,4.0,2.5,g,1,300,true,false,true,true,true,🍲,NULL,2026-04-28 10:24:12.606892+00
+b68bed1e-e541-4d4d-b5fd-bc50c8df90a8,Riblja pašteta Yuhor,Riba,320,8,6,29,g,1,30,true,false,true,true,false,🐟,NULL,2026-10-09 17:19:20.819071+00
+d54a3c3f-5b2f-46a2-b9dd-5facc90343f6,Riblji file (panirani smrznuti),Riba,200,12.0,17.0,10.0,g,1,150,true,false,false,true,false,🐟,NULL,2026-04-28 10:24:12.606892+00
+15aed1b5-1ff0-4612-be44-5e971adaa762,Riblji štapići (pečeni),Riba,251,16.7,17.6,12.4,kom,28,28,true,false,false,true,false,🐟,NULL,2026-10-09 17:19:20.819071+00
+da5b81c0-4661-461c-9f3d-5885a2e730d0,Ricotta,Jaja i mleko,174,11.3,3.0,13.0,g,1,50,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+35fc00fd-5e21-46d3-9531-df34147881f9,Rimska salata (romana),Povrće,17,1.2,3.3,0.3,g,1,50,true,true,true,true,true,🥬,NULL,2026-10-09 17:19:20.819071+00
+bf45f108-7b03-4af4-8955-2f12f1e7c822,Risoto sa pečurkama,Gotova jela,150,4.0,22.0,5.0,g,1,250,true,true,true,true,true,🍚,NULL,2026-04-28 10:24:12.606892+00
+cebc9d20-eb4e-4c81-a46c-72c1fc874e01,Rogač (mleveni),Začini i dodaci,222,4.6,88.9,0.7,g,1,10,true,true,true,true,true,🫘,NULL,2026-10-10 07:18:40.217049+00
+613e0bc9-4d2c-47ec-94a8-37147f6da97f,"Rolnice sa višnjama (smrznute, nepečene)",Pekarski,304,3.7,36,16,g,1,100,true,false,false,false,false,🥐,NULL,2026-10-10 07:18:40.217049+00
+8b2a132a-dd3f-4713-a883-aa35d5f61ee4,Romanesko,Povrće,25,2.5,5.0,0.3,g,1,100,true,true,true,true,true,🥦,NULL,2026-04-28 10:24:12.606892+00
+9f3545e2-160f-40c1-98c5-fe428e9e56cd,Roštilj kobasica Carnex,Meso,328,14,0.2,30,g,1,80,true,false,false,false,false,🌭,NULL,2026-10-09 17:19:20.819071+00
+c2add497-ad31-4056-aa3e-2e564bf77d01,Rotkva daikon,Povrće,18,0.6,4.1,0.1,g,1,50,true,true,true,true,true,🥕,NULL,2026-04-28 10:24:12.606892+00
+859c4250-adcd-45e8-9ef9-a079c576f6b7,Rotkvica,Povrće,16,0.7,3.4,0.1,g,1,50,true,true,true,true,true,🥕,NULL,2026-04-28 10:24:12.606892+00
+0902f311-bed3-4804-8cdf-b8880ce16675,Rukola,Povrće,25,2.6,3.7,0.7,g,1,50,true,true,true,true,true,🥬,NULL,2026-04-28 10:24:12.606892+00
+21bf9661-5710-48d1-92a9-6d25d63bcc40,Rum,Pića,231,0.0,0.0,0.0,ml,1,30,true,true,true,true,false,🥃,NULL,2026-04-28 10:24:12.606892+00
+2d315c5d-cc22-4904-865e-88fccf42c943,Rum Kasato,Slatkiši,418,4.6,64,17,g,1,30,true,false,false,false,false,🍪,NULL,2026-10-09 17:19:20.819071+00
+ecc7d800-7337-48e3-84db-559a84417033,Ruzmarin sušen,Začini i dodaci,331,4.9,64.1,15.2,g,1,1,true,true,true,true,true,🌿,NULL,2026-04-28 10:24:12.606892+00
+a5bd6e38-a7c0-499d-8e7d-d434af55bb70,Šafran,Začini i dodaci,310,11.4,65.4,5.9,g,1,1,true,true,true,true,true,🌿,NULL,2026-04-28 10:24:12.606892+00
+4a8c2e97-46a0-4af9-be09-78c4eae4d420,Saher torta,Slatkiši,370,4.8,58,13,g,1,100,true,false,false,false,false,🍰,NULL,2026-10-09 17:19:20.819071+00
+02abf803-a051-4ebd-b515-de8ad433271e,Salama,Meso,389,21.0,2.0,33.0,g,1,30,true,false,true,false,false,🍖,NULL,2026-04-28 10:24:12.606892+00
+eeb21837-f21f-4909-a619-17fd69fa872d,Salata cezar,Gotova jela,180,8.0,8.0,14.0,g,1,200,true,false,false,false,false,🥗,NULL,2026-04-28 10:24:12.606892+00
+ea39c80d-753e-41ce-96a5-17fa7b223d05,Salata grčka,Gotova jela,107,3.0,4.0,9.0,g,1,200,true,false,true,true,true,🥗,NULL,2026-04-28 10:24:12.606892+00
+21696f28-07a0-4c8c-88e6-9498690d0746,Šalot,Povrće,72,2.5,16.8,0.1,g,1,30,true,true,true,true,true,🧅,NULL,2026-04-28 10:24:12.606892+00
+f086d551-a114-42b0-a024-2153f0f4f374,Šampanjac,Pića,76,0.1,1.4,0.0,ml,1,150,true,true,true,true,false,🍾,NULL,2026-04-28 10:24:12.606892+00
+14176a87-ac09-4f4e-b417-059d120585cd,"Šampinjoni (konzerva, oceđeni)",Povrće,25,1.9,5.1,0.3,g,1,100,true,true,true,true,true,🍄,NULL,2026-10-09 17:19:20.819071+00
+90b77c23-12aa-4bca-98be-5c1813c6130a,Šampita,Slatkiši,310,4.0,38.0,16.5,g,1,120,true,false,false,false,false,🍰,NULL,2026-04-28 10:24:12.606892+00
+e89c3fc5-7fd5-4b81-a9fa-b771bc951224,Šaran,Riba,127,17.8,0.0,5.6,g,1,150,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+f4d40335-f812-4e20-a9da-b00a6d462032,Šaran (pečen),Riba,162,22.9,0,7.2,g,1,150,true,false,true,true,true,🐟,NULL,2026-10-09 17:19:20.819071+00
+aad1a4be-9f57-48d1-8055-51d439e686f4,Sardina (sveža),Riba,134,19.8,0,6.1,g,1,150,true,false,true,true,true,🐟,NULL,2026-10-09 17:19:20.819071+00
+9b4026b1-832c-4899-825f-f98e7cd7aeab,Sardine u paradajz sosu,Riba,177,18.5,0.9,10.8,g,1,80,true,false,false,true,true,🐟,NULL,2026-10-09 17:19:20.819071+00
+a67be7d8-1245-4c6f-aa03-eefd79f771bc,Sardine u soku,Riba,135,22.0,0.0,5.0,g,1,80,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+cbadb47a-e992-432d-9d9b-0113d3ab7045,Sardine u ulju,Riba,208,24.6,0.0,11.5,g,1,80,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+434d6073-3541-4e6d-881d-8d1e9fb768c3,Šargarepa,Povrće,41,0.9,9.6,0.2,kom,72,72,true,true,true,true,true,🥕,NULL,2026-04-28 10:24:12.606892+00
+d4ab6b8a-9374-4db6-906c-df941b33e3ad,Šargarepa (kuvana),Povrće,35,0.8,8.2,0.2,g,1,100,true,true,true,true,true,🥕,NULL,2026-10-09 17:19:20.819071+00
+8a9d4167-51c4-4fe0-9884-fb13a5dac31c,Sarma sa kiselim kupusom,Gotova jela,150,8.0,12.0,7.5,g,1,250,true,false,true,false,false,🍲,NULL,2026-04-28 10:24:12.606892+00
+365fdcaa-b4a8-4df5-8cc4-fda55e8d1286,Sataraš,Gotova jela,75,2.0,8.0,4.0,g,1,200,true,true,true,true,true,🍲,NULL,2026-04-28 10:24:12.606892+00
+7b03e18c-cdb7-4b9a-9e86-bed03d20a253,Schweppes Bitter Lemon,Pića,55,0,13.3,0,ml,1,330,true,true,true,true,false,🥤,NULL,2026-10-10 07:18:40.217049+00
+c53596be-907f-498c-ba6f-6375ac1cb904,Schweppes Tangerine,Pića,30,0,7,0,ml,1,330,true,true,true,true,false,🥤,NULL,2026-10-10 07:18:40.217049+00
+64695ef0-d795-4d25-b9d0-792d6a17c17e,Schweppes Tonic Water,Pića,23,0,5.4,0,ml,1,330,true,true,true,true,false,🥤,NULL,2026-10-10 07:18:40.217049+00
+9b4cf50d-638c-4fe0-a95f-3868f90083c7,Šećer beli,Slatkiši,387,0.0,100.0,0.0,g,1,5,true,true,true,true,false,🍬,NULL,2026-04-28 10:24:12.606892+00
+57002c9a-0842-4b1d-8f88-8cd2dccd8b65,Šećer smeđi,Slatkiši,377,0.0,97.3,0.0,g,1,5,true,true,true,true,false,🍬,NULL,2026-04-28 10:24:12.606892+00
+ccd660d5-cd38-47ce-8c01-68b23dbb0e59,Šećer u prahu,Slatkiši,389,0.0,99.8,0.0,g,1,5,true,true,true,true,false,🍬,NULL,2026-04-28 10:24:12.606892+00
+8f50c6b9-142c-445b-895e-0b9b37e27fd7,Seitan,Mahunarke,121,21.0,4.0,2.0,g,1,100,true,true,false,true,true,🌾,NULL,2026-04-28 10:24:12.606892+00
+d23b240f-f145-4975-a5f2-8c9ab7030467,Senf,Začini i dodaci,66,4.4,5.3,4.0,g,1,15,true,true,true,true,true,🥫,NULL,2026-04-28 10:24:12.606892+00
+8cead01e-f74d-4ce2-bff9-a07cac34a938,Senf dijon,Začini i dodaci,143,8.0,4.0,10.0,g,1,15,true,true,true,true,true,🥫,NULL,2026-04-28 10:24:12.606892+00
+dfceecf7-9756-4a34-b3b7-aa077f192240,Senf estragon Podravka,Začini i dodaci,100,5.5,4.1,5.7,g,1,15,true,true,true,true,true,🥫,NULL,2026-10-09 17:19:20.819071+00
+76bc9d79-102b-4638-8a4a-0a970cf538c8,Sezamovo ulje,Masnoće i ulja,884,0.0,0.0,100.0,g,1,10,true,true,true,true,true,🫗,NULL,2026-04-28 10:24:12.606892+00
+be1d841f-f854-4628-a563-d6874cde97f2,Sipa,Riba,79,16.2,0.8,0.7,g,1,150,true,false,true,true,true,🦑,NULL,2026-04-28 10:24:12.606892+00
+d7f5b4f9-e2d5-4420-8307-625733a73414,Sir feta,Jaja i mleko,264,14.2,4.1,21.3,g,1,30,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+b3eb4ec9-a751-4d97-a971-bc9a8468daf2,Sir somborski,Jaja i mleko,330,22.0,1.5,26.0,g,1,40,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+cb7f7cf8-e3d2-4dd7-85f4-28704a598469,Sir zlatarski,Jaja i mleko,345,24.0,1.0,27.0,g,1,40,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+b682c4fa-9b26-47ce-8ffb-18bea208d583,Sir zlatiborski,Jaja i mleko,211,20.2,2.4,13.5,g,1,40,true,false,true,false,true,🧀,NULL,2026-10-09 17:19:20.819071+00
+035c0e79-82fd-4618-bbf6-1953df499af0,Sirak,Ugljeni hidrati,329,10.6,72.1,3.5,g,1,50,true,true,true,true,true,🌾,NULL,2026-04-28 10:24:12.606892+00
+cb3a2f70-67c3-41f9-bf00-ee0ea6dc2e54,Sirće belo,Začini i dodaci,18,0.0,0.0,0.0,g,1,15,true,true,true,true,true,🫗,NULL,2026-04-28 10:24:12.606892+00
+7c60fa2a-550c-4a68-b71e-ca9f27d46179,Sirće jabukovo,Začini i dodaci,22,0.0,0.9,0.0,g,1,15,true,true,true,true,true,🫗,NULL,2026-04-28 10:24:12.606892+00
+86bf6d09-0791-4511-b7a7-af04375a0f35,Sirće od pirinča,Začini i dodaci,18,0.3,0.0,0.0,g,1,15,true,true,true,true,true,🫗,NULL,2026-04-28 10:24:12.606892+00
+2fc2c84f-9912-4eda-9624-c4c00e5467eb,Sirće vinsko,Začini i dodaci,19,0,0.3,0,g,1,15,true,true,true,true,true,🫗,NULL,2026-10-09 17:19:20.819071+00
+61ac051a-7c99-483f-b904-1142d30791cc,Sirni namaz Sirko,Jaja i mleko,199,4.8,2.2,19,g,1,30,true,false,true,false,false,🧀,NULL,2026-10-09 17:19:20.819071+00
+b7221f40-4670-4893-a526-fac992721383,Šitake,Povrće,34,2.2,6.8,0.5,g,1,100,true,true,true,true,true,🍄,NULL,2026-04-28 10:24:12.606892+00
+149ece82-f724-486b-9963-5c9b8378d565,"Sitan sir (švapski, nemasni)",Jaja i mleko,69,12.3,3.3,0.8,g,1,100,true,false,true,false,true,🧀,NULL,2026-10-09 17:19:20.819071+00
+95b394b5-b089-4cfc-8c1f-73c6e4df8804,Škampi (kuvani),Riba,99,24.0,0.2,0.3,g,1,100,true,false,true,true,true,🦐,NULL,2026-04-28 10:24:12.606892+00
+3c830637-adb5-4e98-ad01-907c9cd7ebd1,Škembići u saftu Carnex (konzerva),Gotova jela,85,5.9,5,4.6,g,1,250,true,false,false,false,false,🍲,NULL,2026-10-09 17:19:20.819071+00
+bb5f5016-fd1e-4256-a620-941657590bd9,Skuša,Riba,205,19.0,0.0,14.0,g,1,150,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+324b1ccf-99cb-4246-8c20-cf7e15d98431,Skuša (pečena),Riba,262,23.8,0,17.8,g,1,150,true,false,true,true,true,🐟,NULL,2026-10-09 17:19:20.819071+00
+bf92d414-8197-47ca-835b-3bfe4eb393ce,Skuša (toplo dimljena),Riba,295,19.5,0,24.1,g,1,100,true,false,true,true,true,🐟,NULL,2026-10-09 17:19:20.819071+00
+89c56fb8-144d-4ac5-8ad3-bcdccb6bee84,Skyr,Jaja i mleko,63,11.0,4.0,0.2,g,1,150,true,false,true,false,true,🥛,NULL,2026-04-28 10:24:12.606892+00
+48d20005-4af6-47da-9599-8c04b6b16fe9,Sladoled Čoko Moko,Slatkiši,295,4.3,24,20,kom,52,52,true,false,false,false,false,🍨,NULL,2026-10-09 17:19:20.819071+00
+24e92d6f-91e9-42e3-ad06-d9b6b521b369,Sladoled čokolada,Slatkiši,216,3.8,28.2,11.0,g,1,100,true,false,true,false,false,🍨,NULL,2026-04-28 10:24:12.606892+00
+fcd0e42f-f48a-4fcc-9081-b7cc86181193,Sladoled Kapri,Slatkiši,262,2.7,29,15,kom,60,60,true,false,false,false,false,🍨,NULL,2026-10-09 17:19:20.819071+00
+d231eefd-9d4b-4747-a7fe-86669d1ce840,Sladoled kornet vanila,Slatkiši,164,2.6,18.5,8.8,ml,1,120,true,false,false,false,false,🍨,NULL,2026-10-09 17:19:20.819071+00
+1f94fe11-b4db-43c8-a868-fecc569a4d79,Sladoled Macho čokolada,Slatkiši,335,4,29,22.5,ml,1,75,true,false,false,false,false,🍨,NULL,2026-10-09 17:19:20.819071+00
+01227e91-ca8d-40a1-bb00-99d1a6e2c489,Sladoled Rumenko,Slatkiši,92,0,23,0,kom,53,53,true,false,false,false,false,🍨,NULL,2026-10-09 17:19:20.819071+00
+23ab900b-efdc-4816-815e-d90951891504,Sladoled Sneško,Slatkiši,223,4,23,13,kom,46,46,true,false,false,false,false,🍨,NULL,2026-10-09 17:19:20.819071+00
+5f636279-7fe0-46cf-bb94-223dba54eb93,Sladoled vanilija,Slatkiši,207,3.5,23.6,11.0,g,1,100,true,false,true,false,false,🍨,NULL,2026-04-28 10:24:12.606892+00
+5be69ba3-a8cb-45b0-ae8a-bd0d7e64dd9e,Sladoled voćni (sorbe),Slatkiši,130,0.5,33.0,0.2,g,1,100,true,true,true,true,false,🍨,NULL,2026-04-28 10:24:12.606892+00
+46cfdf55-25e1-4e86-8002-3ced80776b5d,Slanina,Meso,541,12.0,1.4,52.0,g,1,20,true,false,true,false,false,🥓,NULL,2026-04-28 10:24:12.606892+00
+a30486e0-6445-4d77-b2c3-11d069921030,Slanina dimljena,Meso,475,11.0,1.4,46.0,g,1,20,true,false,true,false,false,🥓,NULL,2026-04-28 10:24:12.606892+00
+38506feb-da85-40d4-9b81-0f6da20e0821,Slanina mesnata (dimljena),Meso,318,17,0.2,28,g,1,20,true,false,false,false,false,🥓,NULL,2026-10-09 17:19:20.819071+00
+520e9519-98c6-41ff-b103-bb49fedacbc4,Slanutak (kuvan),Mahunarke,164,8.9,27.4,2.6,g,1,150,true,true,true,true,true,🫘,NULL,2026-04-28 10:24:12.606892+00
+73d11595-6a51-4dd9-a90b-68eff4f62341,Slanutak (suv),Mahunarke,378,20.5,63,6,g,1,80,true,true,true,true,true,🫘,NULL,2026-10-09 17:19:20.819071+00
+b391099d-1126-48b6-9856-b079cd1790bd,Slatka pavlaka 30%,Jaja i mleko,290,2.4,3.0,30.0,g,1,30,true,false,true,false,false,🥛,NULL,2026-04-28 10:24:12.606892+00
+66e10932-b75c-4916-8fa9-efa1883b0ea4,Slatki krompir (batat),Povrće,86,1.6,20.1,0.1,g,1,150,true,true,true,true,true,🍠,NULL,2026-04-28 10:24:12.606892+00
+d335e70d-3adf-42a8-9a44-ab5bf394778c,Slatko od borovnica,Slatkiši,282,1,68,0,g,1,20,true,true,true,true,false,🫙,NULL,2026-10-09 17:19:20.819071+00
+3e8869f2-a2b7-469e-a652-c158dbf0c796,Slatko od dunja,Slatkiši,297,0,73,0,g,1,20,true,true,true,true,false,🫙,NULL,2026-10-09 17:19:20.819071+00
+d4fe1be9-b23e-4218-ab84-cf41b3e5fec1,Slatko od kupina,Slatkiši,283,0,68.1,0.2,g,1,20,true,true,true,true,false,🫙,NULL,2026-10-09 17:19:20.819071+00
+9d98b619-1891-4c95-845e-7800979582a7,Slatko od ruže,Slatkiši,265,0.0,66.0,0.0,g,1,20,true,true,true,true,false,🫙,NULL,2026-04-28 10:24:12.606892+00
+07774e60-6713-4ca0-ba96-2109435299f2,Slatko od šumskih jagoda,Slatkiši,287,0.7,70,0,g,1,20,true,true,true,true,false,🫙,NULL,2026-10-09 17:19:20.819071+00
+a72f3316-b4db-4e56-90a8-38cfefcb7562,Šljiva,Voće,46,0.7,11.4,0.3,g,1,100,true,true,true,true,true,🫐,NULL,2026-04-28 10:24:12.606892+00
+175578d0-da04-4ef6-abd8-4fee4c15b564,Smoki,Slatkiši,521,13,50,29,g,1,50,true,true,false,true,false,🥜,NULL,2026-10-09 17:19:20.819071+00
+6dddfbc2-cf51-4e35-bc36-98714aa1802e,Smoki Protein,Slatkiši,512,20,37,30,g,1,70,true,true,false,true,false,🥜,NULL,2026-10-10 07:18:40.217049+00
+76b604c7-e5c0-4362-bb6e-296f9d3c3cd0,Smokva sveža,Voće,74,0.8,19.2,0.3,kom,50,50,true,true,true,true,true,🍐,NULL,2026-04-28 10:24:12.606892+00
+9ef85af4-cdf3-4cb3-9fc8-1f205e008362,Smoothie voćni,Pića,75,1.5,17.0,0.4,ml,1,300,true,true,true,true,true,🥤,NULL,2026-04-28 10:24:12.606892+00
+957f985a-bb1f-4103-87cc-5a3c1c1c00dd,Smoothie zeleni,Pića,55,2.0,11.0,0.5,ml,1,300,true,true,true,true,true,🥤,NULL,2026-04-28 10:24:12.606892+00
+62a79d79-eae6-4492-94da-757f23d65096,Smuđ,Riba,84,18.4,0.0,1.0,g,1,150,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+70587b60-ffd1-4a6e-bc0a-c783e77a2b24,So,Začini i dodaci,0,0.0,0.0,0.0,g,1,1,true,true,true,true,true,🧂,NULL,2026-04-28 10:24:12.606892+00
+42f485ff-ecd0-4b27-a510-49bfaf51aa45,So himalajska,Začini i dodaci,0,0.0,0.0,0.0,g,1,1,true,true,true,true,true,🧂,NULL,2026-04-28 10:24:12.606892+00
+6f8d85b8-9acc-4bab-a1d9-657e7fffc567,So morska,Začini i dodaci,0,0.0,0.0,0.0,g,1,1,true,true,true,true,true,🧂,NULL,2026-04-28 10:24:12.606892+00
+bdd65952-041c-40f7-87e6-b4d5c893c3ec,Sočivo crno (beluga),Mahunarke,143,12.0,26.0,0.5,g,1,150,true,true,true,true,true,🫘,NULL,2026-04-28 10:24:12.606892+00
+87bdd823-6464-4da3-8977-8dd7cd06b963,Sočivo crveno (kuvano),Mahunarke,116,9.0,20.0,0.4,g,1,150,true,true,true,true,true,🫘,NULL,2026-04-28 10:24:12.606892+00
+1f01442a-aa62-4c21-93d8-890f2d8185c3,Sočivo crveno (suvo),Mahunarke,358,23.9,63.1,2.2,g,1,80,true,true,true,true,true,🫘,NULL,2026-10-09 17:19:20.819071+00
+b41481be-3d08-46bf-9359-02c4108a13cf,Sočivo zeleno (kuvano),Mahunarke,116,9.0,20.0,0.4,g,1,150,true,true,true,true,true,🫘,NULL,2026-04-28 10:24:12.606892+00
+761a0bd6-04aa-4159-bc4c-abe4afa9b624,Sočivo zeleno (suvo),Mahunarke,352,24.6,63.4,1.1,g,1,80,true,true,true,true,true,🫘,NULL,2026-10-09 17:19:20.819071+00
+29166a34-89d2-46a3-88ae-ecda5cf5c2a6,Soda bikarbona,Začini i dodaci,0,0.0,0.0,0.0,g,1,3,true,true,true,true,true,🧂,NULL,2026-04-28 10:24:12.606892+00
+106460a6-2b6d-4940-8f36-7eca0c77cbb3,Soja sos,Začini i dodaci,53,8.1,4.9,0.6,g,1,15,true,true,false,true,true,🥫,NULL,2026-04-28 10:24:12.606892+00
+a75a4ad5-8eee-4e8f-b4dd-8f02bc17a0a5,Soja sos bez glutena (tamari),Začini i dodaci,60,10.5,5.6,0.1,g,1,15,true,true,true,true,true,🥫,NULL,2026-04-28 10:24:12.606892+00
+4588748a-9628-4c8b-ad98-815083517584,Soja zrno (kuvana),Mahunarke,173,16.6,9.9,9.0,g,1,100,true,true,true,true,true,🫘,NULL,2026-04-28 10:24:12.606892+00
+8ab986e3-6f51-4759-9f1a-90bb572c4cb0,Soja zrno (suvo),Mahunarke,446,36.5,30.2,19.9,g,1,80,true,true,true,true,true,🫘,NULL,2026-10-09 17:19:20.819071+00
+933d44cc-5231-43d3-bfa2-8c1035ed32e2,Sojin protein izolat,Suplementi,338,88.3,2.6,1.9,g,1,30,true,true,true,true,true,🥤,NULL,2026-04-28 10:24:12.606892+00
+5ddc8615-ec73-4613-8996-69dee9a7f764,Sojino mleko (nezaslađeno),Jaja i mleko,33,3.3,1.8,1.8,ml,1,200,true,true,true,true,true,🥛,NULL,2026-04-28 10:24:12.606892+00
+8bbc1727-b950-4885-b3b3-509d51d62bfa,Sok multivitamin,Pića,47,0.2,10.8,0,ml,1,200,true,true,true,true,false,🧃,NULL,2026-10-10 07:18:40.217049+00
+bfc1cc71-fd3c-4ae0-9341-56c045d5e8c3,Sok od cvekle,Pića,42,1.2,9.5,0.0,ml,1,200,true,true,true,true,true,🧃,NULL,2026-04-28 10:24:12.606892+00
+a973283a-3b7d-453f-9cac-c42413979331,Sok od jabuke (100%),Pića,46,0.1,11.3,0.1,ml,1,200,true,true,true,true,true,🧃,NULL,2026-04-28 10:24:12.606892+00
+a8ca7974-b9ae-4aae-9f15-e9d16095b7cd,Sok od jabuke (industrijski),Pića,46,0.1,11.0,0.1,ml,1,200,true,true,true,true,true,🧃,NULL,2026-04-28 10:24:12.606892+00
+54a15c9c-b86a-474c-98eb-85bc385fd633,Sok od narandže (industrijski),Pića,45,0.5,11.0,0.1,ml,1,200,true,true,true,true,true,🧃,NULL,2026-04-28 10:24:12.606892+00
+3a411da0-b074-4c8b-aa98-15f5f21f9aeb,Sok od pomorandže (cedjen),Pića,45,0.7,10.4,0.2,ml,1,200,true,true,true,true,true,🧃,NULL,2026-04-28 10:24:12.606892+00
+5f3c4104-f916-4d55-b45c-7c5cece790cc,Sok od šargarepe,Pića,40,0.9,9.3,0.2,ml,1,200,true,true,true,true,true,🧃,NULL,2026-04-28 10:24:12.606892+00
+d73bc618-4836-4230-86f0-8b65a1dd68e9,Som,Riba,95,16.4,0.0,2.8,g,1,150,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+16a5de2c-217b-4cbf-9e6f-e4420bb43abb,Somun,Pekarski,275,8.5,53.0,3.0,g,1,100,true,false,false,false,false,🫓,NULL,2026-04-28 10:24:12.606892+00
+4ecf2d7c-f493-4cc2-aaae-c3ccbc3f9c50,Šopska salata,Gotova jela,80,3.0,5.0,5.5,g,1,200,true,false,true,true,true,🥗,NULL,2026-04-28 10:24:12.606892+00
+17e7abc9-f852-4f9f-ba6a-c86ac64100f4,Spanać,Povrće,23,2.9,3.6,0.4,g,1,100,true,true,true,true,true,🥬,NULL,2026-04-28 10:24:12.606892+00
+04038592-383b-4e9e-bc24-7d287c4fe1d3,Spanać (kuvan),Povrće,23,3,3.8,0.3,g,1,100,true,true,true,true,true,🥬,NULL,2026-10-09 17:19:20.819071+00
+7ce9ead3-c201-4313-836a-168a43f1b65b,Šparoge bele,Povrće,18,2.0,3.5,0.2,g,1,100,true,true,true,true,true,🥬,NULL,2026-04-28 10:24:12.606892+00
+4216b822-98d2-455f-bfc4-7b0ca6699f12,Šparoge zelene,Povrće,20,2.2,3.9,0.1,g,1,100,true,true,true,true,true,🥬,NULL,2026-04-28 10:24:12.606892+00
+555a1d85-d78a-4f29-835a-129283b7eb62,Spelta (kuvana),Ugljeni hidrati,127,5.5,26.4,0.9,g,1,150,true,true,false,true,true,🌾,NULL,2026-04-28 10:24:12.606892+00
+cc7a4849-6edc-488a-befd-68cb80566ad0,Speltino brašno,Ugljeni hidrati,338,14.6,70.2,2.4,g,1,30,true,true,false,false,true,🌾,NULL,2026-04-28 10:24:12.606892+00
+a7ad119e-27a0-465b-be12-3184619b0620,Spirulina,Suplementi,290,57.5,23.9,7.7,g,1,5,true,true,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+9bc413c9-111e-4440-a169-6f0583896a76,Spring rolls (proletnji),Brza hrana,154,5.0,19.0,6.5,g,1,80,true,true,false,true,true,🥟,NULL,2026-04-28 10:24:12.606892+00
+87ebc750-9acf-4177-8506-b1a7b3a5271e,Sprite,Pića,39,0.0,9.7,0.0,ml,1,330,true,true,true,true,false,🥤,NULL,2026-04-28 10:24:12.606892+00
+84429b2d-f8a1-4641-9a1b-d206658d95c4,Sremska kobasica,Meso,450,26.4,0.1,38.2,g,1,30,true,false,false,false,false,🌭,NULL,2026-10-09 17:19:20.819071+00
+73c3244c-f5ad-4489-b3ed-057ffeddc51b,Sriracha sos,Začini i dodaci,93,1.9,19.2,0.9,g,1,10,true,true,true,true,true,🌶️,NULL,2026-04-28 10:24:12.606892+00
+9d110ceb-378b-42b5-8673-ee8dced2bff7,Stevia (prah),Slatkiši,0,0.0,0.0,0.0,g,1,1,true,true,true,true,true,🍬,NULL,2026-04-28 10:24:12.606892+00
+ccfe4f43-b423-4dfc-a607-795291772203,Stišnjena šunka,Meso,80,12.5,2.5,2,g,1,30,true,false,false,false,true,🍖,NULL,2026-10-09 17:19:20.819071+00
+34622c59-e2ab-4dca-ad48-6e9e541e4295,Štrudla sa makom,Pekarski,360,7.0,55.0,12.5,g,1,80,true,false,false,false,false,🥧,NULL,2026-04-28 10:24:12.606892+00
+b751f9a3-0a18-46fc-a6b0-1687ca28edf0,Štrudla sa orasima,Pekarski,395,8.5,52.0,17.0,g,1,80,true,false,false,false,false,🥧,NULL,2026-04-28 10:24:12.606892+00
+492da48c-e1e5-4588-8e7e-46089394a85d,Štuka,Riba,88,19.3,0.0,0.7,g,1,150,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+e95fdde7-830f-419e-b771-36d356080a40,Štuka (pečena),Riba,113,24.7,0,0.9,g,1,150,true,false,true,true,true,🐟,NULL,2026-10-09 17:19:20.819071+00
+8b1b7c09-c05e-43b2-968f-b9f64d193931,Sudžuk,Meso,463,21.0,1.0,42.0,g,1,40,true,false,true,false,false,🌭,NULL,2026-04-28 10:24:12.606892+00
+2a3337d9-d277-4dc7-aeb0-50b9e7652237,Šumsko voće Frikom (smrznuto),Voće,46,1.2,5.8,0.5,g,1,100,true,true,true,true,true,🫐,NULL,2026-10-09 17:19:20.819071+00
+faeaf59e-5dd4-4094-881a-b2b714ca9bf4,Suncokretovo seme,Orašasti plodovi,584,20.8,20.0,51.5,g,1,30,true,true,true,true,true,🌻,NULL,2026-04-28 10:24:12.606892+00
+ef3c1a2a-e39f-4999-a353-d13f962209ab,"Suncokretovo seme (pečeno, slano, oljušteno)",Orašasti plodovi,582,19.3,24.1,49.8,g,1,30,true,true,true,true,false,🌻,NULL,2026-10-09 17:19:20.819071+00
+b701de60-241e-45dd-99b7-55a43630b866,Suncokretovo ulje,Masnoće i ulja,884,0.0,0.0,100.0,g,1,10,true,true,true,true,true,🌻,NULL,2026-04-28 10:24:12.606892+00
+88316409-f3ff-4a8d-8a1c-1a7c0562d539,Šunka,Meso,145,18.0,1.5,7.0,g,1,30,true,false,true,false,true,🍖,NULL,2026-04-28 10:24:12.606892+00
+af89ed71-3a94-44e0-87f9-08914fa72746,Šunka pileća,Meso,110,17.0,1.0,4.0,g,1,30,true,false,true,false,true,🍖,NULL,2026-04-28 10:24:12.606892+00
+b85cf37c-4244-4994-94ca-0b01333fa10f,Šunka praška,Meso,107,18.0,1.0,4.0,g,1,30,true,false,true,false,true,🍖,NULL,2026-04-28 10:24:12.606892+00
+054bd590-e281-4472-ad02-b2ad6c4fdfc9,Surimi (krab štapići),Riba,99,7.6,17.0,0.9,g,1,80,true,false,false,true,false,🦀,NULL,2026-04-28 10:24:12.606892+00
+68c8694c-b07a-4fbe-9449-883210872d2a,Surutka,Jaja i mleko,27,0.9,5.1,0.4,ml,1,200,true,false,true,false,true,🥛,NULL,2026-10-09 17:19:20.819071+00
+28c61042-20b7-4e9f-97ee-4015ca3f7fb4,Susam,Orašasti plodovi,573,17.7,23.5,49.7,g,1,15,true,true,true,true,true,🌰,NULL,2026-04-28 10:24:12.606892+00
+3e52e305-ce87-4de0-9ce5-963b90bb34ac,Sushi (maki),Brza hrana,150,5.0,28.0,1.5,g,1,30,true,false,true,true,true,🍣,NULL,2026-04-28 10:24:12.606892+00
+92f7ebe5-6838-4b18-a987-47a5550124c2,Sushi (nigiri losos),Brza hrana,142,5.4,21.0,3.4,g,1,30,true,false,true,true,true,🍣,NULL,2026-04-28 10:24:12.606892+00
+e2541d8b-ed24-422a-9da1-a92678bbaa3b,Sutlijaš,Slatkiši,108,3.2,16,3.4,g,1,150,true,false,true,false,false,🍮,NULL,2026-10-09 17:19:20.819071+00
+c4b154a3-55c0-4f19-9f07-f97057a737c8,Suva jabuka,Voće,243,0.9,65.9,0.3,g,1,30,true,true,true,true,true,🍎,NULL,2026-10-09 17:19:20.819071+00
+0eab68e4-d93f-4f86-9ec4-73b8b4908f02,Suva kajsija,Voće,241,3.4,62.6,0.5,g,1,30,true,true,true,true,true,🍑,NULL,2026-04-28 10:24:12.606892+00
+b333499b-db32-4129-a67b-33de47858b61,Suva kruška,Voće,262,1.9,69.7,0.6,g,1,30,true,true,true,true,true,🍐,NULL,2026-10-09 17:19:20.819071+00
+ee523fd3-0173-41a9-8b8e-4b6fc5219b7d,Suva pečenica Zlatiborac,Meso,183,38.9,0.1,3,g,1,30,true,false,true,false,true,🍖,NULL,2026-10-09 17:19:20.819071+00
+a7ff8856-d3d0-403a-8ac4-8951874a5507,Suva šljiva,Voće,240,2.2,63.9,0.4,kom,9.5,9.5,true,true,true,true,true,🫐,NULL,2026-04-28 10:24:12.606892+00
+9bfbc9c0-cd80-4a03-bbc9-d03b4b3a4ce6,Suva smokva,Voće,249,3.3,63.9,0.9,g,1,30,true,true,true,true,true,🍐,NULL,2026-04-28 10:24:12.606892+00
+58b8d2b9-80f2-4489-a7d3-b22ff8af0e50,Suva višnja,Voće,333,2.5,80.0,1.5,g,1,30,true,true,true,true,true,🍒,NULL,2026-04-28 10:24:12.606892+00
+8bebd2ee-9fe8-4e24-96f1-c574c5a452dc,Suve brusnice,Voće,308,0.1,82.4,1.4,g,1,30,true,true,true,true,true,🍒,NULL,2026-04-28 10:24:12.606892+00
+8712753e-64b1-48cf-ba6a-1dbb3fb1eb82,Suvi mango,Voće,319,2.5,78.6,1.2,g,1,30,true,true,true,true,true,🥭,NULL,2026-04-28 10:24:12.606892+00
+e186f722-7248-46af-b809-d0405599d6c1,Suvi paradajz,Povrće,258,14.1,55.8,3.0,g,1,30,true,true,true,true,true,🍅,NULL,2026-04-28 10:24:12.606892+00
+ac6e9bc1-3f09-4247-b15e-8ab4b63d4a9c,Švarcvald torta,Slatkiši,260,6.4,25.1,14,g,1,100,true,false,false,false,false,🍰,NULL,2026-10-09 17:19:20.819071+00
+46481031-575a-4548-9f66-8695e8375d98,Sveži kravlji sir light,Jaja i mleko,98,12.0,3.4,4.3,g,1,50,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+929269f7-9e8a-4c8f-b67c-e796cbefa16d,Sveži sir Ella 0.5% mm,Jaja i mleko,74,13,4.2,0.5,g,1,100,true,false,true,false,true,🧀,NULL,2026-10-09 17:19:20.819071+00
+a01a0c0c-e8f7-432b-96f3-f858030f47db,Sveži sir Zero 0.5% mm,Jaja i mleko,72,13,3.7,0.5,g,1,100,true,false,true,false,true,🧀,NULL,2026-10-10 07:18:40.217049+00
+6eb06801-9e62-4a29-a99c-70ffca227ce7,Svinjetina mlevena (21% mm),Meso,263,16.9,0,21.2,g,1,150,true,false,true,false,true,🥩,NULL,2026-10-09 17:19:20.819071+00
+0c494775-4a98-417f-a6fc-0c875e894831,Svinjska džigerica,Meso,134,21.4,2.5,3.7,g,1,100,true,false,true,false,true,🥩,NULL,2026-10-09 17:19:20.819071+00
+c22727df-de87-49bf-ac32-4378750f5902,Svinjska krmenadla (pečena),Meso,209,25.6,0,11.1,g,1,150,true,false,true,false,true,🥩,NULL,2026-10-09 17:19:20.819071+00
+d3ca73db-48b9-41e2-9e2e-3e023575d9bc,Svinjska plećka,Meso,229,18.0,0.0,17.0,g,1,150,true,false,true,false,false,🥩,NULL,2026-04-28 10:24:12.606892+00
+74a61e9c-2f6a-4e5f-ab5d-4d6a659e34d4,Svinjska plećka (pečena),Meso,292,23.3,0,21.4,g,1,150,true,false,true,false,false,🥩,NULL,2026-10-09 17:19:20.819071+00
+f6bf60c6-d47c-48ec-a347-b3e8848668d3,Svinjska rebra,Meso,277,20.0,0.0,22.0,g,1,150,true,false,true,false,false,🥩,NULL,2026-04-28 10:24:12.606892+00
+74049ca4-4b25-449b-8fc4-f279f761003e,Svinjska rebra (pečena),Meso,361,20.9,0,30.9,g,1,150,true,false,true,false,false,🥩,NULL,2026-10-09 17:19:20.819071+00
+3bcd8f55-dc64-4950-8ee3-3006898af30c,Svinjski but,Meso,211,21.0,0.0,14.0,g,1,150,true,false,true,false,true,🥩,NULL,2026-04-28 10:24:12.606892+00
+df19f2bb-b2f2-47de-8e7e-7ef80edec4ff,Svinjski but (pečen),Meso,273,26.8,0,17.6,g,1,150,true,false,true,false,false,🥩,NULL,2026-10-09 17:19:20.819071+00
+397c5645-bcb1-41fe-b3df-484eba36f568,Svinjski file (pečen),Meso,147,26,0,4,g,1,150,true,false,true,false,true,🥩,NULL,2026-10-09 17:19:20.819071+00
+ed17e480-5bab-4300-a026-8914a2b20e7c,Svinjski file (sirov),Meso,120,20.6,0,3.5,g,1,150,true,false,true,false,true,🥩,NULL,2026-10-09 17:19:20.819071+00
+f7c13512-11be-417e-87fc-c998cd40d6f2,Svinjski kare,Meso,198,22.0,0.0,12.0,g,1,150,true,false,true,false,true,🥩,NULL,2026-04-28 10:24:12.606892+00
+524c9732-28aa-4f68-bd9f-4b2237ac515f,Svinjski paprikaš Carnex (konzerva),Gotova jela,96,6.3,4.7,5.8,g,1,250,true,false,false,false,false,🍲,NULL,2026-10-09 17:19:20.819071+00
+76ef5acc-48c1-4234-a1b0-616e4852bdd8,Svinjski vrat (pečen),Meso,255,26.4,0,16.6,g,1,150,true,false,true,false,false,🥩,NULL,2026-10-09 17:19:20.819071+00
+a91a06e2-a10b-42af-95fe-78c86dcc3541,Svinjski vrat (sirov),Meso,203,18.9,0,14.1,g,1,150,true,false,true,false,false,🥩,NULL,2026-10-09 17:19:20.819071+00
+ce177b0a-2e21-4c48-82f5-f2042026fe15,Svinjsko belo meso,Meso,143,21.0,0.0,6.0,g,1,150,true,false,true,false,true,🥩,NULL,2026-04-28 10:24:12.606892+00
+0065faf4-390e-44bd-93d7-e7bd7c4bf3ef,Tabasco,Začini i dodaci,12,1.3,0.8,0.8,g,1,5,true,true,true,true,true,🌶️,NULL,2026-04-28 10:24:12.606892+00
+93cda4a0-4bea-4fed-b025-a1c925c0930b,Tabule salata,Gotova jela,150,3.5,18.0,7.5,g,1,150,true,true,false,false,true,🥗,NULL,2026-04-28 10:24:12.606892+00
+fd9a0a43-8de8-4b19-887f-1ff421248ebc,Tahini (susam pasta),Orašasti plodovi,595,17.0,21.2,53.8,g,1,30,true,true,true,true,true,🌰,NULL,2026-04-28 10:24:12.606892+00
+e1074997-772a-4b72-b9cf-8fac6d67a13c,Tahini puter,Orašasti plodovi,595,17.0,21.0,53.8,g,1,30,true,true,true,true,true,🌰,NULL,2026-04-28 10:24:12.606892+00
+fb45aa61-3fec-453d-8656-2cddad3e7d55,TAK krekeri,Slatkiši,450,9,64,18,g,1,30,true,false,false,false,false,🥨,NULL,2026-10-09 17:19:20.819071+00
+8392ba72-e374-481a-810b-4195c1790434,Tapenade,Povrće,300,2.0,5.0,30.0,g,1,20,true,true,true,true,true,🫒,NULL,2026-04-28 10:24:12.606892+00
+3dcd5dbb-28bb-4ea3-bed0-40f90bc754b9,Tartar sos Dijamant,Začini i dodaci,483,0.9,2.9,52,g,1,15,true,false,true,false,false,🥫,NULL,2026-10-09 17:19:20.819071+00
+c229cc93-6a07-4c54-9bcd-44a3e7cad9c7,Tartufi,Povrće,284,6.0,57.0,5.0,g,1,5,true,true,true,true,true,🍄,NULL,2026-04-28 10:24:12.606892+00
+faace94a-f924-492d-9a20-f81cd0d06bdb,Tekila,Pića,231,0.0,0.0,0.0,ml,1,30,true,true,true,true,false,🥃,NULL,2026-04-28 10:24:12.606892+00
+67b41e50-3bc4-43fb-a395-e986135cf8da,Teleća džigerica,Meso,140,19.9,2.9,4.9,g,1,100,true,false,true,false,true,🥩,NULL,2026-10-09 17:19:20.819071+00
+ed9ce8c3-d16e-4012-988e-acfab5077fdb,Teleća džigerica (pržena),Meso,193,27.4,4.5,6.5,g,1,100,true,false,true,false,true,🥩,NULL,2026-10-10 07:18:40.217049+00
+f5a77641-9bf5-4732-bc37-7a473a880296,Teleća krmenadla (na žaru),Meso,198,28,0.2,9.5,g,1,150,true,false,true,false,true,🥩,NULL,2026-10-09 17:19:20.819071+00
+25151204-7481-48f0-a0fb-a53e778f966d,Teleća šnicla (na žaru),Meso,151,31.9,0,2.6,g,1,150,true,false,true,false,true,🥩,NULL,2026-10-09 17:19:20.819071+00
+9c9d9fc0-c637-4d12-97ad-e5a6ca7465d6,Teleće pečenje (plećka),Meso,184,25.3,0,8.4,g,1,150,true,false,true,false,true,🥩,NULL,2026-10-09 17:19:20.819071+00
+3ba14f0b-932c-455b-9bbe-29cb5e0d89c7,Teletina,Meso,172,24.0,0.0,8.0,g,1,150,true,false,true,false,true,🥩,NULL,2026-04-28 10:24:12.606892+00
+4d6695ac-94cd-4394-b47d-39c1b540a53b,Tempeh,Mahunarke,193,19.0,9.4,11.0,g,1,100,true,true,true,true,true,🫘,NULL,2026-04-28 10:24:12.606892+00
+fe6c71d6-fc1e-4e3e-8df5-734ede908cc0,Testenina bela (kuvana),Ugljeni hidrati,158,5.8,30.9,0.9,g,1,150,true,true,false,true,true,🍝,NULL,2026-04-28 10:24:12.606892+00
+bd136c15-a622-489b-b2f4-5a228313a26f,Testenina bela (suva),Ugljeni hidrati,371,13,74.7,1.5,g,1,80,true,true,false,true,true,🍝,NULL,2026-10-09 17:19:20.819071+00
+47f5f489-bd87-4983-873a-a833afa5a1e8,Testenina integralna (kuvana),Ugljeni hidrati,124,5.3,26.5,0.5,g,1,150,true,true,false,true,true,🍝,NULL,2026-04-28 10:24:12.606892+00
+603296d6-e76a-41d3-9748-ca190e1539b1,Testenina integralna (suva),Ugljeni hidrati,352,13.9,73.4,2.9,g,1,80,true,true,false,true,true,🍝,NULL,2026-10-09 17:19:20.819071+00
+9efbd583-9e88-4e99-a154-daf46f184d29,Testenina od heljde (soba),Ugljeni hidrati,99,5.0,20.0,0.5,g,1,150,true,true,true,true,true,🍝,NULL,2026-04-28 10:24:12.606892+00
+8e26a23b-04e1-4d6b-91af-2197fb1f3af1,Testenina od pirinča,Ugljeni hidrati,165,3.0,33.0,1.0,g,1,150,true,true,true,true,true,🍝,NULL,2026-04-28 10:24:12.606892+00
+40fa1d6a-021d-46ee-93c5-1be5185aabba,Testenina od slanutka,Ugljeni hidrati,170,14.0,28.0,3.0,g,1,150,true,true,true,true,true,🍝,NULL,2026-04-28 10:24:12.606892+00
+2da69695-6ffa-4084-9ed6-bd85791c9a31,Testenina od sočiva,Ugljeni hidrati,170,21.0,28.0,2.5,g,1,150,true,true,true,true,true,🍝,NULL,2026-04-28 10:24:12.606892+00
+f2e58c1b-5b68-4a13-8c39-5153638c4b7d,Tikvice,Povrće,17,1.2,3.1,0.3,g,1,100,true,true,true,true,true,🥒,NULL,2026-04-28 10:24:12.606892+00
+fd9f559c-cf03-4d13-8c36-4be9fb499297,Tikvice (kuvane),Povrće,15,1.1,2.7,0.4,g,1,100,true,true,true,true,true,🥒,NULL,2026-10-09 17:19:20.819071+00
+5c367bc7-8637-4c90-b72a-d7cfd75197cb,Tilapija,Riba,96,20.1,0.0,1.7,g,1,150,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+d4540104-538d-4702-bee2-b214480ed684,Tilzit,Jaja i mleko,312,24,0,24,g,1,30,true,false,true,false,true,🧀,NULL,2026-10-10 07:18:40.217049+00
+fe8a3f7e-39d8-4ccb-94f2-2330b4f3271d,Timijan sušen,Začini i dodaci,276,9.1,63.9,7.4,g,1,1,true,true,true,true,true,🌿,NULL,2026-04-28 10:24:12.606892+00
+ba5e183e-206f-488d-b88c-51593632a85b,Toblerone,Slatkiši,535,5.6,60.5,29.5,g,1,35,true,false,false,false,false,🍫,NULL,2026-10-10 07:18:40.217049+00
+d0c600e3-f640-47ea-bdb8-b6c684334029,Toffifee,Slatkiši,516,5.9,58.5,28.7,kom,8.3,8.3,true,false,true,false,false,🍫,NULL,2026-10-10 07:18:40.217049+00
+83d838df-1424-49de-b5a8-dc3bf85514aa,Tofu (čvrst),Mahunarke,144,17.3,2.8,8.7,g,1,100,true,true,true,true,true,🫘,NULL,2026-04-28 10:24:12.606892+00
+904e6e1e-277c-4fc0-a370-ad9b2a8968d6,Tofu (svileni),Mahunarke,55,4.8,2.0,3.0,g,1,100,true,true,true,true,true,🫘,NULL,2026-04-28 10:24:12.606892+00
+884120fe-2283-448d-a026-e76e58b3e92d,Tofu dimljeni,Mahunarke,160,17.0,1.0,10.0,g,1,100,true,true,true,true,true,🫘,NULL,2026-04-28 10:24:12.606892+00
+f706e6e1-f425-44a1-be04-81f7bf349b07,Topla čokolada,Pića,140,3.5,18.0,6.0,ml,1,250,true,false,true,false,false,☕,NULL,2026-04-28 10:24:12.606892+00
+604cd369-fd8a-4bd7-9053-4e5b178d105b,Topljeni sir,Jaja i mleko,290,16.0,4.0,23.0,g,1,20,true,false,true,false,false,🧀,NULL,2026-04-28 10:24:12.606892+00
+66b08d4d-c800-4e3d-b5bc-8113fbc5ac9b,Tortica (komad),Slatkiši,400,4.5,50.0,20.0,g,1,100,true,false,false,false,false,🍰,NULL,2026-04-28 10:24:12.606892+00
+b2c45c71-795b-42b5-a107-c54757c4907f,Tortilja integralna (25 cm),Ugljeni hidrati,290,10.0,47.0,7.5,kom,62,62,true,true,false,true,true,🫓,NULL,2026-04-28 10:24:12.606892+00
+11a0e446-0732-482a-9ae5-e07e5dc74767,Tortilja kukuruzna,Ugljeni hidrati,237,5.7,49.0,2.9,g,1,50,true,true,true,true,true,🫓,NULL,2026-04-28 10:24:12.606892+00
+51ce6a7e-9a3d-423d-ba7b-5842d3a32ac3,Tortilja proteinska Mexicana (25 cm),Ugljeni hidrati,315,17,43,6,kom,62,62,true,true,false,true,true,🫓,NULL,2026-10-10 08:38:09.088077+00
+ebc7458b-43a8-4679-8d63-d8cc0bcf69ac,Tortilja proteinska World's Market (20 cm),Ugljeni hidrati,304,18,38,7.8,kom,40,40,true,false,false,true,true,🫓,NULL,2026-10-10 08:38:09.088077+00
+ab4f26ce-2567-4fb1-aac6-62ab8271200f,Tortilja pšenična (20 cm),Ugljeni hidrati,304,8.0,55.0,7.0,kom,40,40,true,true,false,true,false,🫓,NULL,2026-10-10 08:38:09.088077+00
+563496d4-1f5e-476b-82a8-46fcee4725cc,Tortilja pšenična (25 cm),Ugljeni hidrati,304,8.0,55.0,7.0,kom,62,62,true,true,false,true,false,🫓,NULL,2026-04-28 10:24:12.606892+00
+befc4af7-48cc-4d41-bdc7-4c4d329dd0f4,Tost hleb beli,Ugljeni hidrati,262,7.4,51.5,2.3,kom,22,22,true,true,false,true,false,🍞,NULL,2026-10-09 17:19:20.819071+00
+92c6240c-796a-4eda-bebd-4367d8104e02,Tost hleb sa semenkama,Ugljeni hidrati,262,8.9,42,5.3,kom,22,22,true,true,false,true,true,🍞,NULL,2026-10-10 07:18:40.217049+00
+8ddb4e29-d145-4714-ba9b-8536e20dda5e,Toto keks (mlečni),Slatkiši,492,7,63,24,g,1,30,true,false,false,false,false,🍪,NULL,2026-10-09 17:19:20.819071+00
+cedd4c96-72e5-4a08-ba4b-dfa45d18a248,Trapist,Jaja i mleko,360,25.0,1.0,28.0,g,1,30,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+3bddac72-50bb-42b3-acb4-8951388da6e7,Trešnja,Voće,63,1.1,16.0,0.2,g,1,100,true,true,true,true,true,🍒,NULL,2026-04-28 10:24:12.606892+00
+fc5e6e3c-ec3f-43c0-b512-58fb3888f6c9,Trik perece,Slatkiši,391,11,68,9,g,1,30,true,true,false,true,false,🥨,NULL,2026-10-09 17:19:20.819071+00
+daf51231-ed86-4ac7-be66-1e577a7fd97e,Trik ribice,Slatkiši,460,8,63,20,g,1,30,true,false,false,false,false,🥨,NULL,2026-10-09 17:19:20.819071+00
+55566f4c-18ac-44c4-b36e-fe17494cd2d2,Tulumba,Slatkiši,415,3.5,55.0,20.0,g,1,80,true,true,false,false,false,🍮,NULL,2026-04-28 10:24:12.606892+00
+528de160-d1d3-43e8-acf8-496047543dd4,Tuna konzerva u vodi,Riba,108,23.6,0.0,1.0,g,1,80,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+459d7515-f8db-4656-9ac2-347ef330bdbb,Tuna sveža,Riba,132,28.0,0.0,1.0,g,1,150,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+49a2d52a-0683-47de-a8d4-b401e8934a02,Tuna u maslinovom ulju,Riba,198,26.0,0.0,10.0,g,1,80,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+c9d44259-c257-4180-a57b-ed8d4332ea56,Tuna u sopstvenom soku,Riba,116,26.0,0.0,1.0,g,1,80,true,false,true,true,true,🐟,NULL,2026-04-28 10:24:12.606892+00
+3f8cb8d4-9732-4004-8541-e40be47c7a44,Turšija (mešana salata),Povrće,23,1.2,4,0.2,g,1,100,true,true,true,true,true,🫙,NULL,2026-10-09 17:19:20.819071+00
+5ce97d96-e3fe-428c-a0f3-81cee3c8c171,Turska kafa,Pića,2,0.1,0.0,0.0,ml,1,60,true,true,true,true,true,☕,NULL,2026-04-28 10:24:12.606892+00
+b4465df2-ede9-419b-b50e-b2db1972a7f5,Ulje od koštica grožđa,Masnoće i ulja,884,0,0,100,g,1,10,true,true,true,true,true,🫗,NULL,2026-10-10 07:18:40.217049+00
+04976de8-2ad9-46f5-bde8-2c297da09879,Urda,Jaja i mleko,100,11.0,3.5,5.0,g,1,50,true,false,true,false,true,🧀,NULL,2026-04-28 10:24:12.606892+00
+d951a255-72de-4a9a-bc31-57a11683453e,Urma (datula),Voće,277,1.8,75.0,0.2,g,1,30,true,true,true,true,true,🍎,NULL,2026-04-28 10:24:12.606892+00
+4f075c53-bb69-4752-883e-9430d45ae8ed,Urnebes Sirko,Jaja i mleko,186,4.7,3.2,17.2,g,1,30,true,false,true,false,false,🧀,NULL,2026-10-09 17:19:20.819071+00
+7f18826b-a3bd-42f3-ad23-d14bf08699fc,Vafl,Pekarski,291,6.5,33.0,14.0,g,1,75,true,false,false,false,false,🧇,NULL,2026-04-28 10:24:12.606892+00
+1c353eae-b6f6-450b-8cea-1a6925dfe0a8,Vanilice,Slatkiši,420,5.5,65.0,15.5,g,1,20,true,false,false,false,false,🍪,NULL,2026-04-28 10:24:12.606892+00
+6dc81d67-d0e1-41b0-9506-b7d645918990,Vanilija (mahuna),Začini i dodaci,288,0.1,12.7,0.1,g,1,1,true,true,true,true,true,🌿,NULL,2026-04-28 10:24:12.606892+00
+33958e2c-f48d-4e57-8e42-a36db8532ac0,Vanilin šećer,Začini i dodaci,395,0,99,0,g,1,10,true,true,true,true,false,🍬,NULL,2026-10-09 17:19:20.819071+00
+396294ee-833e-4337-aeaa-ed2f987fa19e,Vegeta,Začini i dodaci,180,12.0,30.0,2.0,g,1,5,true,false,false,false,false,🧂,NULL,2026-04-28 10:24:12.606892+00
+71449062-279e-4397-98ae-c0cf71cc0058,Vešalica (na žaru),Meso,196,26.6,0,9.1,g,1,150,true,false,true,false,true,🥩,NULL,2026-10-09 17:19:20.819071+00
+8924a393-dfb3-499d-8b76-a88732c582b8,Vinjak,Pića,221,0,0,0,ml,1,30,true,true,true,true,false,🥃,NULL,2026-10-09 17:19:20.819071+00
+92526e34-be4c-4567-a44c-dc56c20c2acb,Vino belo,Pića,82,0.1,2.6,0.0,ml,1,150,true,true,true,true,false,🍷,NULL,2026-04-28 10:24:12.606892+00
+92a77560-5ce7-49ad-ac51-669b34e391ad,Vino crveno,Pića,85,0.1,2.6,0.0,ml,1,150,true,true,true,true,false,🍷,NULL,2026-04-28 10:24:12.606892+00
+fb5ee990-d0f5-4c36-b482-5285dc5e4389,Vino roze,Pića,83,0.1,2.6,0.0,ml,1,150,true,true,true,true,false,🍷,NULL,2026-04-28 10:24:12.606892+00
+a65f4d1a-6705-4b6a-977e-20a865be3b1e,Vinov list (u salamuri),Povrće,69,4.3,11.7,2,g,1,30,true,true,true,true,true,🥬,NULL,2026-10-09 17:19:20.819071+00
+b67a9d37-c0ff-49fd-b7ee-b6fc3cb9391e,"Viršla u testu (smrznuta, nepečena)",Pekarski,296,9,27,17,g,1,100,true,false,false,false,false,🌭,NULL,2026-10-10 07:18:40.217049+00
+92307f05-ada0-410f-912d-33d2b55f97ae,Viršle,Meso,244,14,2,20,g,1,100,true,false,false,false,false,🌭,NULL,2026-10-09 17:19:20.819071+00
+362aa7c6-ae68-46d7-b8b3-99c082af928b,Viski,Pića,250,0.0,0.0,0.0,ml,1,30,true,true,true,true,false,🥃,NULL,2026-04-28 10:24:12.606892+00
+898d3c02-ff91-4808-82d2-2f050cb2ef73,Višnja,Voće,50,1.0,12.2,0.3,g,1,100,true,true,true,true,true,🍒,NULL,2026-04-28 10:24:12.606892+00
+4bada471-ab5d-4bb6-b90f-60cc7804af13,Vitamin B kompleks,Suplementi,0,0.0,0.0,0.0,g,1,1,true,true,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+bb624344-9df9-46db-a0dd-89cb03cc8578,Vitamin C,Suplementi,0,0.0,0.0,0.0,g,1,1,true,true,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+592de954-5159-475b-8c93-752589800621,Vitamin D3,Suplementi,0,0.0,0.0,0.0,g,1,1,true,false,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+4b71501f-fe50-4ec8-b153-af4c9591c3d8,Vitamin D3 vegan,Suplementi,0,0.0,0.0,0.0,g,1,1,true,true,true,true,true,💊,NULL,2026-04-28 10:24:12.606892+00
+6fb39c8f-b653-4cba-b42e-f21391ab370a,Vlašac,Povrće,30,3.3,4.4,0.7,g,1,10,true,true,true,true,true,🌿,NULL,2026-04-28 10:24:12.606892+00
+70696f2c-9fa3-419c-893a-027a6d41cadb,Voćni sirup (jagoda),Slatkiši,260,0.0,68.0,0.0,g,1,15,true,true,true,true,false,🍯,NULL,2026-04-28 10:24:12.606892+00
+699c05ac-b275-4e26-852b-aff35d99ff4a,Voda,Pića,0,0.0,0.0,0.0,ml,1,250,true,true,true,true,true,💧,NULL,2026-04-28 10:24:12.606892+00
+bf6767b5-e0d4-4570-bbcd-3a2de51a6cf0,Vodka,Pića,231,0.0,0.0,0.0,ml,1,30,true,true,true,true,false,🥃,NULL,2026-04-28 10:24:12.606892+00
+fbb71bf5-b780-4266-a6b8-5db824df231e,Vrganji,Povrće,22,3.1,3.3,0.4,g,1,100,true,true,true,true,true,🍄,NULL,2026-04-28 10:24:12.606892+00
+f7939e29-43bf-42bc-9d43-f3e869bfd176,Whey izolat (prah),Suplementi,360,90.0,1.0,1.0,g,1,30,true,false,true,false,true,🥤,NULL,2026-04-28 10:24:12.606892+00
+c0e83763-7927-4fa9-b53a-2488c65f7ff1,Whey protein (prah),Suplementi,370,75.0,10.0,5.0,g,1,30,true,false,true,false,true,🥤,NULL,2026-04-28 10:24:12.606892+00
+9145b8c5-8e35-4a7b-948a-131678860b6c,Worcester sos,Začini i dodaci,78,0.0,19.7,0.0,g,1,10,true,true,false,false,true,🥫,NULL,2026-04-28 10:24:12.606892+00
+72db776b-8da6-4cb0-be32-894318afe5f1,Začin C,Začini i dodaci,160,10.0,28.0,1.0,g,1,5,true,false,false,false,false,🧂,NULL,2026-04-28 10:24:12.606892+00
+09cfc758-946b-4336-8f68-5620229e8543,Žalfija sušena,Začini i dodaci,315,10.6,60.7,12.8,g,1,1,true,true,true,true,true,🌿,NULL,2026-10-10 07:18:40.217049+00
+ac241bcf-3b69-47ef-abd6-849eb6055c4f,Zečetina,Meso,173,33.0,0.0,3.5,g,1,150,true,false,true,false,true,🥩,NULL,2026-04-28 10:24:12.606892+00
+7d793a22-38bd-47d4-ba07-5821ed706875,Želatin (u prahu),Začini i dodaci,335,85.6,0,0.1,g,1,10,true,false,true,false,true,🍮,NULL,2026-10-10 07:18:40.217049+00
+485e7e89-cb96-4315-ac1b-d76768ccfa24,Zelena salata,Povrće,15,1.4,2.9,0.2,g,1,50,true,true,true,true,true,🥬,NULL,2026-04-28 10:24:12.606892+00
+0e035c31-643e-4d5f-8c63-2532c42a0b41,Zeleni čaj (nezaslađen),Pića,1,0.0,0.0,0.0,ml,1,250,true,true,true,true,true,🍵,NULL,2026-04-28 10:24:12.606892+00
+97f224f6-2a80-4ca6-8bbc-981d1e4f14c7,Zelje (štavelj),Povrće,22,2,3.2,0.7,g,1,100,true,true,true,true,true,🥬,NULL,2026-10-09 17:19:20.819071+00
+1d3ec60d-8f43-412b-9828-cb8c65c8d567,Zemička za burger,Pekarski,286,9.5,47.3,5.8,kom,65,65,true,false,false,false,false,🍞,NULL,2026-10-09 17:19:20.819071+00
+c5bf6d70-d785-4010-a86f-723d079e3227,Zimska salama Gavrilović,Meso,472,27,1,40,g,1,30,true,false,false,false,false,🍖,NULL,2026-10-09 17:19:20.819071+00
+5b05fdeb-e144-4e1e-87db-e306f1a96f28,Životinjsko carstvo,Slatkiši,548,7.4,54,33,kom,15,15,true,false,false,false,false,🍫,NULL,2026-10-09 17:19:20.819071+00
+25533b59-ae7e-4fe2-8474-ceca7883aa85,Zlatni Pek keks,Slatkiši,425,8.2,75,10,g,1,30,true,false,false,true,false,🍪,NULL,2026-10-09 17:19:20.819071+00
+7b3122db-e143-47df-a67c-e982f9cfa54e,"Žu-žu pecivo (smrznuto, nepečeno)",Pekarski,369,5.2,36,22,g,1,100,true,false,false,false,false,🥐,NULL,2026-10-10 07:18:40.217049+00
+ccadf673-3d30-4145-aa37-ece60df0599d,Žumance,Jaja i mleko,322,15.9,3.6,26.5,kom,17,17,true,false,true,false,true,🥚,NULL,2026-04-28 10:24:12.606892+00

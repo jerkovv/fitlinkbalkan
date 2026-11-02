@@ -1,0 +1,1254 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FitLink — v4, postojeći ekrani</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand-1:hsl(268 80% 56%);
+  --brand-2:hsl(252 80% 58%);
+  --brand-3:hsl(322 78% 60%);
+  --g-brand:linear-gradient(135deg,hsl(268 80% 56%) 0%,hsl(252 80% 58%) 55%,hsl(322 78% 60%) 100%);
+  --g-brand-soft:linear-gradient(135deg,hsl(268 100% 97%) 0%,hsl(252 100% 97%) 55%,hsl(322 100% 97%) 100%);
+  --g-rest:linear-gradient(135deg,hsl(322 82% 56%),hsl(252 82% 60%));
+  --ink:hsl(240 18% 10%);
+  --body:hsl(240 10% 32%);
+  --muted:hsl(240 8% 48%);
+  --faint:hsl(240 8% 66%);
+  --page:hsl(240 14% 97%);
+  --surf:#fff;
+  --s2:hsl(240 14% 95%);
+  --s3:hsl(240 12% 91%);
+  --hair:hsl(240 10% 90%);
+  --ok:hsl(152 65% 36%);
+  --ok-soft:hsl(150 55% 95%);
+  --warn-bg:hsl(38 100% 95%);
+  --warn-fg:hsl(28 80% 38%);
+  --bad:hsl(0 75% 55%);
+  --br-soft:hsl(268 85% 96%);
+  --br-fg:hsl(268 62% 42%);
+
+  --gutter:24px;
+  --r-row:20px; --r-card:20px; --r-sheet:30px; --pill:999px;
+  --sh:0 1px 2px hsl(240 18% 10% / .04),0 10px 30px hsl(240 18% 10% / .06);
+  --sh-lift:0 2px 6px hsl(240 18% 10% / .05),0 18px 40px hsl(240 18% 10% / .10);
+  --sh-brand:0 10px 30px hsl(268 80% 56% / .34);
+  --caps:.09em;
+  --bloom:radial-gradient(180px 180px at 84% -2%,hsl(268 90% 72% / .26),transparent 70%),radial-gradient(220px 220px at 106% 4%,hsl(322 90% 72% / .18),transparent 72%);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0D0D14;color:#fff;font-family:"Inter",system-ui,sans-serif;padding:60px 34px 120px;-webkit-font-smoothing:antialiased}
+.dsp{font-family:"Inter Tight","Inter",sans-serif}
+.num{font-variant-numeric:tabular-nums}
+.grad{background:var(--g-brand);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+.head{max-width:1320px;margin:0 auto 52px}
+.kick{font-size:12px;font-weight:700;letter-spacing:var(--caps);text-transform:uppercase;color:hsl(268 90% 78%)}
+.head h1{font-family:"Inter Tight";font-size:44px;font-weight:700;letter-spacing:-.035em;line-height:1.06;margin-top:12px}
+.head h1 span{background:var(--g-brand);-webkit-background-clip:text;background-clip:text;color:transparent}
+.head p{margin-top:16px;font-size:15px;line-height:1.7;color:rgba(255,255,255,.6);max-width:76ch}
+.head p b{color:#fff;font-weight:600}
+.cols{display:flex;flex-wrap:wrap;gap:34px;margin-top:32px;padding-top:28px;border-top:1px solid rgba(255,255,255,.1)}
+.cols section{max-width:310px}
+.cols h4{font-size:10px;font-weight:700;letter-spacing:var(--caps);text-transform:uppercase;color:rgba(255,255,255,.42);margin-bottom:11px}
+.cols ul{list-style:none;font-size:12.5px;line-height:1.85;color:rgba(255,255,255,.58)}
+.cols li:before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:hsl(268 80% 64%);margin-right:10px;vertical-align:middle}
+.cols li.x:before{background:hsl(0 75% 58%)}
+
+.grid{max-width:1320px;margin:0 auto;display:flex;flex-wrap:wrap;gap:80px 46px;align-items:flex-start}
+.slot{width:390px}
+.cap{margin-top:24px}
+.cap .no{font-size:11px;font-weight:700;letter-spacing:var(--caps);color:hsl(268 90% 78%);text-transform:uppercase}
+.cap h3{font-size:16px;font-weight:600;margin-top:4px}
+.cap .src{font-size:11px;color:rgba(255,255,255,.34);margin-top:5px;font-family:ui-monospace,Menlo,monospace}
+.cap p{margin-top:9px;font-size:12.5px;line-height:1.65;color:rgba(255,255,255,.48)}
+
+.phone{width:390px;border-radius:52px;background:#000;padding:6px;box-shadow:0 50px 90px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.07)}
+.scr{position:relative;border-radius:46px;overflow:hidden;background:var(--page);color:var(--ink);font-size:14px;display:flex;flex-direction:column;min-height:700px}
+.sb{position:relative;z-index:6;height:52px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:14px 30px 0;font-size:13px;font-weight:600;letter-spacing:-.01em}
+.sb .d{display:flex;gap:4px;align-items:center;opacity:.9}
+.sb .d i{width:3.5px;height:3.5px;border-radius:50%;background:currentColor}
+.bloom{position:absolute;top:0;left:0;right:0;height:320px;background:var(--bloom);pointer-events:none}
+.pad{padding:0 var(--gutter);position:relative;z-index:2}
+.pb{padding-bottom:34px}
+
+.top{display:flex;align-items:center;justify-content:space-between;height:54px}
+.ib{width:44px;height:44px;border-radius:var(--pill);display:grid;place-items:center;background:var(--surf);box-shadow:var(--sh);color:var(--ink);flex:none;position:relative}
+.ib.ghost{background:transparent;box-shadow:none}
+.av{width:46px;height:46px;border-radius:var(--pill);background:var(--g-brand);display:grid;place-items:center;color:#fff;font-weight:700;font-size:15px;flex:none}
+.av.s{width:30px;height:30px;font-size:11px;font-weight:700}
+.av.m{width:40px;height:40px;font-size:13px}
+.bdg{position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:50%;background:var(--bad);border:2px solid #fff}
+
+.eyebrow{font-size:11.5px;font-weight:700;letter-spacing:var(--caps);text-transform:uppercase;color:var(--muted)}
+.title{font-family:"Inter Tight";font-size:34px;font-weight:700;letter-spacing:-.035em;line-height:1.08;margin-top:10px}
+.title.s{font-size:29px}
+.h2{font-family:"Inter Tight";font-size:20px;font-weight:700;letter-spacing:-.028em}
+.h3{font-size:16px;font-weight:600;letter-spacing:-.012em}
+.h4{font-size:14.5px;font-weight:600;letter-spacing:-.008em}
+.sub{font-size:13.5px;color:var(--muted);line-height:1.5;margin-top:3px}
+.sub.s{font-size:12.5px}
+.lead{font-size:15px;line-height:1.6;color:var(--body)}
+.sect{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.sect a{font-size:13px;font-weight:600;color:var(--brand-1);text-decoration:none}
+.over{font-size:11.5px;font-weight:700;letter-spacing:var(--caps);text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+.chip{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 15px;border-radius:var(--pill);background:var(--s2);color:var(--body);font-size:13px;font-weight:600;white-space:nowrap}
+.chip.br{background:var(--br-soft);color:var(--br-fg)}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.wn{background:var(--warn-bg);color:var(--warn-fg)}
+.chip.w{background:var(--surf);box-shadow:var(--sh);font-weight:500}
+.chip.xs{height:27px;padding:0 11px;font-size:11px}
+.chips{display:flex;gap:9px;flex-wrap:wrap}
+
+.card{background:var(--surf);border-radius:var(--r-card);padding:22px;box-shadow:var(--sh)}
+.card.q{box-shadow:none;background:var(--s2)}
+.list{--ins:18px;background:var(--surf);border-radius:var(--r-row);box-shadow:var(--sh);overflow:hidden}
+.list .r{position:relative;display:flex;align-items:center;gap:15px;padding:15px 18px;min-height:74px}
+.list .r+.r:before{content:"";position:absolute;left:var(--ins);right:0;top:0;height:1px;background:var(--hair)}
+.list.m44{--ins:77px}
+.list.m56{--ins:89px}
+.grow{flex:1;min-width:0}
+.med{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;flex:none;color:#fff;background:var(--g-brand)}
+.med.soft{background:var(--g-brand-soft);color:var(--brand-1)}
+.med.ok{background:var(--ok);color:#fff}
+.med.q{background:var(--s2);color:var(--muted)}
+.med.wn{background:var(--warn-bg);color:var(--warn-fg)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;height:56px;padding:0 24px;border-radius:18px;font-size:15.5px;font-weight:600;letter-spacing:-.01em;font-family:inherit;border:0}
+.btn.pill{border-radius:var(--pill)}
+.btn.brand{background:var(--g-brand);color:#fff;box-shadow:var(--sh-brand)}
+.btn.light{background:#fff;color:var(--ink)}
+.btn.q{background:var(--surf);color:var(--ink);box-shadow:var(--sh)}
+.btn.block{width:100%}
+.btn.sm{height:44px;font-size:14px;padding:0 18px}
+
+.stat{background:var(--surf);border-radius:var(--r-card);padding:18px;box-shadow:var(--sh)}
+.stat .l{font-size:11px;font-weight:700;letter-spacing:var(--caps);text-transform:uppercase;color:var(--muted)}
+.stat .v{font-family:"Inter Tight";font-size:30px;font-weight:700;letter-spacing:-.035em;line-height:1;margin-top:10px}
+.stat .u{font-size:13px;color:var(--muted);margin-top:6px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+.hero{position:relative;overflow:hidden;border-radius:24px;padding:24px;color:#fff;box-shadow:var(--sh-brand);background:var(--g-brand)}
+.hero .orb{position:absolute;top:-60px;right:-50px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.16);filter:blur(30px)}
+.hero .in{position:relative}
+.hero .cap{font-size:11px;font-weight:700;letter-spacing:var(--caps);text-transform:uppercase;opacity:.82;margin:0}
+
+.nav{position:sticky;bottom:0;z-index:6;margin:18px 14px 14px;border-radius:28px;background:rgba(255,255,255,.94);backdrop-filter:blur(22px);box-shadow:0 -2px 12px hsl(240 18% 10% / .04),0 16px 36px hsl(240 18% 10% / .12);display:grid;padding:11px 8px}
+.nav.a5{grid-template-columns:repeat(5,1fr)}
+.nav.a4{grid-template-columns:repeat(4,1fr)}
+.nav a{display:flex;flex-direction:column;align-items:center;gap:6px;text-decoration:none;color:var(--faint);font-size:10px;font-weight:600}
+.nav a .b{width:40px;height:40px;border-radius:14px;display:grid;place-items:center}
+.nav a.on{color:var(--ink)}
+.nav a.on .b{background:var(--g-brand);color:#fff;box-shadow:var(--sh-brand)}
+.navwrap{position:relative;margin-top:auto}
+.navwrap:before{content:"";position:absolute;left:0;right:0;top:-30px;height:30px;background:linear-gradient(to top,var(--page),transparent);pointer-events:none}
+
+.seg{display:inline-flex;padding:5px;border-radius:var(--pill);background:var(--s2)}
+.seg span{padding:9px 22px;border-radius:var(--pill);font-size:13.5px;font-weight:600;color:var(--muted)}
+.seg span.on{background:var(--surf);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.06)}
+
+.dayp{display:flex;gap:10px;overflow:hidden;margin-right:-24px}
+.dc{flex:none;width:70px;padding:14px 0;border-radius:18px;background:var(--surf);box-shadow:var(--sh);text-align:center}
+.dc .n{font-family:"Inter Tight";font-size:23px;font-weight:700;letter-spacing:-.035em;line-height:1}
+.dc .w{font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--muted);margin-top:7px;text-transform:uppercase}
+.dc.on{background:var(--g-brand);color:#fff;box-shadow:var(--sh-brand)}
+.dc.on .w{color:rgba(255,255,255,.8)}
+
+.slot-card{border-radius:20px;background:var(--surf);box-shadow:var(--sh);overflow:hidden}
+.slot-head{padding:12px 18px;display:flex;align-items:center;justify-content:space-between}
+.slot-body{padding:16px 18px 18px}
+.metaRow{display:flex;align-items:center;gap:18px;font-size:13px;color:var(--muted)}
+.metaRow b{color:var(--ink);font-weight:600}
+
+.vid{position:relative;overflow:hidden;border-radius:22px;background:#0b0b12}
+.vid video{display:block;width:100%;height:100%;object-fit:cover}
+
+.setline{display:flex;align-items:center;gap:14px;padding:14px 18px;position:relative}
+.setline+.setline:before{content:"";position:absolute;left:18px;right:0;top:0;height:1px;background:var(--hair)}
+.setline.act{background:hsl(268 85% 97%)}
+.dotn{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;flex:none;background:var(--s2);color:var(--muted)}
+.dotn.done{background:var(--ok);color:#fff}
+.dotn.act{background:var(--g-brand);color:#fff}
+
+.stp{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.stp .b{width:50px;height:50px;border-radius:16px;background:var(--s2);display:grid;place-items:center;flex:none;color:var(--ink)}
+.stp .v{flex:1;text-align:center;font-family:"Inter Tight";font-size:22px;font-weight:700;letter-spacing:-.03em}
+.rpe{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}
+.rpe span{height:38px;border-radius:11px;background:var(--s2);color:var(--muted);font-size:12.5px;font-weight:700;display:grid;place-items:center}
+.rpe span.on{background:var(--g-brand);color:#fff;box-shadow:var(--sh-brand)}
+
+.bars{display:flex;align-items:flex-end;gap:7px;height:104px}
+.bars .c{flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;height:100%;justify-content:flex-end}
+.bars i{width:100%;border-radius:7px 7px 0 0;background:hsl(268 80% 56% / .3)}
+.bars i.on{background:linear-gradient(to top,hsl(268 80% 56%),hsl(268 80% 56% / .6))}
+.bars i.zero{background:var(--hair)}
+.bars .c span{font-size:10px;font-weight:700;color:var(--muted)}
+.bars .c.on span{color:var(--brand-1)}
+
+.inp{height:54px;border-radius:16px;background:var(--surf);box-shadow:var(--sh);display:flex;align-items:center;justify-content:space-between;padding:0 18px;font-size:15px;color:var(--ink)}
+.fieldlabel{font-size:13px;font-weight:600;color:var(--body);margin-bottom:9px;display:flex;justify-content:space-between;align-items:baseline}
+
+.photos{display:flex;gap:12px}
+.photos div{flex:1;aspect-ratio:3/4;border-radius:16px;background-size:cover;background-position:center;background-color:var(--s2)}
+.photos .add{display:grid;place-items:center;color:var(--faint);background:var(--s2)}
+
+svg.i{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+svg.i.s{width:16px;height:16px}
+svg.i.l{width:25px;height:25px}
+.col{display:flex;flex-direction:column}
+.g8{gap:8px}.g10{gap:10px}.g12{gap:12px}.g14{gap:14px}.g16{gap:16px}
+.m8{margin-top:8px}.m12{margin-top:12px}.m16{margin-top:16px}.m20{margin-top:20px}.m24{margin-top:24px}.m28{margin-top:28px}.m32{margin-top:32px}.m40{margin-top:40px}
+</style>
+</head>
+<body>
+
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 20a2 2 0 0 1-3.4 0"/></symbol>
+  <symbol id="i-msg" viewBox="0 0 24 24"><path d="M20 12a7.5 7.5 0 0 1-10.9 6.7L4 20l1.3-4.1A7.5 7.5 0 1 1 20 12z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z" fill="currentColor" stroke-width="1.2"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 2.5c3.4 3.2 5.5 6 5.5 9.2a5.5 5.5 0 0 1-11 0c0-1.7.7-3 1.7-4.2.3 1.2 1 2 1.9 2 1.4 0 2.1-2.4 1.9-7z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5.3l3.2 1.9"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3.5"/><path d="M8 3v4M16 3v4M3 10h18"/></symbol>
+  <symbol id="i-calplus" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3.5"/><path d="M8 3v4M16 3v4M3 10h18M12 13.5v5M9.5 16h5"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 10.6 12 4l8 6.6V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-dumb" viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></symbol>
+  <symbol id="i-trend" viewBox="0 0 24 24"><path d="M21 7.5 13.5 15l-4-4L3 17.5"/><path d="M15.5 7.5H21v5.5"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><path d="M2.5 10h19M6.5 14.5h4"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5.5 12h13"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M17 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M5 20V11M12 20V4M19 20v-6"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.7-7.5-9.8A4.2 4.2 0 0 1 12 7.4a4.2 4.2 0 0 1 7.5 2.8C19.5 15.3 12 20 12 20z"/></symbol>
+  <symbol id="i-apple" viewBox="0 0 24 24"><path d="M12 8.5c-1-1.5-3-2-4.5-1C5.6 8.8 5 11.5 6 14.5c.8 2.4 2.4 4.5 4 4.5.9 0 1.4-.5 2-.5s1.1.5 2 .5c1.6 0 3.2-2.1 4-4.5 1-3 .4-5.7-1.5-7-1.5-1-3.5-.5-4.5 1z"/><path d="M12 8.5V5.5c0-1 1-2 2.5-2"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17.2v.1"/></symbol>
+  <symbol id="i-hist" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3 4v5h5M12 7.5V12l3 1.8"/></symbol>
+  <symbol id="i-caldays" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3.5"/><path d="M3 10h18M8 3v4M16 3v4M8 14h.1M12 14h.1M16 14h.1"/></symbol>
+  <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3.5 13.6 9 19 10.5 13.6 12 12 17.5 10.4 12 5 10.5 10.4 9z"/></symbol>
+  <symbol id="i-scale" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M8.5 10.5 12 8l3.5 2.5"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.5 5 6v5.5c0 4.4 3 7.6 7 9 4-1.4 7-4.6 7-9V6z"/><path d="m9.5 12 1.8 1.8L15 10"/></symbol>
+  <symbol id="i-pkg" viewBox="0 0 24 24"><path d="M12 3.5 20 8v8l-8 4.5L4 16V8z"/><path d="m4 8 8 4.5L20 8M12 12.5V20"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 0 1 14.5-6M20.5 12A8.5 8.5 0 0 1 6 18"/><path d="M18 3v3.5h-3.5M6 21v-3.5h3.5"/></symbol>
+  <symbol id="i-radio" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.5"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 16.2a6 6 0 0 0 0-8.4M5 5a10 10 0 0 0 0 14M19 19a10 10 0 0 0 0-14"/></symbol>
+  <symbol id="i-fwd" viewBox="0 0 24 24"><path d="M5 5v14l9-7zM17 5v14"/></symbol>
+  <symbol id="i-chevdown" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+</svg>
+
+<div class="head">
+  <div class="kick">v4 · samo postojeći ekrani i postojeće opcije</div>
+  <h1>Ništa novo, <span>samo bolje raspoređeno</span></h1>
+  <p>
+    Ova verzija ne uvodi nijednu novu opciju. Prošao sam kroz kod i prepisao svaki ekran onakav kakav
+    jeste: iste sekcije, isti redosled, isti tekst, ista dugmad, iste prazne poruke. Ono što je promenjeno
+    je isključivo <b>raspored i vazduh</b>. Ispod svakog ekrana piše iz kog fajla je preuzet, da možeš da uporediš.
+    Izbačeno je sve što sam u prethodnim verzijama izmislio, spisak je desno.
+  </p>
+  <div class="cols">
+    <section>
+      <h4>Šta je promenjeno</h4>
+      <ul>
+        <li>Razmak između sekcija 40, unutar kartice 22</li>
+        <li>Naslov sekcije 20px umesto 15px</li>
+        <li>Lista je jedna kartica sa uvučenim linijama</li>
+        <li>Bez bordera, senka jedva vidljiva</li>
+        <li>Redovi 74 visoki, dugmad 56</li>
+        <li>Brojke tabelarne, pa kolone ne skaču</li>
+      </ul>
+    </section>
+    <section>
+      <h4>Šta je ostalo netaknuto</h4>
+      <ul>
+        <li>Svaka sekcija i njen redosled</li>
+        <li>Sav tekst, do zareza</li>
+        <li>Sve boje i gradijenti iz index.css</li>
+        <li>Donja navigacija, pet i četiri stavke</li>
+        <li>Inter Tight za naslove i brojke</li>
+        <li>Emoji tamo gde ih aplikacija već ima</li>
+      </ul>
+    </section>
+    <section>
+      <h4>Izbačeno, jer ne postoji</h4>
+      <ul>
+        <li class="x">Biblioteka vežbi za vežbača</li>
+        <li class="x">Nedeljna traka dana na Treningu</li>
+        <li class="x">Fotografije vežbi u listama</li>
+        <li class="x">Ocena osećaja i rekord na rezimeu</li>
+        <li class="x">Unos vode i slike hrane</li>
+        <li class="x">Vrsta termina i mreža sati</li>
+        <li class="x">Apple prijava, paketi i uplate u listi</li>
+      </ul>
+    </section>
+    <section>
+      <h4>Snimak vežbe</h4>
+      <ul>
+        <li>Ostaje samo tamo gde ga aplikacija ima</li>
+        <li>ExerciseHeader na aktivnom treningu</li>
+        <li>Petlja bez zvuka, kao i sada</li>
+        <li>Fotografije napretka u kartici Telo</li>
+      </ul>
+    </section>
+  </div>
+</div>
+
+<div class="grid">
+
+<!-- ============ 01 PRIJAVA ============ -->
+<div class="slot">
+  <div class="phone"><div class="scr">
+    <div class="bloom"></div>
+    <div class="sb"><span>9:41</span><span class="d"><i></i><i></i><i></i></span></div>
+
+    <div class="pad" style="flex:1;display:flex;flex-direction:column;padding-top:40px">
+      <div class="dsp grad" style="font-size:26px;font-weight:700;letter-spacing:-.035em">FitLink</div>
+
+      <div style="margin-top:64px">
+        <div class="title">Dobrodošao nazad</div>
+        <div class="sub" style="margin-top:10px">Uloguj se na svoj FitLink nalog.</div>
+      </div>
+
+      <div class="m32">
+        <div class="fieldlabel">Email</div>
+        <div class="inp">ana.kovac@gmail.com</div>
+      </div>
+
+      <div class="m20">
+        <div class="fieldlabel">Lozinka <span style="font-size:12px;font-weight:500;color:var(--muted)">Zaboravljena?</span></div>
+        <div class="inp">
+          <span>••••••••••</span>
+          <span style="font-size:12.5px;font-weight:600;color:var(--muted)">Prikaži</span>
+        </div>
+      </div>
+
+      <div class="btn brand block m32">Uloguj se</div>
+
+      <div style="text-align:center;margin-top:32px;font-size:12.5px;color:var(--muted)">Nemaš nalog? Registruj se kao trener</div>
+      <div style="text-align:center;margin-top:16px;font-size:12.5px;color:var(--muted)">Vežbač? Unesi kod poziva</div>
+
+      <div style="margin-top:auto;padding-bottom:32px"></div>
+    </div>
+  </div></div>
+  <div class="cap"><div class="no">01</div><h3>Prijava</h3>
+    <div class="src">src/pages/Auth.tsx, mode = login</div>
+    <p>Iste tri stvari koje ekran već ima: email, lozinka sa Prikaži i Zaboravljena, pa dva teksta na dnu. Polja su bez okvira, naslov je krupniji, ostalo je isto.</p></div>
+</div>
+
+<!-- ============ 02 POČETNA ============ -->
+<div class="slot">
+  <div class="phone"><div class="scr">
+    <div class="bloom"></div>
+    <div class="sb"><span>9:41</span><span class="d"><i></i><i></i><i></i></span></div>
+
+    <div class="pad pb">
+      <div class="top" style="justify-content:flex-end">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="ib"><svg class="i"><use href="#i-msg"/></svg><span class="bdg"></span></div>
+          <div class="ib"><svg class="i"><use href="#i-bell"/></svg></div>
+          <div class="av">AK</div>
+        </div>
+      </div>
+
+      <div class="m24">
+        <div class="eyebrow">Dobro došao nazad</div>
+        <div class="title">Zdravo, Ana<span class="grad"> 💪</span></div>
+      </div>
+
+      <div class="chip w m20" style="padding-left:5px"><span class="av s">MI</span> Trener: <b style="color:var(--ink);font-weight:600">Marko Ilić</b></div>
+
+      <div class="hero m20">
+        <div class="orb"></div>
+        <div class="in">
+          <div class="cap">Sledeći trening</div>
+          <div class="dsp" style="font-size:26px;font-weight:700;letter-spacing:-.035em;line-height:1.12;margin-top:12px">Gornji deo tela</div>
+          <div style="font-size:13px;opacity:.85;margin-top:8px">Snaga 12 nedelja · Dan 3 od 5 · Trener Marko</div>
+          <div style="font-size:13px;opacity:.9;margin-top:18px">8 vežbi na rasporedu</div>
+          <div class="btn light sm pill m20" style="font-weight:700"><svg class="i s"><use href="#i-play"/></svg> Počni trening</div>
+        </div>
+      </div>
+
+      <div class="two m20">
+        <div class="stat"><div class="l">Ovog meseca</div><div class="v grad num">12</div><div class="u">treninga</div></div>
+        <div class="stat"><div class="l">U programu</div><div class="v num" style="color:var(--ok)">5</div><div class="u">dana</div></div>
+      </div>
+
+      <div class="m40">
+        <div class="sect"><div class="h2">Tvoj napredak</div><a>Napredak →</a></div>
+        <div class="card"><div class="lead" style="color:var(--muted)">Završi prvih nekoliko treninga da vidiš statistiku rekorda.</div></div>
+      </div>
+
+      <div class="m24 col g14">
+        <div class="list m44">
+          <div class="r">
+            <div class="med"><svg class="i"><use href="#i-calplus"/></svg></div>
+            <div class="grow"><div class="h3">Rezerviši termin</div><div class="sub s">Pogledaj dostupne slotove</div></div>
+            <span style="color:var(--brand-1);font-weight:700">→</span>
+          </div>
+          <div class="r">
+            <div class="med soft"><svg class="i"><use href="#i-apple"/></svg></div>
+            <div class="grow"><div class="h3">Plan ishrane</div><div class="sub s">Današnji obroci</div></div>
+            <span style="color:var(--faint);font-weight:700">→</span>
+          </div>
+          <div class="r">
+            <div class="med soft"><svg class="i"><use href="#i-msg"/></svg></div>
+            <div class="grow"><div class="h3">Poruka treneru</div><div class="sub s">Postavi pitanje ili javi nešto</div></div>
+            <span style="color:var(--faint);font-weight:700">→</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="navwrap">
+      <div class="nav a5">
+        <a class="on"><span class="b"><svg class="i"><use href="#i-home"/></svg></span>Početna</a>
+        <a><span class="b"><svg class="i"><use href="#i-dumb"/></svg></span>Trening</a>
+        <a><span class="b"><svg class="i"><use href="#i-calplus"/></svg></span>Rezerviši</a>
+        <a><span class="b"><svg class="i"><use href="#i-trend"/></svg></span>Napredak</a>
+        <a><span class="b"><svg class="i"><use href="#i-card"/></svg></span>Članarina</a>
+      </div>
+    </div>
+  </div></div>
+  <div class="cap"><div class="no">02</div><h3>Početna</h3>
+    <div class="src">src/pages/athlete/Home.tsx</div>
+    <p>Isti redosled: pozdrav, čip trenera, kartica sledećeg treninga, dve statistike, Tvoj napredak, pa tri prečice. Prečice su sada jedna lista umesto tri odvojene kartice.</p></div>
+</div>
+
+<!-- ============ 03 TVOJI TRENINZI ============ -->
+<div class="slot">
+  <div class="phone"><div class="scr">
+    <div class="bloom"></div>
+    <div class="sb"><span>9:41</span><span class="d"><i></i><i></i><i></i></span></div>
+
+    <div class="pad pb">
+      <div style="height:16px"></div>
+      <div class="eyebrow m20">Trening</div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:10px">
+        <div class="dsp" style="font-size:29px;font-weight:700;letter-spacing:-.035em;line-height:1.05">Tvoji treninzi</div>
+        <div class="chip wn num" style="font-weight:700"><svg class="i s"><use href="#i-flame"/></svg> 5 dana</div>
+      </div>
+
+      <div class="card m24" style="background:var(--warn-bg);box-shadow:none;display:flex;gap:14px;align-items:flex-start;padding:18px">
+        <div class="med" style="background:hsl(28 80% 38% / .15);color:var(--warn-fg)"><svg class="i"><use href="#i-warn"/></svg></div>
+        <div>
+          <div class="h4" style="color:var(--warn-fg)">Nisi trenirao 5 dana</div>
+          <div style="font-size:13px;line-height:1.5;color:hsl(28 80% 38% / .85);margin-top:4px">Ne lomi naviku, kreni odmah, biće lakše nego što misliš.</div>
+        </div>
+      </div>
+
+      <div class="hero m16">
+        <div class="orb"></div>
+        <div class="in">
+          <div class="cap">Sledeći trening</div>
+          <div class="dsp" style="font-size:26px;font-weight:700;letter-spacing:-.035em;line-height:1.12;margin-top:12px">Gornji deo tela</div>
+          <div style="font-size:13px;opacity:.85;margin-top:8px">Snaga 12 nedelja · Dan 3 od 5</div>
+          <div style="font-size:13px;opacity:.9;margin-top:18px">8 vežbi na rasporedu</div>
+          <div class="btn light sm pill m20" style="font-weight:700"><svg class="i s"><use href="#i-play"/></svg> Počni trening</div>
+        </div>
+      </div>
+
+      <div class="list m16" style="--ins:77px">
+        <div class="r">
+          <div class="med soft"><svg class="i"><use href="#i-zap"/></svg></div>
+          <div class="grow"><div class="h3">Slobodan trening</div><div class="sub s">Bez plana, samo puls, kalorije i vreme</div></div>
+          <svg class="i s" style="color:var(--brand-1)"><use href="#i-chev"/></svg>
+        </div>
+      </div>
+
+      <div style="text-align:center;margin-top:18px"><span style="font-size:12.5px;color:var(--muted);text-decoration:underline;text-underline-offset:3px">Problem sa satom?</span></div>
+
+      <div class="m40">
+        <div class="over"><svg class="i s"><use href="#i-caldays"/></svg> Svi dani u programu</div>
+        <div class="list m44">
+          <div class="r">
+            <div class="med soft dsp num" style="font-size:16px;font-weight:700">1</div>
+            <div class="grow"><div class="h3">Noge</div><div class="sub s">9 vežbi</div></div>
+            <svg class="i s" style="color:var(--brand-1)"><use href="#i-play"/></svg>
+          </div>
+          <div class="r">
+            <div class="med soft dsp num" style="font-size:16px;font-weight:700">2</div>
+            <div class="grow"><div class="h3">Leđa i biceps</div><div class="sub s">7 vežbi</div></div>
+            <svg class="i s" style="color:var(--brand-1)"><use href="#i-play"/></svg>
+          </div>
+          <div class="r" style="box-shadow:inset 0 0 0 2px hsl(268 80% 56% / .4)">
+            <div class="med dsp num" style="font-size:16px;font-weight:700">3</div>
+            <div class="grow"><div class="h3">Gornji deo tela</div><div class="sub s">8 vežbi · sledeći u rotaciji</div></div>
+            <svg class="i s" style="color:var(--brand-1)"><use href="#i-play"/></svg>
+          </div>
+          <div class="r">
+            <div class="med soft dsp num" style="font-size:16px;font-weight:700">4</div>
+            <div class="grow"><div class="h3">Ramena</div><div class="sub s">6 vežbi</div></div>
+            <svg class="i s" style="color:var(--brand-1)"><use href="#i-play"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="m40">
+        <div class="over"><svg class="i s"><use href="#i-hist"/></svg> Treninzi</div>
+        <div class="seg" style="display:flex;width:100%"><span class="on" style="flex:1;text-align:center;background:var(--g-brand);color:#fff;box-shadow:var(--sh-brand)">Iz aplikacije</span><span style="flex:1;text-align:center">Sa sata</span></div>
+        <div class="sub s" style="margin:14px 0 16px">Treninzi koje si radio kroz FitLink. Ako si nosio sat, puls i kalorije su već ovde.</div>
+        <div class="list m44">
+          <div class="r">
+            <div class="med soft"><svg class="i"><use href="#i-dumb"/></svg></div>
+            <div class="grow"><div class="h4">Gornji deo tela</div><div class="sub s">8. avgust · 47 min · 132 bpm</div></div>
+            <svg class="i s" style="color:var(--faint)"><use href="#i-chev"/></svg>
+          </div>
+          <div class="r">
+            <div class="med soft"><svg class="i"><use href="#i-dumb"/></svg></div>
+            <div class="grow"><div class="h4">Leđa i biceps</div><div class="sub s">6. avgust · 52 min · 128 bpm</div></div>
+            <svg class="i s" style="color:var(--faint)"><use href="#i-chev"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="navwrap">
+      <div class="nav a5">
+        <a><span class="b"><svg class="i"><use href="#i-home"/></svg></span>Početna</a>
+        <a class="on"><span class="b"><svg class="i"><use href="#i-dumb"/></svg></span>Trening</a>
+        <a><span class="b"><svg class="i"><use href="#i-calplus"/></svg></span>Rezerviši</a>
+        <a><span class="b"><svg class="i"><use href="#i-trend"/></svg></span>Napredak</a>
+        <a><span class="b"><svg class="i"><use href="#i-card"/></svg></span>Članarina</a>
+      </div>
+    </div>
+  </div></div>
+  <div class="cap"><div class="no">03</div><h3>Tvoji treninzi</h3>
+    <div class="src">src/pages/athlete/WorkoutHome.tsx</div>
+    <p>Streak čip uz naslov, upozorenje o neaktivnosti, kartica sledećeg treninga, Slobodan trening, Problem sa satom, Svi dani u programu, pa dve kartice istorije. Nedeljne trake dana nema, jer je nema ni u aplikaciji.</p></div>
+</div>
+
+<!-- ============ 04 AKTIVAN TRENING ============ -->
+<div class="slot">
+  <div class="phone"><div class="scr">
+    <div class="sb"><span>9:41</span><span class="d"><i></i><i></i><i></i></span></div>
+
+    <div style="position:sticky;top:0;z-index:5;background:rgba(255,255,255,.95);backdrop-filter:blur(20px);box-shadow:0 1px 0 var(--hair)">
+      <div style="display:flex;align-items:center;gap:14px;padding:8px 20px 14px">
+        <div class="ib" style="width:42px;height:42px;box-shadow:none;background:var(--s2)"><svg class="i s"><use href="#i-x"/></svg></div>
+        <div class="grow">
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:var(--caps);text-transform:uppercase;color:var(--muted)">Aktivan trening · 24:18</div>
+          <div class="h4" style="margin-top:3px">Vežba 3 od 8 · Serija 3 od 4</div>
+        </div>
+        <div class="chip" style="background:var(--surf);box-shadow:var(--sh);color:hsl(0 75% 48%)"><svg class="i s"><use href="#i-heart"/></svg><span class="num">138</span></div>
+      </div>
+      <div style="height:3px;background:var(--s2)"><div style="width:38%;height:100%;background:var(--g-brand)"></div></div>
+    </div>
+
+    <div class="pad pb" style="padding-top:20px">
+      <div class="vid" style="height:210px">
+        <video src="assets/vezbe/potisak-klupa.mp4" poster="assets/vezbe/potisak-klupa.jpg" autoplay muted loop playsinline></video>
+      </div>
+
+      <div class="m20">
+        <div class="dsp" style="font-size:24px;font-weight:700;letter-spacing:-.035em">Bench press</div>
+        <div class="sub">Potisak sa klupe</div>
+        <div class="chips m16"><span class="chip br">Grudi</span></div>
+        <div style="display:flex;align-items:center;gap:7px;margin-top:18px;font-size:13px;font-weight:600;color:var(--muted)">
+          <svg class="i s"><use href="#i-chevdown"/></svg> Uputstvo
+        </div>
+      </div>
+
+      <div class="list m24" style="border-radius:24px">
+        <div class="setline"><span class="dotn done"><svg class="i s" style="stroke-width:3"><use href="#i-check"/></svg></span><div class="grow" style="font-size:13.5px"><b>Serija 1</b> <span style="color:var(--muted)">· 12 reps · 60 kg</span></div></div>
+        <div class="setline"><span class="dotn done"><svg class="i s" style="stroke-width:3"><use href="#i-check"/></svg></span><div class="grow" style="font-size:13.5px"><b>Serija 2</b> <span style="color:var(--muted)">· 10 reps · 65 kg</span></div></div>
+        <div class="setline act"><span class="dotn act num">3</span><div class="grow" style="font-size:13.5px"><b>Serija 3</b> <span style="color:var(--muted)">· cilj 10 × 65 kg</span></div><svg class="i s" style="color:var(--brand-1)"><use href="#i-chev"/></svg></div>
+        <div class="setline"><span class="dotn num">4</span><div class="grow" style="font-size:13.5px"><b>Serija 4</b> <span style="color:var(--muted)">· cilj 10 × 65 kg</span></div></div>
+      </div>
+
+      <div class="card m16" style="border-radius:24px;padding:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:11px;font-weight:700;letter-spacing:var(--caps);text-transform:uppercase;color:var(--muted)">Aktivna serija</div>
+          <div style="font-size:12.5px;font-weight:600;color:var(--body)">Serija 3 od 4</div>
+        </div>
+
+        <div class="two m20" style="gap:16px">
+          <div>
+            <div style="font-size:11px;font-weight:700;letter-spacing:var(--caps);text-transform:uppercase;color:var(--muted);margin-bottom:12px">Ponavljanja</div>
+            <div class="stp">
+              <span class="b"><svg class="i s"><use href="#i-minus"/></svg></span>
+              <span class="v num">10</span>
+              <span class="b"><svg class="i s"><use href="#i-plus"/></svg></span>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:700;letter-spacing:var(--caps);text-transform:uppercase;color:var(--muted);margin-bottom:12px">Težina (kg)</div>
+            <div class="stp">
+              <span class="b"><svg class="i s"><use href="#i-minus"/></svg></span>
+              <span class="v num">65</span>
+              <span class="b"><svg class="i s"><use href="#i-plus"/></svg></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="m24">
+          <div style="font-size:11px;font-weight:700;letter-spacing:var(--caps);text-transform:uppercase;color:var(--muted);margin-bottom:12px">RPE (težina 1-10)</div>
+          <div class="rpe num">
+            <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span class="on">7</span><span>8</span><span>9</span><span>10</span>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:7px;margin-top:20px;font-size:12.5px;font-weight:600;color:var(--muted)">
+          <svg class="i s"><use href="#i-chevdown"/></svg> Beleška (opciono)
+        </div>
+
+        <div class="btn brand block m20"><svg class="i s" style="stroke-width:3"><use href="#i-check"/></svg> Završio set</div>
+      </div>
+
+      <div style="text-align:center;margin-top:24px"><span style="font-size:12.5px;font-weight:600;color:var(--muted)">Završi trening odmah</span></div>
+    </div>
+  </div></div>
+  <div class="cap"><div class="no">04</div><h3>Aktivan trening</h3>
+    <div class="src">src/pages/athlete/ActiveWorkout.tsx + workout/ExerciseHeader, SetLogger</div>
+    <p>Ovde snimak vežbe već postoji, kroz ExerciseHeader, i ostaje tačno tu. Ispod je lista serija sa ciljem, pa aktivna serija sa dva steppera, RPE od 1 do 10, beleška i Završio set.</p></div>
+</div>
+
+<!-- ============ 05 ODMOR ============ -->
+<div class="slot">
+  <div class="phone"><div class="scr" style="justify-content:center">
+    <div class="sb"><span>9:41</span><span class="d"><i></i><i></i><i></i></span></div>
+
+    <div class="pad" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">
+      <div style="font-size:11.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)">Odmor</div>
+      <div style="font-size:14px;color:var(--body);margin-top:10px">Sledeća serija 4 od 4</div>
+
+      <div style="position:relative;margin-top:38px">
+        <svg width="260" height="260" viewBox="0 0 260 260" style="transform:rotate(-90deg)">
+          <circle cx="130" cy="130" r="110" fill="none" stroke="hsl(240 10% 90%)" stroke-width="10"/>
+          <circle cx="130" cy="130" r="110" fill="none" stroke="url(#rg)" stroke-width="10" stroke-linecap="round" stroke-dasharray="691" stroke-dashoffset="242"/>
+          <defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="hsl(322 82% 56%)"/><stop offset="100%" stop-color="hsl(252 82% 60%)"/>
+          </linearGradient></defs>
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+          <span class="dsp num" style="font-size:64px;font-weight:700;letter-spacing:-.05em;line-height:1">0:34</span>
+          <span class="num" style="font-size:12.5px;color:var(--muted);margin-top:10px">0:56 / 1:30</span>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:44px;width:100%;max-width:330px">
+        <div class="btn q" style="flex:1;height:50px;font-size:14px"><svg class="i s"><use href="#i-plus"/></svg> 30</div>
+        <div class="btn q" style="flex:1;height:50px;font-size:14px"><svg class="i s"><use href="#i-plus"/></svg> 60</div>
+        <div class="btn q" style="flex:1;height:50px;font-size:14px"><svg class="i s"><use href="#i-fwd"/></svg> Preskoči</div>
+      </div>
+    </div>
+  </div></div>
+  <div class="cap"><div class="no">05</div><h3>Odmor</h3>
+    <div class="src">src/components/workout/RestTimer.tsx</div>
+    <p>Preko celog ekrana, na svetloj podlozi sa blurom, tačno kao sada. Prsten, veliki brojač, proteklo kroz ukupno, pa tri dugmeta koja već postoje: plus 30, plus 60 i Preskoči.</p></div>
+</div>
+
+<!-- ============ 06 TRENING ZAVRŠEN ============ -->
+<div class="slot">
+  <div class="phone"><div class="scr">
+    <div class="bloom"></div>
+    <div class="sb"><span>9:41</span><span class="d"><i></i><i></i><i></i></span></div>
+
+    <div class="pad pb">
+      <div style="text-align:center;margin-top:34px">
+        <div style="width:80px;height:80px;border-radius:50%;margin:0 auto;background:var(--ok);display:grid;place-items:center;color:#fff;box-shadow:0 12px 40px -10px hsl(152 65% 36% / .55)">
+          <svg class="i" style="width:40px;height:40px;stroke-width:3.2"><use href="#i-check"/></svg>
+        </div>
+        <div class="dsp" style="font-size:30px;font-weight:700;letter-spacing:-.035em;margin-top:22px">Trening završen</div>
+        <div class="sub">Sjajan posao 💪 Tvoj napredak je sačuvan.</div>
+      </div>
+
+      <div class="two m32">
+        <div class="stat"><div class="l" style="display:flex;align-items:center;gap:7px"><svg class="i s"><use href="#i-clock"/></svg> Trajanje</div><div class="v num">47:12</div></div>
+        <div class="stat"><div class="l" style="display:flex;align-items:center;gap:7px"><svg class="i s"><use href="#i-dumb"/></svg> Ukupan volumen</div><div class="v num">4.240 <span style="font-size:14px;color:var(--muted);font-weight:500">kg</span></div></div>
+        <div class="stat"><div class="l" style="display:flex;align-items:center;gap:7px"><svg class="i s"><use href="#i-check"/></svg> Završenih serija</div><div class="v num">26</div></div>
+        <div class="stat"><div class="l" style="display:flex;align-items:center;gap:7px"><svg class="i s"><use href="#i-heart"/></svg> Prosečan puls</div><div class="v num">132 <span style="font-size:14px;color:var(--muted);font-weight:500">bpm</span></div></div>
+        <div class="stat"><div class="l" style="display:flex;align-items:center;gap:7px"><svg class="i s"><use href="#i-heart"/></svg> Max puls</div><div class="v num">168 <span style="font-size:14px;color:var(--muted);font-weight:500">bpm</span></div></div>
+        <div class="stat"><div class="l" style="display:flex;align-items:center;gap:7px"><svg class="i s"><use href="#i-flame"/></svg> Aktivne kcal</div><div class="v num">386</div></div>
+      </div>
+
+      <div class="m40">
+        <div class="over">Zone pulsa</div>
+        <div class="card" style="border-radius:24px">
+          <div class="col g12">
+            <div style="display:flex;align-items:center;gap:12px"><span class="num" style="width:24px;font-size:12px;font-weight:700;color:var(--muted)">Z1</span><span style="flex:1;height:12px;border-radius:6px;background:var(--s2);overflow:hidden"><i style="display:block;height:100%;width:18%;background:hsl(200 80% 55%)"></i></span><span class="num sub s" style="margin:0;width:44px;text-align:right">6:20</span></div>
+            <div style="display:flex;align-items:center;gap:12px"><span class="num" style="width:24px;font-size:12px;font-weight:700;color:var(--muted)">Z2</span><span style="flex:1;height:12px;border-radius:6px;background:var(--s2);overflow:hidden"><i style="display:block;height:100%;width:42%;background:hsl(152 65% 42%)"></i></span><span class="num sub s" style="margin:0;width:44px;text-align:right">18:40</span></div>
+            <div style="display:flex;align-items:center;gap:12px"><span class="num" style="width:24px;font-size:12px;font-weight:700;color:var(--muted)">Z3</span><span style="flex:1;height:12px;border-radius:6px;background:var(--s2);overflow:hidden"><i style="display:block;height:100%;width:28%;background:hsl(38 95% 52%)"></i></span><span class="num sub s" style="margin:0;width:44px;text-align:right">13:05</span></div>
+            <div style="display:flex;align-items:center;gap:12px"><span class="num" style="width:24px;font-size:12px;font-weight:700;color:var(--muted)">Z4</span><span style="flex:1;height:12px;border-radius:6px;background:var(--s2);overflow:hidden"><i style="display:block;height:100%;width:12%;background:hsl(0 75% 55%)"></i></span><span class="num sub s" style="margin:0;width:44px;text-align:right">5:30</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="m40">
+        <div class="over">Po vežbi</div>
+        <div class="list m44">
+          <div class="r"><div class="med soft"><svg class="i"><use href="#i-dumb"/></svg></div><div class="grow"><div class="h4">Bench press</div><div class="sub s num">4/4 serije · 40 ponavljanja · 70 kg</div></div></div>
+          <div class="r"><div class="med soft"><svg class="i"><use href="#i-dumb"/></svg></div><div class="grow"><div class="h4">Shoulder press</div><div class="sub s num">3/3 serije · 27 ponavljanja · 30 kg</div></div></div>
+          <div class="r"><div class="med soft"><svg class="i"><use href="#i-dumb"/></svg></div><div class="grow"><div class="h4">Bent-over row</div><div class="sub s num">4/4 serije · 38 ponavljanja · 45 kg</div></div></div>
+          <div class="r"><div class="med soft"><svg class="i"><use href="#i-dumb"/></svg></div><div class="grow"><div class="h4">Pull-ups</div><div class="sub s num">3/3 serije · 24 ponavljanja</div></div></div>
+        </div>
+      </div>
+
+      <div class="btn q block m32"><svg class="i s"><use href="#i-msg"/></svg> Pošalji treneru komentar</div>
+      <div class="btn brand block m16">Vrati se na početnu</div>
+    </div>
+  </div></div>
+  <div class="cap"><div class="no">06</div><h3>Trening završen</h3>
+    <div class="src">src/pages/athlete/WorkoutSummary.tsx</div>
+    <p>Šest pločica koje ekran već ima, zone pulsa, Po vežbi, pa dva dugmeta. Bez rekorda i bez ocene osećaja, to sam ranije izmislio.</p></div>
+</div>
+
+<!-- ============ 07 NAPREDAK · TRENINZI ============ -->
+<div class="slot">
+  <div class="phone"><div class="scr">
+    <div class="bloom"></div>
+    <div class="sb"><span>9:41</span><span class="d"><i></i><i></i><i></i></span></div>
+
+    <div class="pad pb">
+      <div style="height:16px"></div>
+      <div class="eyebrow m20">Statistike</div>
+      <div class="title s" style="margin-top:10px">Tvoj napredak</div>
+
+      <div class="seg m24"><span class="on">Treninzi</span><span>Telo</span></div>
+
+      <div class="card m24" style="background:linear-gradient(135deg,hsl(268 80% 56% / .08),var(--surf) 60%);position:relative;overflow:hidden">
+        <div style="position:absolute;top:-40px;right:-40px;width:130px;height:130px;border-radius:50%;background:var(--g-brand);opacity:.1;filter:blur(30px)"></div>
+        <div style="position:relative">
+          <div style="display:flex;align-items:center;gap:8px">
+            <svg class="i s" style="color:var(--brand-1)"><use href="#i-sparkle"/></svg>
+            <span style="font-size:11px;font-weight:700;letter-spacing:var(--caps);text-transform:uppercase;color:var(--brand-1)">Sa trenerom Marko</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:10px;margin-top:12px">
+            <span class="dsp num" style="font-size:44px;font-weight:700;letter-spacing:-.04em;line-height:1">38</span>
+            <span class="sub" style="margin:0">treninga ukupno</span>
+          </div>
+          <div style="display:flex;gap:18px;margin-top:16px;font-size:12.5px;color:var(--muted)">
+            <span style="display:flex;align-items:center;gap:6px"><svg class="i s"><use href="#i-cal"/></svg> <b class="num" style="color:var(--ink)">12</b> ovog meseca</span>
+            <span style="display:flex;align-items:center;gap:6px"><svg class="i s"><use href="#i-target"/></svg> <b class="num" style="color:var(--ink)">7</b> ostalo</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="two m16">
+        <div class="stat"><div class="l" style="display:flex;justify-content:space-between;align-items:center">Ove nedelje <svg class="i s" style="color:var(--faint)"><use href="#i-dumb"/></svg></div><div class="v num">3</div><div class="u">treninga</div></div>
+        <div class="stat" style="background:linear-gradient(135deg,hsl(38 100% 95% / .6),var(--surf))"><div class="l" style="display:flex;justify-content:space-between;align-items:center">Streak <svg class="i s" style="color:var(--warn-fg)"><use href="#i-flame"/></svg></div><div class="v num">5</div><div class="u">dana u nizu · best 11</div></div>
+      </div>
+
+      <div class="card m16">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px">
+          <div>
+            <div style="font-size:11px;font-weight:700;letter-spacing:var(--caps);text-transform:uppercase;color:var(--muted)">Aktivnost</div>
+            <div class="h4" style="margin-top:4px">Poslednjih 8 nedelja</div>
+          </div>
+          <div style="text-align:right">
+            <div class="dsp num" style="font-size:21px;font-weight:700;letter-spacing:-.03em">3.2</div>
+            <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">prosek/ned</div>
+          </div>
+        </div>
+        <div class="bars">
+          <div class="c"><i style="height:40%"></i><span>2</span></div>
+          <div class="c"><i style="height:60%"></i><span>3</span></div>
+          <div class="c"><i class="zero" style="height:4px"></i><span>0</span></div>
+          <div class="c"><i style="height:80%"></i><span>4</span></div>
+          <div class="c"><i style="height:60%"></i><span>3</span></div>
+          <div class="c"><i style="height:80%"></i><span>4</span></div>
+          <div class="c"><i style="height:40%"></i><span>2</span></div>
+          <div class="c on"><i class="on" style="height:60%"></i><span>3</span></div>
+        </div>
+      </div>
+
+      <div class="m40">
+        <div class="sect"><div class="h2">Lični rekordi 🏆</div></div>
+        <div class="list m44">
+          <div class="r">
+            <div class="med" style="background:linear-gradient(135deg,hsl(38 100% 95%),hsl(268 85% 96%));color:var(--brand-1)"><svg class="i s"><use href="#i-sparkle"/></svg></div>
+            <div class="grow"><div class="h4">Bench press</div><div class="sub s num">70 kg × 5 · 1RM ~79 kg</div></div>
+            <span class="sub s num" style="margin:0">10.08.</span>
+          </div>
+          <div class="r">
+            <div class="med" style="background:linear-gradient(135deg,hsl(38 100% 95%),hsl(268 85% 96%));color:var(--brand-1)"><svg class="i s"><use href="#i-sparkle"/></svg></div>
+            <div class="grow"><div class="h4">Squat</div><div class="sub s num">120 kg × 3 · 1RM ~131 kg</div></div>
+            <span class="sub s num" style="margin:0">04.08.</span>
+          </div>
+          <div class="r">
+            <div class="med" style="background:linear-gradient(135deg,hsl(38 100% 95%),hsl(268 85% 96%));color:var(--brand-1)"><svg class="i s"><use href="#i-sparkle"/></svg></div>
+            <div class="grow"><div class="h4">Deadlift</div><div class="sub s num">140 kg × 2 · 1RM ~148 kg</div></div>
+            <span class="sub s num" style="margin:0">21.07.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="m40">
+        <div class="sect"><div class="h2">Istorija</div></div>
+        <div class="list m44">
+          <div class="r"><div class="med soft"><svg class="i"><use href="#i-dumb"/></svg></div><div class="grow"><div class="h4">Gornji deo tela</div><div class="sub s">Snaga 12 nedelja · 8. avgust</div></div></div>
+          <div class="r"><div class="med soft"><svg class="i"><use href="#i-dumb"/></svg></div><div class="grow"><div class="h4">Leđa i biceps</div><div class="sub s">Snaga 12 nedelja · 6. avgust</div></div></div>
+          <div class="r"><div class="med soft"><svg class="i"><use href="#i-dumb"/></svg></div><div class="grow"><div class="h4">Slobodan trening</div><div class="sub s">3. avgust</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="navwrap">
+      <div class="nav a5">
+        <a><span class="b"><svg class="i"><use href="#i-home"/></svg></span>Početna</a>
+        <a><span class="b"><svg class="i"><use href="#i-dumb"/></svg></span>Trening</a>
+        <a><span class="b"><svg class="i"><use href="#i-calplus"/></svg></span>Rezerviši</a>
+        <a class="on"><span class="b"><svg class="i"><use href="#i-trend"/></svg></span>Napredak</a>
+        <a><span class="b"><svg class="i"><use href="#i-card"/></svg></span>Članarina</a>
+      </div>
+    </div>
+  </div></div>
+  <div class="cap"><div class="no">07</div><h3>Napredak, kartica Treninzi</h3>
+    <div class="src">src/pages/athlete/Progress.tsx, tab Treninzi</div>
+    <p>Segmentni prekidač Treninzi i Telo, hero sa ukupnim brojem treninga kod trenera, dve pločice, grafikon aktivnosti sa brojevima ispod stubića, rekordi i istorija.</p></div>
+</div>
+
+<!-- ============ 08 NAPREDAK · TELO ============ -->
+<div class="slot">
+  <div class="phone"><div class="scr">
+    <div class="bloom"></div>
+    <div class="sb"><span>9:41</span><span class="d"><i></i><i></i><i></i></span></div>
+
+    <div class="pad pb">
+      <div style="height:16px"></div>
+      <div class="eyebrow m20">Statistike</div>
+      <div class="title s" style="margin-top:10px">Tvoj napredak</div>
+
+      <div class="seg m24"><span>Treninzi</span><span class="on">Telo</span></div>
+
+      <div class="card m24">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between">
+          <div>
+            <div style="font-size:11px;font-weight:700;letter-spacing:var(--caps);text-transform:uppercase;color:var(--muted)">Težina</div>
+            <div class="dsp num" style="font-size:30px;font-weight:700;letter-spacing:-.035em;margin-top:10px">68.4 <span style="font-size:15px;color:var(--muted);font-weight:600">kg</span></div>
+          </div>
+          <span class="chip ok xs num">−1.6 kg</span>
+        </div>
+        <svg viewBox="0 0 280 90" style="width:100%;height:104px;margin-top:18px" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="wf" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="hsl(252 82% 60%)" stop-opacity=".3"/><stop offset="100%" stop-color="hsl(252 82% 60%)" stop-opacity="0"/></linearGradient>
+            <linearGradient id="wl" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="hsl(268 80% 56%)"/><stop offset="100%" stop-color="hsl(252 82% 60%)"/></linearGradient>
+          </defs>
+          <polygon points="0,20 56,30 112,26 168,48 224,58 280,72 280,90 0,90" fill="url(#wf)"/>
+          <polyline points="0,20 56,30 112,26 168,48 224,58 280,72" fill="none" stroke="url(#wl)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="278" cy="72" r="4" fill="hsl(252 82% 60%)"/>
+        </svg>
+        <div style="display:flex;justify-content:space-between;margin-top:8px" class="num"><span style="font-size:10.5px;font-weight:700;color:var(--muted)">67.8 kg</span><span style="font-size:10.5px;font-weight:700;color:var(--muted)">70.2 kg</span></div>
+      </div>
+
+      <div class="m40">
+        <div class="sect"><div class="h2">Merenja</div><span class="ib" style="width:40px;height:40px;background:var(--g-brand);color:#fff;box-shadow:var(--sh-brand)"><svg class="i s"><use href="#i-plus"/></svg></span></div>
+        <div class="list m44">
+          <div class="r"><div class="med soft"><svg class="i"><use href="#i-scale"/></svg></div><div class="grow"><div class="h4 num">68.4 kg · 19% masti</div><div class="sub s">10. avgust · posle treninga</div></div></div>
+          <div class="r"><div class="med soft"><svg class="i"><use href="#i-scale"/></svg></div><div class="grow"><div class="h4 num">69.1 kg</div><div class="sub s">27. jul</div></div></div>
+          <div class="r"><div class="med soft"><svg class="i"><use href="#i-scale"/></svg></div><div class="grow"><div class="h4 num">70.0 kg · 21% masti</div><div class="sub s">13. jul</div></div></div>
+        </div>
+      </div>
+
+      <div class="m40">
+        <div class="sect"><div class="h2">Fotografije napretka</div><span class="ib" style="width:40px;height:40px;background:var(--surf)"><svg class="i s"><use href="#i-plus"/></svg></span></div>
+        <div class="photos">
+          <div style="background-image:url(assets/stretch-outdoor.jpg)"></div>
+          <div style="background-image:url(assets/gym-dumbbells.jpg)"></div>
+          <div class="add"><svg class="i l"><use href="#i-plus"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="navwrap">
+      <div class="nav a5">
+        <a><span class="b"><svg class="i"><use href="#i-home"/></svg></span>Početna</a>
+        <a><span class="b"><svg class="i"><use href="#i-dumb"/></svg></span>Trening</a>
+        <a><span class="b"><svg class="i"><use href="#i-calplus"/></svg></span>Rezerviši</a>
+        <a class="on"><span class="b"><svg class="i"><use href="#i-trend"/></svg></span>Napredak</a>
+        <a><span class="b"><svg class="i"><use href="#i-card"/></svg></span>Članarina</a>
+      </div>
+    </div>
+  </div></div>
+  <div class="cap"><div class="no">08</div><h3>Napredak, kartica Telo</h3>
+    <div class="src">src/pages/athlete/Progress.tsx, tab Telo + ProgressPhotos</div>
+    <p>Težina sa grafikonom i čipom promene, lista merenja sa dugmetom za dodavanje, pa fotografije napretka. Sve tri stvari već postoje na ovoj kartici.</p></div>
+</div>
+
+<!-- ============ 09 REZERVIŠI TRENING ============ -->
+<div class="slot">
+  <div class="phone"><div class="scr">
+    <div class="bloom"></div>
+    <div class="sb"><span>9:41</span><span class="d"><i></i><i></i><i></i></span></div>
+
+    <div class="pad pb">
+      <div style="height:16px"></div>
+      <div class="eyebrow m20">Kod Marko Ilić</div>
+      <div class="title s" style="margin-top:10px">Rezerviši trening</div>
+
+      <div class="card q m24" style="padding:14px 18px;border-radius:16px">
+        <div class="sub s" style="margin:0">Otkazivanje je moguće najkasnije <b style="color:var(--ink);font-weight:600">12h</b> pre termina.</div>
+      </div>
+
+      <div class="m32">
+        <div class="sect"><div class="h2">Koji dan?</div></div>
+        <div class="dayp">
+          <div class="dc"><div class="n num">11</div><div class="w">Uto</div></div>
+          <div class="dc on"><div class="n num">12</div><div class="w">Sre</div></div>
+          <div class="dc"><div class="n num">13</div><div class="w">Čet</div></div>
+          <div class="dc"><div class="n num">14</div><div class="w">Pet</div></div>
+          <div class="dc"><div class="n num">15</div><div class="w">Sub</div></div>
+        </div>
+      </div>
+
+      <div class="m40">
+        <div class="sect"><div class="h2">U kojem terminu?</div></div>
+        <div class="col g14">
+
+          <div class="slot-card">
+            <div class="slot-head" style="background:hsl(268 100% 97%);color:hsl(268 75% 45%)">
+              <span class="h4">Grupni trening</span>
+              <span style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.8">60 min</span>
+            </div>
+            <div class="slot-body">
+              <div class="metaRow">
+                <span style="display:flex;align-items:center;gap:7px"><svg class="i s"><use href="#i-clock"/></svg><b class="num">08:00 - 09:00</b></span>
+                <span style="display:flex;align-items:center;gap:7px"><svg class="i s"><use href="#i-users"/></svg><b class="num">4 / 6</b></span>
+              </div>
+              <div class="metaRow" style="margin-top:12px"><span style="display:flex;align-items:center;gap:7px"><svg class="i s"><use href="#i-users"/></svg> Marko Ilić</span></div>
+              <div class="btn brand block m20" style="height:48px;font-size:14.5px">Rezerviši</div>
+            </div>
+          </div>
+
+          <div class="slot-card">
+            <div class="slot-head" style="background:hsl(152 70% 95%);color:hsl(152 70% 32%)">
+              <span class="h4">Individualni trening</span>
+              <span style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.8">60 min</span>
+            </div>
+            <div class="slot-body">
+              <div class="metaRow">
+                <span style="display:flex;align-items:center;gap:7px"><svg class="i s"><use href="#i-clock"/></svg><b class="num">09:00 - 10:00</b></span>
+                <span style="display:flex;align-items:center;gap:7px"><svg class="i s"><use href="#i-users"/></svg><b class="num">1 / 1</b></span>
+              </div>
+              <div class="metaRow" style="margin-top:12px"><span style="display:flex;align-items:center;gap:7px"><svg class="i s"><use href="#i-users"/></svg> Marko Ilić</span></div>
+              <div style="display:flex;align-items:center;gap:12px;margin-top:20px">
+                <span style="flex:1;height:44px;border-radius:14px;background:var(--ok-soft);color:var(--ok);font-size:13.5px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px"><svg class="i s"><use href="#i-check"/></svg> Rezervisano</span>
+                <span style="height:44px;padding:0 18px;border-radius:14px;color:var(--bad);font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:7px"><svg class="i s"><use href="#i-x"/></svg> Otkaži</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="slot-card">
+            <div class="slot-head" style="background:hsl(200 100% 95%);color:hsl(200 80% 38%)">
+              <span class="h4">Grupni trening</span>
+              <span style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.8">45 min</span>
+            </div>
+            <div class="slot-body">
+              <div class="metaRow">
+                <span style="display:flex;align-items:center;gap:7px"><svg class="i s"><use href="#i-clock"/></svg><b class="num">18:00 - 18:45</b></span>
+                <span style="display:flex;align-items:center;gap:7px"><svg class="i s"><use href="#i-users"/></svg><b class="num">6 / 6</b></span>
+              </div>
+              <div class="metaRow" style="margin-top:12px"><span style="display:flex;align-items:center;gap:7px"><svg class="i s"><use href="#i-clock"/></svg> <span class="num">2</span> na čekanju</span></div>
+              <div class="btn q block m20" style="height:48px;font-size:14.5px;box-shadow:inset 0 0 0 1.5px var(--hair)">Prijavi se na listu čekanja</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="navwrap">
+      <div class="nav a5">
+        <a><span class="b"><svg class="i"><use href="#i-home"/></svg></span>Početna</a>
+        <a><span class="b"><svg class="i"><use href="#i-dumb"/></svg></span>Trening</a>
+        <a class="on"><span class="b"><svg class="i"><use href="#i-calplus"/></svg></span>Rezerviši</a>
+        <a><span class="b"><svg class="i"><use href="#i-trend"/></svg></span>Napredak</a>
+        <a><span class="b"><svg class="i"><use href="#i-card"/></svg></span>Članarina</a>
+      </div>
+    </div>
+  </div></div>
+  <div class="cap"><div class="no">09</div><h3>Rezerviši trening</h3>
+    <div class="src">src/pages/athlete/Booking.tsx</div>
+    <p>Termin je kartica sa obojenim zaglavljem tipa treninga, kao i sada, sa vremenom, popunjenošću i imenom trenera. Tri stanja koja postoje: Rezerviši, Rezervisano sa Otkaži, i lista čekanja.</p></div>
+</div>
+
+<!-- ============ 10 TVOJ PLAN ============ -->
+<div class="slot">
+  <div class="phone"><div class="scr">
+    <div class="bloom"></div>
+    <div class="sb"><span>9:41</span><span class="d"><i></i><i></i><i></i></span></div>
+
+    <div class="pad pb">
+      <div style="height:16px"></div>
+      <div class="eyebrow m20">Ishrana</div>
+      <div class="title s" style="margin-top:10px">Tvoj <span class="grad">plan</span></div>
+
+      <div class="hero m24">
+        <div class="orb"></div>
+        <div class="in">
+          <div class="cap">Danas</div>
+          <div class="dsp num" style="font-size:28px;font-weight:700;letter-spacing:-.035em;margin-top:10px">1.240 <span style="opacity:.7;font-size:18px">/ 2.100 kcal</span></div>
+          <div style="height:6px;border-radius:4px;background:rgba(255,255,255,.2);margin-top:18px;overflow:hidden"><div style="width:59%;height:100%;background:#fff;border-radius:4px"></div></div>
+          <div style="display:flex;margin-top:20px;text-align:center">
+            <div style="flex:1"><div style="font-size:12px;opacity:.7">Proteini</div><div class="num" style="font-weight:700;margin-top:4px">88<span style="opacity:.6;font-size:12px">/140g</span></div></div>
+            <div style="flex:1"><div style="font-size:12px;opacity:.7">UH</div><div class="num" style="font-weight:700;margin-top:4px">120<span style="opacity:.6;font-size:12px">/210g</span></div></div>
+            <div style="flex:1"><div style="font-size:12px;opacity:.7">Masti</div><div class="num" style="font-weight:700;margin-top:4px">42<span style="opacity:.6;font-size:12px">/70g</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="m40">
+        <div class="over" style="margin-bottom:6px">Današnji obroci</div>
+        <div class="h2" style="margin-bottom:16px">Dan 2 · srednji unos</div>
+
+        <div class="col g14">
+          <div class="card" style="padding:18px">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+              <div>
+                <div class="h4">Doručak <span style="color:var(--muted);font-weight:400">· 08:00</span></div>
+                <div class="sub s num">420 kcal</div>
+              </div>
+              <span class="chip br xs"><svg class="i s" style="width:13px;height:13px"><use href="#i-plus"/></svg> Loguj</span>
+            </div>
+            <div class="m16 col" style="gap:0">
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:9px 0"><span style="font-weight:500">Ovsene pahuljice</span><span class="num" style="color:var(--muted)">60g · 228 kcal</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:9px 0;box-shadow:inset 0 1px 0 var(--hair)"><span style="font-weight:500">Jogurt 2.8%</span><span class="num" style="color:var(--muted)">200g · 116 kcal</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:9px 0;box-shadow:inset 0 1px 0 var(--hair)"><span style="font-weight:500">Banana</span><span class="num" style="color:var(--muted)">80g · 76 kcal</span></div>
+            </div>
+          </div>
+
+          <div class="card" style="padding:18px">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+              <div>
+                <div class="h4">Ručak <span style="color:var(--muted);font-weight:400">· 13:30</span></div>
+                <div class="sub s num">0 kcal</div>
+              </div>
+              <span class="chip br xs"><svg class="i s" style="width:13px;height:13px"><use href="#i-plus"/></svg> Loguj</span>
+            </div>
+            <div class="sub s m12">Nema namirnica</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="m40">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:16px">
+          <div>
+            <div class="over" style="margin-bottom:4px">Šta sam pojeo</div>
+            <div class="h2">Današnji log</div>
+          </div>
+          <span class="ib" style="width:40px;height:40px;background:var(--brand-1);color:#fff;box-shadow:var(--sh-brand)"><svg class="i s"><use href="#i-plus"/></svg></span>
+        </div>
+        <div class="list">
+          <div class="r" style="min-height:64px"><div class="grow"><div class="h4">Ovsene pahuljice</div><div class="sub s num">Doručak · 60g · 228 kcal · P8</div></div><svg class="i s" style="color:var(--bad)"><use href="#i-x"/></svg></div>
+          <div class="r" style="min-height:64px"><div class="grow"><div class="h4">Jogurt 2.8%</div><div class="sub s num">Doručak · 200g · 116 kcal · P9</div></div><svg class="i s" style="color:var(--bad)"><use href="#i-x"/></svg></div>
+          <div class="r" style="min-height:64px"><div class="grow"><div class="h4">Pileća prsa</div><div class="sub s num">Ručak · 180g · 297 kcal · P56</div></div><svg class="i s" style="color:var(--bad)"><use href="#i-x"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="navwrap">
+      <div class="nav a5">
+        <a><span class="b"><svg class="i"><use href="#i-home"/></svg></span>Početna</a>
+        <a><span class="b"><svg class="i"><use href="#i-dumb"/></svg></span>Trening</a>
+        <a><span class="b"><svg class="i"><use href="#i-calplus"/></svg></span>Rezerviši</a>
+        <a><span class="b"><svg class="i"><use href="#i-trend"/></svg></span>Napredak</a>
+        <a><span class="b"><svg class="i"><use href="#i-card"/></svg></span>Članarina</a>
+      </div>
+    </div>
+  </div></div>
+  <div class="cap"><div class="no">10</div><h3>Tvoj plan</h3>
+    <div class="src">src/pages/athlete/Nutrition.tsx</div>
+    <p>Gradijentna kartica Danas sa kcal i tri makroa, planirani obroci sa dugmetom Loguj i namirnicama, pa Današnji log sa dugmetom plus. Bez unosa vode i bez fotografija hrane.</p></div>
+</div>
+
+<!-- ============ 11 TVOJA ČLANARINA ============ -->
+<div class="slot">
+  <div class="phone"><div class="scr">
+    <div class="bloom"></div>
+    <div class="sb"><span>9:41</span><span class="d"><i></i><i></i><i></i></span></div>
+
+    <div class="pad pb">
+      <div style="height:16px"></div>
+      <div class="eyebrow m20">Pretplata</div>
+      <div class="title s" style="margin-top:10px">Tvoja članarina</div>
+
+      <div class="hero m24">
+        <div class="orb" style="top:auto;bottom:-60px;right:-50px"></div>
+        <div class="in">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+            <div>
+              <div class="cap">Aktivan paket</div>
+              <div class="dsp" style="font-size:24px;font-weight:700;letter-spacing:-.035em;margin-top:8px">12 treninga mesečno</div>
+            </div>
+            <span class="chip xs" style="background:rgba(255,255,255,.16);color:#fff"><svg class="i s" style="width:13px;height:13px"><use href="#i-shield"/></svg> Aktivna</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-top:22px">
+            <span class="dsp num" style="font-size:40px;font-weight:700;letter-spacing:-.04em;line-height:1">7</span>
+            <span style="font-size:14px;font-weight:600;opacity:.8">/ 12 treninga preostalo</span>
+          </div>
+          <div style="height:6px;border-radius:4px;background:rgba(255,255,255,.2);margin-top:18px;overflow:hidden"><div style="width:58%;height:100%;background:#fff;border-radius:4px"></div></div>
+          <div style="font-size:12.5px;opacity:.85;margin-top:14px">Važi do 12. septembra · Trener Marko</div>
+        </div>
+      </div>
+
+      <div class="btn brand block m24"><svg class="i s"><use href="#i-plus"/></svg> Kupi novi paket</div>
+
+      <div class="m40">
+        <div class="over">Tvoji zahtevi</div>
+        <div class="col g14">
+          <div class="card" style="padding:18px">
+            <div style="display:flex;align-items:center;gap:15px">
+              <div class="med q"><svg class="i"><use href="#i-clock"/></svg></div>
+              <div class="grow"><div class="h4">12 treninga mesečno</div><div class="sub s num">16.500 RSD · Keš</div></div>
+              <span style="font-size:12px;font-weight:600;color:var(--bad)">Otkaži</span>
+            </div>
+            <div class="sub s" style="text-align:center;margin-top:16px">Čeka se potvrda trenera…</div>
+          </div>
+
+          <div class="card" style="padding:18px">
+            <div style="display:flex;align-items:center;gap:15px">
+              <div class="med q"><svg class="i"><use href="#i-x"/></svg></div>
+              <div class="grow"><div class="h4">8 treninga mesečno</div><div class="sub s num">12.000 RSD · Račun</div></div>
+              <span class="chip wn xs">Odbijen</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="navwrap">
+      <div class="nav a5">
+        <a><span class="b"><svg class="i"><use href="#i-home"/></svg></span>Početna</a>
+        <a><span class="b"><svg class="i"><use href="#i-dumb"/></svg></span>Trening</a>
+        <a><span class="b"><svg class="i"><use href="#i-calplus"/></svg></span>Rezerviši</a>
+        <a><span class="b"><svg class="i"><use href="#i-trend"/></svg></span>Napredak</a>
+        <a class="on"><span class="b"><svg class="i"><use href="#i-card"/></svg></span>Članarina</a>
+      </div>
+    </div>
+  </div></div>
+  <div class="cap"><div class="no">11</div><h3>Tvoja članarina</h3>
+    <div class="src">src/pages/athlete/Membership.tsx</div>
+    <p>Aktivan paket sa brojem preostalih treninga i trakom, jedno dugme koje menja tekst po stanju, pa Tvoji zahtevi sa stanjima čekanja i odbijanja. Izbor paketa i dalje živi u dijalogu, kao sada.</p></div>
+</div>
+
+<!-- ============ 12 TRENER, POČETNA ============ -->
+<div class="slot">
+  <div class="phone"><div class="scr">
+    <div class="bloom"></div>
+    <div class="sb"><span>9:41</span><span class="d"><i></i><i></i><i></i></span></div>
+
+    <div class="pad pb">
+      <div class="top" style="justify-content:flex-end">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="ib"><svg class="i"><use href="#i-msg"/></svg><span class="bdg"></span></div>
+          <div class="ib"><svg class="i"><use href="#i-bell"/></svg></div>
+          <div class="av">MI</div>
+        </div>
+      </div>
+
+      <div class="m24">
+        <div class="eyebrow">Dobro došao nazad</div>
+        <div class="title">Zdravo, Marko<span class="grad"> 👋</span></div>
+      </div>
+
+      <div class="list m24" style="--ins:77px">
+        <div class="r">
+          <div class="med soft"><svg class="i"><use href="#i-radio"/></svg></div>
+          <div class="grow"><div class="h3">Uživo monitor</div><div class="sub s">Live Activity sa aktivnim vežbačima</div></div>
+          <span style="width:50px;height:30px;border-radius:99px;background:var(--g-brand);position:relative;flex:none"><i style="position:absolute;top:3px;right:3px;width:24px;height:24px;border-radius:50%;background:#fff"></i></span>
+        </div>
+      </div>
+
+      <div class="two m16">
+        <div class="stat"><div class="l">Aktivnih</div><div class="v grad num">14</div><div class="u">članova</div></div>
+        <div class="stat"><div class="l">≤ 14 dana</div><div class="v num" style="color:var(--warn-fg)">3</div><div class="u">ističu</div></div>
+      </div>
+
+      <div class="m40">
+        <div class="sect"><div class="h2">Danas, 10. avgust</div><a>Kalendar →</a></div>
+        <div class="list m44">
+          <div class="r">
+            <div class="med" style="background:hsl(268 80% 56% / .13);color:var(--brand-1)"><svg class="i"><use href="#i-clock"/></svg></div>
+            <div class="grow"><div class="h3 num">08:00 · Ana Kovač</div><div class="sub s">Individualni trening</div></div>
+            <span class="chip br xs">Zakazano</span>
+          </div>
+          <div class="r">
+            <div class="med" style="background:hsl(152 65% 38% / .13);color:hsl(152 70% 32%)"><svg class="i"><use href="#i-clock"/></svg></div>
+            <div class="grow"><div class="h3 num">09:00 · Jelena Marić</div><div class="sub s">Grupni trening</div></div>
+            <span class="chip br xs">Zakazano</span>
+          </div>
+          <div class="r">
+            <div class="med" style="background:hsl(200 80% 45% / .13);color:hsl(200 80% 38%)"><svg class="i"><use href="#i-clock"/></svg></div>
+            <div class="grow"><div class="h3 num">18:00 · Nikola Perić</div><div class="sub s">Grupni trening</div></div>
+            <span class="chip br xs">Zakazano</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="m40">
+        <div class="sect"><div class="h2">Treba ih probuditi</div><a>Svi vežbači →</a></div>
+        <div class="list m44">
+          <div class="r">
+            <div class="med wn"><svg class="i"><use href="#i-warn"/></svg></div>
+            <div class="grow"><div class="h3">Stefan Jovanović</div><div class="sub s">Nije trenirao 12 dana</div></div>
+            <span class="chip wn xs">Pošalji nudge</span>
+          </div>
+          <div class="r">
+            <div class="med wn"><svg class="i"><use href="#i-warn"/></svg></div>
+            <div class="grow"><div class="h3">Milica Todorović</div><div class="sub s">Nije trenirala 9 dana</div></div>
+            <span class="chip wn xs">Pošalji nudge</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="m40">
+        <div class="sect"><div class="h2">Tvoji ambasadori 💜</div></div>
+        <div class="list m44">
+          <div class="r">
+            <div class="av m">AK</div>
+            <div class="grow"><div class="h4">Ana Kovač</div><div class="sub s">Dovela 3 vežbača · 2 aktivnih</div></div>
+            <span class="chip ok xs">+3</span>
+          </div>
+          <div class="r">
+            <div class="av m">NP</div>
+            <div class="grow"><div class="h4">Nikola Perić</div><div class="sub s">Doveo 1 vežbača</div></div>
+            <span class="chip ok xs">+1</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card m24" style="background:var(--g-brand-soft);box-shadow:none;display:flex;align-items:center;gap:15px;padding:18px">
+        <div class="av m">ST</div>
+        <div class="grow"><div class="h4">Studio Titan</div><div class="sub s">Tvoj studio</div></div>
+      </div>
+
+      <div class="m40">
+        <div class="sect"><div class="h2">Brze akcije</div></div>
+        <div class="two">
+          <div class="card" style="padding:18px">
+            <div class="med soft"><svg class="i"><use href="#i-users"/></svg></div>
+            <div class="h4" style="margin-top:14px">Vežbači</div>
+            <div class="sub s">Lista i pozivi</div>
+          </div>
+          <div class="card" style="padding:18px">
+            <div class="med soft"><svg class="i"><use href="#i-cal"/></svg></div>
+            <div class="h4" style="margin-top:14px">Kalendar</div>
+            <div class="sub s">Termini i sesije</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="navwrap">
+      <div class="nav a4">
+        <a class="on"><span class="b"><svg class="i"><use href="#i-home"/></svg></span>Početna</a>
+        <a><span class="b"><svg class="i"><use href="#i-users"/></svg></span>Vežbači</a>
+        <a><span class="b"><svg class="i"><use href="#i-cal"/></svg></span>Kalendar</a>
+        <a><span class="b"><svg class="i"><use href="#i-chart"/></svg></span>Finansije</a>
+      </div>
+    </div>
+  </div></div>
+  <div class="cap"><div class="no">12</div><h3>Trener, početna</h3>
+    <div class="src">src/pages/trainer/Dashboard.tsx</div>
+    <p>Uživo monitor sa prekidačem, dve pločice, Danas sa terminima u boji tipa sesije, Treba ih probuditi, ambasadori, studio i Brze akcije. Isti redosled kao u kodu.</p></div>
+</div>
+
+</div>
+</body>
+</html>

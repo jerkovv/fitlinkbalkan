@@ -1,0 +1,29 @@
+/* trener: zajednicko */
+.host{display:block;width:360px;max-width:100%}
+.fab b{position:absolute;top:-2px;right:-4px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#fff;color:var(--ink);font-size:11px;font-weight:700;display:grid;place-items:center}
+.livedot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok)}
+.ini2{position:relative;flex:none;width:34px;height:34px;border-radius:50%;background:var(--g);display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff}
+.ini2 i{position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 2px #15121C}
+.ini2.ph{background:#2A2535 center/cover no-repeat}
+
+/* uzivo: zid pulseva */
+.lgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lt{position:relative;overflow:hidden;padding:12px;border-radius:22px;background:var(--s1);border:1px solid color-mix(in srgb,currentColor 30%,transparent)}
+.lt::before{content:"";position:absolute;inset:0;background:radial-gradient(170px 140px at 90% -10px,currentColor,transparent 70%);opacity:.2;pointer-events:none}
+.lt>*{position:relative}
+.lt .nm{display:flex;align-items:center;gap:8px;color:var(--tx)}
+.lt .bpm{display:flex;align-items:baseline;gap:5px;margin-top:12px}
+.lt .bpm svg{width:15px;height:15px;align-self:center}
+.lt .bpm .fig{font-size:40px;line-height:1}
+.lt .bpm small{font-size:11px;color:var(--tx2)}
+.zb5{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin-top:8px}
+.zb5 i{height:5px;border-radius:3px;opacity:.25}
+.zb5 i:nth-child(1){background:var(--z1)}
+.zb5 i:nth-child(2){background:var(--z2)}
+.zb5 i:nth-child(3){background:var(--z3)}
+.zb5 i:nth-child(4){background:var(--z4)}
+.zb5 i:nth-child(5){background:var(--z5)}
+.zb5 i.on{opacity:1;box-shadow:0 0 10px currentColor}
+.lt .ex{margin-top:9px;font-size:11.5px;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lt .mt{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:11px;color:var(--tx2);font-variant-numeric:tabular-nums}
+.lt .mt svg{width:13px;height:13px}

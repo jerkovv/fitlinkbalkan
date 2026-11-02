@@ -95,6 +95,13 @@ async function getApnsJwt(): Promise<string> {
   return token;
 }
 
+/// Paket iz reda; sve sto ne lici na ime paketa pada na podrazumevani, da se u
+/// APNs zaglavlje ne bi moglo ubaciti nista drugo.
+function paketZnaka(izReda: string | null, podrazumevani: string): string {
+  const p = (izReda ?? "").trim();
+  return /^[A-Za-z0-9.-]{3,128}$/.test(p) ? p : podrazumevani;
+}
+
 // ---- APNs slanje ------------------------------------------------------------
 
 type SendResult = { status: number; reason: string | null; apnsId: string | null };
@@ -379,7 +386,7 @@ Deno.serve(async (req) => {
 
     const { data: rows, error: tokErr } = await admin
       .from("device_push_tokens")
-      .select("id, token, platform")
+      .select("id, token, platform, bundle")
       .eq("user_id", userId);
 
     if (tokErr) return json({ error: tokErr.message }, 500);
@@ -432,12 +439,16 @@ Deno.serve(async (req) => {
           r = await sendFcm(token, title, text ?? null, custom);
           host = "fcm";
         } else {
-          r = await sendToHost(APNS_PROD_HOST, token, jwt, bundleId, apnsPayload);
+          // Tema je paket aplikacije iz koje je znak stigao. Dve aplikacije dele
+          // isti APNs kljuc, ali svaka ima svoj paket; bez ovoga APNs odbija
+          // svaki znak koji nije iz paketa u APNS_BUNDLE_ID.
+          const paket = paketZnaka(row.bundle as string | null, bundleId);
+          r = await sendToHost(APNS_PROD_HOST, token, jwt, paket, apnsPayload);
           host = "prod";
 
           // BadDeviceToken cesto znaci pogresno okruzenje -> probaj sandbox.
           if (r.reason === "BadDeviceToken") {
-            r = await sendToHost(APNS_SANDBOX_HOST, token, jwt, bundleId, apnsPayload);
+            r = await sendToHost(APNS_SANDBOX_HOST, token, jwt, paket, apnsPayload);
             host = "sandbox";
           }
         }

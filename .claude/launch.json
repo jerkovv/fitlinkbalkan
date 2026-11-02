@@ -1,0 +1,7 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "fitlink-dev", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 8080 },
+    { "name": "design-static", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "8091", "--directory", "design"], "port": 8091 }
+  ]
+}

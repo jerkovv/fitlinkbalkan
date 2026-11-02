@@ -1,0 +1,917 @@
+<title>FitLink Ponoć Sat Trener</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+<style>
+/* Jedna tamna tema, namerno. Boje brenda iz src/index.css, font i bold italik brojke iz v5. */
+:root{
+  --stage-1:#453B55; --stage-2:#221C2C; --stage-3:#15111B;
+  --ink:#0B0A10; --s1:#15121C; --s2:#1F1B28;
+  --line:rgba(236,228,255,.08);
+  --tx:#F6F3FB; --tx2:#ABA3BC; --tx3:#716A82;
+  --v:#8B3DEB; --v-lt:#C4A2FF; --m:#E24CA6;
+  --g:linear-gradient(135deg,#8B3DEB 0%,#5B4BEF 55%,#E24CA6 100%);
+  --ok:#3DDC97;
+  --z1:#0A84FF; --z2:#30D158; --z3:#FFD60A; --z4:#FF9F0A; --z5:#FF453A;
+  --font:"Poppins",-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--stage-3)}
+body{min-height:100vh;background:radial-gradient(1300px 760px at 50% -8%,var(--stage-1),var(--stage-2) 55%,var(--stage-3));color:var(--tx);font-family:var(--font);-webkit-font-smoothing:antialiased;padding:36px 24px 56px}
+.fig{font-weight:700;font-style:italic;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+svg.f{fill:currentColor;stroke:none}
+
+/* okvir strane */
+.top,.foot{max-width:1180px;margin-inline:auto;display:flex;justify-content:space-between;align-items:center;gap:12px 24px;flex-wrap:wrap}
+.top{margin-bottom:44px}
+.brand{display:flex;align-items:center;gap:10px;font-size:19px;font-weight:600;letter-spacing:-.01em}
+.brand svg{width:38px;height:24px}
+.top p,.foot p{font-size:13px;color:var(--tx2)}
+.foot{margin-top:48px}
+.foot p{color:var(--tx3);font-size:12px}
+
+.stage{max-width:1180px;margin-inline:auto;display:flex;justify-content:center;align-items:flex-start;gap:36px;flex-wrap:wrap}
+.phone{position:relative;flex:none;width:360px;height:780px;border-radius:56px;background:var(--ink);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 70px 110px -40px rgba(5,3,10,.85),0 0 0 1px rgba(255,255,255,.06),inset 0 1px 0 rgba(255,255,255,.08)}
+.stage .phone:nth-child(1){margin-top:128px}
+.stage .phone:nth-child(2){margin-top:64px}
+@media (max-width:1219px){.stage .phone:nth-child(n){margin-top:0}}
+@media (max-width:420px){.phone{zoom:.87}.stage{gap:28px}}
+
+.glow{position:absolute;inset:0 0 auto 0;height:380px;pointer-events:none;background:radial-gradient(360px 270px at 18% -40px,rgba(139,61,235,.62),transparent 72%),radial-gradient(260px 220px at 104% -10px,rgba(226,76,166,.36),transparent 70%)}
+.sb{position:relative;z-index:4;flex:none;height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 4px 36px;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.sb .ic{display:flex;gap:5px;align-items:center}
+.sb .ic svg{height:12px}
+.scr{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;gap:20px;padding:14px 22px 0;min-height:0}
+
+.glass{background:rgba(14,12,20,.55);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.1)}
+.btn-c{position:relative;flex:none;width:46px;height:46px;border-radius:50%;background:rgba(16,13,22,.8);border:1px solid var(--line);display:grid;place-items:center}
+.btn-c svg{width:20px;height:20px}
+.btn-c .dot{position:absolute;top:10px;right:11px;width:8px;height:8px;border-radius:50%;background:var(--z5);box-shadow:0 0 0 2px var(--ink)}
+.streak{width:auto;padding:0 13px 0 11px;border-radius:999px;display:flex;gap:4px;color:#FFB36B}
+.streak .fig{font-size:15px;color:var(--tx)}
+
+/* zaglavlje sa avatarom */
+.hd{display:flex;align-items:center;gap:12px}
+.av{width:50px;height:50px;border-radius:50%;object-fit:cover;flex:none;box-shadow:0 0 0 2px rgba(255,255,255,.14)}
+.who{flex:1;min-width:0}
+.who b{display:block;font-size:18px;font-weight:600;letter-spacing:-.01em;line-height:1.25}
+.who span{display:block;font-size:12.5px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* današnji trening */
+.today{display:flex;align-items:center;gap:14px;padding:8px;border-radius:999px;background:var(--g);box-shadow:0 20px 40px -16px rgba(139,61,235,.75),inset 0 0 0 1px rgba(255,255,255,.2)}
+.today .ico{flex:none;width:66px;height:66px;border-radius:50%;background:var(--ink);display:grid;place-items:center}
+.today .ico svg{width:28px;height:28px}
+.today .t{flex:1;min-width:0}
+.today b{display:block;font-size:16px;font-weight:600;line-height:1.3}
+.today span{display:block;font-size:12px;color:rgba(255,255,255,.85)}
+.go{flex:none;margin-right:6px;padding:12px 17px;border-radius:999px;background:#fff;color:var(--ink);font-size:12.5px;font-weight:700;letter-spacing:.08em}
+
+/* nedelja */
+.wk{display:grid;grid-template-columns:repeat(7,1fr);row-gap:10px;text-align:center}
+.wk .dn{font-size:12.5px;color:var(--tx2)}
+.wk .dn.on{color:var(--v-lt);font-weight:600}
+.wk .d{position:relative;width:40px;height:40px;margin-inline:auto;border-radius:50%;display:grid;place-items:center;font-size:15px;font-weight:500;font-variant-numeric:tabular-nums}
+.wk .d.done{box-shadow:inset 0 0 0 2px rgba(196,162,255,.5)}
+.wk .d.now{color:var(--v-lt);font-weight:600}
+.wk .d.now svg{position:absolute;inset:0;width:40px;height:40px;transform:rotate(-90deg)}
+.wk .d.term::after{content:"";position:absolute;bottom:-7px;left:50%;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--m)}
+
+.grp{display:flex;flex-direction:column;gap:14px}
+.rail{display:flex;gap:10px;margin-right:-22px;overflow:hidden}
+.chip{flex:none;display:flex;align-items:center;gap:8px;height:44px;padding:0 16px;border-radius:999px;background:var(--s1);border:1px solid var(--line);font-size:13.5px;font-weight:500;white-space:nowrap}
+.chip svg{width:17px;height:17px}
+.chip.on{border:1.5px solid var(--v-lt);color:var(--v-lt);background:rgba(139,61,235,.14)}
+
+.card{position:relative;flex:none;width:138px;height:150px;border-radius:24px;overflow:hidden;background:var(--s2)}
+.card img{width:100%;height:100%;object-fit:cover;display:block}
+.card::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,10,16,.15) 20%,rgba(11,10,16,.92))}
+.card .cap{position:absolute;z-index:1;left:12px;right:10px;bottom:11px}
+.card .cap b{display:block;font-size:13.5px;font-weight:600;line-height:1.2}
+.card .cap small{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:11px;color:rgba(255,255,255,.75)}
+.card .cap small svg{width:12px;height:12px}
+.card .tag{position:absolute;z-index:1;top:9px;left:9px;display:flex;align-items:center;gap:4px;padding:4px 9px;border-radius:999px;font-size:10.5px;font-weight:600}
+.card .tag svg{width:11px;height:11px;stroke-width:3}
+.card .tag.ok{color:var(--ok)}
+.card .edge{position:absolute;z-index:2;inset:0;border-radius:inherit;border:2px solid var(--v-lt)}
+
+.sh{display:flex;justify-content:space-between;align-items:center}
+.sh h2{font-size:17px;font-weight:600;letter-spacing:-.01em}
+.sh .lnk{font-size:12.5px;color:var(--v-lt);font-weight:500}
+.sh .btn-c{width:38px;height:38px}
+.sh .btn-c svg{width:18px;height:18px}
+
+.acts{display:flex;flex-direction:column;gap:8px}
+.act{display:flex;align-items:center;gap:14px;padding:11px 18px 11px 11px;border-radius:32px;background:var(--s1);border:1px solid var(--line)}
+.act .ring{flex:none;width:60px;height:60px;padding:3px;border-radius:50%;background:var(--g)}
+.act .ring span{width:100%;height:100%;border-radius:50%;background:var(--ink);display:grid;place-items:center}
+.act .ring svg{width:24px;height:24px}
+.act .ring.pr{background:linear-gradient(135deg,#FFD60A,#FF9F0A)}
+.act .meta{flex:1;min-width:0}
+.act .meta b{display:block;font-size:14.5px;font-weight:600}
+.act .meta span{display:block;font-size:12px;color:var(--tx2)}
+.act .val{text-align:right;line-height:1.1}
+.act .val .fig{font-size:25px}
+.act .val small{display:block;font-size:11.5px;color:var(--tx2)}
+
+/* donja navigacija */
+.tab{position:absolute;z-index:6;left:0;right:0;bottom:0;height:92px;padding:0 10px 16px;display:grid;grid-template-columns:repeat(5,1fr);align-items:end;background:#121017;border-top:1px solid var(--line);border-radius:30px 30px 0 0}
+.tab::before{content:"";position:absolute;left:0;right:0;top:-44px;height:44px;background:linear-gradient(180deg,rgba(11,10,16,0),var(--ink));pointer-events:none}
+.tab .it{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:10.5px;font-weight:500;color:var(--tx3)}
+.tab .it svg{width:22px;height:22px}
+.tab .it.on{color:var(--tx);font-weight:600}
+.tab .it.on svg{color:var(--v-lt)}
+.tab .it.on::after{content:"";position:absolute;bottom:-10px;width:5px;height:5px;border-radius:50%;background:var(--v-lt)}
+.fab{position:relative;z-index:2;justify-self:center;align-self:start;width:66px;height:66px;margin-top:-26px;border-radius:50%;background:var(--g);display:grid;place-items:center;box-shadow:0 14px 28px -8px rgba(139,61,235,.85),0 0 0 6px var(--ink)}
+.fab svg{width:28px;height:28px;color:#fff}
+
+/* trening uživo */
+/* snimci vezbi iz baze su ilustracije na beloj pozadini: svetla scena + multiply, dno se topi u tamno */
+.hero{position:relative;flex:none;height:300px;isolation:isolate;background:radial-gradient(420px 300px at 50% 42%,#FFFFFF 0%,#EEE8F8 62%,#DCD2EE 100%)}
+.hero video{position:absolute;left:0;right:0;top:66px;width:100%;height:200px;object-fit:contain;mix-blend-mode:multiply}
+.hero .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,10,16,0) 72%,rgba(11,10,16,.55) 88%,var(--ink) 100%),radial-gradient(260px 200px at 0% 0%,rgba(139,61,235,.3),transparent 70%),radial-gradient(220px 180px at 100% 10%,rgba(226,76,166,.18),transparent 70%)}
+.phone.full .sb{position:absolute;top:0;left:0;right:0;color:var(--ink)}
+.hbar{position:absolute;z-index:3;top:56px;left:20px;right:20px;display:flex;justify-content:space-between;align-items:center}
+.hbar .btn-c{background:rgba(14,12,20,.55)}
+.hbar .cnt{padding:8px 14px;border-radius:999px;font-size:12.5px;font-weight:500}
+.hbar .cnt b{font-weight:700}
+.play{position:absolute;z-index:3;top:122px;left:50%;margin-left:-28px;width:56px;height:56px;border-radius:50%;display:grid;place-items:center}
+.play svg{width:20px;height:20px;margin-left:3px}
+.hr{position:absolute;z-index:3;left:20px;bottom:30px;display:grid;gap:6px;min-width:0;padding:8px 12px 9px;border-radius:18px}
+.hr .row{display:flex;align-items:baseline;gap:6px}
+.hr .row svg{width:16px;height:16px;align-self:center;color:var(--z3)}
+.hr .row .fig{font-size:24px;line-height:1}
+.hr .row small{font-size:11px;color:var(--tx2)}
+.hr .row em{margin-left:auto;font-style:normal;font-size:10.5px;font-weight:700;color:var(--ink);background:var(--z3);padding:2px 7px;border-radius:999px}
+.zones{display:grid;grid-template-columns:repeat(5,1fr);gap:3px}
+.zones i{height:5px;border-radius:3px;opacity:.26}
+.zones i.on{opacity:1;box-shadow:0 0 10px var(--z3)}
+.hr .src{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--tx2)}
+.hr .src svg{width:12px;height:12px}
+.live{position:absolute;z-index:3;right:20px;bottom:30px;display:flex;align-items:center;gap:8px;padding:8px 12px 8px 10px;border-radius:999px;font-size:11.5px;font-weight:500}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--z5);box-shadow:0 0 0 0 rgba(255,69,58,.6)}
+@media (prefers-reduced-motion:no-preference){.live i{animation:ping 1.8s ease-out infinite}}
+@keyframes ping{0%{box-shadow:0 0 0 0 rgba(255,69,58,.6)}80%,100%{box-shadow:0 0 0 7px rgba(255,69,58,0)}}
+.seg{position:absolute;z-index:3;left:20px;right:20px;bottom:12px;display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+.seg i{height:4px;border-radius:2px;background:rgba(255,255,255,.18)}
+.seg i.done{background:#fff}
+.seg i.now{background:linear-gradient(90deg,var(--v-lt) 50%,rgba(255,255,255,.18) 50%)}
+
+.wbody{position:relative;z-index:2;display:flex;flex-direction:column;gap:14px;padding:8px 22px 0}
+.ttl{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.eyebrow{font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--v-lt)}
+.ttl h2{margin-top:3px;font-size:20px;text-wrap:balance;font-weight:600;letter-spacing:-.015em;line-height:1.15}
+.pill-t{flex:none;display:flex;align-items:center;gap:7px;height:42px;padding:0 14px;border-radius:999px;background:var(--s1);border:1px solid var(--line);font-size:13px;color:var(--tx2)}
+.pill-t svg{width:18px;height:18px;color:var(--tx)}
+.pill-t .fig{font-size:15px;color:var(--tx)}
+
+.last{display:flex;align-items:center;gap:6px;padding:9px 10px 9px 12px;border-radius:18px;background:rgba(139,61,235,.1);border:1px dashed rgba(196,162,255,.3)}
+.last .lb{flex:1;font-size:10.5px;line-height:1.25;color:var(--tx2)}
+.last .lb b{display:block;font-size:11.5px;color:var(--v-lt);font-weight:600}
+.last span{padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.07);font-size:11.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.sets{display:flex;flex-direction:column;gap:6px}
+.set{display:grid;grid-template-columns:22px 1fr 1fr 30px;align-items:center;gap:10px;height:46px;padding:0 8px 0 14px;border-radius:16px;background:var(--s1);font-variant-numeric:tabular-nums}
+.set .n{font-size:12.5px;font-weight:600;color:var(--tx3)}
+.set .v{font-size:15px;font-weight:500}
+.set .v small{margin-left:3px;font-size:11px;color:var(--tx3);font-weight:400}
+.set .ck{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:rgba(61,220,151,.15);color:var(--ok)}
+.set .ck svg{width:15px;height:15px;stroke-width:2.6}
+.set .ck.empty{background:none;border:1.5px solid rgba(255,255,255,.18)}
+.set.cur{height:62px;border:1.5px solid transparent;background:linear-gradient(var(--s2),var(--s2)) padding-box,var(--g) border-box}
+.set.cur .n{color:var(--v-lt)}
+.step{display:flex;align-items:center;gap:7px}
+.step i{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.08);display:grid;place-items:center;color:var(--tx2)}
+.step i svg{width:13px;height:13px;stroke-width:2.4}
+.step .fig{font-size:20px}
+.step small{font-size:10.5px;color:var(--tx3)}
+.set.next{opacity:.5}
+.cta{display:flex;align-items:center;justify-content:center;gap:10px;height:56px;border-radius:999px;background:var(--g);font-size:15.5px;font-weight:600;box-shadow:0 18px 34px -14px rgba(139,61,235,.85),inset 0 0 0 1px rgba(255,255,255,.18)}
+.cta svg{width:19px;height:19px;stroke-width:2.4}
+
+/* ishrana */
+.ttl2 .eyebrow{display:block}
+.ttl2 h2{margin-top:4px;font-size:22px;font-weight:600;letter-spacing:-.015em}
+.mac{display:flex;gap:8px;margin-right:-22px}
+.m{flex:none;width:100px;display:flex;flex-direction:column;padding:14px 12px 13px;border-radius:26px;background:var(--s1);border:1px solid var(--line)}
+.m svg{width:24px;height:24px;color:var(--c);margin-bottom:14px}
+.m .lb{font-size:11.5px;color:var(--tx2)}
+.m .fig{margin-top:2px;font-size:22px;line-height:1.15}
+.m .of{font-size:10.5px;color:var(--tx3);white-space:nowrap}
+.m .pb{height:4px;margin-top:10px;border-radius:2px;background:rgba(255,255,255,.08);overflow:hidden}
+.m .pb i{display:block;height:100%;border-radius:2px;background:var(--c)}
+
+.meal{display:flex;flex-direction:column;gap:12px}
+.mh{display:flex;align-items:center;gap:12px}
+.mh .ring{flex:none;width:48px;height:48px;padding:2px;border-radius:50%;background:var(--g)}
+.mh .ring span{width:100%;height:100%;border-radius:50%;background:var(--ink);display:grid;place-items:center}
+.mh .ring svg{width:20px;height:20px}
+.mh .meta{flex:1;min-width:0}
+.mh .meta b{display:block;font-size:14.5px;font-weight:600}
+.mh .meta span{display:block;font-size:12px;color:var(--tx2);font-variant-numeric:tabular-nums}
+.logged{flex:none;display:flex;align-items:center;gap:6px;height:36px;padding:0 13px;border-radius:999px;background:rgba(61,220,151,.14);color:var(--ok);font-size:12.5px;font-weight:600}
+.logged svg{width:14px;height:14px;stroke-width:2.8}
+.photo{position:relative;height:122px;border-radius:28px;overflow:hidden}
+.photo img{width:100%;height:100%;object-fit:cover;display:block}
+.ing{position:absolute;left:10px;right:10px;bottom:10px;display:flex;gap:6px;padding:7px;border-radius:20px;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,#000 86%,transparent);mask-image:linear-gradient(90deg,#000 86%,transparent)}
+.ing span{flex:none;display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.1);font-size:11.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ing span i{width:7px;height:7px;border-radius:50%;background:var(--c)}
+.mrow{display:flex;align-items:center;gap:6px}
+.mp{display:flex;align-items:center;gap:6px;height:34px;padding:0 11px;border-radius:999px;background:var(--s1);border:1px solid var(--line);font-size:12px;font-variant-numeric:tabular-nums}
+.mp i{width:7px;height:7px;border-radius:50%;background:var(--c)}
+.mp b{font-weight:600}
+.mrow .btn-c{margin-left:auto;width:38px;height:38px}
+.mrow .btn-c svg{width:18px;height:18px}
+
+/* Dodatak na CSS iz design/fitlink-ponoc.html: svi ekrani vezbaca. Imena klasa ne diraju postojece. */
+:root{--soft:rgba(139,61,235,.16);--ok-soft:rgba(61,220,151,.13);--warn:#FFB547;--warn-soft:rgba(255,181,71,.13);--bad:#FF6B61;--bad-soft:rgba(255,69,58,.14);--s3:#2A2535;--g-text:linear-gradient(135deg,#B57BFF 0%,#8C7DFF 50%,#FF7CC6 100%)}
+.gt{background:var(--g-text);-webkit-background-clip:text;background-clip:text;color:transparent}
+/* italik brojke izlaze iz svog okvira, a gradijent se crta samo unutar njega; prosiri okvir da se cifre ne seku */
+.gt.fig,.gt.bign{padding:.04em .16em .04em .06em;margin:-.04em -.16em -.04em -.06em}
+.scr>*{flex-shrink:0}
+.fab.on{box-shadow:0 14px 28px -8px rgba(139,61,235,.9),0 0 0 6px var(--ink),0 0 0 8px rgba(196,162,255,.5)}
+
+/* stranica */
+.sec{max-width:1560px;margin:0 auto 110px}
+.sech{max-width:1180px;margin:0 auto 40px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px 32px;flex-wrap:wrap;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.sech h2{font-size:32px;font-weight:700;letter-spacing:-.03em;line-height:1.1;text-wrap:balance}
+.sech p{max-width:60ch;font-size:13.5px;line-height:1.55;color:var(--tx2)}
+.shots{display:flex;flex-wrap:wrap;justify-content:center;gap:64px 32px}
+.shot{display:flex;flex-direction:column;align-items:center;gap:18px;margin:0}
+.shot figcaption{text-align:center;line-height:1.4}
+.shot figcaption b{display:block;font-size:14.5px;font-weight:600}
+.shot figcaption code{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:11.5px;color:var(--tx3)}
+
+/* zajednicki delovi */
+.shl .bk{width:38px;height:38px;border-radius:50%;background:var(--s1);border:1px solid var(--line);display:grid;place-items:center;margin-bottom:12px}
+.shl .bk svg{width:16px;height:16px}
+.ey{font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--tx2)}
+.shl h1{margin-top:3px;font-size:32px;font-weight:700;letter-spacing:-.03em;line-height:1.05}
+.shl .rw{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.sc{border-radius:24px;background:var(--s1);border:1px solid var(--line)}
+.gc{position:relative;overflow:hidden;border-radius:28px;background:var(--g);padding:18px 20px;box-shadow:0 24px 44px -18px rgba(139,61,235,.8),inset 0 0 0 1px rgba(255,255,255,.18)}
+.gc::before{content:"";position:absolute;top:-44px;right:-40px;width:170px;height:170px;border-radius:50%;background:rgba(255,255,255,.15);filter:blur(28px)}
+.gc>*{position:relative}
+.gc .ey{color:rgba(255,255,255,.82)}
+.lr{display:flex;align-items:center;gap:12px;padding:11px 14px 11px 11px}
+.lr+.lr{border-top:1px solid var(--line)}
+.ti{flex:none;width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:var(--soft);color:var(--v-lt)}
+.ti svg{width:18px;height:18px}
+.ti.g{background:var(--g);color:#fff;box-shadow:0 10px 22px -10px rgba(139,61,235,.9)}
+.tx{flex:1;min-width:0}
+.tx b{display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx small{display:block;margin-top:1px;font-size:11.5px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chv{flex:none;width:16px;height:16px;color:var(--tx3)}
+.btn{display:flex;align-items:center;justify-content:center;gap:9px;height:54px;border-radius:18px;font-size:15px;font-weight:600;white-space:nowrap}
+.btn svg{width:18px;height:18px}
+.btn.g{background:var(--g);color:#fff;box-shadow:0 18px 34px -14px rgba(139,61,235,.85),inset 0 0 0 1px rgba(255,255,255,.18)}
+.btn.o{border:1px solid rgba(255,255,255,.14)}
+.btn.s{height:44px;border-radius:14px;font-size:13.5px}
+.pl2{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap}
+.pl2 svg{width:12px;height:12px}
+.pl2.ok{background:var(--ok-soft);color:var(--ok)}
+.pl2.wa{background:var(--warn-soft);color:var(--warn)}
+.pl2.vi{background:var(--soft);color:var(--v-lt)}
+.pl2.bad{background:var(--bad-soft);color:var(--bad)}
+.pl2.gl{background:rgba(255,255,255,.2);color:#fff}
+.ey2{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--tx2)}
+.ey2 svg{width:12px;height:12px;flex:none}
+.lab{margin-bottom:7px;font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--tx2)}
+.inp{display:flex;align-items:center;justify-content:space-between;gap:10px;height:52px;padding:0 16px;border-radius:16px;background:var(--s1);border:1px solid var(--line);font-size:14.5px}
+.inp.ph{color:var(--tx3)}
+.inp.fo{border-color:rgba(196,162,255,.6);box-shadow:0 0 0 4px rgba(139,61,235,.16)}
+.inp small{font-size:12px;font-weight:600;color:var(--v-lt)}
+.lnk2{font-size:13px;font-weight:600;color:var(--v-lt)}
+.tabs2{display:grid;grid-template-columns:1fr 1fr;padding:4px;border-radius:999px;background:var(--s1);border:1px solid var(--line)}
+.tabs2 span{height:34px;border-radius:999px;display:grid;place-items:center;font-size:13px;font-weight:600;color:var(--tx3)}
+.tabs2 span.on{background:var(--s3);color:var(--tx);box-shadow:0 8px 16px -8px rgba(0,0,0,.7)}
+.dock{position:absolute;z-index:6;left:18px;right:18px;bottom:24px}
+.fadeb{position:absolute;z-index:5;left:0;right:0;bottom:0;height:130px;background:linear-gradient(180deg,rgba(11,10,16,0),var(--ink) 60%);pointer-events:none}
+.logo{width:52px;height:52px;border-radius:16px;background:var(--soft);display:grid;place-items:center;box-shadow:inset 0 0 0 1px rgba(196,162,255,.2)}
+.logo svg{width:30px;height:19px}
+.scrim{position:absolute;inset:0;z-index:7;background:rgba(6,5,10,.72);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.xb{flex:none;width:40px;height:40px;border-radius:50%;background:var(--s1);border:1px solid var(--line);display:grid;place-items:center}
+.xb svg{width:16px;height:16px}
+.rbtn{flex:none;width:36px;height:36px;border-radius:50%;background:var(--v);display:grid;place-items:center;box-shadow:0 10px 20px -8px rgba(139,61,235,.9)}
+.rbtn svg{width:16px;height:16px;stroke-width:2.4}
+
+/* trening */
+.dayr{display:flex;align-items:center;gap:12px;padding:10px 14px 10px 10px;border-radius:20px;background:var(--s1);border:1px solid var(--line)}
+.dayr .num{flex:none;width:40px;height:40px;border-radius:13px;background:var(--soft);color:var(--v-lt);display:grid;place-items:center;font-size:15px;font-weight:700;font-style:italic}
+.dayr.nx{border:1.5px solid rgba(196,162,255,.55);box-shadow:0 0 0 4px rgba(139,61,235,.12)}
+.dayr.nx .num{background:var(--g);color:#fff}
+.dayr .pi{flex:none;width:15px;height:15px;color:var(--v-lt)}
+.exw{padding:12px;border-radius:22px;background:var(--s1);border:1px solid var(--line)}
+.exr{display:flex;gap:12px}
+.exr .th{position:relative;flex:none;width:68px;height:68px;border-radius:16px;background:#fff;overflow:hidden}
+.exr .th img{width:100%;height:100%;object-fit:cover}
+.exr .th i{position:absolute;top:5px;left:5px;width:20px;height:20px;border-radius:50%;background:rgba(11,10,16,.85);color:#fff;font-size:10.5px;font-weight:700;font-style:normal;display:grid;place-items:center}
+.exr .bd{flex:1;min-width:0}
+.exr .bd b{display:block;font-size:14px;font-weight:600;line-height:1.25}
+.exr .bd .en{display:block;margin-top:1px;font-size:11px;color:var(--tx3)}
+.exr .mt{display:flex;align-items:center;gap:7px;margin-top:7px;font-size:11.5px;color:var(--tx2);white-space:nowrap}
+.tgt{padding:3px 8px;border-radius:8px;background:var(--s2);color:var(--tx);font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.pp{margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
+.pp .h{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.pp .rec{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:var(--warn);font-variant-numeric:tabular-nums}
+.pp .rec svg{width:12px;height:12px}
+.pchips{display:flex;flex-wrap:wrap;gap:5px}
+.pchips span{padding:3px 9px;border-radius:999px;background:var(--s2);font-size:11.5px;font-weight:500;font-variant-numeric:tabular-nums}
+.ssr{position:relative;padding-left:12px;display:flex;flex-direction:column;gap:8px}
+.ssr::before{content:"";position:absolute;left:0;top:4px;bottom:4px;width:3px;border-radius:3px;background:rgba(196,162,255,.45)}
+.ssl{display:flex;align-items:center;gap:6px;font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--v-lt)}
+.ssl svg{width:12px;height:12px}
+.rest{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 24px 40px;background:radial-gradient(260px 240px at 50% 44%,rgba(226,76,166,.22),transparent 70%),radial-gradient(320px 300px at 50% 50%,rgba(91,75,239,.18),transparent 72%)}
+.rest .ey{letter-spacing:.24em}
+.rest .nx{margin:4px 0 26px;font-size:14px;color:rgba(246,243,251,.82)}
+.ringw{position:relative;width:260px;height:260px}
+.ringw svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ringw .c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ringw .fig{font-size:66px;line-height:1}
+.ringw small{margin-top:8px;font-size:12px;color:var(--tx2);font-variant-numeric:tabular-nums}
+.rbtns{display:grid;grid-template-columns:1fr 1fr 1.25fr;gap:10px;width:100%;margin-top:40px}
+.fwt{position:relative;z-index:2;display:flex;align-items:center;gap:12px;padding:6px 16px 12px;border-bottom:1px solid var(--line)}
+.fwt .t{flex:1;min-width:0}
+.fwt .t b{display:block;font-size:13px;font-weight:700}
+.hrp{flex:none;display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:999px;background:var(--s1);border:1px solid var(--line)}
+.hrp svg{width:14px;height:14px}
+.hrp .fig{font-size:15px;line-height:1}
+.fwc{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;align-items:center;padding:18px 22px 0;text-align:center;background:radial-gradient(260px 260px at 50% 46%,rgba(255,214,10,.12),transparent 70%)}
+.zbar{display:flex;gap:6px}
+.zbar i{width:40px;height:8px;border-radius:4px;opacity:.35}
+.zbar i.on{opacity:1;box-shadow:0 0 12px var(--z3)}
+.mini2{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
+.mini2>div{padding:11px 12px;border-radius:18px;background:var(--s1);border:1px solid var(--line);text-align:left}
+.okc{width:80px;height:80px;border-radius:50%;background:var(--ok);color:#06140D;display:grid;place-items:center;box-shadow:0 0 0 10px rgba(61,220,151,.12),0 0 50px rgba(61,220,151,.55)}
+.okc svg{width:38px;height:38px;stroke-width:3}
+.stt{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stt>div{padding:11px 13px 12px;border-radius:18px;background:var(--s1);border:1px solid var(--line)}
+.stt .ey2 svg{color:var(--v-lt)}
+.stt .fig{display:block;margin-top:5px;font-size:22px;line-height:1}
+.stt .fig small{margin-left:3px;font-size:12px;font-style:normal;font-weight:500;color:var(--tx2)}
+.tour{position:absolute;z-index:8;left:22px;right:22px;top:50%;transform:translateY(-50%);border-radius:28px;overflow:hidden;background:#17141F;border:1px solid rgba(255,255,255,.1);box-shadow:0 40px 80px -20px rgba(0,0,0,.85)}
+.tour .band{position:relative;overflow:hidden;padding:22px 20px 20px;background:var(--g)}
+.tour .band::before{content:"";position:absolute;top:-50px;right:-40px;width:170px;height:170px;border-radius:50%;background:rgba(255,255,255,.18);filter:blur(28px)}
+.tour .band>*{position:relative}
+.tour .band .ti{width:48px;height:48px;border-radius:15px;background:rgba(255,255,255,.16);color:#fff}
+.tour .band .ey{margin-top:14px;color:rgba(255,255,255,.85)}
+.tour .band h3{margin-top:3px;font-size:21px;font-weight:700;letter-spacing:-.02em}
+.tour .bd2{padding:16px 20px 18px}
+.tour p{font-size:14px;line-height:1.5;color:rgba(246,243,251,.86)}
+.dots3{display:flex;gap:6px;margin:16px 0}
+.dots3 i{width:6px;height:6px;border-radius:3px;background:var(--s3)}
+.dots3 i.on{width:24px;background:var(--v-lt)}
+
+/* napredak */
+.bars8{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;align-items:end;height:96px;margin-top:12px}
+.bars8>div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;height:100%}
+.bars8 i{width:100%;border-radius:8px 8px 4px 4px;background:rgba(196,162,255,.28)}
+.bars8 i.now{background:var(--g);box-shadow:0 10px 20px -8px rgba(139,61,235,.9)}
+.bars8 span{font-size:11px;font-weight:600;color:var(--tx3)}
+.bars8 span.now{color:var(--v-lt)}
+.warm{background:linear-gradient(135deg,rgba(255,159,10,.24),rgba(226,76,166,.16));border-color:rgba(255,181,71,.3)}
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.pgrid>div{position:relative;aspect-ratio:1;max-width:100%;border-radius:14px;overflow:hidden}
+.pgrid img{width:100%;height:100%;object-fit:cover}
+.pgrid span{position:absolute;left:0;right:0;bottom:0;padding:12px 6px 5px;font-size:9.5px;text-align:center;background:linear-gradient(180deg,transparent,rgba(0,0,0,.72))}
+.pgrid em{position:absolute;top:5px;left:5px;display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:999px;background:var(--v);font-size:9px;font-style:normal;font-weight:600}
+.pgrid em svg{width:9px;height:9px}
+
+/* termini i clanarina */
+.days{display:flex;gap:8px;margin-right:-22px;overflow:hidden}
+.days span{flex:none;width:60px;height:72px;border-radius:18px;background:var(--s1);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.days b{font-size:21px;font-weight:700;font-style:italic;font-variant-numeric:tabular-nums;line-height:1.1}
+.days small{font-size:9.5px;font-weight:600;letter-spacing:.1em;color:var(--tx3)}
+.days span.on{border:0;background:var(--g);box-shadow:0 14px 26px -12px rgba(139,61,235,.9)}
+.days span.on small{color:rgba(255,255,255,.85)}
+.slot{border-radius:22px;background:var(--s1);border:1px solid var(--line);overflow:hidden}
+.slot .st{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;font-size:12px;font-weight:600}
+.slot .st small{font-size:10px;font-weight:700;letter-spacing:.1em}
+.slot .sb2{display:flex;flex-direction:column;gap:6px;padding:11px 14px 13px}
+.slot .r{display:flex;align-items:center;gap:14px;font-size:12.5px;color:var(--tx2);font-variant-numeric:tabular-nums}
+.slot .r span{display:inline-flex;align-items:center;gap:5px}
+.slot .r b{color:var(--tx);font-weight:600}
+.slot .r svg{width:13px;height:13px}
+.slot .ac{display:flex;gap:8px;margin-top:6px}
+.pbar{height:6px;border-radius:999px;background:rgba(255,255,255,.22);overflow:hidden}
+.pbar i{display:block;height:100%;border-radius:999px;background:#fff}
+.pk{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:16px;border:1px solid var(--line)}
+.pk.on{border-color:rgba(196,162,255,.7);background:rgba(139,61,235,.14)}
+.pk b{display:block;font-size:13.5px;font-weight:600}
+.pk small{font-size:11px;color:var(--tx2)}
+.pk .pr{margin-left:auto;font-size:14px;font-weight:700;color:var(--v-lt);white-space:nowrap;font-variant-numeric:tabular-nums}
+.pk .pr small{font-size:10px;font-weight:500;color:var(--tx3)}
+.pay2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pay2 span{display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px;border-radius:16px;border:1px solid var(--line);font-size:12px;font-weight:600;color:var(--tx2)}
+.pay2 span svg{width:18px;height:18px}
+.pay2 span.on{border-color:rgba(196,162,255,.7);background:rgba(139,61,235,.14);color:var(--tx)}
+.bank{padding:12px;border-radius:18px;background:linear-gradient(135deg,rgba(139,61,235,.2),rgba(91,75,239,.12) 55%,rgba(226,76,166,.14))}
+.qrw{margin:10px auto 6px;width:124px;height:124px;padding:8px;border-radius:14px;background:#fff}
+.qrw svg{display:block;width:100%;height:100%}
+.kv{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 2px;border-top:1px solid rgba(255,255,255,.08)}
+.kv small{display:block;font-size:9.5px;font-weight:600;letter-spacing:.12em;color:var(--tx2)}
+.kv b{display:block;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.kv svg{width:14px;height:14px;color:var(--tx3)}
+.modal{position:absolute;z-index:8;left:12px;right:12px;top:56px;bottom:14px;display:flex;flex-direction:column;border-radius:28px;background:#17141F;border:1px solid rgba(255,255,255,.1);box-shadow:0 30px 60px -20px rgba(0,0,0,.8);overflow:hidden}
+.modal .mb{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:10px;padding:18px 16px 0;-webkit-mask-image:linear-gradient(180deg,#000 86%,transparent);mask-image:linear-gradient(180deg,#000 86%,transparent)}
+.modal .mb>*{flex-shrink:0}
+.modal .mf{display:flex;flex-direction:column;gap:8px;padding:12px 16px 16px;border-top:1px solid var(--line)}
+.sheet{position:absolute;z-index:8;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;padding:10px 22px 30px;border-radius:30px 30px 0 0;background:#17141F;border-top:1px solid rgba(255,255,255,.1);box-shadow:0 -30px 60px -20px rgba(0,0,0,.8);text-align:center}
+.grab{width:40px;height:5px;margin-bottom:18px;border-radius:3px;background:rgba(255,255,255,.2)}
+
+/* poruke i profil */
+.chh{position:relative;z-index:2;display:flex;align-items:center;gap:11px;padding:6px 16px 12px;border-bottom:1px solid var(--line);background:rgba(21,18,28,.7)}
+.chh .bk2{flex:none;width:36px;height:36px;border-radius:50%;background:var(--s1);display:grid;place-items:center}
+.chh .bk2 svg{width:16px;height:16px}
+.chh .ava{flex:none;width:38px;height:38px;border-radius:13px;background:var(--g);display:grid;place-items:center;font-size:15px;font-weight:700}
+.msgs{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;padding:14px 14px 0;overflow:hidden}
+.dayd{align-self:center;margin:4px 0 4px;padding:4px 11px;border-radius:999px;background:var(--s2);font-size:11px;color:var(--tx2)}
+.bub{max-width:78%;margin-top:8px;padding:9px 13px 7px;border-radius:20px;font-size:14px;line-height:1.4}
+.bub small{display:block;margin-top:3px;font-size:10.5px;font-variant-numeric:tabular-nums}
+.bub.th{align-self:flex-start;background:var(--s2);border:1px solid var(--line);border-bottom-left-radius:7px}
+.bub.th small{color:var(--tx3)}
+.bub.me{align-self:flex-end;background:var(--g);border-bottom-right-radius:7px;box-shadow:0 12px 24px -12px rgba(139,61,235,.9)}
+.bub.me small{text-align:right;color:rgba(255,255,255,.75)}
+.bub.g0{margin-top:3px}
+.comp{position:relative;z-index:2;display:flex;align-items:flex-end;gap:8px;padding:10px 12px 28px;border-top:1px solid var(--line);background:rgba(21,18,28,.85)}
+.comp .ta{flex:1;height:44px;display:flex;align-items:center;padding:0 14px;border-radius:16px;background:var(--s1);border:1px solid var(--line);font-size:14px;color:var(--tx3)}
+.comp .snd{flex:none;width:44px;height:44px;border-radius:16px;background:var(--v);display:grid;place-items:center}
+.comp .snd svg{width:18px;height:18px}
+.nt{position:relative;display:flex;gap:12px;padding:12px 26px 12px 12px;border-radius:20px;background:var(--s1);border:1px solid var(--line)}
+.nt .tx b{padding-right:30px;font-size:13.5px}
+.nt .tx p{margin-top:2px;font-size:12px;line-height:1.4;color:var(--tx2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.nt time{position:absolute;top:12px;right:14px;font-size:11px;color:var(--tx3)}
+.nt.new{background:linear-gradient(90deg,rgba(139,61,235,.15),rgba(139,61,235,.04));border-color:rgba(196,162,255,.25)}
+.nt.new::after{content:"";position:absolute;right:13px;top:50%;width:7px;height:7px;margin-top:-3px;border-radius:50%;background:var(--v-lt);box-shadow:0 0 10px var(--v-lt)}
+.trc{position:relative;overflow:hidden;display:flex;align-items:center;gap:14px;padding:16px;border-radius:24px;background:linear-gradient(135deg,rgba(139,61,235,.18),var(--s1) 70%);border:1px solid var(--line)}
+.trc::after{content:"";position:absolute;top:-40px;right:-30px;width:140px;height:140px;border-radius:50%;background:var(--g);opacity:.18;filter:blur(30px)}
+.trc .ti{width:56px;height:56px;border-radius:18px}
+.trc .ti svg{width:24px;height:24px}
+.htg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ht{padding:12px 12px 11px;border-radius:18px;background:var(--s1);border:1px solid var(--line)}
+.ht .ey2 svg{color:var(--v-lt)}
+.ht .fig{display:block;margin-top:6px;font-size:25px;line-height:1}
+.ht .fig small{margin-left:3px;font-size:11.5px;font-style:normal;font-weight:500;color:var(--tx2)}
+.ht .tr{display:flex;align-items:center;gap:4px;margin-top:6px;font-size:10.5px;color:var(--tx3)}
+.ht .tr b{font-weight:600}
+.ht .tr svg{width:11px;height:11px}
+.dev{position:relative;overflow:hidden;padding:14px;border-radius:22px;background:var(--s1);border:1px solid var(--line)}
+.dev.on{border-color:rgba(196,162,255,.45)}
+.dev.on::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:var(--g)}
+.dev .hdr{display:flex;align-items:center;gap:12px}
+.dev .ti{width:44px;height:44px;border-radius:14px}
+.dev p{margin-top:10px;font-size:12px;line-height:1.45;color:var(--tx2)}
+.dev .acts2{display:flex;gap:8px;margin-top:12px}
+.dev.soon{opacity:.6}
+
+/* v2: potpisni element na svakom ekranu */
+.shot figcaption i{display:inline-block;max-width:340px;margin-top:8px;padding:4px 11px;border-radius:999px;background:rgba(139,61,235,.16);color:#C4A2FF;font-size:11.5px;font-style:normal;font-weight:600;line-height:1.35}
+.gls{background:rgba(14,12,20,.55);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.12)}
+.photo2{position:absolute;left:0;right:0;top:0;z-index:0;overflow:hidden}
+.photo2 img{display:block;width:100%;height:100%;object-fit:cover}
+.photo2::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,10,16,.45) 0%,rgba(11,10,16,.05) 32%,rgba(11,10,16,.5) 68%,var(--ink) 100%),radial-gradient(300px 260px at 0 0,rgba(139,61,235,.45),transparent 70%)}
+.fchip{position:absolute;z-index:3;display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:16px;font-size:12px;font-weight:600}
+.fchip svg{width:14px;height:14px}
+.fchip .fig{font-size:19px;line-height:1}
+.otp{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}
+.otp span{position:relative;height:60px;border-radius:16px;background:var(--s1);border:1px solid var(--line);display:grid;place-items:center;font-size:27px;font-weight:700;font-style:italic;font-variant-numeric:tabular-nums}
+.otp span.on{border-color:rgba(196,162,255,.75);box-shadow:0 0 0 4px rgba(139,61,235,.18),0 0 28px rgba(139,61,235,.4)}
+.otp span.on::after{content:"";position:absolute;left:50%;top:18px;width:2px;height:24px;margin-left:-1px;border-radius:1px;background:var(--v-lt)}
+.meter{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.meter i{height:5px;border-radius:3px;background:var(--s3)}
+.meter i.on{background:var(--g)}
+.orb{position:relative;width:96px;height:96px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 30%,#B57BFF,#5B4BEF 55%,#2A1A55);box-shadow:0 0 0 10px rgba(139,61,235,.12),0 0 60px rgba(139,61,235,.55),inset 0 2px 0 rgba(255,255,255,.35)}
+.orb svg{width:40px;height:40px;color:#fff}
+.stackth{display:flex}
+.stackth span{width:46px;height:46px;border-radius:14px;background:#fff center/cover no-repeat;border:2px solid rgba(255,255,255,.95);box-shadow:0 10px 20px -8px rgba(0,0,0,.6)}
+.stackth span+span{margin-left:-14px}
+.avs{display:flex}
+.avs span{width:24px;height:24px;border-radius:50%;border:2px solid #1B1726;background:var(--g) center/cover no-repeat;display:grid;place-items:center;font-size:8.5px;font-weight:700}
+.avs span+span{margin-left:-8px}
+.fan{position:relative;height:168px}
+.fan span{position:absolute;top:14px;width:124px;height:124px;border-radius:26px;background:#fff center/cover no-repeat;box-shadow:0 28px 44px -20px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.45)}
+.split{display:flex;gap:3px;height:8px;border-radius:999px;overflow:hidden}
+.split i{display:block;height:100%;border-radius:999px}
+.heat{display:grid;grid-template-columns:22px repeat(8,1fr);gap:5px;align-items:center}
+.heat b{font-size:9px;font-weight:600;color:var(--tx3)}
+.heat i{height:19px;border-radius:6px;background:rgba(236,228,255,.06)}
+.heat i.l1{background:rgba(139,61,235,.38)}
+.heat i.l2{background:rgba(139,61,235,.72)}
+.heat i.l3{background:var(--g);box-shadow:0 0 12px rgba(139,61,235,.75)}
+.rail2{display:flex;gap:10px;margin-right:-22px;overflow:hidden}
+.prc{flex:none;width:138px;padding:10px;border-radius:22px;background:linear-gradient(160deg,rgba(255,181,71,.2),var(--s1) 62%);border:1px solid rgba(255,181,71,.3)}
+.prc .im{position:relative;height:82px;border-radius:14px;background:#fff center/cover no-repeat}
+.prc .im svg{position:absolute;right:6px;top:6px;width:20px;height:20px;padding:4px;border-radius:50%;background:#FFB547;color:#1A1000}
+.cmp{position:relative;height:292px;border-radius:26px;overflow:hidden}
+.cmp .h{position:absolute;inset:0}
+.cmp .h img{width:100%;height:100%;object-fit:cover}
+.cmp .h.r{clip-path:inset(0 0 0 50%)}
+.cmp .h.l img{filter:saturate(.55) brightness(.8)}
+.cmp .ln{position:absolute;top:0;bottom:0;left:50%;width:2px;margin-left:-1px;background:#fff;box-shadow:0 0 18px rgba(255,255,255,.7)}
+.cmp .kn{position:absolute;top:50%;left:50%;width:42px;height:42px;margin:-21px 0 0 -21px;border-radius:50%;background:#fff;color:var(--ink);display:grid;place-items:center;box-shadow:0 10px 24px -6px rgba(0,0,0,.6)}
+.cmp .kn svg{width:18px;height:18px}
+.cmp .tg{position:absolute;top:12px;padding:5px 10px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.12em}
+.tl{display:grid;grid-template-columns:40px 1fr;column-gap:8px}
+.tl .hrs span{display:block;height:66px;font-size:11px;color:var(--tx3);font-variant-numeric:tabular-nums;transform:translateY(-7px)}
+.tl .lane{position:relative;border-left:1px dashed rgba(236,228,255,.14)}
+.blk{position:absolute;left:10px;right:0;padding:10px 12px;border-radius:18px;overflow:hidden}
+.nowl{position:absolute;left:-4px;right:0;height:2px;background:var(--m);box-shadow:0 0 10px var(--m)}
+.nowl::before{content:"";position:absolute;left:-3px;top:-3px;width:8px;height:8px;border-radius:50%;background:var(--m)}
+.mem{position:relative;overflow:hidden;height:200px;padding:18px 20px;border-radius:26px;background:linear-gradient(125deg,#6B2FD6 0%,#4B3FE0 38%,#B8409A 74%,#E97BC0 100%);box-shadow:0 30px 60px -24px rgba(139,61,235,.9),inset 0 0 0 1px rgba(255,255,255,.24)}
+.mem::before{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.22) 46%,transparent 62%)}
+.mem .wm{position:absolute;right:-44px;bottom:-34px;width:240px;height:150px;opacity:.16}
+.mem>*{position:relative}
+.sess{display:grid;grid-template-columns:repeat(12,1fr);gap:5px}
+.sess i{height:24px;border-radius:7px}
+.sess i.used{background:rgba(236,228,255,.14)}
+.sess i.left{background:var(--g);box-shadow:0 0 10px rgba(139,61,235,.55)}
+.pkc{flex:none;width:172px;padding:14px;border-radius:24px;background:var(--s1);border:1px solid var(--line)}
+.pkc.on{border:1.5px solid transparent;background:linear-gradient(#1B1726,#1B1726) padding-box,var(--g) border-box;box-shadow:0 20px 40px -20px rgba(139,61,235,.9)}
+.qrr{display:flex;gap:6px;overflow:hidden;margin-right:-12px}
+.qrr span{flex:none;padding:8px 13px;border-radius:999px;background:var(--s1);border:1px solid rgba(196,162,255,.3);font-size:12.5px;font-weight:500;color:var(--v-lt)}
+.att{display:flex;align-items:center;gap:10px;margin-top:7px;padding:7px;border-radius:14px;background:rgba(11,10,16,.35)}
+.att .im{flex:none;width:46px;height:46px;border-radius:10px;background:#fff center/cover no-repeat}
+.ringsm{position:relative;flex:none;width:66px;height:66px}
+.ringsm svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ringsm>span{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.pav{position:relative;flex:none;width:96px;height:96px;padding:3px;border-radius:50%;background:var(--g);box-shadow:0 0 44px rgba(139,61,235,.55)}
+.pav img{width:100%;height:100%;border-radius:50%;object-fit:cover;border:3px solid var(--ink)}
+.strip3{display:grid;grid-template-columns:repeat(3,1fr);border-radius:22px;background:var(--s1);border:1px solid var(--line)}
+.strip3>div{padding:12px 6px;text-align:center}
+.strip3>div+div{border-left:1px solid var(--line)}
+.strip3 .fig{display:block;font-size:24px;line-height:1}
+.strip3 small{display:block;margin-top:4px;font-size:10.5px;color:var(--tx2)}
+.zst{display:flex;gap:2px;height:10px;border-radius:999px;overflow:hidden}
+.zst i{display:block;height:100%}
+.gold{background:linear-gradient(135deg,rgba(255,214,10,.22),rgba(255,159,10,.12) 50%,rgba(21,18,28,.92));border:1px solid rgba(255,214,10,.38);box-shadow:0 22px 44px -26px rgba(255,180,0,.7)}
+.glowtxt{text-shadow:0 0 28px currentColor}
+
+/* Apple Watch: kuciste, ekran i delovi. Fazon: velike zaobljene kartice, okrugli
+   gradijentni znakovi, kapsula sa belim dugmetom, meki grafikon. Boje su FitLink. */
+.watch{position:relative;flex:none;width:276px;height:336px;padding:18px;border-radius:78px/70px;background:linear-gradient(155deg,#43424C 0%,#1A1A20 42%,#33323B 100%);box-shadow:0 60px 90px -44px rgba(5,3,10,.9),0 0 0 1px rgba(255,255,255,.07),inset 0 1px 0 rgba(255,255,255,.16)}
+.watch::before,.watch::after{content:"";position:absolute;left:50%;transform:translateX(-50%);width:150px;height:60px;background:linear-gradient(180deg,#2A2933,#16151B);z-index:-1}
+.watch::before{top:-46px;border-radius:22px 22px 8px 8px}
+.watch::after{bottom:-46px;border-radius:8px 8px 22px 22px}
+.crown{position:absolute;right:-7px;top:92px;width:9px;height:46px;border-radius:5px;background:linear-gradient(90deg,#9A99A5,#45444E);box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}
+.sbtn{position:absolute;right:-5px;top:158px;width:6px;height:40px;border-radius:4px;background:linear-gradient(90deg,#6E6D79,#35343D)}
+.wscr{position:relative;width:100%;height:100%;border-radius:60px;background:var(--ink);overflow:hidden;display:flex;flex-direction:column}
+.wtime{position:absolute;z-index:5;top:11px;right:26px;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:#C4A2FF}
+.wleft{position:absolute;z-index:5;top:11px;left:24px;font-size:11px;font-weight:600;color:var(--tx3)}
+/* bezbedna zona: zaobljeni ekran seva uglove, pa sadrzaj ide unutar krivine */
+.wb{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;gap:9px;padding:34px 17px 21px;min-height:0}
+.wglow{position:absolute;inset:0;z-index:0;pointer-events:none}
+.wbig{font-weight:700;font-style:italic;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1}
+/* iskosene cifre izlaze iz okvira, a gradijent se crta samo unutar njega */
+.wbig.gt{padding:.04em .16em .04em .06em;margin:-.04em -.16em -.04em -.06em}
+.wcap{font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--tx3)}
+/* kapsula sa znakom levo i belim dugmetom desno */
+.wpill{display:flex;align-items:center;gap:9px;padding:5px 5px 5px 6px;border-radius:999px;background:var(--g);box-shadow:0 16px 28px -14px rgba(139,61,235,.95),inset 0 0 0 1px rgba(255,255,255,.2)}
+.wpill .b{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:rgba(11,10,16,.55);color:#fff}
+.wpill .b .i{width:17px;height:17px}
+.wpill .t{flex:1;min-width:0;font-size:12.5px;font-weight:700;line-height:1.15;color:#fff}
+.wpill .t small{display:block;margin-top:1px;font-size:9.5px;font-weight:500;color:rgba(255,255,255,.8)}
+.wpill .go{flex:none;height:30px;padding:0 13px;border-radius:999px;display:grid;place-items:center;background:#fff;color:var(--ink);font-size:11px;font-weight:700}
+/* redovi i kartice */
+.wrow{display:flex;align-items:center;gap:9px;padding:8px;border-radius:20px;background:#15121C;border:1px solid var(--line)}
+.wrow .tx{min-width:0}
+.wrow .tx b{display:block;font-size:12.5px;font-weight:600;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wrow .tx small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wrow .tx small{display:block;margin-top:2px;font-size:9.5px;color:var(--tx3)}
+.wrow.on{border-color:rgba(196,162,255,.45);background:linear-gradient(135deg,rgba(139,61,235,.26),rgba(21,18,28,.9))}
+.wcard{padding:11px 12px;border-radius:22px;background:#15121C;border:1px solid var(--line)}
+.wbadge{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--g);color:#fff;box-shadow:0 10px 18px -10px rgba(139,61,235,.95)}
+.wbadge .i{width:16px;height:16px}
+.wbadge.ok{background:linear-gradient(135deg,#3DDC97,#1FAF74);box-shadow:0 10px 18px -10px rgba(61,220,151,.9)}
+.wbadge.bad{background:linear-gradient(135deg,#FF7A70,#E2483C);box-shadow:0 10px 18px -10px rgba(226,72,60,.9)}
+.wbadge.warn{background:linear-gradient(135deg,#FFD66B,#E8962A);box-shadow:0 10px 18px -10px rgba(232,150,42,.9)}
+.wchev{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:rgba(236,228,255,.07);color:var(--tx3)}
+.wchev .i{width:11px;height:11px}
+.wchip{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:999px;border:1px solid var(--line);background:rgba(236,228,255,.04);font-size:10.5px;font-weight:600;color:var(--tx2);white-space:nowrap}
+.wchip .i{width:12px;height:12px}
+.wchip.on{border-color:rgba(196,162,255,.55);background:rgba(139,61,235,.16);color:#C4A2FF}
+.wround{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:rgba(236,228,255,.07);border:1px solid var(--line);color:var(--tx)}
+.wround.g{background:var(--g);border:0;color:#fff;box-shadow:0 12px 20px -10px rgba(139,61,235,.95)}
+/* plocice sa znakom, vrednoscu i drugim redom */
+.wtile{flex:1;min-width:0;padding:9px 10px;border-radius:18px;background:#15121C;border:1px solid var(--line)}
+.wtile .ic{display:grid;place-items:center;width:22px;height:22px;border-radius:8px;background:rgba(236,228,255,.06)}
+.wtile .ic .i{width:12px;height:12px}
+.wtile b{display:block;margin-top:7px;font-size:21px;line-height:1}
+.wtile small{display:block;margin-top:3px;font-size:9px;font-weight:600;color:var(--tx3)}
+.wbtn{position:relative;display:flex;align-items:center;gap:8px;padding:5px;border-radius:999px;background:rgba(236,228,255,.07);border:1px solid var(--line);font-size:12.5px;font-weight:700}
+.wbtn .b{flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:rgba(11,10,16,.5)}
+.wbtn .b .i{width:14px;height:14px}
+.wbtn span:not(.b){position:absolute;left:44px;right:44px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wbtn.g{background:var(--g);border:0;color:#fff;box-shadow:0 16px 26px -14px rgba(139,61,235,.95),inset 0 0 0 1px rgba(255,255,255,.2)}
+.wbtn.s{justify-content:center;gap:6px;padding:4px;font-size:11.5px}
+.wbtn.s .b{width:26px;height:26px}
+.wbtn.s span:not(.b){position:static;flex:none}
+.whr{display:inline-flex;align-items:baseline;gap:4px}
+/* meki grafikon sa mehurima */
+.wspark{position:relative;width:100%}
+.wspark svg{display:block;width:100%}
+/* lestvica */
+.zl{display:flex;flex-direction:column;gap:3px}
+.zl .r{display:flex;align-items:center;gap:8px;height:20px;padding:0 6px;opacity:.6;font-size:12px;font-weight:600;color:rgba(246,243,251,.6)}
+.zl .r i{flex:none;width:4px;height:14px;border-radius:2px;background:currentColor}
+.zl .r span{margin-left:auto;font-size:11px;font-variant-numeric:tabular-nums}
+.zl .r.on{height:32px;padding:0 12px;opacity:1;border-radius:16px;font-size:15px;font-weight:700;color:#fff}
+.zl .r.on span{font-size:12px;color:rgba(255,255,255,.88)}
+/* traka */
+.zt{display:flex;gap:4px;height:26px}
+.zt i{flex:1;border-radius:10px;opacity:.28}
+.zt i.on{flex:1.9;position:relative;opacity:1;display:grid;place-items:center;font-size:10px;font-weight:700;font-style:normal;color:#fff}
+.zt i.on::after{content:"";position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:var(--zc,#fff)}
+.ztrow{display:flex;align-items:baseline;gap:5px;font-size:10px;font-weight:700;color:var(--tx3)}
+.ztrow b{font-size:22px;color:var(--tx)}
+/* tabla */
+.zs{display:flex;gap:3px}
+.zs i{flex:1;height:8px;border-radius:4px;opacity:.28}
+.zs i.on{opacity:1}
+/* prsten */
+.wring{position:relative;width:104px;height:104px;margin:0 auto}
+/* overflow:visible da sjaj prstena ne bude odsecen u kvadrat */
+.wring svg{width:100%;height:100%;overflow:visible;transform:rotate(-90deg)}
+.wring>div{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <linearGradient id="gbrand" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8B3DEB"/><stop offset=".55" stop-color="#5B4BEF"/><stop offset="1" stop-color="#E24CA6"/></linearGradient>
+    <linearGradient id="garc" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#C4A2FF"/><stop offset="1" stop-color="#E24CA6"/></linearGradient>
+    <symbol id="bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+    <symbol id="flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
+    <symbol id="dumbbell" viewBox="0 0 24 24"><path d="m6.5 6.5 11 11"/><path d="m21 21-1-1"/><path d="m3 3 1 1"/><path d="m18 22 4-4"/><path d="m2 6 4-4"/><path d="m3 10 7-7"/><path d="m14 21 7-7"/></symbol>
+    <symbol id="back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="more" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></symbol>
+    <symbol id="play" viewBox="0 0 24 24"><path d="M6 3.9v16.2a1 1 0 0 0 1.52.85l13-8.1a1 1 0 0 0 0-1.7l-13-8.1A1 1 0 0 0 6 3.9z"/></symbol>
+    <symbol id="heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></symbol>
+    <symbol id="check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="home" viewBox="0 0 24 24"><path d="M3 10a2 2 0 0 1 .71-1.53l7-6a2 2 0 0 1 2.58 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/></symbol>
+    <symbol id="calplus" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M12 14v4M10 16h4"/></symbol>
+    <symbol id="cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+    <symbol id="trend" viewBox="0 0 24 24"><path d="M22 7l-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></symbol>
+    <symbol id="card" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2"/><path d="M14 10h4M14 14h4"/></symbol>
+    <symbol id="timer" viewBox="0 0 24 24"><path d="M10 2h4M12 14l3-3"/><circle cx="12" cy="14" r="8"/></symbol>
+    <symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+    <symbol id="zap" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></symbol>
+    <symbol id="bt" viewBox="0 0 24 24"><path d="m7 7 10 10-5 5V2l5 5L7 17"/></symbol>
+    <symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="utensils" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></symbol>
+    <symbol id="trophy" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></symbol>
+    <symbol id="egg" viewBox="0 0 24 24"><path d="M12 22c6.23-.05 7.87-5.57 7.5-10-.36-4.34-3.95-9.96-7.5-10-3.55.04-7.14 5.66-7.5 10-.37 4.43 1.27 9.95 7.5 10z"/></symbol>
+    <symbol id="wheat" viewBox="0 0 24 24"><path d="M2 22 16 8"/><path d="M3.47 12.53 5 11l1.53 1.53a3.5 3.5 0 0 1 0 4.94L5 19l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M7.47 8.53 9 7l1.53 1.53a3.5 3.5 0 0 1 0 4.94L9 15l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M11.47 4.53 13 3l1.53 1.53a3.5 3.5 0 0 1 0 4.94L13 11l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M20 2h2v2a4 4 0 0 1-4 4h-2V6a4 4 0 0 1 4-4Z"/><path d="M11.47 17.47 13 19l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L5 19l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/><path d="M15.47 13.47 17 15l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L9 15l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/><path d="M19.47 9.47 21 11l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L13 11l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"/></symbol>
+    <symbol id="drop" viewBox="0 0 24 24"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></symbol>
+    <symbol id="signal" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></symbol>
+    <symbol id="wifi" viewBox="0 0 16 12"><path d="M8 12 5.6 9.3a3.4 3.4 0 0 1 4.8 0z"/><path d="M3.5 7.2a6.4 6.4 0 0 1 9 0l-1.4 1.5a4.4 4.4 0 0 0-6.2 0z"/><path d="M1.2 4.8a9.7 9.7 0 0 1 13.6 0l-1.4 1.5a7.7 7.7 0 0 0-10.8 0z" opacity=".9"/></symbol>
+    <symbol id="batt" viewBox="0 0 27 12"><rect x=".5" y=".5" width="23" height="11" rx="3.2" fill="none" stroke="currentColor" opacity=".45"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.8"/><path d="M25 4v4c.8-.3 1.4-1.1 1.4-2S25.8 4.3 25 4z" opacity=".45"/></symbol>
+      <symbol id="mark" viewBox="0 0 828.12 517.2"><path d="M662.2.44l-142.2,81.41v76.48l117.57-67.31,99.98,174.63-255.11,146.05c-10.34,5.92-19.44,1.93-22.88-.06-3.43-1.99-11.42-7.91-11.42-19.82v-36.17s198.53-113.66,198.53-113.66l-32.97-57.6-165.59,94.8-.02-79.69.05-.03v-76.48l-.09.05c-.61-31.48-17.15-59.58-44.49-75.43-27.86-16.15-61.18-16.24-89.13-.24L0,227.37l165.92,289.83,150.04-85.9v-76.48l-125.42,71.8-99.98-174.63L347.39,104.97c10.34-5.92,19.44-1.93,22.87.06,3.43,1.99,11.42,7.91,11.42,19.82v36.17s-189.19,108.31-189.19,108.31l32.97,57.6,156.25-89.45.02,79.69-.23.13v76.48l.27-.15c.61,31.48,17.15,59.58,44.49,75.43,27.86,16.15,61.18,16.24,89.13.24l312.71-179.02L662.2.44Z"/></symbol>
+    <symbol id="chat" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+    <symbol id="msgsq" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="userround" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol>
+    <symbol id="users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+    <symbol id="chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="link2" viewBox="0 0 24 24"><path d="M9 17H7A5 5 0 0 1 7 7h2M15 7h2a5 5 0 1 1 0 10h-2M8 12h8"/></symbol>
+    <symbol id="lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+    <symbol id="sparkles" viewBox="0 0 24 24"><path d="M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z"/><path d="M19 3v4M21 5h-4"/></symbol>
+    <symbol id="calcheck" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 16 2 2 4-4"/></symbol>
+    <symbol id="target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+    <symbol id="scale" viewBox="0 0 24 24"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></symbol>
+    <symbol id="trenddown" viewBox="0 0 24 24"><path d="M22 17l-8.5-8.5-5 5L2 7"/><path d="M16 17h6v-6"/></symbol>
+    <symbol id="camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+    <symbol id="eye" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="calx" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m14 14-4 4M10 14l4 4"/></symbol>
+    <symbol id="megaphone" viewBox="0 0 24 24"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></symbol>
+    <symbol id="clipboard" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/></symbol>
+    <symbol id="shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="receipt" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8M12 17.5v-11"/></symbol>
+    <symbol id="banknote" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></symbol>
+    <symbol id="landmark" viewBox="0 0 24 24"><path d="M3 22h18M6 18v-7M10 18v-7M14 18v-7M18 18v-7M12 2l8 5H4z"/></symbol>
+    <symbol id="qrcode" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></symbol>
+    <symbol id="copy" viewBox="0 0 24 24"><rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+    <symbol id="send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+    <symbol id="arrowleft" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></symbol>
+    <symbol id="arrowright" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></symbol>
+    <symbol id="phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
+    <symbol id="activity" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+    <symbol id="moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+    <symbol id="heartpulse" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/></symbol>
+    <symbol id="refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+    <symbol id="briefcase" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></symbol>
+    <symbol id="skip" viewBox="0 0 24 24"><path d="m5 4 10 8-10 8V4zM19 5v14"/></symbol>
+    <symbol id="caldays" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></symbol>
+    <symbol id="mail" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol>
+    <symbol id="moveh" viewBox="0 0 24 24"><path d="m18 8 4 4-4 4M6 8l-4 4 4 4"/></symbol>
+    <symbol id="checkcircle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="calclock" viewBox="0 0 24 24"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4M8 2v4M3 10h5"/><path d="M17.5 17.5 16 16.3V14"/><circle cx="16" cy="16" r="6"/></symbol>
+    <symbol id="calcog" viewBox="0 0 24 24"><path d="M21 10.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6"/><path d="M16 2v4M8 2v4M3 10h18"/><circle cx="18" cy="18" r="3"/><path d="M18 14v1M18 21v1M21.5 16l-.9.5M15.4 19.5l-.9.5M21.5 20l-.9-.5M15.4 16.5l-.9-.5"/></symbol>
+    <symbol id="bars" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></symbol>
+    <symbol id="wallet" viewBox="0 0 24 24"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></symbol>
+    <symbol id="package" viewBox="0 0 24 24"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></symbol>
+    <symbol id="settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+    <symbol id="radio" viewBox="0 0 24 24"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></symbol>
+    <symbol id="thumb" viewBox="0 0 24 24"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></symbol>
+    <symbol id="alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="wind" viewBox="0 0 24 24"><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/></symbol>
+    <symbol id="trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
+    <symbol id="pencil" viewBox="0 0 24 24"><path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/></symbol>
+    <symbol id="apple" viewBox="0 0 24 24"><path d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.22A4.91 4.91 0 0 0 17 5c-2.22 0-4 1.44-5 2-1-.56-2.78-2-5-2a4.9 4.9 0 0 0-5 4.78C2 14 5 22 8 22c1.25 0 2.5-1.06 4-1.06Z"/><path d="M10 2c1 .5 2 2 2 5"/></symbol>
+    <symbol id="sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+    <symbol id="hourglass" viewBox="0 0 24 24"><path d="M5 22h14M5 2h14M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"/></symbol>
+    <symbol id="upright" viewBox="0 0 24 24"><path d="M7 7h10v10M7 17 17 7"/></symbol>
+    <symbol id="downright" viewBox="0 0 24 24"><path d="m7 7 10 10M17 7v10H7"/></symbol>
+    <symbol id="battlow" viewBox="0 0 24 24"><rect x="2" y="7" width="16" height="10" rx="2"/><path d="M22 11v2"/><path d="M6 11v2" stroke-width="2.6"/></symbol>
+    <symbol id="userplus" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></symbol>
+    <symbol id="bookmark" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></symbol>
+    <symbol id="filetext" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8"/></symbol>
+    <symbol id="layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65M22 12.65l-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></symbol>
+    <symbol id="globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20"/></symbol>
+    <symbol id="share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98M15.41 6.51l-6.82 3.98"/></symbol>
+    <symbol id="gift" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/></symbol>
+    <symbol id="mappin" viewBox="0 0 24 24"><path d="M20 10c0 4.99-5.54 10.19-7.4 11.8a1 1 0 0 1-1.2 0C9.54 20.19 4 14.99 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol>
+    <symbol id="award" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.48 12.89 17 22l-5-3-5 3 1.52-9.11"/></symbol>
+    <symbol id="stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></symbol>
+</defs></svg>
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 828.12 517.2" aria-hidden="true"><path fill="url(#gbrand)" d="M662.2.44l-142.2,81.41v76.48l117.57-67.31,99.98,174.63-255.11,146.05c-10.34,5.92-19.44,1.93-22.88-.06-3.43-1.99-11.42-7.91-11.42-19.82v-36.17s198.53-113.66,198.53-113.66l-32.97-57.6-165.59,94.8-.02-79.69.05-.03v-76.48l-.09.05c-.61-31.48-17.15-59.58-44.49-75.43-27.86-16.15-61.18-16.24-89.13-.24L0,227.37l165.92,289.83,150.04-85.9v-76.48l-125.42,71.8-99.98-174.63L347.39,104.97c10.34-5.92,19.44-1.93,22.87.06,3.43,1.99,11.42,7.91,11.42,19.82v36.17s-189.19,108.31-189.19,108.31l32.97,57.6,156.25-89.45.02,79.69-.23.13v76.48l.27-.15c.61,31.48,17.15,59.58,44.49,75.43,27.86,16.15,61.18,16.24,89.13.24l312.71-179.02L662.2.44Z"/></svg>
+    FitLink <em style="font-style:normal;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:4px 9px;border-radius:999px;background:rgba(139,61,235,.16);color:#C4A2FF">Sat · trener</em>
+  </div>
+  <p>Ponoć · Apple Watch za trenera, ideja koja još ne postoji u aplikaciji</p>
+</header>
+<section class="sec" id="trener-uzivo">
+  <div class="sech"><h2>Trener na satu: uživo <em style="font-style:normal;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:5px 10px;border-radius:999px;background:rgba(226,76,166,.16);color:#FFA7DA;vertical-align:middle">ideja</em></h2><p>Ovo ne postoji u aplikaciji. Ideja je da trener na zglobu vidi ko trenira, uskoči sa porukom i reaguje kad puls ode previsoko, bez vađenja telefona.</p></div>
+  <div class="shots">
+
+    <figure class="shot">
+      <section class="watch" aria-label="Trener, pregled uživo">
+        <i class="crown"></i><i class="sbtn"></i>
+        <div class="wscr">
+          <div class="wglow" style="background:radial-gradient(170px 160px at 50% 20%,rgba(139,61,235,.45),transparent 70%),radial-gradient(140px 130px at 100% 100%,rgba(61,220,151,.22),transparent 70%)"></div>
+          <span class="wleft">Uživo</span><span class="wtime">18:42</span>
+          <div class="wb" style="gap:8px">
+            <div style="display:flex;align-items:baseline;gap:7px"><span class="wbig gt" style="font-size:40px">4</span><span style="font-size:11.5px;color:var(--tx2);line-height:1.2">vežbača<br>trenira</span><span class="wchip" style="margin-left:auto;height:22px;padding:0 8px;font-size:9.5px"><i class="rd" style="width:5px;height:5px;background:var(--ok);box-shadow:0 0 7px var(--ok)"></i>uživo</span></div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div class="wrow" style="padding:7px 9px"><span class="wbadge" style="width:26px;height:26px;font-size:9.5px;font-weight:700">LP</span><div class="tx"><b>Luka Petrović</b><small>serija 3/4</small></div><div style="text-align:right"><b class="wbig" style="font-size:16px;color:var(--z2)">132</b></div></div>
+              <div class="wrow" style="padding:7px 9px"><span class="wbadge" style="width:26px;height:26px;font-size:9.5px;font-weight:700">AM</span><div class="tx"><b>Ana Marković</b><small>mrtvo dizanje</small></div><div style="text-align:right"><b class="wbig" style="font-size:16px;color:var(--z4)">158</b></div></div>
+              <div class="wrow" style="padding:7px 9px"><span class="wbadge" style="width:26px;height:26px;font-size:9.5px;font-weight:700">JN</span><div class="tx"><b>Jovana Nikolić</b><small>odmor</small></div><div style="text-align:right"><b class="wbig" style="font-size:16px;color:var(--z1)">104</b></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <figcaption><b>Pregled uživo</b><code>ideja · ne postoji</code><br><i>Ko trenira sada, puls svakog u boji zone</i></figcaption>
+    </figure>
+
+    <figure class="shot">
+      <section class="watch" aria-label="Trener, jedan vežbač">
+        <i class="crown"></i><i class="sbtn"></i>
+        <div class="wscr">
+          <div class="wglow" style="background:radial-gradient(160px 160px at 50% 35%,rgba(61,220,151,.3),transparent 70%),radial-gradient(150px 140px at 0 100%,rgba(139,61,235,.34),transparent 70%)"></div>
+          <span class="wtime">18:43</span>
+          <div class="wb" style="gap:8px">
+            <div style="display:flex;align-items:center;gap:7px"><span class="wbadge" style="width:24px;height:24px;font-size:9px;font-weight:700">LP</span><b style="font-size:12.5px;font-weight:600">Luka Petrović</b></div>
+            <div class="wring" style="width:104px;height:104px">
+              <svg viewBox="0 0 104 104" aria-hidden="true"><circle cx="52" cy="52" r="45" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="9"/><circle cx="52" cy="52" r="45" fill="none" stroke="var(--z2)" stroke-width="9" stroke-linecap="round" stroke-dasharray="196 283" style="filter:drop-shadow(0 0 8px rgba(48,209,88,.5))"/></svg>
+              <div><span class="wbig" style="font-size:34px">132</span><small style="margin-top:1px;font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--tx3)">BPM</small><b style="margin-top:4px;font-size:11px;font-weight:700;color:var(--z2)">ZONA 2</b></div>
+            </div>
+            <div class="wrow" style="padding:7px 9px"><span class="wbadge" style="width:26px;height:26px"><svg class="i" style="width:12px;height:12px"><use href="#dumbbell"/></svg></span><div class="tx"><b>Veslanje u pretklonu</b><small>serija 3/4 · 62,5 kg</small></div></div>
+            <div class="wbtn g" style="margin-top:auto"><span class="b"><svg class="i"><use href="#msgsq"/></svg></span><span>Poruka</span></div>
+          </div>
+        </div>
+      </section>
+      <figcaption><b>Jedan vežbač</b><code>ideja · ne postoji</code><br><i>Puls u zoni, trenutna vežba i serija, poruka jednim dodirom</i></figcaption>
+    </figure>
+
+    <figure class="shot">
+      <section class="watch" aria-label="Trener, brza poruka">
+        <i class="crown"></i><i class="sbtn"></i>
+        <div class="wscr">
+          <div class="wglow" style="background:radial-gradient(170px 160px at 50% 30%,rgba(139,61,235,.48),transparent 70%)"></div>
+          <span class="wtime">18:44</span>
+          <div class="wb" style="gap:8px">
+            <div><span class="wchip on">Brza poruka</span><div style="margin-top:7px;font-size:11px;color:var(--tx3)">Luki Petroviću</div></div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div class="wrow" style="padding:8px 9px"><span class="wbadge ok" style="width:26px;height:26px"><svg class="i" style="width:12px;height:12px"><use href="#thumb"/></svg></span><div class="tx"><b>Bravo, samo tako!</b></div></div>
+              <div class="wrow" style="padding:8px 9px"><span class="wbadge warn" style="width:26px;height:26px"><svg class="i" style="width:12px;height:12px"><use href="#wind"/></svg></span><div class="tx"><b>Smanji tempo</b></div></div>
+              <div class="wrow" style="padding:8px 9px"><span class="wbadge" style="width:26px;height:26px"><svg class="i" style="width:12px;height:12px"><use href="#timer"/></svg></span><div class="tx"><b>Odmori 30s</b></div></div>
+            </div>
+            <div class="wcap" style="margin-top:auto;text-align:center">Stiže na sat vežbača</div>
+          </div>
+        </div>
+      </section>
+      <figcaption><b>Brza poruka</b><code>ideja · ne postoji</code><br><i>Iste poruke koje trener već šalje sa telefona tokom treninga</i></figcaption>
+    </figure>
+
+    <figure class="shot">
+      <section class="watch" aria-label="Trener, upozorenje na puls">
+        <i class="crown"></i><i class="sbtn"></i>
+        <div class="wscr">
+          <div class="wglow" style="background:radial-gradient(170px 160px at 50% 32%,rgba(255,69,58,.4),transparent 70%),radial-gradient(140px 130px at 0 100%,rgba(139,61,235,.26),transparent 70%)"></div>
+          <span class="wtime">18:46</span>
+          <div class="wb" style="gap:0;align-items:center">
+            <span class="wbadge bad" style="width:52px;height:52px;margin-top:4px"><svg class="i" style="width:24px;height:24px"><use href="#heart"/></svg></span>
+            <div style="margin-top:11px;font-size:14px;font-weight:600">Ana u Zoni 5</div>
+            <div class="wcard" style="width:100%;margin-top:10px;display:flex;align-items:center;gap:9px;padding:9px 11px">
+              <div class="tx" style="flex:1"><b class="wbig" style="font-size:20px;color:var(--z5)">174</b><small style="display:block;margin-top:2px;font-size:9.5px;color:var(--tx3)">bpm · 2 min</small></div>
+              <div class="zs" style="flex:1"><i style="background:var(--z1)"></i><i style="background:var(--z2)"></i><i style="background:var(--z3)"></i><i style="background:var(--z4)"></i><i class="on" style="background:var(--z5);box-shadow:0 5px 12px -4px rgba(255,69,58,.95)"></i></div>
+            </div>
+            <div style="display:flex;gap:7px;width:100%;margin-top:auto">
+              <div class="wbtn s" style="flex:1"><span class="b"><svg class="i"><use href="#msgsq"/></svg></span><span>Poruka</span></div>
+              <div class="wbtn s" style="flex:1"><span class="b"><svg class="i" style="stroke-width:2.6"><use href="#check"/></svg></span><span>U redu</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <figcaption><b>Upozorenje na puls</b><code>ideja · ne postoji</code><br><i>Kucne po zglobu kad vežbač predugo ostane u najvišoj zoni</i></figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<section class="sec" id="trener-dan">
+  <div class="sech"><h2>Trener na satu: dan i naplata <em style="font-style:normal;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:5px 10px;border-radius:999px;background:rgba(226,76,166,.16);color:#FFA7DA;vertical-align:middle">ideja</em></h2><p>Takođe ideja. Raspored dana, sledeći termin i potvrda članarine sa zgloba, plus upozorenje za sesiju koja je ostala uključena.</p></div>
+  <div class="shots">
+
+    <figure class="shot">
+      <section class="watch" aria-label="Trener, dan">
+        <i class="crown"></i><i class="sbtn"></i>
+        <div class="wscr">
+          <div class="wglow" style="background:radial-gradient(170px 160px at 50% 18%,rgba(139,61,235,.44),transparent 70%),radial-gradient(140px 130px at 100% 100%,rgba(226,76,166,.22),transparent 70%)"></div>
+          <span class="wleft">Danas</span><span class="wtime">08:30</span>
+          <div class="wb" style="gap:8px">
+            <div style="display:flex;align-items:baseline;gap:7px"><span class="wbig gt" style="font-size:40px">3</span><span style="font-size:11.5px;color:var(--tx2);line-height:1.2">termina<br>danas</span><span class="wchip" style="margin-left:auto;height:22px;padding:0 8px;font-size:9.5px;border-color:rgba(255,181,71,.45);background:rgba(255,181,71,.12);color:#FFD08A">2 čekaju</span></div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div class="wrow" style="padding:7px 9px"><span class="wbadge ok" style="width:26px;height:26px"><svg class="i" style="width:12px;height:12px"><use href="#users"/></svg></span><div class="tx"><b>Group HIIT</b><small>09:00 · 5/8 mesta</small></div></div>
+              <div class="wrow on" style="padding:7px 9px"><span class="wbadge" style="width:26px;height:26px;font-size:9.5px;font-weight:700">LP</span><div class="tx"><b>Luka Petrović</b><small>18:00 · personalni</small></div></div>
+              <div class="wrow" style="padding:7px 9px;opacity:.5"><span class="wbadge warn" style="width:26px;height:26px"><svg class="i" style="width:12px;height:12px"><use href="#wind"/></svg></span><div class="tx"><b>Mobilnost</b><small>19:30 · 6/6 mesta</small></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <figcaption><b>Dan trenera</b><code>ideja · ne postoji</code><br><i>Koliko termina ima danas i ko čeka potvrdu</i></figcaption>
+    </figure>
+
+    <figure class="shot">
+      <section class="watch" aria-label="Trener, sledeći termin">
+        <i class="crown"></i><i class="sbtn"></i>
+        <div class="wscr">
+          <div class="wglow" style="background:radial-gradient(170px 160px at 50% 45%,rgba(139,61,235,.5),transparent 70%)"></div>
+          <span class="wtime">17:35</span>
+          <div class="wb" style="gap:9px">
+            <span class="wchip on" style="align-self:flex-start"><svg class="i"><use href="#timer"/></svg>Za 25 min</span>
+            <div><span class="wbig" style="font-size:44px">18:00</span><small style="display:block;margin-top:3px;font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--tx3)">personalni trening</small></div>
+            <div class="wrow" style="padding:7px 9px"><span class="wbadge" style="width:28px;height:28px;font-size:10px;font-weight:700">LP</span><div class="tx"><b>Luka Petrović</b><small>8/12 treninga</small></div></div>
+            <div class="wbtn g" style="margin-top:auto"><span class="b"><svg class="i"><use href="#activity"/></svg></span><span>Otvori</span></div>
+          </div>
+        </div>
+      </section>
+      <figcaption><b>Sledeći termin</b><code>ideja · ne postoji</code><br><i>Podsetnik pred trening, sa vežbačem i stanjem članarine</i></figcaption>
+    </figure>
+
+    <figure class="shot">
+      <section class="watch" aria-label="Trener, zahtev za članarinu">
+        <i class="crown"></i><i class="sbtn"></i>
+        <div class="wscr">
+          <div class="wglow" style="background:radial-gradient(170px 160px at 50% 25%,rgba(139,61,235,.46),transparent 70%),radial-gradient(140px 130px at 100% 100%,rgba(61,220,151,.2),transparent 70%)"></div>
+          <span class="wtime">10:15</span>
+          <div class="wb" style="gap:8px">
+            <span class="wchip on" style="align-self:flex-start"><svg class="i"><use href="#card"/></svg>Zahtev za članarinu</span>
+            <div class="wrow" style="padding:7px 9px"><span class="wbadge" style="width:26px;height:26px;font-size:9.5px;font-weight:700">AM</span><div class="tx"><b>Ana Marković</b><small>Mesečna 8 · 30 dana</small></div></div>
+            <div style="display:flex;align-items:baseline;gap:6px"><span class="wbig gt" style="font-size:34px">14.000</span><small style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--tx3)">RSD</small><span class="wchip" style="margin-left:auto;height:22px;padding:0 8px;font-size:9.5px">Račun</span></div>
+            <div style="display:flex;gap:7px;margin-top:auto">
+              <div class="wbtn s" style="flex:1"><span class="b"><svg class="i"><use href="#x"/></svg></span><span>Odbij</span></div>
+              <div class="wbtn s g" style="flex:1"><span class="b"><svg class="i" style="stroke-width:2.6"><use href="#check"/></svg></span><span>Potvrdi</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <figcaption><b>Zahtev za članarinu</b><code>ideja · ne postoji</code><br><i>Vežbač traži članarinu, trener potvrđuje sa zgloba</i></figcaption>
+    </figure>
+
+    <figure class="shot">
+      <section class="watch" aria-label="Trener, zaboravljena sesija">
+        <i class="crown"></i><i class="sbtn"></i>
+        <div class="wscr">
+          <div class="wglow" style="background:radial-gradient(170px 160px at 50% 30%,rgba(255,69,58,.36),transparent 70%),radial-gradient(140px 130px at 0 100%,rgba(139,61,235,.24),transparent 70%)"></div>
+          <span class="wtime">20:12</span>
+          <div class="wb" style="gap:0;align-items:center">
+            <span class="wbadge bad" style="width:52px;height:52px;margin-top:4px"><svg class="i" style="width:24px;height:24px"><use href="#alert"/></svg></span>
+            <div style="margin-top:11px;font-size:14px;font-weight:600">Trening još traje</div>
+            <div class="wcard" style="width:100%;margin-top:10px;display:flex;align-items:center;gap:9px;padding:9px 11px">
+              <span class="wbadge" style="width:26px;height:26px;font-size:9.5px;font-weight:700">NS</span>
+              <div class="tx" style="flex:1"><b style="font-size:12.5px;font-weight:600">Nikola Savić</b><small style="display:block;margin-top:2px;font-size:9.5px;color:var(--tx3)">uključen 2h 14min</small></div>
+            </div>
+            <div class="wbtn g" style="width:100%;margin-top:auto;background:linear-gradient(135deg,#FF7A70,#E2483C);box-shadow:0 16px 26px -14px rgba(226,72,60,.95)"><span class="b"><svg class="i"><use href="#stop"/></svg></span><span>Zaustavi</span></div>
+          </div>
+        </div>
+      </section>
+      <figcaption><b>Zaboravljena sesija</b><code>ideja · ne postoji</code><br><i>Sesija koja je ostala uključena, sa zaustavljanjem na licu mesta</i></figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<footer class="foot">
+  <p>Koncept i ideja. Sat za trenera ne postoji u aplikaciji. Sve na ovim ekranima oslanja se na podatke koje server već ima: puls uživo, sesije, termini i zahtevi za članarinu. Imena i brojke su primer.</p>
+</footer>

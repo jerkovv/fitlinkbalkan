@@ -4,6 +4,8 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const APP_URL = "https://app.fitlink.rs";
+// Trener placa FitLink na sajtu, ne u aplikaciji (mejl sme da nosi link, aplikacija ne).
+const BILLING_URL = "https://fitlink.rs/pretplata";
 const FROM = "FitLink <noreply@fitlink.rs>";
 
 const cors = {
@@ -34,6 +36,83 @@ function fmtDate(s: string | null | undefined): string | null {
 }
 
 type Row = { label: string; value: string };
+
+// ---- Interna autorizacija (kopija iz send-push) ------------------------------
+// Pozivalac je baza preko pg_net, koja salje Bearer <service_role_key> iz Vault-a.
+// Ne poredimo bajt-po-bajt sa env kljucem (env moze imati sb_secret_, a Vault
+// legacy JWT); prihvatamo validan service_role JWT za ovaj projekat, a uz
+// SUPABASE_JWT_SECRET proveravamo i HS256 potpis.
+
+function b64urlFromBytes(bytes: Uint8Array): string {
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function b64urlDecodeToString(b64url: string): string {
+  const b64 = b64url.replace(/-/g, "+").replace(/_/g, "/");
+  const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
+  const bin = atob(b64 + pad);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+async function isAuthorizedToken(
+  token: string,
+  projectRef: string,
+  envKey: string,
+): Promise<boolean> {
+  if (!token) return false;
+  if (envKey && token === envKey) return true;
+
+  const parts = token.split(".");
+  if (parts.length !== 3) return false;
+  let payload: { role?: string; ref?: string; exp?: number };
+  try {
+    payload = JSON.parse(b64urlDecodeToString(parts[1]));
+  } catch {
+    return false;
+  }
+  if (payload?.role !== "service_role") return false;
+  if (projectRef && payload?.ref && payload.ref !== projectRef) return false;
+  const now = Math.floor(Date.now() / 1000);
+  if (payload?.exp && now >= payload.exp) return false;
+
+  const jwtSecret = Deno.env.get("SUPABASE_JWT_SECRET");
+  if (jwtSecret) {
+    try {
+      const key = await crypto.subtle.importKey(
+        "raw",
+        new TextEncoder().encode(jwtSecret),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"],
+      );
+      const sig = await crypto.subtle.sign(
+        "HMAC",
+        key,
+        new TextEncoder().encode(`${parts[0]}.${parts[1]}`),
+      );
+      if (b64urlFromBytes(new Uint8Array(sig)) !== parts[2]) return false;
+    } catch {
+      return false;
+    }
+  }
+  return true;
+}
+
+type Pretplata = { access_until?: string | null; probni?: boolean | null; vezbaca?: number | null };
+
+/** 2, 3, 4 (ali ne 12-14) traze "gube", ostali "gubi". */
+function gube(n: number): boolean {
+  return n % 10 >= 2 && n % 10 <= 4 && !(n % 100 >= 12 && n % 100 <= 14);
+}
+
+/** "1 vežbač", "3 vežbača", "12 vežbača". */
+function vezbaca(n: number): string {
+  return n % 10 === 1 && n % 100 !== 11 ? `${n} vežbač` : `${n} vežbača`;
+}
 
 function renderTemplate(o: {
   previewText: string;
@@ -136,7 +215,8 @@ function buildEmail(
   event: string,
   name: string | null,
   m: { plan_name?: string; ends_on?: string | null; sessions_total?: number | null; price?: number | null },
-  daysLeft?: number
+  daysLeft?: number,
+  sub: Pretplata = {}
 ): { subject: string; html: string } | null {
   const greet = name ? `Zdravo ${esc(name)}, ` : "Zdravo, ";
   const endsFmt = fmtDate(m.ends_on);
@@ -183,15 +263,73 @@ function buildEmail(
     };
   }
 
+  // Trener: FitLink pretplata (salje notify_membership_expiry).
+  if (event === "fitlink_sub_expiring" || event === "fitlink_sub_expired") {
+    const naziv = sub.probni ? "Probni period" : "FitLink pretplata";
+    const doFmt = fmtDate(sub.access_until);
+    const n = typeof sub.vezbaca === "number" ? sub.vezbaca : 0;
+    const rows: Row[] = [];
+    if (doFmt) rows.push({ label: event === "fitlink_sub_expired" ? "Datum isteka" : "Važi do", value: doFmt });
+    if (n > 0) rows.push({ label: "Vežbači", value: vezbaca(n) });
+
+    if (event === "fitlink_sub_expiring") {
+      const dl = typeof daysLeft === "number" ? daysLeft : 3;
+      const kad = dl <= 0 ? "danas" : dl === 1 ? "sutra" : `za ${dl} dana`;
+      const posledica = n > 0
+        ? `izmene u aplikaciji se zaključavaju, a ${esc(vezbaca(n))} ${gube(n) ? "gube" : "gubi"} pristup treninzima`
+        : "izmene u aplikaciji se zaključavaju";
+      return {
+        subject: `${naziv} ističe ${kad}`,
+        html: renderTemplate({
+          previewText: `${naziv} ističe ${kad}.`,
+          eyebrow: "Podsetnik",
+          heading: `${naziv} ističe ${kad}`,
+          bodyHtml: `${greet}tvoja pretplata važi do ${doFmt || "kraja perioda"}. Kad istekne, ${posledica}. Produži je na vreme i sve radi bez prekida.`,
+          rows,
+          ctaText: "Produži pretplatu",
+          ctaUrl: BILLING_URL,
+        }),
+      };
+    }
+
+    const naslov = sub.probni ? "Probni period je istekao" : "FitLink pretplata je istekla";
+    return {
+      subject: naslov,
+      html: renderTemplate({
+        previewText: "Izmene su zaključane dok ne produžiš pretplatu.",
+        eyebrow: "Pretplata",
+        heading: naslov,
+        bodyHtml: `${greet}izmene u aplikaciji su zaključane${n > 0 ? ", a tvoji vežbači ne mogu da treniraju" : ""} dok ne produžiš pretplatu. Čim je produžiš, sve se otključa samo od sebe.`,
+        rows,
+        ctaText: "Produži pretplatu",
+        ctaUrl: BILLING_URL,
+      }),
+    };
+  }
+
   return null;
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
+    // Zove je samo baza (pg_net) sa service_role kljucem; niko spolja ne sme da salje mejlove.
+    const auth = req.headers.get("Authorization") ?? "";
+    const provided = (auth.startsWith("Bearer ") ? auth.slice(7) : "").trim();
+    let projectRef = "";
+    try {
+      projectRef = new URL(SUPABASE_URL).hostname.split(".")[0];
+    } catch {
+      projectRef = "";
+    }
+    if (!(await isAuthorizedToken(provided, projectRef, (SERVICE_ROLE_KEY ?? "").trim()))) {
+      return json({ error: "Unauthorized" }, 401);
+    }
+
     const payload = await req.json().catch(() => null);
     if (!payload) return json({ error: "invalid json" }, 400);
-    const { event, athlete_id, membership, days_left } = payload;
+    // athlete_id je id primaoca (vezbac ili, za pretplatu, trener).
+    const { event, athlete_id, membership, days_left, subscription } = payload;
     if (!event || !athlete_id) return json({ error: "missing event or athlete_id" }, 400);
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
@@ -204,7 +342,7 @@ Deno.serve(async (req) => {
     const { data: prof } = await admin.from("profiles").select("full_name").eq("id", athlete_id).maybeSingle();
     const name = prof?.full_name ?? null;
 
-    const built = buildEmail(event, name, membership ?? {}, days_left);
+    const built = buildEmail(event, name, membership ?? {}, days_left, subscription ?? {});
     if (!built) return json({ error: "unknown event" }, 400);
 
     const resp = await fetch("https://api.resend.com/emails", {

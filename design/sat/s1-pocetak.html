@@ -1,0 +1,96 @@
+<section class="sec" id="pocetak">
+  <div class="sech"><h2>Sat i pokretanje</h2><p>Sat radi sam: kad je povezan sa telefonom, trening se pokreće sa ručnog zgloba, bira se dan iz programa ili slobodan trening.</p></div>
+  <div class="shots">
+
+    <figure class="shot">
+      <section class="watch" aria-label="Početni ekran sata">
+        <i class="crown"></i><i class="sbtn"></i>
+        <div class="wscr">
+          <div class="wglow" style="background:radial-gradient(170px 160px at 50% 70%,rgba(139,61,235,.55),transparent 70%),radial-gradient(130px 120px at 100% 0,rgba(226,76,166,.32),transparent 70%)"></div>
+          <span class="wtime">10:09</span>
+          <div class="wb" style="gap:0;align-items:center">
+            <svg viewBox="0 0 828.12 517.2" style="width:78px;height:49px;margin-top:10px" aria-label="FitLink"><use href="#mark" fill="url(#gbrand)"/></svg>
+            <span class="wchip" style="margin-top:11px"><i class="rd" style="width:6px;height:6px;background:var(--ok);box-shadow:0 0 8px var(--ok)"></i>Povezano</span>
+            <div class="wpill" style="width:100%;margin-top:auto">
+              <span class="b"><svg class="i"><use href="#activity"/></svg></span>
+              <span class="t">Pokreni trening<small>Leđa i biceps · 6 vežbi</small></span>
+              <span class="go">KRENI</span>
+            </div>
+          </div>
+        </div>
+      </section>
+      <figcaption><b>Početni ekran</b><code>ContentView · idle</code><br><i>Stanje veze sa telefonom i pokretanje treninga sa sata</i></figcaption>
+    </figure>
+
+    <figure class="shot">
+      <section class="watch" aria-label="Izbor treninga">
+        <i class="crown"></i><i class="sbtn"></i>
+        <div class="wscr">
+          <div class="wglow" style="background:radial-gradient(160px 150px at 15% 5%,rgba(139,61,235,.4),transparent 70%)"></div>
+          <span class="wleft">Trening</span><span class="wtime">10:09</span>
+          <div class="wb" style="gap:8px">
+            <div class="wrow on">
+              <span class="wbadge"><svg class="i"><use href="#dumbbell"/></svg></span>
+              <div class="tx"><b>Leđa i biceps</b><small>6 vežbi · dan 3</small></div>
+              <span class="go" style="flex:none;height:26px;padding:0 10px;border-radius:999px;display:grid;place-items:center;background:#fff;color:var(--ink);font-size:9.5px;font-weight:700">dalje</span>
+            </div>
+            <div class="wrow">
+              <span class="wbadge" style="background:rgba(236,228,255,.07);box-shadow:none;color:var(--v-lt)"><svg class="i"><use href="#dumbbell"/></svg></span>
+              <div class="tx"><b>Noge</b><small>7 vežbi</small></div>
+              <span class="wchev"><svg class="i"><use href="#chev"/></svg></span>
+            </div>
+            <div class="wrow">
+              <span class="wbadge warn"><svg class="i"><use href="#zap"/></svg></span>
+              <div class="tx"><b>Slobodan trening</b><small>Bez plana - puls i kalorije</small></div>
+              <span class="wchev"><svg class="i"><use href="#chev"/></svg></span>
+            </div>
+            <div class="wrow" style="opacity:.4">
+              <span class="wbadge" style="background:rgba(236,228,255,.07);box-shadow:none;color:var(--v-lt)"><svg class="i"><use href="#dumbbell"/></svg></span>
+              <div class="tx"><b>Ramena i core</b><small>5 vežbi</small></div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <figcaption><b>Izbor treninga</b><code>WorkoutPickerView</code><br><i>Dani iz programa i slobodan trening, sa oznakom gde si stao</i></figcaption>
+    </figure>
+
+    <figure class="shot">
+      <section class="watch" aria-label="Pokretanje treninga">
+        <i class="crown"></i><i class="sbtn"></i>
+        <div class="wscr">
+          <div class="wglow" style="background:radial-gradient(150px 150px at 50% 48%,rgba(139,61,235,.55),transparent 70%)"></div>
+          <span class="wtime">10:10</span>
+          <div class="wb" style="align-items:center;justify-content:center;gap:0">
+            <div class="wring" style="width:96px;height:96px">
+              <svg viewBox="0 0 96 96" aria-hidden="true"><circle cx="48" cy="48" r="41" fill="none" stroke="rgba(236,228,255,.09)" stroke-width="8"/><circle cx="48" cy="48" r="41" fill="none" stroke="url(#garc)" stroke-width="8" stroke-linecap="round" stroke-dasharray="80 178" style="filter:drop-shadow(0 0 8px rgba(139,61,235,.85))"/></svg>
+              <div><svg class="i" style="width:26px;height:26px;color:#C4A2FF"><use href="#activity"/></svg></div>
+            </div>
+            <div style="margin-top:16px;font-size:15px;font-weight:600">Pokrećem...</div>
+            <span class="wchip" style="margin-top:9px">Leđa i biceps</span>
+          </div>
+        </div>
+      </section>
+      <figcaption><b>Pokretanje</b><code>ContentView · watch-start</code><br><i>Prelazni ekran dok server ne potvrdi sesiju</i></figcaption>
+    </figure>
+
+    <figure class="shot">
+      <section class="watch" aria-label="Nalog nije povezan">
+        <i class="crown"></i><i class="sbtn"></i>
+        <div class="wscr">
+          <div class="wglow" style="background:radial-gradient(160px 150px at 50% 70%,rgba(139,61,235,.28),transparent 70%)"></div>
+          <span class="wtime">10:09</span>
+          <div class="wb" style="gap:0;align-items:center">
+            <svg viewBox="0 0 828.12 517.2" style="width:74px;height:46px;margin-top:10px;opacity:.55" aria-label="FitLink"><use href="#mark" fill="#F6F3FB"/></svg>
+            <span class="wchip" style="margin-top:11px;border-color:rgba(255,181,71,.45);background:rgba(255,181,71,.12);color:#FFD08A"><i class="rd" style="width:6px;height:6px;background:var(--warn);box-shadow:0 0 8px var(--warn)"></i>Uloguj se na iPhone-u</span>
+            <div class="wrow" style="width:100%;margin-top:auto">
+              <span class="wbadge"><svg class="i"><use href="#phone"/></svg></span>
+              <div class="tx"><b style="white-space:normal">Otvori FitLink na telefonu</b><small>Sat preuzme nalog sam</small></div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <figcaption><b>Nalog nije povezan</b><code>ContentView · statusText</code><br><i>Sat čeka nalog sa telefona, bez prijave na satu</i></figcaption>
+    </figure>
+
+  </div>
+</section>

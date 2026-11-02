@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FitLink test lista</title>
+<style>
+:root{--bg:#0e0e12;--s1:#17171d;--tx:#f2f2f5;--tx2:#a0a0ad;--ln:#2a2a33;--ok:#2fbf71;--okbg:#12301f;--ne:#ff5a5a;--nebg:#3a1616;--v:#8b7bff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.w{max-width:720px;margin:0 auto;padding:16px 16px 120px}
+h1{font-size:22px;margin:8px 0 2px}
+.pod{color:var(--tx2);font-size:13.5px;margin-bottom:8px}
+h2{font-size:15px;margin:26px 0 6px;color:var(--v)}
+.red{background:var(--s1);border:1px solid var(--ln);border-radius:14px;padding:12px;margin-bottom:8px}
+.red.ok{border-color:var(--ok)}.red.ne{border-color:var(--ne)}
+.gore{display:flex;gap:10px}
+.n{color:var(--tx2);font-size:13px;width:22px;flex-shrink:0;padding-top:1px}
+.t{flex:1;min-width:0}
+.o{color:var(--tx2);font-size:13px;margin-top:2px}
+.dg{display:flex;gap:8px;margin-top:10px}
+button{font:inherit;font-size:14px;font-weight:600;border-radius:11px;border:1px solid var(--ln);background:transparent;color:var(--tx);height:42px;cursor:pointer}
+.dg button{flex:1}
+.dg button.ok{background:var(--okbg);border-color:var(--ok);color:var(--ok)}
+.dg button.ne{background:var(--nebg);border-color:var(--ne);color:var(--ne)}
+input{width:100%;margin-top:8px;height:42px;border-radius:11px;border:1px solid var(--ln);background:#0e0e12;color:var(--tx);font:inherit;font-size:14px;padding:0 12px;display:none}
+.dno{position:fixed;left:0;right:0;bottom:0;background:#0e0e12ee;border-top:1px solid var(--ln);padding:10px 16px calc(10px + env(safe-area-inset-bottom))}
+.dno .u{max-width:720px;margin:0 auto;display:flex;gap:10px;align-items:center}
+.zb{flex:1;font-size:13px;color:var(--tx2)}
+#kop{padding:0 16px;background:var(--v);border-color:var(--v);color:#fff}
+#por{font-size:13px;color:var(--ok);max-width:720px;margin:6px auto 0}
+textarea{width:100%;height:140px;margin-top:8px;border-radius:11px;border:1px solid var(--ln);background:#0e0e12;color:var(--tx);font:13px/1.4 ui-monospace,monospace;padding:10px;display:none}
+</style>
+</head>
+<body>
+<div class="w">
+<h1>FitLink test lista</h1>
+<div class="pod">Telefon i sat na ruci. Za svaki korak dodirni Radi ili Ne radi. Na kraju dodirni Kopiraj rezultat i nalepi ga u čet.</div>
+<div id="lista"></div>
+<textarea id="izlaz" readonly aria-label="Rezultat za kopiranje"></textarea>
+</div>
+<div class="dno"><div class="u"><div class="zb" id="zbir"></div><button id="kop">Kopiraj rezultat</button></div><div id="por"></div></div>
+<script>
+const G=[
+["A. Vežbač: telefon i sat zajedno",[
+["Pokreni trening po planu na telefonu","Sat sam otvara FitLink i ulazi u isti trening"],
+["Na satu pokušaj da pokreneš drugi trening","Ne dozvoljava, nudi samo nastavak"],
+["Ukucaj kg i ponavljanja na satu, bez završetka serije","Iste brojke odmah na telefonu"],
+["Ukucaj kg i ponavljanja na telefonu","Iste brojke odmah na satu"],
+["Završi seriju na satu","Telefon prelazi na pauzu, serija upisana jednom"],
+["Završi sledeću seriju na telefonu","Sat prati"],
+["Tajmer pauze na satu","Broj ne dodiruje krug, puls samo na jednom mestu"],
+["Zaključaj sat, pa podigni ruku","Ostaje u FitLink-u, na treningu"],
+["Ugasi aplikaciju na telefonu usred treninga, pa je otvori","Nudi Nastavi, ne Pokreni"],
+["U poslednjoj seriji ukucaj pogrešnu kilažu (npr. 900) i završi","Trening se završava"],
+["Na ekranu Trening završen dodirni Ispravi serije i ispravi","Teret i rekord se menjaju"],
+["Istorija","Trening upisan jednom, razumno trajanje, puls i kalorije sa sata"],
+["Apple Zdravlje","Trening upisan jednom, ne dvaput"]]],
+["B. Vežbač: ostalo",[
+["Slobodan trening sa telefona","Pokreni, dodaj vežbu, upiši seriju, završi"],
+["Kardio vežba na vreme","Minuti kroz brojčanik, na telefonu i satu"],
+["Početni ekran sata","Vide se kalorije, sledeći dan isti kao na telefonu"],
+["Otkaži trening usred rada","Nestaje sa oba uređaja, nema ga u istoriji"],
+["Ishrana: namirnica u gramima i jedna na komad","Zbir za danas se menja"],
+["Termini: rezerviši, pa otkaži","Broj preostalih treninga se vraća"],
+["Poruka treneru i komentar posle treninga","Stižu treneru"]]],
+["C. Trener",[
+["Uživo na telefonu dok vežbač trenira","Spisak sa pulsom i kalorijama u kolonama"],
+["Uživo na satu, pa zaključaj i podigni ruku","Kompaktan spisak, ostaje u aplikaciji"],
+["Potvrdi vežbaču seriju i promeni brojku","Trenerova brojka ostaje konačna"],
+["Dodaj seriju i zameni vežbu usred treninga","Vežbačev telefon i sat pokazuju izmenu"],
+["Zahtev za članarinu na satu","Red sa brojem zahteva, potvrdi jedan"],
+["Obaveštenje o rekordu","Stiže tek kad vežbač završi trening"],
+["Kartica uživo: uključi, pa skloni prevlačenjem","Prekidač na početnoj pokazuje da je ugašena"],
+["Plan ishrane od nule kad postoji započet","Upozorava da se stari briše"],
+["Ukloni test vežbača","Tekst pominje samo termine, članarina ostaje"]]],
+["D. Nalog",[
+["Odjava i prijava kao vežbač, pa kao trener","Sat prelazi na pravu ulogu"],
+["Registracija novog vežbača preko koda pozivnice","Prolazi do kraja"],
+["Vežbač bez važeće članarine pokreće trening","Jasna poruka o članarini, telefon i sat"]]]
+];
+let S={},B={};
+try{const z=JSON.parse(localStorage.getItem('fitlink-test')||'{}');S=z.S||{};B=z.B||{}}catch(e){}
+function pamti(){try{localStorage.setItem('fitlink-test',JSON.stringify({S,B}))}catch(e){}}
+let n=0;const L=document.getElementById('lista');
+G.forEach(([g,k])=>{const h=document.createElement('h2');h.textContent=g;L.appendChild(h);
+k.forEach(([t,o])=>{n++;const i=n;const r=document.createElement('div');r.className='red';
+r.innerHTML='<div class="gore"><div class="n">'+i+'</div><div class="t"><div class="tt"></div><div class="o"></div></div></div><div class="dg"><button data-v="ok">Radi</button><button data-v="ne">Ne radi</button></div>';
+r.querySelector('.tt').textContent=t;r.querySelector('.o').textContent='Treba: '+o;
+const inp=document.createElement('input');inp.type='text';inp.placeholder='Šta se desilo';inp.value=B[i]||'';
+inp.addEventListener('input',()=>{B[i]=inp.value;pamti()});r.appendChild(inp);
+function crtaj(){r.className='red'+(S[i]?' '+S[i]:'');r.querySelectorAll('button').forEach(x=>x.className=S[i]===x.dataset.v?x.dataset.v:'');inp.style.display=S[i]==='ne'?'block':'none'}
+r.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{S[i]=S[i]===b.dataset.v?null:b.dataset.v;crtaj();pamti();zbir()}));
+crtaj();L.appendChild(r)})});
+function zbir(){let ok=0,ne=0;for(let i=1;i<=n;i++){if(S[i]==='ok')ok++;if(S[i]==='ne')ne++}
+document.getElementById('zbir').textContent=(ok+ne)+' od '+n+' · '+ok+' radi · '+ne+' ne radi';document.getElementById('por').textContent=''}
+zbir();
+document.getElementById('kop').addEventListener('click',async()=>{const ok=[],ne=[],pr=[];
+for(let i=1;i<=n;i++){if(S[i]==='ok')ok.push(i);else if(S[i]==='ne')ne.push(i+(B[i]&&B[i].trim()?': '+B[i].trim():''));else pr.push(i)}
+const por=document.getElementById('por');
+if(!ok.length&&!ne.length){por.style.color='var(--ne)';por.textContent='Označi bar jedan korak.';return}
+const tekst='Rezultat testa na uređaju.\nRadi: '+(ok.join(', ')||'ništa')+'\nNe radi:\n'+(ne.length?ne.map(x=>'- '+x).join('\n'):'- ništa')+'\nNije testirano: '+(pr.join(', ')||'sve je testirano');
+const iz=document.getElementById('izlaz');iz.value=tekst;iz.style.display='block';
+por.style.color='var(--ok)';
+try{await navigator.clipboard.writeText(tekst);por.textContent='Kopirano. Nalepi u čet.'}
+catch(e){iz.focus();iz.select();por.textContent='Tekst je na dnu liste, označi ga i kopiraj.'}
+});
+</script>
+</body>
+</html>

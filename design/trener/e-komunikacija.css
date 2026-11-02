@@ -1,0 +1,22 @@
+/* trener: chat, notifikacije, profil, javna stranica, zakljucano */
+.stories{display:flex;gap:10px;overflow:hidden;margin-right:-22px}
+.story{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;width:64px;font-size:11px;color:var(--tx2)}
+.story .rg{position:relative;width:58px;height:58px;border-radius:50%;padding:2.5px;background:var(--g);box-shadow:0 0 20px rgba(139,61,235,.45)}
+.story .rg>span{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;border:2.5px solid var(--ink);background:#2A2535 center/cover no-repeat;font-size:14px;font-weight:700;color:#fff}
+.story .bd{position:absolute;top:-2px;right:-3px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:#fff;color:var(--ink);font-size:10.5px;font-weight:700;display:grid;place-items:center}
+.story.dim .rg{background:rgba(236,228,255,.14);box-shadow:none}
+.crow{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:20px}
+.crow+.crow{margin-top:2px}
+.crow.un{background:linear-gradient(90deg,rgba(139,61,235,.16),rgba(139,61,235,0))}
+.crow .av2{flex:none;width:46px;height:46px;border-radius:15px;background:var(--g) center/cover no-repeat;display:grid;place-items:center;font-size:16px;font-weight:700}
+.crow .tm2{flex:none;align-self:flex-start;margin-top:3px;font-size:11px;color:var(--tx3)}
+.crow .cnt2{flex:none;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--v);font-size:10.5px;font-weight:700;display:grid;place-items:center}
+.urlbar{position:absolute;z-index:4;left:16px;right:16px;top:52px;display:flex;align-items:center;justify-content:center;gap:6px;height:34px;border-radius:12px;font-size:12px;color:var(--tx2)}
+.urlbar svg{width:12px;height:12px}
+.lockrow{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.lockrow span{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 11px;border-radius:999px;background:var(--s2);border:1px solid var(--line);font-size:12px;color:var(--tx2)}
+.lockrow svg{width:12px;height:12px;color:var(--v-lt)}
+.pubpk{flex:none;width:150px;padding:14px;border-radius:22px;background:var(--s1);border:1px solid var(--line)}
+.pubpk.pop{border:1.5px solid transparent;background:linear-gradient(#17141F,#17141F) padding-box,var(--g) border-box;box-shadow:0 20px 40px -24px rgba(139,61,235,.9)}
+.lockban{position:absolute;z-index:6;left:16px;right:16px;bottom:106px;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:16px;background:rgba(139,61,235,.2);border:1px solid rgba(196,162,255,.4);font-size:12px;color:#E4D4FF;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.lockban svg{flex:none;width:14px;height:14px}

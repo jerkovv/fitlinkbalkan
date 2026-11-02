@@ -34,3 +34,6 @@ supabase/.temp/
 
 # tsc -b build cache
 *.tsbuildinfo
+
+# Snimci mockupa koje pravi design/desktop/sastavi.py (python3 sastavi.py slike)
+design/desktop/slike/

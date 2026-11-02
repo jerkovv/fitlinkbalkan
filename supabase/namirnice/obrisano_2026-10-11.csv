@@ -1,0 +1,17 @@
+vrsta,id,opis,category,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g,unit,grams_per_unit,serving_size_g,is_global,created_by,meal_id,grams
+namirnica,b426066c-8476-4020-bb5a-0706ef46e516,Avokado (voće),Voće,160,2.0,8.5,14.7,kom,115,115,true,NULL,NULL,NULL
+namirnica,81cdbcaa-45e2-492b-8804-f2ab2da56d31,Beli sir light,Jaja i mleko,160,18.0,2.0,9.0,g,1,40,true,NULL,NULL,NULL
+namirnica,7002166a-6bfc-4d95-b3dc-4ac11a0ae4f6,Feferone,Povrće,40,1.9,8.8,0.4,g,1,30,true,NULL,NULL,NULL
+namirnica,92da5080-980a-43e8-a0da-a56ee2508b98,Kafa belim sa mlekom (bez šećera),Pića,35,1.7,2.6,2.0,ml,1,200,true,NULL,NULL,NULL
+namirnica,09555abc-20cb-4390-a9f3-5f376bdaf65f,Kefir (piće),Pića,55,3.8,4.5,2.5,ml,1,250,true,NULL,NULL,NULL
+namirnica,b85c5931-c267-41c2-b89e-9b836e06dcf5,Krekeri rižani,Ugljeni hidrati,387,8.0,82.0,3.0,g,1,15,true,NULL,NULL,NULL
+namirnica,16c0e335-3295-4010-ab83-981908807a45,Kukuruz test,Brza hrana,1,1,1,1,g,1,100,false,55d9c686-f014-41d3-a4af-f2c256d8df92,NULL,NULL
+namirnica,f75795b5-0a12-4563-a3d8-b6abfe1a6800,Margarin test,Gotova jela,100,5,0,0,g,1,100,false,fe6f5f4c-e96f-4d05-9e53-0d3b1ed6c5df,NULL,NULL
+namirnica,e40145fc-213e-4341-8416-399a10c8eff5,Mušule,Riba,86,11.9,3.7,2.2,g,1,100,true,NULL,NULL,NULL
+namirnica,a8ca7974-b9ae-4aae-9f15-e9d16095b7cd,Sok od jabuke (industrijski),Pića,46,0.1,11.0,0.1,ml,1,200,true,NULL,NULL,NULL
+namirnica,e1074997-772a-4b72-b9cf-8fac6d67a13c,Tahini puter,Orašasti plodovi,595,17.0,21.0,53.8,g,1,30,true,NULL,NULL,NULL
+namirnica,528de160-d1d3-43e8-acf8-496047543dd4,Tuna konzerva u vodi,Riba,108,23.6,0.0,1.0,g,1,80,true,NULL,NULL,NULL
+stavka dodeljenog plana,e9afbd1f-83a3-4af3-9c22-cafc167ec8e0,Kukuruz test,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,41871c8d-74a5-4242-b751-5db36fd3885a,100
+stavka dodeljenog plana,cf5c003c-903a-45af-ac27-c8990000adc3,Kukuruz test,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0daf2cdd-ca08-4544-a4ae-3f858c4eb4f5,100
+stavka sablona,87f352d6-6618-4d5e-8d7b-db084d84a270,Kukuruz test,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,352823c9-fb32-412a-a150-eab06772596c,100
+stavka sablona,7bbcaa88-e671-4bf4-8599-25f474d6f2e8,Kukuruz test,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,8d69c5a5-a875-4857-b69c-21f46d9bd5c5,100

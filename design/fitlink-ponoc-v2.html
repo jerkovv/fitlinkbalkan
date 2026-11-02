@@ -1,0 +1,408 @@
+<title>FitLink Ponoć</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+<style>
+/* v2: samo elementi koji postoje u aplikaciji (Home.tsx, ActiveWorkout.tsx, Nutrition.tsx, BottomNav.tsx).
+   Jedna tamna tema, namerno. Boje brenda iz src/index.css, bold italik brojke iz v5. */
+:root{
+  --stage-1:#453B55; --stage-2:#221C2C; --stage-3:#15111B;
+  --ink:#0B0A10; --s1:#15121C; --s2:#1F1B28; --s3:#2A2535;
+  --line:rgba(236,228,255,.08);
+  --tx:#F6F3FB; --tx2:#ABA3BC; --tx3:#716A82;
+  --v:#8B3DEB; --v-lt:#C4A2FF; --m:#E24CA6;
+  --g:linear-gradient(135deg,#8B3DEB 0%,#5B4BEF 55%,#E24CA6 100%);
+  --g-text:linear-gradient(135deg,#B57BFF 0%,#8C7DFF 50%,#FF7CC6 100%);
+  --soft:rgba(139,61,235,.16);
+  --ok:#3DDC97; --ok-fg:#7EE8B8; --ok-soft:rgba(61,220,151,.1);
+  --warn:#FFB547;
+  --z3:#FFD60A;
+  --font:"Poppins",-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--stage-3)}
+body{min-height:100vh;background:radial-gradient(1300px 760px at 50% -8%,var(--stage-1),var(--stage-2) 55%,var(--stage-3));color:var(--tx);font-family:var(--font);-webkit-font-smoothing:antialiased;padding:36px 24px 56px}
+.fig{font-weight:700;font-style:italic;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.tnum{font-variant-numeric:tabular-nums}
+.gt{background:var(--g-text);-webkit-background-clip:text;background-clip:text;color:transparent}
+svg.i{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+svg.f{fill:currentColor;stroke:none}
+.cap{font-size:10.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--tx2)}
+
+/* okvir strane */
+.top,.foot{max-width:1180px;margin-inline:auto;display:flex;justify-content:space-between;align-items:center;gap:12px 24px;flex-wrap:wrap}
+.top{margin-bottom:44px}
+.brand{display:flex;align-items:center;gap:10px;font-size:19px;font-weight:600;letter-spacing:-.01em}
+.brand svg{width:38px;height:24px}
+.top p{font-size:13px;color:var(--tx2)}
+.foot{margin-top:48px}
+.foot p{font-size:12px;color:var(--tx3)}
+
+.stage{max-width:1180px;margin-inline:auto;display:flex;justify-content:center;align-items:flex-start;gap:36px;flex-wrap:wrap}
+.phone{position:relative;flex:none;width:360px;height:780px;border-radius:56px;background:var(--ink);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 70px 110px -40px rgba(5,3,10,.85),0 0 0 1px rgba(255,255,255,.06),inset 0 1px 0 rgba(255,255,255,.08)}
+.stage .phone:nth-child(1){margin-top:128px}
+.stage .phone:nth-child(2){margin-top:64px}
+@media (max-width:1219px){.stage .phone:nth-child(n){margin-top:0}}
+@media (max-width:420px){.phone{zoom:.87}.stage{gap:28px}}
+
+.glow{position:absolute;inset:0 0 auto 0;height:400px;pointer-events:none;background:radial-gradient(360px 280px at 16% -40px,rgba(139,61,235,.6),transparent 72%),radial-gradient(260px 230px at 104% -10px,rgba(226,76,166,.34),transparent 70%)}
+.sb{position:relative;z-index:4;flex:none;height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 4px 36px;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.sb .ic{display:flex;gap:5px;align-items:center}
+.scr{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;padding:12px 22px 0;min-height:0}
+
+/* PhoneShell zaglavlje */
+.shell-top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.acts{display:flex;gap:8px}
+.ib{position:relative;width:40px;height:40px;border-radius:50%;background:var(--s2);color:rgba(246,243,251,.85);display:grid;place-items:center}
+.ib svg{width:18px;height:18px}
+.badge{position:absolute;top:-2px;right:-2px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:var(--g);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;box-shadow:0 6px 14px -4px rgba(139,61,235,.8)}
+.me{width:40px;height:40px;border-radius:50%;background:var(--g);color:#fff;font-size:13px;font-weight:700;display:grid;place-items:center;box-shadow:0 10px 22px -8px rgba(139,61,235,.9)}
+.h1{margin-top:6px;font-size:34px;font-weight:700;line-height:1.05;letter-spacing:-.03em}
+
+.trainer{align-self:flex-start;display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:6px 12px 6px 6px;border-radius:999px;background:var(--s2);border:1px solid var(--line);font-size:12px;color:var(--tx2)}
+.trainer i{width:20px;height:20px;border-radius:50%;background:var(--g);display:grid;place-items:center;color:#fff}
+.trainer i svg{width:12px;height:12px;stroke-width:2.6}
+.trainer b{color:var(--tx);font-weight:600}
+
+/* gradijent kartica: Sledeći trening / Danas */
+.hero-card{position:relative;overflow:hidden;border-radius:28px;background:var(--g);padding:20px;box-shadow:0 24px 44px -18px rgba(139,61,235,.8),inset 0 0 0 1px rgba(255,255,255,.18)}
+.hero-card::before{content:"";position:absolute;top:-40px;right:-40px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.14);filter:blur(28px)}
+.hero-card>*{position:relative}
+.hero-card .cap{color:rgba(255,255,255,.8);letter-spacing:.16em}
+.hero-card .big{margin-top:6px;font-size:27px;font-weight:700;line-height:1.1;letter-spacing:-.022em}
+.hero-card .sub{margin-top:5px;font-size:12.5px;color:rgba(255,255,255,.86)}
+.hero-card .cnt{margin-top:14px;font-size:12.5px;color:rgba(255,255,255,.92)}
+.start{display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:10px 17px;border-radius:999px;background:#fff;color:var(--ink);font-size:13px;font-weight:700}
+.start svg{width:13px;height:13px}
+
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat{padding:15px 16px;border-radius:24px;background:var(--s1);border:1px solid var(--line)}
+.stat .cap{font-size:10px;letter-spacing:.12em}
+.stat .row{display:flex;align-items:baseline;gap:6px;margin-top:8px}
+.stat .fig{font-size:32px;line-height:1}
+.stat small{font-size:13px;font-weight:500;color:var(--tx2)}
+
+.st{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.st h2{font-size:15.5px;font-weight:600;letter-spacing:-.02em}
+.st a{font-size:12px;font-weight:600;color:var(--v-lt);text-decoration:none}
+
+.card{padding:16px;border-radius:26px;background:var(--s1);border:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tile{padding:12px 14px;border-radius:18px;background:var(--s2)}
+.tile .cap{display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.12em}
+.tile .cap svg{width:12px;height:12px}
+.tile .v{margin-top:6px;display:flex;align-items:baseline;gap:5px}
+.tile .fig{font-size:23px;line-height:1}
+.tile small{font-size:12px;font-weight:600;color:var(--tx2)}
+.line{display:flex;align-items:center;gap:12px}
+.line .sq{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;flex:none}
+.line .sq svg{width:16px;height:16px}
+.line .t{flex:1;min-width:0}
+.line .t .cap{font-size:10px;letter-spacing:.12em}
+.line .t b{display:block;font-size:13.5px;font-weight:600}
+.line .r{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:4px}
+.line .r svg{width:14px;height:14px}
+
+/* donja navigacija (BottomNav) */
+.navfade{position:absolute;z-index:5;left:0;right:0;bottom:0;height:150px;background:linear-gradient(180deg,rgba(11,10,16,0),var(--ink) 62%);pointer-events:none}
+.nav{position:absolute;z-index:6;left:12px;right:12px;bottom:14px;display:grid;grid-template-columns:repeat(5,1fr);padding:8px;border-radius:26px;background:rgba(24,21,32,.92);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border:1px solid var(--line);box-shadow:0 18px 40px -12px rgba(0,0,0,.7)}
+.nav span{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;font-size:10.5px;font-weight:600;color:var(--tx3)}
+.nav span i{width:36px;height:36px;border-radius:12px;display:grid;place-items:center}
+.nav span svg{width:18px;height:18px}
+.nav span.on{color:var(--tx)}
+.nav span.on i{background:var(--g);color:#fff;box-shadow:0 10px 22px -8px rgba(139,61,235,.95)}
+.nav span.on svg{stroke-width:2.5}
+
+/* aktivan trening */
+.wbar{position:relative;z-index:4;flex:none;background:rgba(11,10,16,.94);border-bottom:1px solid var(--line)}
+.wbar .row{display:flex;align-items:center;gap:12px;padding:8px 16px 12px}
+.xbtn{flex:none;width:40px;height:40px;border-radius:50%;background:var(--s1);border:1px solid var(--line);display:grid;place-items:center}
+.xbtn svg{width:16px;height:16px}
+.wbar .t{flex:1;min-width:0}
+.wbar .cap{font-size:10px;letter-spacing:.16em}
+.wbar b{display:block;font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pulse{flex:none;display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:999px;background:var(--s1);border:1px solid var(--line);color:var(--z3)}
+.pulse svg{width:14px;height:14px}
+.pulse .fig{font-size:15px;line-height:1}
+@media (prefers-reduced-motion:no-preference){.pulse svg{animation:beat 1.1s ease-in-out infinite}}
+@keyframes beat{0%,100%{opacity:1}50%{opacity:.45}}
+.prog{height:4px;background:var(--s2)}
+.prog i{display:block;height:100%;width:34%;background:var(--g)}
+
+.wscr{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;gap:16px;padding:12px 16px 0}
+.wglow{position:absolute;left:-40px;right:-40px;top:70px;height:300px;pointer-events:none;background:radial-gradient(260px 200px at 30% 50%,rgba(139,61,235,.45),transparent 70%),radial-gradient(200px 180px at 90% 70%,rgba(226,76,166,.28),transparent 70%)}
+.msg{position:relative;display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-radius:20px;background:var(--ok-soft);border:1px solid rgba(61,220,151,.3);color:var(--ok-fg)}
+.msg .av{flex:none;width:36px;height:36px;border-radius:50%;background:var(--g);display:grid;place-items:center;color:#fff}
+.msg .av svg{width:16px;height:16px;stroke-width:2.4}
+.msg .t{flex:1;min-width:0}
+.msg .cap{color:var(--ok-fg);opacity:.85;font-size:10px;font-weight:700;letter-spacing:.14em}
+.msg p{margin-top:2px;font-size:13.5px;font-weight:600;line-height:1.35;color:#C9F5E0}
+.msg .x{flex:none;width:26px;height:26px;display:grid;place-items:center}
+.msg .x svg{width:13px;height:13px}
+
+.media{position:relative;aspect-ratio:16/10;max-width:100%;border-radius:26px;overflow:hidden;border:1px solid var(--line);background:var(--s2);box-shadow:0 24px 50px -24px rgba(139,61,235,.7)}
+.media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.media::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,10,16,0) 55%,rgba(11,10,16,.35))}
+.ex h2{font-size:28px;font-weight:700;line-height:1.05;letter-spacing:-.03em}
+.ex p{margin-top:4px;font-size:14px;color:var(--tx2)}
+.mus{display:inline-flex;margin-top:8px;padding:4px 10px;border-radius:999px;background:var(--soft);color:var(--v-lt);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+
+.targets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tg{padding:11px 8px 12px;border-radius:18px;background:var(--s1);border:1px solid var(--line);text-align:center}
+.tg .cap{font-size:9.5px;letter-spacing:.14em}
+.tg .fig{display:block;margin-top:3px;font-size:23px;line-height:1.1}
+.tg .fig span{color:var(--tx3)}
+
+.last{padding:11px 14px 12px;border-radius:18px;background:var(--s1);border:1px solid var(--line)}
+.last .hd{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.last .hd svg{width:14px;height:14px;color:var(--tx2)}
+.last .hd .cap{font-size:10.5px;letter-spacing:.08em}
+.last .hd small{margin-left:auto;font-size:11.5px;color:var(--tx2);font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips span{padding:4px 10px;border-radius:999px;background:var(--s2);font-size:13px;font-weight:500;font-variant-numeric:tabular-nums}
+
+.sets{border-radius:26px;background:var(--s1);border:1px solid var(--line);overflow:hidden}
+.srow{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);font-size:13px}
+.srow .n{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--s2);color:var(--tx2)}
+.srow .n svg{width:15px;height:15px;stroke-width:3}
+.srow .n.done{background:var(--ok);color:#06140D}
+.srow .n.act{background:var(--g);color:#fff}
+.srow .txt{flex:1;min-width:0}
+.srow .txt b{font-weight:600}
+.srow .txt span{color:var(--tx2);font-variant-numeric:tabular-nums}
+.srow .ed{width:16px;height:16px;color:var(--tx3)}
+.srow.act{background:rgba(139,61,235,.1)}
+.srow.act .ed{color:var(--v-lt)}
+
+/* ishrana */
+.meal{padding:16px;border-radius:24px;background:var(--s1);border:1px solid var(--line)}
+.meal .hd{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.meal .hd b{display:block;font-size:14px;font-weight:600}
+.meal .hd b span{font-weight:400;color:var(--tx2)}
+.meal .hd small{font-size:11px;color:var(--tx2);font-variant-numeric:tabular-nums}
+.log{flex:none;display:inline-flex;align-items:center;gap:4px;height:32px;padding:0 12px;border-radius:999px;background:var(--soft);color:var(--v-lt);font-size:12px;font-weight:600}
+.log svg{width:12px;height:12px;stroke-width:2.8}
+.items{list-style:none}
+.items li{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid var(--line);font-size:12px;font-variant-numeric:tabular-nums}
+.items li:first-child{border-top:0}
+.items li b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.items li span{color:var(--tx2);white-space:nowrap}
+.totals .kc{margin-top:4px;font-size:30px;font-weight:700;letter-spacing:-.022em;line-height:1.1}
+.totals .kc span{font-size:18px;font-weight:600;color:rgba(255,255,255,.7);font-style:normal}
+.bar{height:6px;margin-top:12px;border-radius:999px;background:rgba(255,255,255,.22);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:999px;background:#fff}
+.mac3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px;text-align:center}
+.mac3 small{display:block;font-size:12px;color:rgba(255,255,255,.72)}
+.mac3 b{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+.mac3 b span{font-size:11.5px;font-weight:500;color:rgba(255,255,255,.62)}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="gbrand" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8B3DEB"/><stop offset=".55" stop-color="#5B4BEF"/><stop offset="1" stop-color="#E24CA6"/></linearGradient>
+    <symbol id="chat" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+    <symbol id="bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+    <symbol id="user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol>
+    <symbol id="play" viewBox="0 0 24 24"><path d="M6 3.9v16.2a1 1 0 0 0 1.52.85l13-8.1a1 1 0 0 0 0-1.7l-13-8.1A1 1 0 0 0 6 3.9z"/></symbol>
+    <symbol id="dumbbell" viewBox="0 0 24 24"><path d="m6.5 6.5 11 11"/><path d="m21 21-1-1"/><path d="m3 3 1 1"/><path d="m18 22 4-4"/><path d="m2 6 4-4"/><path d="m3 10 7-7"/><path d="m14 21 7-7"/></symbol>
+    <symbol id="flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
+    <symbol id="trophy" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></symbol>
+    <symbol id="scale" viewBox="0 0 24 24"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></symbol>
+    <symbol id="down" viewBox="0 0 24 24"><path d="M22 17l-8.5-8.5-5 5L2 7"/><path d="M16 17h6v-6"/></symbol>
+    <symbol id="home" viewBox="0 0 24 24"><path d="M3 10a2 2 0 0 1 .71-1.53l7-6a2 2 0 0 1 2.58 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/></symbol>
+    <symbol id="calplus" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M12 14v4M10 16h4"/></symbol>
+    <symbol id="trend" viewBox="0 0 24 24"><path d="M22 7l-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></symbol>
+    <symbol id="idcard" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2"/><path d="M14 10h4M14 14h4"/></symbol>
+    <symbol id="x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></symbol>
+    <symbol id="history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+    <symbol id="check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="pencil" viewBox="0 0 24 24"><path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/></symbol>
+    <symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="signal" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></symbol>
+    <symbol id="wifi" viewBox="0 0 16 12"><path d="M8 12 5.6 9.3a3.4 3.4 0 0 1 4.8 0z"/><path d="M3.5 7.2a6.4 6.4 0 0 1 9 0l-1.4 1.5a4.4 4.4 0 0 0-6.2 0z"/><path d="M1.2 4.8a9.7 9.7 0 0 1 13.6 0l-1.4 1.5a7.7 7.7 0 0 0-10.8 0z"/></symbol>
+    <symbol id="batt" viewBox="0 0 27 12"><rect x=".5" y=".5" width="23" height="11" rx="3.2" fill="none" stroke="currentColor" opacity=".45"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.8"/><path d="M25 4v4c.8-.3 1.4-1.1 1.4-2S25.8 4.3 25 4z" opacity=".45"/></symbol>
+  </defs>
+</svg>
+
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 828.12 517.2" aria-hidden="true"><path fill="url(#gbrand)" d="M662.2.44l-142.2,81.41v76.48l117.57-67.31,99.98,174.63-255.11,146.05c-10.34,5.92-19.44,1.93-22.88-.06-3.43-1.99-11.42-7.91-11.42-19.82v-36.17s198.53-113.66,198.53-113.66l-32.97-57.6-165.59,94.8-.02-79.69.05-.03v-76.48l-.09.05c-.61-31.48-17.15-59.58-44.49-75.43-27.86-16.15-61.18-16.24-89.13-.24L0,227.37l165.92,289.83,150.04-85.9v-76.48l-125.42,71.8-99.98-174.63L347.39,104.97c10.34-5.92,19.44-1.93,22.87.06,3.43,1.99,11.42,7.91,11.42,19.82v36.17s-189.19,108.31-189.19,108.31l32.97,57.6,156.25-89.45.02,79.69-.23.13v76.48l.27-.15c.61,31.48,17.15,59.58,44.49,75.43,27.86,16.15,61.18,16.24,89.13.24l312.71-179.02L662.2.44Z"/></svg>
+    FitLink
+  </div>
+  <p>Ponoć · tamna tema, sadržaj 1:1 sa aplikacijom: Početna, Aktivan trening, Ishrana</p>
+</header>
+
+<main class="stage">
+
+  <!-- 1. POČETNA (pages/athlete/Home.tsx) -->
+  <section class="phone" aria-label="Početna">
+    <div class="glow"></div>
+    <div class="sb"><span>17:24</span><span class="ic"><svg class="f" viewBox="0 0 18 12" width="18" height="12"><use href="#signal"/></svg><svg class="f" viewBox="0 0 16 12" width="16" height="12"><use href="#wifi"/></svg><svg class="f" viewBox="0 0 27 12" width="27" height="12"><use href="#batt"/></svg></span></div>
+    <div class="scr">
+      <div class="shell-top">
+        <span class="cap">Dobro došao nazad</span>
+        <div class="acts">
+          <span class="ib" aria-label="Chat"><svg class="i"><use href="#chat"/></svg><span class="badge">2</span></span>
+          <span class="ib" aria-label="Obaveštenja"><svg class="i"><use href="#bell"/></svg><span class="badge">3</span></span>
+          <span class="me" aria-label="Korisnički meni">LP</span>
+        </div>
+      </div>
+      <h1 class="h1">Zdravo, Luka 💪</h1>
+      <div class="trainer"><i><svg class="i"><use href="#user"/></svg></i>Trener: <b>Marko Jovanović</b></div>
+
+      <div class="hero-card" style="margin-top:16px">
+        <div class="cap">Sledeći trening</div>
+        <div class="big">Leđa i biceps</div>
+        <div class="sub">Snaga 8 nedelja · Dan 3 od 4 · Trener Marko</div>
+        <div class="cnt">6 vežbi na rasporedu</div>
+        <div class="start"><svg class="f" viewBox="0 0 24 24"><use href="#play"/></svg>Počni trening</div>
+      </div>
+
+      <div class="stats" style="margin-top:16px">
+        <div class="stat"><div class="cap">Ovog meseca</div><div class="row"><span class="fig gt">9</span><small>treninga</small></div></div>
+        <div class="stat"><div class="cap">U programu</div><div class="row"><span class="fig" style="color:var(--ok-fg)">4</span><small>dana</small></div></div>
+      </div>
+
+      <section style="margin-top:20px">
+        <div class="st"><h2>Tvoj napredak</h2><a>Napredak →</a></div>
+        <div class="card">
+          <div class="tiles">
+            <div class="tile"><div class="cap"><svg class="i"><use href="#flame"/></svg>Niz</div><div class="v"><span class="fig">6</span><small>nedelje</small></div></div>
+            <div class="tile"><div class="cap"><svg class="i"><use href="#dumbbell"/></svg>Ukupno</div><div class="v"><span class="fig">48</span><small>treninga</small></div></div>
+          </div>
+          <div class="line">
+            <span class="sq" style="background:rgba(255,181,71,.12);color:var(--warn)"><svg class="i"><use href="#trophy"/></svg></span>
+            <div class="t"><div class="cap">Najjači rekord</div><b>Čučanj</b></div>
+            <span class="r">100 kg × 5</span>
+          </div>
+          <div class="line">
+            <span class="sq" style="background:var(--soft);color:var(--v-lt)"><svg class="i"><use href="#scale"/></svg></span>
+            <div class="t"><div class="cap">Težina</div><b class="tnum">78 kg</b></div>
+            <span class="r" style="color:var(--ok-fg)"><svg class="i"><use href="#down"/></svg>-2 kg</span>
+          </div>
+        </div>
+      </section>
+    </div>
+    <div class="navfade"></div>
+    <nav class="nav" aria-label="Glavna navigacija">
+      <span class="on"><i><svg class="i"><use href="#home"/></svg></i>Početna</span>
+      <span><i><svg class="i"><use href="#dumbbell"/></svg></i>Trening</span>
+      <span><i><svg class="i"><use href="#calplus"/></svg></i>Rezerviši</span>
+      <span><i><svg class="i"><use href="#trend"/></svg></i>Napredak</span>
+      <span><i><svg class="i"><use href="#idcard"/></svg></i>Članarina</span>
+    </nav>
+  </section>
+
+  <!-- 2. AKTIVAN TRENING (pages/athlete/ActiveWorkout.tsx) -->
+  <section class="phone" aria-label="Aktivan trening">
+    <div class="sb" style="background:rgba(11,10,16,.94)"><span>18:14</span><span class="ic"><svg class="f" viewBox="0 0 18 12" width="18" height="12"><use href="#signal"/></svg><svg class="f" viewBox="0 0 16 12" width="16" height="12"><use href="#wifi"/></svg><svg class="f" viewBox="0 0 27 12" width="27" height="12"><use href="#batt"/></svg></span></div>
+    <div class="wbar">
+      <div class="row">
+        <span class="xbtn" aria-label="Zatvori"><svg class="i"><use href="#x"/></svg></span>
+        <div class="t"><div class="cap">Aktivan trening · 18:42</div><b>Vežba 2 od 6 · Serija 3 od 4</b></div>
+        <span class="pulse" aria-label="Trenutni puls"><svg class="f" viewBox="0 0 24 24"><use href="#heart"/></svg><span class="fig">142</span></span>
+      </div>
+      <div class="prog"><i></i></div>
+    </div>
+    <div class="wscr">
+      <div class="wglow"></div>
+      <div class="msg" role="status">
+        <span class="av"><svg class="i"><use href="#chat"/></svg></span>
+        <div class="t"><div class="cap">Trener:</div><p>Odlično ide! Poslednje dve serije drži isti tempo.</p></div>
+        <span class="x"><svg class="i"><use href="#x"/></svg></span>
+      </div>
+
+      <div class="media"><img src="assets/vezbe/veslanje.jpg" alt="Veslanje sa šipkom"></div>
+
+      <div class="ex">
+        <h2>Veslanje sa šipkom</h2>
+        <p>Barbell Row</p>
+        <span class="mus">Leđa</span>
+      </div>
+
+      <div class="targets">
+        <div class="tg"><div class="cap">Serije</div><span class="fig">3<span>/4</span></span></div>
+        <div class="tg"><div class="cap">Cilj reps</div><span class="fig">8</span></div>
+        <div class="tg"><div class="cap">Cilj kg</div><span class="fig">65</span></div>
+      </div>
+
+      <div class="last">
+        <div class="hd"><svg class="i"><use href="#history"/></svg><span class="cap">Prošli put</span><small>3 serije, danas 4</small></div>
+        <div class="chips"><span>60 kg x 8</span><span>60 kg x 8</span><span>62,5 kg x 6</span></div>
+      </div>
+
+      <div class="sets">
+        <div class="srow"><span class="n done"><svg class="i"><use href="#check"/></svg></span><div class="txt"><b>Serija 1</b><span> · 62,5 kg × 8</span></div><svg class="i ed"><use href="#pencil"/></svg></div>
+        <div class="srow"><span class="n done"><svg class="i"><use href="#check"/></svg></span><div class="txt"><b>Serija 2</b><span> · 62,5 kg × 8</span></div><svg class="i ed"><use href="#pencil"/></svg></div>
+        <div class="srow act"><span class="n act">3</span><div class="txt"><b>Serija 3</b><span> · cilj 65 kg × 8</span></div><svg class="i ed"><use href="#chev"/></svg></div>
+      </div>
+    </div>
+    <div class="navfade" style="height:90px;background:linear-gradient(180deg,rgba(11,10,16,0),var(--ink))"></div>
+  </section>
+
+  <!-- 3. ISHRANA (pages/athlete/Nutrition.tsx) -->
+  <section class="phone" aria-label="Ishrana">
+    <div class="glow"></div>
+    <div class="sb"><span>17:26</span><span class="ic"><svg class="f" viewBox="0 0 18 12" width="18" height="12"><use href="#signal"/></svg><svg class="f" viewBox="0 0 16 12" width="16" height="12"><use href="#wifi"/></svg><svg class="f" viewBox="0 0 27 12" width="27" height="12"><use href="#batt"/></svg></span></div>
+    <div class="scr">
+      <span class="cap" style="margin-top:6px">Ishrana</span>
+      <h1 class="h1" style="font-size:32px">Tvoj <span class="gt">plan</span></h1>
+
+      <div class="hero-card totals" style="margin-top:18px">
+        <div class="cap">Danas</div>
+        <div class="kc fig">1420 <span>/ 2230 kcal</span></div>
+        <div class="bar"><i style="width:64%"></i></div>
+        <div class="mac3">
+          <div><small>Proteini</small><b>112<span>/160g</span></b></div>
+          <div><small>UH</small><b>148<span>/240g</span></b></div>
+          <div><small>Masti</small><b>42<span>/70g</span></b></div>
+        </div>
+      </div>
+
+      <section style="margin-top:18px">
+        <div class="cap" style="letter-spacing:.16em">Današnji obroci</div>
+        <div style="font-size:18px;font-weight:700;letter-spacing:-.015em;margin:2px 0 10px">Dan sa treningom</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="meal">
+            <div class="hd">
+              <div><b>Doručak <span>· 08:00</span></b><small>515 kcal</small></div>
+              <span class="log"><svg class="i"><use href="#plus"/></svg>Loguj</span>
+            </div>
+            <ul class="items">
+              <li><b>Ovsene pahuljice</b><span>60g · 225 kcal</span></li>
+              <li><b>Grčki jogurt 2%</b><span>200g · 146 kcal</span></li>
+              <li><b>Borovnice</b><span>100g · 57 kcal</span></li>
+              <li><b>Bademi</b><span>15g · 87 kcal</span></li>
+            </ul>
+          </div>
+          <div class="meal">
+            <div class="hd">
+              <div><b>Ručak <span>· 13:30</span></b><small>636 kcal</small></div>
+              <span class="log"><svg class="i"><use href="#plus"/></svg>Loguj</span>
+            </div>
+            <ul class="items">
+              <li><b>Pileće grudi</b><span>150g · 248 kcal</span></li>
+              <li><b>Kinoa</b><span>80g · 294 kcal</span></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+    <div class="navfade"></div>
+    <nav class="nav" aria-label="Glavna navigacija">
+      <span><i><svg class="i"><use href="#home"/></svg></i>Početna</span>
+      <span><i><svg class="i"><use href="#dumbbell"/></svg></i>Trening</span>
+      <span><i><svg class="i"><use href="#calplus"/></svg></i>Rezerviši</span>
+      <span><i><svg class="i"><use href="#trend"/></svg></i>Napredak</span>
+      <span><i><svg class="i"><use href="#idcard"/></svg></i>Članarina</span>
+    </nav>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <p>Svaki element postoji na pravom ekranu vežbača. Imena, kilaže i obroci su primer.</p>
+  <p>Ishrana nije tab, zato u donjoj traci nijedan nije označen, kao u aplikaciji.</p>
+</footer>
