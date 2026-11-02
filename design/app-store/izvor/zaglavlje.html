@@ -2,57 +2,74 @@
 <html lang="sr">
 <head>
 <meta charset="utf-8">
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700&family=Plus+Jakarta+Sans:wght@800&display=block" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@800&display=block" rel="stylesheet">
 <style>
   /* Zajednicka slika za vrh stranice i pretragu na App Store-u (5244 x 2950, 16:9).
-     App Store je sece: vrh stranice na 21:9 (skida po 351 px gore i dole), pretraga na 3:2
-     (skida po 409 px levo i desno). Sve vazno je u zoni koja ostaje posle oba isecanja:
-     x 409..4835, y 351..2598. */
+
+     Sigurna zona iz Apple-ovog sablona (Figma, okvir Universal): x 1921..3323, y 660..1622.
+     iPhone (izmereno na pregledu u App Store Connect-u): vidi se x 1217..4027 i y 0..1830,
+     gore su Dynamic Island (y do 310) i dugmad nazad/deli (y 405..740), dole bela kartica.
+     Zato je sve simetricno oko x 2622: naslov u sigurnoj zoni, ispod tri telefona u lepezi,
+     a puls na srednjem telefonu je iznad bele kartice. */
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { width: 5244px; height: 2950px; overflow: hidden; }
-  body { position: relative; font-family: "Inter Tight", sans-serif; color: #fff;
+  body { position: relative; color: #fff;
     background:
-      radial-gradient(3000px 2600px at 700px 700px, rgba(139,61,235,.55), transparent 70%),
-      radial-gradient(2600px 2400px at 4700px 900px, rgba(226,76,166,.32), transparent 70%),
-      radial-gradient(3600px 2600px at 3600px 2900px, rgba(91,75,239,.50), transparent 70%),
-      linear-gradient(#0B0A10, #140C26); }
-  /* Sigurna zona iz Apple-ovog sablona (Figma, okvir Universal): x 1921..3323, y 660..1622.
-     Samo ona se vidi svuda (iPhone, iPad, Mac, pretraga). Naslov i gornji deo telefona sa
-     pulsom su u njoj; zadnji telefon i sat su ukras i smeju da se iseku. */
+      radial-gradient(2300px 1500px at 2622px 1650px, rgba(124,58,237,.62), transparent 70%),
+      radial-gradient(3400px 1300px at 2622px 2950px, rgba(91,75,239,.45), transparent 70%),
+      radial-gradient(1500px 1100px at 900px 300px, rgba(226,76,166,.16), transparent 70%),
+      radial-gradient(1500px 1100px at 4344px 300px, rgba(226,76,166,.16), transparent 70%),
+      linear-gradient(#08070D, #110A20 60%, #150C2A); }
+
   .tekst { position: absolute; left: 0; right: 0; top: 690px; text-align: center; }
-  h1 { font-family: "Plus Jakarta Sans"; font-weight: 800; font-size: 156px;
+  h1 { font-family: "Plus Jakarta Sans"; font-weight: 800; font-size: 170px;
     line-height: 1.04; letter-spacing: -.03em; white-space: nowrap; }
-  h1 .z { margin-left: -.13em; }
+  /* Zarez i tacka "vise" van reda, pa se centrira samo tekst (opticka sredina). */
+  h1 .z { display: inline-block; width: 0; position: relative; left: -.11em; }
+  /* Tacka je van okvira prelaza, pa dobija krajnju boju prelaza. */
+  h1 em .z { color: #FF6EC7; -webkit-text-fill-color: #FF6EC7; }
   h1 em { font-style: normal; background: linear-gradient(90deg, #C482FF, #9A86FF 45%, #FF6EC7);
     -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .sl { position: absolute; }
-  .senka { filter: drop-shadow(0 120px 160px rgba(0,0,0,.6)) drop-shadow(0 0 300px rgba(139,61,235,.22)); }
-  .zadnji { left: 1600px; top: 1190px; width: 730px; transform: rotate(-9deg); transform-origin: 50% 0;
-    filter: drop-shadow(0 90px 120px rgba(0,0,0,.6)) brightness(.78); }
-  .prednji { left: 2217px; top: 1045px; width: 810px; }
-  .sat { left: 2950px; top: 1150px; width: 410px; transform: rotate(9deg); }
+
+  .tel { position: absolute; }
+  .sredina { left: 2182px; top: 1095px; width: 880px;
+    filter: drop-shadow(0 110px 140px rgba(0,0,0,.65)) drop-shadow(0 0 260px rgba(139,61,235,.35)); }
+  .bok { top: 1265px; width: 760px; filter: drop-shadow(0 90px 120px rgba(0,0,0,.6)) brightness(.62) saturate(.9); }
+  .levo { left: 1542px; transform: rotate(-10deg); transform-origin: 50% 0; }
+  .desno { left: 2942px; transform: rotate(10deg); transform-origin: 50% 0; }
+
   .zona { position: absolute; left: 1921px; top: 660px; width: 1402px; height: 962px;
     outline: 8px dashed #39FF6A; display: none; }
-  .prikazi-zonu .zona { display: block; }
+  .iphone { position: absolute; left: 1217px; top: 0; width: 2810px; height: 1830px;
+    outline: 8px dashed #FFD60A; display: none; }
+  .prikazi-zonu .zona, .prikazi-zonu .iphone { display: block; }
   .greska { outline: 40px solid red; outline-offset: -40px; }
 </style>
 </head>
 <body>
-<div class="tekst" id="tekst">
+<div class="tekst">
   <h1>Vidiš ko trenira<span class="z">,</span><br><em>dok trenira<span class="z">.</span></em></h1>
 </div>
-<img class="sl zadnji" src="slojevi/tel-a-trening.png" alt="">
-<img class="sl prednji senka" src="slojevi/tel-t-uzivo-detalj.png" alt="">
-<img class="sl sat senka" src="slojevi/sat-prsten.png" alt="">
+<img class="tel bok levo" src="slojevi/tel-t-pocetna.png" alt="">
+<img class="tel bok desno" src="slojevi/tel-zakljucan-ekran.png" alt="">
+<img class="tel sredina" src="slojevi/tel-t-uzivo-detalj.png" alt="">
 <div class="zona"></div>
+<div class="iphone"></div>
 <script>
-  // ?zona=1 crta sigurnu zonu. Provera: naslov mora ceo da stane u sigurnu zonu, inace crveni okvir.
+  // ?zona=1 crta sigurnu zonu (zeleno) i ono sto vidi iPhone (zuto).
+  // Provera: oba reda naslova moraju biti u sigurnoj zoni i centrirana, inace crveni okvir.
   if (new URLSearchParams(location.search).get("zona")) document.body.classList.add("prikazi-zonu");
   document.fonts.ready.then(() => {
-    const r = document.createRange(); r.selectNodeContents(document.querySelector("h1"));
-    const b = r.getBoundingClientRect();
-    document.title = [b.left, b.right, b.top, b.bottom].map(Math.round).join(",");
-    if (b.left < 1921 || b.right > 3323 || b.top < 660 || b.bottom > 1622) document.body.classList.add("greska");
+    const h = document.querySelector("h1");
+    const redovi = [...h.childNodes].filter(n => n.nodeType === 3 || n.tagName === "EM").map(n => {
+      const r = document.createRange();
+      if (n.tagName === "EM") r.selectNodeContents(n.firstChild); else r.selectNodeContents(n);
+      return r.getBoundingClientRect();
+    });
+    document.title = redovi.map(b => [b.left, b.right, b.top, b.bottom].map(Math.round).join(",")).join(" | ");
+    const los = redovi.some(b => b.left < 1921 || b.right > 3323 || b.top < 660 || b.bottom > 1622
+      || Math.abs((b.left + b.right) / 2 - 2622) > 2);
+    if (los) document.body.classList.add("greska");
   });
 </script>
 </body>
