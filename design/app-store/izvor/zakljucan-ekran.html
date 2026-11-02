@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<style>
+  /* Zakljucan ekran iPhone-a (1206 x 2622) sa pravom karticom za pracenje iz aplikacije
+     (isecena iz snimka simulatora). Datum i sat su slozeni ovde, jer simulator na
+     zakljucanom ekranu pokazuje engleski datum. */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1206px; height: 2622px; overflow: hidden; }
+  body { position: relative; color: #fff; font-family: "SF Pro Display", -apple-system, sans-serif;
+    background:
+      radial-gradient(900px 1100px at 180px 500px, rgba(139,61,235,.75), transparent 70%),
+      radial-gradient(800px 900px at 1100px 1300px, rgba(226,76,166,.55), transparent 70%),
+      radial-gradient(1100px 1000px at 500px 2300px, rgba(91,75,239,.7), transparent 70%),
+      linear-gradient(#170B33, #0C0820); }
+  .traka { position: absolute; top: 58px; right: 74px; display: flex; align-items: center; gap: 18px; }
+  .datum { position: absolute; top: 300px; width: 100%; text-align: center; font-size: 64px; font-weight: 600;
+    color: rgba(255,255,255,.88); }
+  .sat { position: absolute; top: 340px; width: 100%; text-align: center; font-size: 330px; font-weight: 600;
+    letter-spacing: -.03em; color: rgba(255,255,255,.93); }
+  .kartica { position: absolute; left: 42px; top: 1788px; width: 1122px; height: 450px; border-radius: 76px;
+    overflow: hidden; }
+  .kartica img { display: block; width: 1122px; }
+  .crta { position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%); width: 420px; height: 15px;
+    border-radius: 8px; background: rgba(255,255,255,.85); }
+</style>
+</head>
+<body>
+<div class="traka">
+  <svg width="58" height="38" viewBox="0 0 58 38"><g fill="#fff"><rect x="0" y="26" width="10" height="12" rx="2.5"/><rect x="16" y="18" width="10" height="20" rx="2.5"/><rect x="32" y="9" width="10" height="29" rx="2.5"/><rect x="48" y="0" width="10" height="38" rx="2.5"/></g></svg>
+  <svg width="54" height="38" viewBox="0 0 24 17"><path fill="#fff" d="M12 16.5 8.2 12.6a5.4 5.4 0 0 1 7.6 0zM4.5 9a10.6 10.6 0 0 1 15 0l-2.2 2.2a7.5 7.5 0 0 0-10.6 0zM.8 5.3a15.9 15.9 0 0 1 22.4 0L21 7.5a12.8 12.8 0 0 0-18 0z"/></svg>
+  <svg width="86" height="40" viewBox="0 0 43 20"><rect x="1" y="1" width="36" height="18" rx="5.5" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2"/><rect x="3.5" y="3.5" width="31" height="13" rx="3.5" fill="#fff"/><path d="M39.5 7v6c1.6-.6 2.5-1.7 2.5-3s-.9-2.4-2.5-3z" fill="rgba(255,255,255,.45)"/></svg>
+</div>
+<div class="datum">Ponedeljak, 2. novembar</div>
+<div class="sat">9:41</div>
+<div class="kartica"><img src="sirovi/t-zakljucan.png" style="margin-left:-42px;margin-top:-1788px;width:1206px" alt=""></div>
+<div class="crta"></div>
+</body>
+</html>

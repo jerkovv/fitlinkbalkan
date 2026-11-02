@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700&family=Plus+Jakarta+Sans:wght@800&display=block" rel="stylesheet">
+<style>
+  /* Jedan App Store slajd (1320 x 2868). Slajd se bira sa ?n=1..10. Telefoni i satovi su
+     gotove slike iz slojevi/ (pravi ih appstore_slike.py). */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1320px; height: 2868px; overflow: hidden; }
+  body { position: relative; font-family: "Inter Tight", sans-serif; color: #fff;
+    background:
+      radial-gradient(1100px 1000px at 140px 240px, rgba(139,61,235,.55), transparent 70%),
+      radial-gradient(900px 900px at 1250px 700px, rgba(226,76,166,.30), transparent 70%),
+      radial-gradient(1400px 1300px at 660px 2300px, rgba(91,75,239,.45), transparent 70%),
+      linear-gradient(#0B0A10, #140C26); }
+  .sadrzaj { position: absolute; left: 80px; right: 80px; top: 140px; text-align: center; }
+  .znacka { display: inline-flex; align-items: center; height: 64px; padding: 0 30px; border-radius: 32px;
+    font-weight: 700; font-size: 28px; letter-spacing: .22em; text-transform: uppercase;
+    background: linear-gradient(90deg, #8B3DEB, #5B4BEF 50%, #E24CA6); }
+  h1 { margin-top: 44px; font-family: "Plus Jakarta Sans"; font-weight: 800; font-size: 96px;
+    line-height: 1.04; letter-spacing: -.03em; white-space: nowrap; }
+  h1 .z { margin-left: -.13em; }
+  h1 em { font-style: normal; background: linear-gradient(90deg, #C482FF, #9A86FF 45%, #FF6EC7);
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  /* Opis uvek zauzima dva reda (jedan red se centrira), pa telefon stoji isto na svim slajdovima. */
+  .opis { margin: 30px auto 0; max-width: 1040px; height: 111px; display: flex; align-items: center;
+    justify-content: center; font-size: 42px; line-height: 1.32; font-weight: 500; color: #B9B2C9;
+    text-wrap: balance; }
+  .oznake { margin-top: 44px; display: flex; gap: 18px; justify-content: center; flex-wrap: nowrap; }
+  .oznaka { display: inline-flex; align-items: center; gap: 16px; height: 84px; padding: 0 30px 0 12px;
+    border-radius: 42px; font-size: 36px; font-weight: 600; white-space: nowrap;
+    background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.04));
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,.12), inset 0 2px 0 rgba(255,255,255,.10), 0 14px 34px rgba(0,0,0,.35); }
+  .ikona { width: 60px; height: 60px; border-radius: 30px; display: grid; place-items: center; }
+  .ikona svg { width: 32px; height: 32px; }
+  .crvena { background: rgba(255,69,58,.18); box-shadow: inset 0 0 0 2px rgba(255,69,58,.35); color: #FF6B61; }
+  .narandzasta { background: rgba(255,159,10,.18); box-shadow: inset 0 0 0 2px rgba(255,159,10,.35); color: #FFB547; }
+  .zuta { background: rgba(255,214,10,.16); box-shadow: inset 0 0 0 2px rgba(255,214,10,.32); color: #FFD60A; }
+  .zelena { background: rgba(61,220,151,.16); box-shadow: inset 0 0 0 2px rgba(61,220,151,.35); color: #3DDC97; }
+  .ljubicasta { background: rgba(196,162,255,.16); box-shadow: inset 0 0 0 2px rgba(196,162,255,.35); color: #C4A2FF; }
+  .roze { background: rgba(255,110,199,.16); box-shadow: inset 0 0 0 2px rgba(255,110,199,.35); color: #FF7CC6; }
+  .slika { position: absolute; filter: drop-shadow(0 50px 70px rgba(0,0,0,.55)) drop-shadow(0 0 120px rgba(139,61,235,.25)); }
+  .greska { outline: 16px solid red; outline-offset: -16px; }
+</style>
+</head>
+<body>
+<div class="sadrzaj">
+  <div class="znacka" id="znacka"></div>
+  <h1 id="naslov"></h1>
+  <div class="opis" id="opis"></div>
+  <div class="oznake" id="oznake"></div>
+</div>
+<img class="slika" id="slika" alt="">
+<script>
+const IKONE = {
+  srce: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-8.5-5.6-8.5-11.6C3.5 6.1 6 3.8 8.7 3.8c1.5 0 2.6.7 3.3 1.7.7-1 1.8-1.7 3.3-1.7 2.7 0 5.2 2.3 5.2 5.6C20.5 15.4 12 21 12 21z"/></svg>',
+  plamen: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.5 2c.6 3.6 5.5 6.2 5.5 11.6A6 6 0 0 1 6 13.6c0-2.9 1.6-4.6 3-6 .3 2.1 1.3 3.2 2.4 3.4C10.8 7.6 11.4 4.5 12.5 2z"/></svg>',
+  sat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="6" y="5.5" width="12" height="13" rx="3.2"/><path d="M9 5.5 9.6 2.5h4.8l.6 3M9 18.5l.6 3h4.8l.6-3" stroke-linejoin="round"/><path d="M12 9.5v3l1.8 1.2" stroke-linecap="round"/></svg>',
+  ziv: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="currentColor"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2" opacity=".45"/></svg>',
+  brava: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="10.5" width="14" height="10.5" rx="3"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3"/></svg>',
+  kalendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>',
+  cekanje: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
+  gost: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="9.5" cy="8" r="3.8"/><path d="M3 20c.4-3.4 3.1-5.6 6.5-5.6s6.1 2.2 6.5 5.6M19 8v6M16 11h6"/></svg>',
+  novac: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.6"/></svg>',
+  kvacica: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M8.3 12.4l2.6 2.6 4.9-5.4"/></svg>',
+  paznja: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5.2M12 16.3v.1"/></svg>',
+  rast: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg>',
+  teg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></svg>',
+  snimak: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.3l5 2.7-5 2.7z" fill="currentColor" stroke-linejoin="round"/></svg>',
+  makro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5V12h8.5" stroke-linecap="round"/></svg>',
+  istorija: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1M3.5 4v4.5H8"/><path d="M12 8v4l3 2"/></svg>',
+  serije: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6.5h11M9 12h11M9 17.5h11M4.5 6.5h.1M4.5 12h.1M4.5 17.5h.1"/></svg>',
+  zone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12h4l2.5-6.5 4.5 13 2.5-6.5h5.5"/></svg>',
+  pehar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0V4zM8 6H5a3 3 0 0 0 3.2 4M16 6h3a3 3 0 0 1-3.2 4M12 13v4M8.5 20.5h7"/></svg>',
+};
+
+const ZT = "Za trenere", ZV = "Za vežbače";
+const SLAJDOVI = {
+  1:  { znak: ZT, r1: "Vidiš ko trenira,", r2: "dok trenira.", opis: "Puls, kalorije i vežba svakog klijenta uživo.",
+        oznake: [["srce", "crvena", "Puls uživo"], ["plamen", "narandzasta", "Kalorije"], ["sat", "ljubicasta", "Apple Watch"]],
+        tel: "t-pocetna" },
+  2:  { znak: ZT, r1: "Cela grupa na", r2: "zaključanom ekranu.", opis: "Ko trenira, puls i kalorije, bez otvaranja aplikacije.",
+        oznake: [["ziv", "zelena", "Uživo"], ["brava", "ljubicasta", "Na zaključanom ekranu"]],
+        tel: "zakljucan-ekran" },
+  3:  { znak: ZT, r1: "Termini se", r2: "popune sami.", opis: "Klijenti rezervišu sami, a ti upisuješ i goste.",
+        oznake: [["kalendar", "ljubicasta", "Rezervacije"], ["cekanje", "zuta", "Lista čekanja"], ["gost", "zelena", "Upis gosta"]],
+        tel: "t-kalendar" },
+  4:  { znak: ZT, r1: "Članarina", r2: "u dva klika.", opis: "Potvrdi uplatu, ili je vodi kao neplaćenu dok novac ne stigne.",
+        oznake: [["novac", "zelena", "Keš ili račun"], ["kvacica", "ljubicasta", "Plaćeno"], ["paznja", "zuta", "Nije plaćeno"]],
+        tel: "t-uplate" },
+  5:  { znak: ZT, r1: "Znaš koliko si", r2: "zaradio.", opis: "Zarada po mesecu i spisak onih koji još nisu platili.",
+        oznake: [["rast", "zelena", "Rast po mesecu"], ["paznja", "zuta", "Ko nije platio"]],
+        tel: "t-finansije" },
+  6:  { znak: ZT, r1: "4.699 vežbi", r2: "u biblioteci.", opis: "Svaka vežba sa snimkom pokreta i mišićnom grupom.",
+        oznake: [["teg", "ljubicasta", "Po mišićnoj grupi"], ["snimak", "roze", "Sa snimkom"]],
+        tel: "t-biblioteka" },
+  7:  { znak: ZT, r1: "Plan ishrane", r2: "do grama.", opis: "Kalorije i makroi se računaju sami, za svaki obrok.",
+        oznake: [["makro", "narandzasta", "Kalorije i makroi"], ["kalendar", "ljubicasta", "Nedeljni raspored"]],
+        tel: "t-ishrana" },
+  8:  { znak: ZV, r1: "Vidiš tačno", r2: "kako se radi.", opis: "Animacija vežbe, prošli put, puls i kalorije na jednom ekranu.",
+        oznake: [["snimak", "roze", "Animacija"], ["istorija", "zuta", "Prošli put"], ["srce", "crvena", "Puls i kalorije"]],
+        tel: "a-trening" },
+  9:  { znak: ZV, r1: "Trening bez", r2: "telefona u ruci.", opis: "Serije, pauza, zone pulsa i kalorije na satu.",
+        oznake: [["serije", "ljubicasta", "Serije na ruci"], ["zone", "roze", "Zone pulsa"], ["plamen", "narandzasta", "Kalorije"]],
+        satovi: true },
+  10: { znak: ZV, r1: "Napredak koji", r2: "se vidi.", opis: "Treninzi, niz dana i lični rekordi na jednom mestu.",
+        oznake: [["plamen", "narandzasta", "Niz treninga"], ["pehar", "zuta", "Lični rekordi"]],
+        tel: "a-napredak" },
+};
+
+const s = SLAJDOVI[new URLSearchParams(location.search).get("n") || "1"];
+const zarez = t => t.replace(/([,.])$/, '<span class="z">$1</span>');
+document.getElementById("znacka").textContent = s.znak;
+document.getElementById("naslov").innerHTML = zarez(s.r1) + "<br><em>" + zarez(s.r2) + "</em>";
+document.getElementById("opis").textContent = s.opis;
+document.getElementById("oznake").innerHTML = s.oznake.map(([ik, boja, t]) =>
+  `<span class="oznaka"><span class="ikona ${boja}">${IKONE[ik]}</span>${t}</span>`).join("");
+
+const slika = document.getElementById("slika");
+document.fonts.ready.then(() => {
+  const dno = document.querySelector(".oznake").getBoundingClientRect().bottom;
+  if (s.satovi) {
+    slika.src = "slojevi/satovi.png";
+    slika.style.width = "1110px";
+    slika.style.left = (660 - 1110 / 2 + 35) + "px";
+    slika.style.top = (dno + 30) + "px";
+  } else {
+    slika.src = "slojevi/tel-" + s.tel + ".png";
+    slika.style.left = "48px";                     // sredina tela je na 612 px slike
+    slika.style.top = (dno + 70 - 25) + "px";      // telo pocinje 25 px ispod vrha slike
+  }
+  // Provera: naslov i oznake moraju da stanu, opis najvise dva reda.
+  const sir = el => el.scrollWidth > el.clientWidth + 1;
+  const opis = document.getElementById("opis");
+  if (sir(document.getElementById("naslov")) || sir(document.getElementById("oznake"))
+      || opis.scrollHeight > opis.clientHeight + 1
+      || document.getElementById("naslov").getBoundingClientRect().width > 1160) {
+    document.body.classList.add("greska");
+  }
+});
+</script>
+</body>
+</html>
