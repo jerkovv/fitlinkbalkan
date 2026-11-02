@@ -22,10 +22,33 @@
   h1 em { font-style: normal; background: linear-gradient(90deg,#B57BFF,#8C7DFF 45%,#FF7CC6);
     -webkit-background-clip: text; background-clip: text; color: transparent; }
   p { margin-top: 3.2vw; font-weight: 500; font-size: 4.3vw; line-height: 1.38; color: #B9B2C9; max-width: 82vw; }
-  .ekran { position: absolute; left: 50%; transform: translateX(-50%); width: 82vw; z-index: 1;
-    border-radius: 7.6vw; overflow: hidden; background: #000;
-    box-shadow: 0 0 0 .35vw rgba(255,255,255,.10), 0 4vw 12vw rgba(139,61,235,.45), 0 1vw 4vw rgba(0,0,0,.6); }
+  /* iPhone: titanijumski rub, crna ivica oko ekrana, Dynamic Island i bocni dugmici. */
+  .telefon { position: absolute; left: 50%; transform: translateX(-50%); width: 84vw; z-index: 1;
+    padding: 1.45vw; border-radius: 9.4vw; background: #050506;
+    box-shadow:
+      0 0 0 .32vw #2C2A31,
+      0 0 0 .55vw #4A4752,
+      0 0 0 .7vw #1A191E,
+      0 5vw 14vw rgba(139,61,235,.42),
+      0 1.5vw 5vw rgba(0,0,0,.65); }
+  .telefon::before { content: ""; position: absolute; inset: .25vw; border-radius: 9.2vw;
+    box-shadow: inset 0 0 0 .18vw rgba(255,255,255,.06); pointer-events: none; }
+  .dugme { position: absolute; width: .75vw; border-radius: .4vw;
+    background: linear-gradient(90deg, #2A2830, #57535F 55%, #2A2830); }
+  .dugme.akcija { left: -1.25vw; top: 19vw; height: 6vw; }
+  .dugme.glas1  { left: -1.25vw; top: 30vw; height: 11.5vw; }
+  .dugme.glas2  { left: -1.25vw; top: 44vw; height: 11.5vw; }
+  .dugme.napajanje { right: -1.25vw; top: 33vw; height: 17vw; }
+  .dugme.kamera { right: -1.25vw; top: 64vw; height: 9vw; }
+  .ekran { position: relative; border-radius: 8vw; overflow: hidden; background: #000;
+    container-type: inline-size; }
   .ekran img { display: block; width: 100%; }
+  /* Mere sa pravog snimka iPhone 17 Pro: 375 x 111 px na 42 px od vrha, na sirini 1206. */
+  .ostrvo { position: absolute; left: 50%; transform: translateX(-50%);
+    top: 3.48cqw; width: 31.1cqw; height: 9.2cqw; border-radius: 4.6cqw; background: #000; }
+  .ostrvo::after { content: ""; position: absolute; right: 7.5cqw; top: 50%; transform: translateY(-50%);
+    width: 3.1cqw; height: 3.1cqw; border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #141C2E 0%, #070A12 55%, #000 100%); }
 </style>
 </head>
 <body>
@@ -35,7 +58,11 @@
   <h1 id="naslov"></h1>
   <p id="opis"></p>
 </div>
-<div class="ekran" id="ekran"><img id="slika" alt=""></div>
+<div class="telefon" id="ekran">
+  <i class="dugme akcija"></i><i class="dugme glas1"></i><i class="dugme glas2"></i>
+  <i class="dugme napajanje"></i><i class="dugme kamera"></i>
+  <div class="ekran"><img id="slika" alt=""><div class="ostrvo"></div></div>
+</div>
 <script>
 const SLAJDOVI = {
   1:  { nad: "Za trenere", naslov: "Svaki klijent,<br><em>uživo.</em>", opis: "Puls, kalorije i serija dok trenira, sa sata ili narukvice za puls.", slika: "t-uzivo-detalj" },
