@@ -67,14 +67,14 @@
 const SLAJDOVI = {
   1:  { nad: "Za trenere", naslov: "Svaki klijent,<br><em>uživo.</em>", opis: "Puls, kalorije i serija dok trenira, sa sata ili narukvice za puls.", slika: "t-uzivo-detalj" },
   2:  { nad: "Za vežbače", naslov: "Trening koji te<br><em>vodi.</em>", opis: "Serije, kilaže, puls i kalorije na jednom ekranu.", slika: "a-trening" },
-  3:  { nad: "Puls i kalorije", naslov: "Kalorije sa sata<br>ili <em>narukvice.</em>", opis: "Apple Watch, narukvica za puls ili telefon. Zone pulsa tokom celog treninga.", slika: "a-slobodan" },
+  3:  { nad: "Puls i kalorije", naslov: "Kalorije sa sata<br>ili <em>narukvice.</em>", opis: "Apple Watch, narukvica ili telefon, sa zonama pulsa.", slika: "a-slobodan" },
   4:  { nad: "Za trenere", naslov: "Termini bez<br><em>poruka.</em>", opis: "Klijenti rezervišu sami, a ti vidiš ko dolazi i ko čeka.", slika: "t-kalendar" },
   5:  { nad: "Za trenere", naslov: "Program za<br><em>par minuta.</em>", opis: "Dani, vežbe i serije, pa jednim dodirom klijentu.", slika: "t-urednik" },
   6:  { nad: "Za vežbače", naslov: "Pauza se<br><em>meri sama.</em>", opis: "Odbrojavanje, sledeća serija i puls koji se smiruje.", slika: "a-odmor" },
-  7:  { nad: "Za trenere", naslov: "Uplate pod<br><em>kontrolom.</em>", opis: "Članarine, zarada i ko još nije platio.", slika: "t-finansije" },
+  7:  { nad: "Za trenere", naslov: "Uplate pod<br><em>kontrolom.</em>", opis: "Članarine, mesečna zarada i spisak onih koji još nisu platili.", slika: "t-finansije" },
   8:  { nad: "Za vežbače", naslov: "Ishrana od<br><em>tvog trenera.</em>", opis: "Kalorije i makroi za danas, obrok po obrok.", slika: "a-ishrana" },
   9:  { nad: "Za vežbače", naslov: "Napredak koji<br><em>se vidi.</em>", opis: "Treninzi, nizovi i lični rekordi na jednom mestu.", slika: "a-napredak" },
-  10: { nad: "Za vežbače", naslov: "Rezervacija<br><em>bez poziva.</em>", opis: "Slobodni termini, lista čekanja i otkazivanje u roku.", slika: "a-rezervisi" },
+  10: { nad: "Za vežbače", naslov: "Rezervacija<br><em>bez poziva.</em>", opis: "Slobodni termini, lista čekanja i jasna pravila otkazivanja.", slika: "a-rezervisi" },
 };
 const i = parseInt(location.hash.slice(1) || "1", 10);
 const s = SLAJDOVI[i];
@@ -82,10 +82,16 @@ document.getElementById("nad").textContent = s.nad;
 document.getElementById("naslov").innerHTML = s.naslov;
 document.getElementById("opis").textContent = s.opis;
 document.getElementById("slika").src = "sirovi/" + s.slika + ".png";
-// Ekran pocinje ispod teksta; donji deo izlazi van slike.
-requestAnimationFrame(() => {
+// Telefon stoji na istoj visini na svim slikama (prostor za naslov u dva reda i opis
+// u dva reda). Mera tek kad se font ucita; duzi tekst se oznaci crvenim okvirom.
+document.getElementById("ekran").style.top = "66vw";
+document.fonts.ready.then(() => {
   const t = document.querySelector(".tekst").getBoundingClientRect();
-  document.getElementById("ekran").style.top = (t.bottom + window.innerWidth * 0.075) + "px";
+  const telefon = window.innerWidth * 0.66;
+  if (t.bottom > telefon - window.innerWidth * 0.04) {
+    document.body.style.outline = "1.5vw solid red";
+  }
+  document.title = "tekst do " + Math.round(t.bottom / window.innerWidth * 100) + "vw";
 });
 </script>
 </body>
