@@ -38,6 +38,10 @@ SATOVI_OBLAST = [(205, 730, 700, 1600), (635, 1280, 1195, 2205)]
 SATOVI_EKRAN = [(274, 958, 349, 416), (711, 1513, 374, 446)]
 SATOVI_SNIMCI = ["01-v-set", "03-prsten"]
 
+# Redosled na App Store-u (brojevi su slajdovi iz slajd.html). Prve tri se vide i u
+# pretrazi: pracenje uzivo, trening vezbaca, termini.
+REDOSLED = [1, 8, 3, 4, 5, 9, 2, 7, 10, 6]
+
 SNIMCI = ["t-pocetna", "zakljucan-ekran", "t-kalendar", "t-uplate", "t-finansije",
           "t-biblioteka", "t-ishrana", "a-trening", "a-napredak"]
 
@@ -61,6 +65,13 @@ def obojeno(c, a, bg):
 def maska(w, h, r):
     m = Image.new("L", (w * 4, h * 4), 0)
     ImageDraw.Draw(m).rounded_rectangle([0, 0, w * 4 - 1, h * 4 - 1], radius=r * 4, fill=255)
+    return m.resize((w, h), Image.LANCZOS)
+
+
+def ostrvo_maska(w, h):
+    """Pilula od 1 px manja sa svake strane, da ivica ostrva ne nosi stari rub."""
+    m = Image.new("L", (w * 4, h * 4), 0)
+    ImageDraw.Draw(m).rounded_rectangle([4, 4, w * 4 - 5, h * 4 - 5], radius=(h * 4 - 8) // 2, fill=255)
     return m.resize((w, h), Image.LANCZOS)
 
 
@@ -105,10 +116,20 @@ def okvir_telefona():
     a = a * (np.asarray(obl) / 255.0)
     a[EKRAN[1] - y0:EKRAN[3] - y0, EKRAN[0] - x0:EKRAN[2] - x0] = 1
     boja = obojeno(c, a, m[y0:y1, 40][:, None, :])
+    # Stari ekran je bio beo: ceo ekran (i 3 px oko njega, sve je to crna ivica) postaje
+    # crn, inace u uglovima ostaje tanka bela linija izmedju ivice i novog snimka.
+    boja[EKRAN[1] - y0 - 3:EKRAN[3] - y0 + 3, EKRAN[0] - x0 - 3:EKRAN[2] - x0 + 3] = 0
     rgba = Image.fromarray(np.dstack([boja, a * 255]).astype(np.uint8), "RGBA")
     l = np.asarray(Image.open(put).convert("L")).astype(int)
-    ostrvo = Image.open(put).convert("RGB").crop(OSTRVO)
-    return rgba, kriva_ugla(l), ostrvo
+    # Ostrvo sa starog slajda ima svetao rub od belog ekrana: na rubu (6 px) sve sto nije
+    # crno postaje crno; kamera u sredini ostaje netaknuta.
+    o = np.asarray(Image.open(put).convert("RGB").crop(OSTRVO)).copy()
+    h, w = o.shape[:2]
+    unutra = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(unutra).rounded_rectangle([6, 6, w - 7, h - 7], radius=(h - 12) // 2, fill=255)
+    rub = np.asarray(unutra) == 0
+    o[rub & (o.max(axis=2) > 25)] = 0
+    return rgba, kriva_ugla(l), Image.fromarray(o)
 
 
 def telefon(okvir, kriva, ostrvo, snimak):
@@ -121,7 +142,7 @@ def telefon(okvir, kriva, ostrvo, snimak):
     sl.paste(s, (ex0, ey0), maska_ekrana(ew, eh, kriva, k))
     ow, oh = round(ostrvo.width * k), round(ostrvo.height * k)
     sl.paste(ostrvo.resize((ow, oh), Image.LANCZOS),
-             (round((OSTRVO[0] - ISECAK[0]) * k), round((OSTRVO[1] - ISECAK[1]) * k)), maska(ow, oh, oh // 2))
+             (round((OSTRVO[0] - ISECAK[0]) * k), round((OSTRVO[1] - ISECAK[1]) * k)), ostrvo_maska(ow, oh))
     return sl
 
 
@@ -167,10 +188,10 @@ if __name__ == "__main__":
     print("satovi")
 
     v = int(time.time())
-    for i in range(1, 11):
+    for i, slajd in enumerate(REDOSLED, 1):
         n = f"{i:02d}"
         put = os.path.join(IZLAZ_VELIKI, n + ".png")
-        snimi(f"file://{OVDE}/slajd.html?n={i}&v={v}", put)
+        snimi(f"file://{OVDE}/slajd.html?n={slajd}&v={v}", put)
         im = Image.open(put).convert("RGB")
         im.save(put, optimize=True)
         im.resize((1206, 2622), Image.LANCZOS).save(os.path.join(IZLAZ_SREDNJI, n + ".png"), optimize=True)
