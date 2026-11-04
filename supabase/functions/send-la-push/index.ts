@@ -190,6 +190,115 @@ async function isAuthorizedToken(
   return true;
 }
 
+// ---- FCM (Android) - ziva kartica kao data poruka ----------------------------
+//
+// Android nema Live Activity. Nativna Android aplikacija prijavi FCM znak kroz
+// trainer_set_la_token sa paketom "fcm:<paket>", pa okidaci rade isto kao za
+// iOS, a ovde se umesto APNs-a salje FCM data poruka visokog prioriteta. Telefon
+// iz nje sam osvezi stalno obavestenje (Live Update). Tajne iste kao send-push:
+// FCM_PROJECT_ID, FCM_CLIENT_EMAIL, FCM_PRIVATE_KEY.
+
+let fcmKey: CryptoKey | null = null;
+let fcmToken: { token: string; exp: number } | null = null;
+
+async function getFcmAccessToken(): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  if (fcmToken && now < fcmToken.exp - 300) return fcmToken.token;
+
+  const clientEmail = Deno.env.get("FCM_CLIENT_EMAIL");
+  const pem = Deno.env.get("FCM_PRIVATE_KEY");
+  if (!clientEmail || !pem) throw new Error("FCM_CLIENT_EMAIL / FCM_PRIVATE_KEY missing");
+  if (!fcmKey) {
+    fcmKey = await crypto.subtle.importKey(
+      "pkcs8",
+      pemToPkcs8Bytes(pem),
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+  }
+  const header = { alg: "RS256", typ: "JWT" };
+  const payload = {
+    iss: clientEmail,
+    scope: "https://www.googleapis.com/auth/firebase.messaging",
+    aud: "https://oauth2.googleapis.com/token",
+    iat: now,
+    exp: now + 3600,
+  };
+  const signingInput =
+    `${b64urlFromString(JSON.stringify(header))}.${b64urlFromString(JSON.stringify(payload))}`;
+  const sig = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    fcmKey,
+    new TextEncoder().encode(signingInput),
+  );
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: `${signingInput}.${b64urlFromBytes(new Uint8Array(sig))}`,
+    }),
+  });
+  const j = await res.json();
+  if (!res.ok || !j.access_token) {
+    throw new Error(`FCM token exchange failed: ${res.status}`);
+  }
+  fcmToken = { token: j.access_token, exp: now + (j.expires_in ?? 3600) };
+  return fcmToken.token;
+}
+
+async function sendFcmZiva(
+  token: string,
+  event: string,
+  contentState: unknown,
+  staleSeconds: number,
+): Promise<SendResult> {
+  const projectId = Deno.env.get("FCM_PROJECT_ID");
+  if (!projectId) throw new Error("FCM_PROJECT_ID missing");
+  const res = await fetch(
+    `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${await getFcmAccessToken()}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        message: {
+          token,
+          // Samo data (bez notification): aplikacija sama crta karticu.
+          data: {
+            kind: "trainer_live",
+            event,
+            content: JSON.stringify(contentState),
+            sent_at: String(Math.floor(Date.now() / 1000)),
+            stale_seconds: String(staleSeconds),
+          },
+          // Stara poruka nema vrednost: nova je uvek tacnija.
+          android: { priority: "HIGH", ttl: `${Math.max(30, staleSeconds)}s`, collapse_key: "trainer_live" },
+        },
+      }),
+    },
+  );
+  let reason: string | null = null;
+  let bodyText: string | null = null;
+  if (res.status !== 200) {
+    try {
+      bodyText = await res.text();
+      const j = JSON.parse(bodyText);
+      const detalji: Array<Record<string, unknown>> = Array.isArray(j?.error?.details) ? j.error.details : [];
+      reason = (detalji.find((d) => typeof d?.errorCode === "string")?.errorCode as string | undefined) ??
+        j?.error?.status ?? null;
+    } catch {
+      reason = null;
+    }
+  } else {
+    await res.arrayBuffer().catch(() => undefined);
+  }
+  return { status: res.status, reason, apnsId: null, body: bodyText };
+}
+
 // ---- Handler ----------------------------------------------------------------
 
 Deno.serve(async (req) => {
@@ -238,6 +347,17 @@ Deno.serve(async (req) => {
     }
     if (event !== "update" && event !== "end") {
       return json({ error: "event must be 'update' or 'end'" }, 400);
+    }
+
+    // Android (nativna aplikacija): paket "fcm:..." znaci da je znak FCM.
+    const trazenPaket = (body?.bundle ?? "").toString().trim();
+    if (trazenPaket.startsWith("fcm:")) {
+      const tailF = token.slice(-6);
+      const rf = await sendFcmZiva(token, event, contentState, staleSeconds);
+      console.log(
+        `send-la-push: token …${tailF} (fcm) event=${event} status=${rf.status} reason=${rf.reason}`,
+      );
+      return json({ ok: rf.status === 200, host: "fcm", event, status: rf.status, reason: rf.reason });
     }
 
     const nowSec = Math.floor(Date.now() / 1000);

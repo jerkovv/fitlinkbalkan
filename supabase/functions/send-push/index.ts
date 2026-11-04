@@ -152,6 +152,57 @@ async function sendToHost(
 // Tajne: FCM_PROJECT_ID, FCM_CLIENT_EMAIL, FCM_PRIVATE_KEY - sve tri iz JSON-a
 // koji Firebase da kad se napravi servisni nalog.
 
+const FCM_REZERVISANO = new Set(["from", "notification", "message_type", "collapse_key"]);
+const FCM_TELO_BAJTOVA = 1000;
+
+/// Skracuje tekst tako da u UTF-8 stane u granicu, bez secenja znaka na pola.
+function skratiNaBajtove(s: string, granica: number): string {
+  const enc = new TextEncoder();
+  if (enc.encode(s).length <= granica) return s;
+  let out = "";
+  let bajtova = 0;
+  for (const znak of s) {
+    const n = enc.encode(znak).length;
+    if (bajtova + n + 3 > granica) break;
+    out += znak;
+    bajtova += n;
+  }
+  return out + "...";
+}
+
+/// Kanal obavestenja na Androidu, isti kao KanaliObavestenja.kanalZa u aplikaciji.
+function kanalZa(kind: string | undefined): string {
+  switch (kind ?? "") {
+    case "message_from_trainer":
+    case "message":
+      return "fitlink_poruke";
+    case "waitlist_promoted":
+    case "booking_canceled_by_trainer":
+    case "booking_added_by_trainer":
+    case "booking_created":
+    case "booking_canceled":
+    case "waitlist_joined":
+      return "fitlink_termini";
+    case "membership_expiring":
+    case "membership_expired":
+    case "membership_activated":
+    case "membership_rejected":
+    case "payment_request":
+    case "payment_marked":
+    case "fitlink_sub_expiring":
+    case "fitlink_sub_expired":
+      return "fitlink_clanarina";
+    case "program_assigned":
+    case "nutrition_assigned":
+    case "workout_forgotten":
+    case "workout_completed":
+    case "pr_set":
+      return "fitlink_treninzi";
+    default:
+      return "fitlink_obavestenja";
+  }
+}
+
 let fcmKey: CryptoKey | null = null;
 let fcmToken: { token: string; exp: number } | null = null;
 
@@ -220,12 +271,19 @@ async function sendFcm(
   if (!projectId) throw new Error("FCM_PROJECT_ID missing");
 
   // FCM prima data iskljucivo kao string:string. Sve sto nije string mora da
-  // se serijalizuje, inace Google odbije ceo zahtev sa 400.
+  // se serijalizuje, inace Google odbije ceo zahtev sa 400. Rezervisana imena
+  // (from, notification, message_type, collapse_key, google.*, gcm.*) Google
+  // takodje odbija, pa se preskacu.
   const flat: Record<string, string> = {};
   for (const [k, v] of Object.entries(data)) {
     if (v === null || v === undefined) continue;
+    if (FCM_REZERVISANO.has(k) || /^(google|gcm)/i.test(k)) continue;
     flat[k] = typeof v === "string" ? v : JSON.stringify(v);
   }
+  // Cela poruka sme do 4096 bajtova; dug tekst (npr. obavestenje svim
+  // vezbacima) se skracuje, da Google ne odbije ceo zahtev.
+  const telo = body ? skratiNaBajtove(body, FCM_TELO_BAJTOVA) : null;
+  const naslov = skratiNaBajtove(title, 300);
 
   const res = await fetch(
     `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
@@ -238,11 +296,17 @@ async function sendFcm(
       body: JSON.stringify({
         message: {
           token,
-          notification: body ? { title, body } : { title },
+          notification: telo ? { title: naslov, body: telo } : { title: naslov },
           data: flat,
           android: {
             priority: "HIGH",
-            notification: { sound: "default", default_vibrate_timings: true },
+            notification: {
+              sound: "default",
+              default_vibrate_timings: true,
+              // Kanal po vrsti (nativna Android aplikacija ih pravi). Stari
+              // klijent koji kanal nema pada na podrazumevani iz manifesta.
+              channel_id: kanalZa(flat.kind),
+            },
           },
         },
       }),
@@ -254,8 +318,25 @@ async function sendFcm(
     try {
       const j = await res.json();
       // Google vraca ugnjezden kod; UNREGISTERED znaci mrtav token, isto sto
-      // je kod Apple-a "Unregistered".
-      reason = j?.error?.details?.[0]?.errorCode ?? j?.error?.status ?? null;
+      // je kod Apple-a "Unregistered". INVALID_ARGUMENT obicno znaci da je
+      // PORUKA losa, ne token; token je los samo kad BadRequest navodi polje
+      // message.token, i tada se vraca INVALID_TOKEN.
+      const detalji: Array<Record<string, unknown>> = Array.isArray(j?.error?.details)
+        ? j.error.details
+        : [];
+      const kod = detalji.find((d) => typeof d?.errorCode === "string")?.errorCode as
+        | string
+        | undefined;
+      reason = kod ?? j?.error?.status ?? null;
+      if (reason === "INVALID_ARGUMENT") {
+        const losToken = detalji.some((d) =>
+          Array.isArray(d?.fieldViolations) &&
+          (d.fieldViolations as Array<Record<string, unknown>>).some((f) =>
+            f?.field === "message.token"
+          )
+        );
+        if (losToken) reason = "INVALID_TOKEN";
+      }
     } catch {
       reason = null;
     }
@@ -462,11 +543,14 @@ Deno.serve(async (req) => {
             `send-push: FAIL token …${tail} (${host}) status=${r.status} reason=${r.reason}`,
           );
           // Mrtav token -> obrisi red.
-          // "Unregistered"/"BadDeviceToken" su Apple-ovi, "UNREGISTERED" i
-          // "INVALID_ARGUMENT" Google-ovi - u oba slucaja token je mrtav.
+          // "Unregistered"/"BadDeviceToken" su Apple-ovi; kod Google-a samo
+          // UNREGISTERED, SENDER_ID_MISMATCH i INVALID_TOKEN (INVALID_ARGUMENT
+          // koji navodi message.token). Obican INVALID_ARGUMENT je losa poruka
+          // i ne sme da obrise korisnikove Android tokene.
           if (
             r.reason === "Unregistered" || r.reason === "BadDeviceToken" ||
-            r.reason === "UNREGISTERED" || r.reason === "INVALID_ARGUMENT"
+            r.reason === "UNREGISTERED" || r.reason === "SENDER_ID_MISMATCH" ||
+            r.reason === "INVALID_TOKEN"
           ) {
             const { error: delErr } = await admin
               .from("device_push_tokens")
