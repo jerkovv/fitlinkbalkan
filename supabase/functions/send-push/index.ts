@@ -182,6 +182,9 @@ function kanalZa(kind: string | undefined): string {
     case "booking_created":
     case "booking_canceled":
     case "waitlist_joined":
+    case "session_reminder":
+    case "day_digest":
+    case "tomorrow_digest":
       return "fitlink_termini";
     case "membership_expiring":
     case "membership_expired":
