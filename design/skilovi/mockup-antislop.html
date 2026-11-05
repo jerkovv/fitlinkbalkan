@@ -1,0 +1,906 @@
+<!doctype html>
+<html lang="sr-Latn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FitLink po anti-slop skilu</title>
+<meta name="description" content="Mockup šest ekrana FitLink aplikacije, dizajniran po anti-slop skilu.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Razlozi odluka (R-31), jedna linija po odluci:
+   Podloga ekrana: grafit, ne ljubicasto-crna; aplikacija se gleda usred treninga, sa klupe, a FitLink je vec Ponoc.
+   Ljubicasta: boja marke, samo tamo gde korisnik nesto potvrdjuje, pokrece ili bira.
+   Zar (narandzasta): samo zivo telo, puls, kalorije i ono sto je uzivo.
+   Zone pulsa: jedna topla skala od kamena do crvene, toplije znaci teze; nema duge.
+   Brojke: Barlow Condensed, slovo sa putokaza, cita se iz daljine i staje u kolone.
+   Reci: Plus Jakarta Sans, vec je glas FitLink-a u prodavnici i na sajtu.
+   Kartice: samo za objekat na kome se radi (zahtev, trenutna vezba, termin); ostalo su liste sa linijom.
+   Senka: samo telefon na papiru, jer je to jedini predmet koji lezi iznad strane.
+   Radijusi: 18 kartica, 14 dugme i polje, 8 oznaka; nista nije pilula osim avatara.
+   Ikone: crtane za ovaj mockup, ravne crte i rezani krajevi kao Barlow; srce i plamen puni jer oznacavaju dve brojke tela. */
+:root{
+  --paper:#ECE7DF; --paper-ink:#16161A; --paper-2:#55524C; --paper-line:#D3CCC1;
+  --ink:#0E0E11; --ink-2:#17171C; --ink-3:#24242B; --line:#2E2E36;
+  --bone:#F2EEE7; --bone-2:#A9A49C;
+  --violet:#6343E6; --violet-tx:#B4A0FF;
+  --ember:#FF7A3D;
+  --z1:#8E8880; --z2:#D8C29C; --z3:#FFB36B; --z4:#FF7A3D; --z5:#FF4B3A;
+  --num:'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --txt:'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+body{margin:0;background:var(--paper);color:var(--paper-ink);font-family:var(--txt);font-size:16px;line-height:1.5;overflow-x:hidden}
+p{margin:0}
+a[href],summary{cursor:pointer}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--paper-ink);outline-offset:3px;border-radius:4px}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- strana ---------- */
+.wrap{max-width:1380px;margin:0 auto;padding:0 24px}
+.head{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:48px;padding-top:64px;padding-bottom:32px;border-bottom:1px solid var(--paper-line)}
+h1{font-size:clamp(32px,4.2vw,52px);line-height:1.04;font-weight:800;letter-spacing:-.025em;margin:0 0 20px}
+.intro p{font-size:17px;line-height:1.6;max-width:62ch;color:var(--paper-ink)}
+.intro p + p{margin-top:12px}
+.read{font-size:14px;line-height:1.5;color:var(--paper-2);align-self:end}
+.read dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:10px 18px}
+.read dt{font-weight:700;color:var(--paper-ink)}
+.read dd{margin:0}
+.sw{display:flex;flex-wrap:wrap;gap:8px 14px}
+.sw span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.sw i{width:14px;height:14px;border-radius:4px;display:inline-block;border:1px solid rgba(0,0,0,.18)}
+.ramp{display:inline-flex;gap:2px;vertical-align:middle}
+.ramp i{width:10px;height:14px;border-radius:2px;border:0}
+nav{padding:18px 0 8px}
+nav ol{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:4px 6px}
+nav a{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;color:var(--paper-ink)}
+nav a b{font-family:var(--num);font-size:18px;font-weight:600;color:var(--paper-2)}
+nav a:hover{background:#E2DCD2;text-decoration:underline;text-underline-offset:4px}
+nav a:active{background:#D8D1C5;transform:translateY(1px)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(415px,100%),1fr));gap:64px 32px;padding-top:32px;padding-bottom:72px}
+.shot{display:flex;flex-direction:column;align-items:center;min-width:0;scroll-margin-top:16px}
+.shot h2{width:100%;max-width:415px;font-size:15px;font-weight:700;margin:0 0 14px;display:flex;gap:10px;align-items:baseline}
+.shot h2 b{font-family:var(--num);font-size:24px;font-weight:600;line-height:1}
+.shot h2 span{color:var(--paper-2);font-weight:600}
+.slot{width:100%;display:flex;justify-content:center}
+.cap{width:100%;max-width:415px;margin-top:18px;font-size:15px;line-height:1.55}
+details{width:100%;max-width:415px;margin-top:10px;font-size:14px;color:var(--paper-2);border-top:1px solid var(--paper-line)}
+summary{min-height:44px;display:flex;align-items:center;font-weight:600;color:var(--paper-ink);list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"+";font-family:var(--num);font-size:20px;width:22px;flex:none}
+details[open] summary::before{content:"-"}
+summary:hover{text-decoration:underline;text-underline-offset:4px}
+summary:active{color:var(--paper-2)}
+details ul{margin:0 0 6px;padding:0 0 0 22px;list-style:none}
+details li{margin:0 0 8px}
+details li b{color:var(--paper-ink)}
+footer{border-top:1px solid var(--paper-line);padding:24px 0 48px;font-size:14px;color:var(--paper-2)}
+@media (max-width:900px){
+  .head{grid-template-columns:1fr;gap:28px;padding-top:40px}
+}
+@media (max-width:560px){
+  .wrap{padding:0 16px}
+  .head{padding-top:28px}
+  .intro p{font-size:16px}
+  .grid{gap:48px 0;padding-top:24px}
+}
+
+/* ---------- telefon ---------- */
+.phone{width:415px;flex:none;padding:11px;border-radius:66px;background:#050506;box-shadow:0 0 0 1px #3B3B42 inset,0 34px 60px -28px rgba(22,22,26,.55)}
+@media (max-width:446px){.phone{zoom:.8}}
+@media (max-width:363px){.phone{zoom:.7}}
+@media (max-width:321px){.phone{zoom:.64}}
+.scr{position:relative;width:393px;height:852px;overflow:hidden;border-radius:55px;background:var(--ink);color:var(--bone);font-family:var(--txt);font-size:15px;line-height:1.35;font-weight:500}
+.island{position:absolute;top:11px;left:50%;width:126px;height:37px;margin-left:-63px;border-radius:20px;background:#000;z-index:5}
+.sb{position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 50px;z-index:4;font-weight:600;font-size:17px}
+.sb .ic{display:flex;gap:6px;align-items:center}
+.sb svg{display:block}
+.hi{position:absolute;bottom:8px;left:50%;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:var(--bone);z-index:6}
+.ct{position:absolute;top:54px;left:0;right:0;bottom:0;padding:6px 20px 0}
+.num{font-family:var(--num);font-weight:600;font-variant-numeric:tabular-nums;line-height:1;letter-spacing:0}
+.dim{color:var(--bone-2)}
+svg.g{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:square;stroke-linejoin:miter;flex:none}
+svg.g.s{width:16px;height:16px}
+svg.g.xs{width:14px;height:14px}
+svg.f{fill:currentColor;stroke:none}
+
+.av{width:44px;height:44px;border-radius:50%;background:var(--ink-3);color:var(--bone);display:grid;place-items:center;font-weight:700;font-size:15px;flex:none;letter-spacing:.01em}
+.av.sm{width:28px;height:28px;font-size:10.5px;border:2px solid var(--ink-2)}
+.av.md{width:36px;height:36px;font-size:13px}
+
+.ib{position:relative;width:44px;height:44px;border-radius:50%;background:var(--ink-2);border:1px solid var(--line);display:grid;place-items:center;color:var(--bone);flex:none}
+.cnt{position:absolute;top:-3px;right:-3px;min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:var(--bone);color:var(--ink);font-size:11px;font-weight:800;display:grid;place-items:center;font-style:normal}
+
+/* meter toplote: identitetski motiv, ponavlja se svuda gde je puls */
+.heat{display:flex;gap:2px}
+.heat i{display:block;width:6px;height:4px;border-radius:1px;background:var(--ink-3)}
+.heat i.l1{background:var(--z1)} .heat i.l2{background:var(--z2)} .heat i.l3{background:var(--z3)} .heat i.l4{background:var(--z4)} .heat i.l5{background:var(--z5)}
+.zbar{display:grid;grid-template-columns:repeat(5,1fr);gap:3px}
+.zbar i{display:block;height:6px;border-radius:2px;background:var(--ink-3)}
+.zbar i.l1{background:var(--z1)} .zbar i.l2{background:var(--z2)} .zbar i.l3{background:var(--z3)} .zbar i.l4{background:var(--z4)} .zbar i.l5{background:var(--z5)}
+.zbar i.cur{height:10px;margin-top:-2px}
+.zlab{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin-top:6px;font-size:11px;font-weight:600;color:var(--bone-2)}
+.zlab span.cur{color:var(--bone)}
+.c-z2{color:var(--z2)} .c-z4{color:var(--z4)}
+
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;height:48px;border-radius:14px;font-weight:700;font-size:15px;white-space:nowrap}
+.btn.pri{background:var(--violet);color:var(--bone)}
+.btn.sec{background:var(--ink-3);color:var(--bone);border:1px solid var(--line)}
+
+/* tab bar */
+.tabs{position:absolute;left:0;right:0;bottom:0;height:84px;background:var(--ink-2);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding:7px 6px 0;z-index:3}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:600;color:var(--bone-2)}
+.tab.on{color:var(--violet-tx)}
+.tab.mid{position:relative}
+.mid .bub{position:absolute;top:-22px;left:50%;margin-left:-29px;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;border:4px solid var(--ink)}
+.mid .bub.live{background:var(--ember);color:var(--ink)}
+.mid .bub.go{background:var(--violet);color:var(--bone)}
+.mid .cnt{top:-4px;right:-6px;border:2px solid var(--ink)}
+
+/* ---------- 1: trener pocetna ---------- */
+.hdr{display:flex;align-items:center;gap:12px;height:56px}
+.hdr .av{width:46px;height:46px;font-size:17px}
+.hdr-t{flex:1;min-width:0}
+.t-19{font-size:19px;font-weight:700;line-height:1.2}
+.t-sub{font-size:13px;color:var(--bone-2)}
+.sec-h{display:flex;align-items:flex-end;justify-content:space-between;margin:22px 0 8px}
+.sec-t{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px}
+.sec-t .dim{font-weight:600}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--ember);display:inline-block}
+.colh{display:grid;grid-template-columns:52px 52px;gap:14px;padding-right:17px;font-size:12px;font-weight:600;color:var(--bone-2);text-align:right}
+.live{background:var(--ink-2);border:1px solid var(--line);border-radius:18px;padding:0 16px 0 14px}
+.lrow{display:grid;grid-template-columns:40px minmax(0,1fr) 52px 52px;gap:0 14px;align-items:center;padding:13px 0}
+.lrow + .lrow{border-top:1px solid var(--line)}
+.lrow .av{align-self:start;width:40px;height:40px;font-size:14px;margin-right:-6px}
+.nm{font-size:16px;font-weight:700;line-height:1.25}
+.ex{font-size:13px;color:var(--bone-2);margin-top:1px;line-height:1.3}
+.meta{font-size:12.5px;color:var(--bone-2);margin-top:5px;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.meta .st{color:var(--bone);font-weight:700;display:inline-flex;align-items:center;gap:3px}
+.dev{font-size:12px;color:var(--bone-2);margin-top:3px;display:flex;align-items:center;gap:4px}
+.nv{display:flex;flex-direction:column;align-items:flex-end;gap:7px}
+.nv .num{font-size:38px}
+.nv .heat,.nv .sp{height:4px}
+.pay{background:var(--ink-2);border:1px solid var(--line);border-radius:18px;padding:16px;margin-top:22px}
+.pay-r{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:14px}
+.pay-r .t{font-size:16px;font-weight:700}
+.pay-r .s{font-size:13px;color:var(--bone-2);margin-top:2px}
+.amt{display:flex;align-items:baseline;gap:5px;white-space:nowrap}
+.amt .num{font-size:34px}
+.amt small{font-size:12px;font-weight:700;color:var(--bone-2)}
+.exp{margin-top:6px}
+.erow{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 0}
+.erow + .erow{border-top:1px solid var(--line)}
+.erow .n{font-size:15px;font-weight:700}
+.erow .p{font-size:13px;color:var(--bone-2)}
+.days{display:flex;align-items:baseline;gap:4px}
+.days .num{font-size:28px}
+.days small{font-size:12px;color:var(--bone-2);font-weight:600}
+
+/* ---------- 2: uzivo detalj ---------- */
+.top{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;height:48px}
+.top .who{text-align:center}
+.top .who .n{font-size:16px;font-weight:700}
+.top .who .s{font-size:12.5px;color:var(--bone-2);display:inline-flex;align-items:center;gap:4px;font-weight:600}
+.top .el{text-align:right}
+.top .el .num{font-size:22px;display:block}
+.top .el small{font-size:11px;color:var(--bone-2);font-weight:600}
+.twin{display:grid;grid-template-columns:1fr 1fr;margin-top:8px}
+.twin > div{padding-right:14px}
+.twin > div + div{padding-left:18px;border-left:1px solid var(--line);padding-right:0}
+.twin .l{font-size:12.5px;font-weight:600;color:var(--bone-2);display:flex;align-items:center;gap:5px}
+.twin .v{display:flex;align-items:baseline;gap:6px;margin-top:2px}
+.twin .v .num{font-size:64px;letter-spacing:-.01em}
+.twin .v small{font-size:15px;color:var(--bone-2);font-weight:600}
+.twin .u{font-size:13px;font-weight:700;margin-top:4px}
+.zwrap{margin-top:10px}
+.block{background:var(--ink-2);border:1px solid var(--line);border-radius:18px;padding:14px}
+.rest{margin-top:12px;padding:8px 14px 10px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center}
+.rest .t{font-size:15px;font-weight:700;display:flex;align-items:center;gap:6px}
+.rest .s{font-size:12.5px;color:var(--bone-2)}
+.rest .num{font-size:32px;grid-row:span 2}
+.prog{grid-column:1 / -1;height:4px;border-radius:2px;background:var(--ink-3);margin-top:6px;overflow:hidden}
+.prog i{display:block;height:100%;width:56%;background:var(--bone)}
+.chart{margin-top:10px;padding:10px 14px 8px}
+.chart .h{display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:8px}
+.chart .h span{font-weight:600;color:var(--bone-2);font-size:12px}
+.chart svg{display:block}
+.chart .x{display:flex;justify-content:space-between;font-size:11px;color:var(--bone-2);margin-top:4px;font-weight:600}
+.tr-h{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+.tr-h .t{font-size:17px;font-weight:700}
+.tr-h .s{font-size:13px;color:var(--bone-2)}
+.btn.sm{height:44px;padding:0 14px;font-size:14px;border-radius:12px}
+.thumb{background:#EFEBE4;border-radius:10px;overflow:hidden;flex:none;display:block}
+.thumb img{display:block;width:100%;height:100%;object-fit:cover;mix-blend-mode:multiply}
+.done{display:grid;grid-template-columns:54px minmax(0,1fr) 28px;gap:12px;align-items:center;padding:6px 0}
+.done .n{font-size:14px;font-weight:600;color:var(--bone-2)}
+.done .s{font-size:12px;color:var(--bone-2)}
+.ok{width:28px;height:28px;border-radius:50%;background:var(--ink-3);display:grid;place-items:center;color:var(--bone)}
+.ring{width:28px;height:28px;border-radius:50%;border:2px solid var(--line)}
+.cur-ex{border-color:#45454F;padding:12px 14px}
+.cur-h{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:12px;align-items:center}
+.cur-h .n{font-size:15.5px;font-weight:700;line-height:1.25}
+.cur-h .s{font-size:12.5px;color:var(--bone-2);margin-top:2px}
+.tag{font-size:12px;font-weight:700;padding:5px 8px;border-radius:8px;background:var(--ink-3);color:var(--bone);align-self:start}
+.sets{margin-top:6px}
+.sets .r{display:grid;grid-template-columns:22px minmax(0,1fr) 62px 62px 28px;gap:8px;align-items:center;height:38px}
+.sets .r.hd{height:16px;font-size:11px;font-weight:600;color:var(--bone-2)}
+.sets .r.hd span:nth-child(3),.sets .r.hd span:nth-child(4){text-align:center}
+.sets .k{font-family:var(--num);font-size:17px;font-weight:600;color:var(--bone-2)}
+.sets .pp{font-size:13px;color:var(--bone-2)}
+.fld{height:36px;border-radius:10px;background:var(--ink-3);display:grid;place-items:center;font-family:var(--num);font-weight:600;font-size:20px;font-variant-numeric:tabular-nums}
+.fld.tg{background:transparent;border:1px dashed #4A4A55;color:var(--bone-2)}
+
+/* ---------- 3: kalendar ---------- */
+.k-h{display:flex;justify-content:space-between;align-items:flex-end;margin-top:6px}
+.k-h .m{font-size:13px;font-weight:600;color:var(--bone-2)}
+.k-h .t{font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1.15}
+.k-h .nav2{display:flex;gap:8px}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:16px}
+.week span{height:60px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11.5px;font-weight:600;color:var(--bone-2)}
+.week span b{font-family:var(--num);font-size:24px;font-weight:600;color:var(--bone);line-height:1}
+.week span.on{background:var(--violet);color:var(--bone)}
+.sum{display:flex;align-items:center;gap:14px;margin-top:16px}
+.sum .num{font-size:64px}
+.sum .t{font-size:17px;font-weight:700}
+.sum .s{font-size:13px;color:var(--bone-2);margin-top:2px}
+.tl{margin-top:14px;display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px 10px}
+.tl .h{font-family:var(--num);font-size:17px;font-weight:600;color:var(--bone-2);padding-top:12px}
+.slot-c{background:var(--ink-2);border:1px solid var(--line);border-radius:16px;padding:11px 14px}
+.slot-c .r1{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.slot-c .n{font-size:15px;font-weight:700}
+.slot-c .cap2{font-size:13px;font-weight:700;white-space:nowrap}
+.slot-c .free{color:var(--violet-tx)}
+.slot-c .r2{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12.5px;color:var(--bone-2)}
+.stack{display:flex}
+.stack .av + .av{margin-left:-4px}
+.wl{border-top:1px solid var(--line);margin-top:10px;padding-top:8px}
+.wl .lt{font-size:12px;font-weight:700;color:var(--bone-2)}
+.wl .w{display:flex;align-items:center;gap:10px;height:32px;font-size:14px;font-weight:600}
+.wl .w i{width:24px;height:24px;border-radius:50%;background:var(--ink-3);display:grid;place-items:center;font-style:normal;font-family:var(--num);font-size:15px;font-weight:600}
+.wl .note{font-size:12px;color:var(--bone-2);margin-top:4px;line-height:1.35}
+.now{grid-column:1 / -1;display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:center;height:20px}
+.now span{font-family:var(--num);font-size:15px;font-weight:700;color:var(--bone)}
+.now i{display:block;height:2px;background:var(--bone);position:relative}
+.now i::before{content:"";position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:50%;background:var(--bone)}
+.cancel{font-size:13px;color:var(--bone-2);padding-top:12px}
+.cancel s{font-weight:600}
+
+/* ---------- 4: uplate ---------- */
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:14px;background:var(--ink-2);border:1px solid var(--line);margin-top:14px}
+.seg span{height:38px;border-radius:10px;display:grid;place-items:center;font-size:14px;font-weight:700;color:var(--bone-2)}
+.seg span.on{background:var(--ink-3);color:var(--bone);border:1px solid #45454F}
+.pt{font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1.15;margin-top:10px}
+.tot{margin-top:22px}
+.tot .l{display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:var(--bone-2)}
+.tot .amt{margin-top:6px}
+.tot .amt .num{font-size:64px}
+.tot .amt small{font-size:15px}
+.split{display:grid;grid-template-columns:22fr 14fr;gap:3px;margin-top:14px}
+.split i{display:block;height:8px;border-radius:2px;background:var(--bone)}
+.split i + i{background:var(--bone-2)}
+.split-l{display:flex;justify-content:space-between;font-size:13px;margin-top:8px;color:var(--bone-2)}
+.split-l b{color:var(--bone)}
+.req{margin-top:14px}
+.req + .req{margin-top:12px}
+.req-h{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:start}
+.req-h .p{font-size:13px;color:var(--bone-2);margin-top:2px;line-height:1.35}
+.req-h .rt{text-align:right}
+.req-h .amt{justify-content:flex-end}
+.req-h .amt .num{font-size:28px}
+.meth{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:var(--bone);margin-top:4px}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+
+/* ---------- 5: trening vezbaca ---------- */
+.s5 .sb{color:var(--ink)}
+.hero{position:absolute;top:0;left:0;right:0;height:250px;background:#EFEBE4}
+.hero img{position:absolute;left:50%;top:68px;width:270px;height:180px;margin-left:-135px;mix-blend-mode:multiply}
+.ov{position:absolute;top:58px;left:20px;right:20px;display:flex;justify-content:space-between;align-items:center;z-index:2}
+.ov .ib{background:var(--ink);border-color:var(--ink)}
+.chip{height:36px;padding:0 14px;border-radius:12px;background:var(--ink);color:var(--bone);display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600}
+.chip .num{font-size:18px}
+.s5 .ct{top:250px;padding-top:10px}
+.exprog{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.exprog i{display:block;height:4px;border-radius:2px;background:var(--ink-3)}
+.exprog i.d{background:var(--bone-2)}
+.exprog i.c{background:var(--bone)}
+.tw5{display:grid;grid-template-columns:1fr 1fr;margin-top:10px}
+.tw5 > div{display:flex;align-items:baseline;gap:6px}
+.tw5 > div + div{padding-left:18px;border-left:1px solid var(--line)}
+.tw5 .num{font-size:44px}
+.tw5 small{font-size:13px;color:var(--bone-2);font-weight:600}
+.tw5 svg{align-self:center}
+.zrow{display:flex;justify-content:space-between;font-size:12.5px;font-weight:600;color:var(--bone-2);margin:10px 0 7px}
+.zrow b{color:var(--z2)}
+.exname{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end;margin-top:10px}
+.exname .l{font-size:12.5px;font-weight:600;color:var(--bone-2)}
+.exname .n{font-size:21px;font-weight:800;line-height:1.2;letter-spacing:-.01em;margin-top:2px}
+.timer{height:44px;padding:0 12px;border-radius:12px;background:var(--ink-3);display:flex;align-items:center;gap:6px}
+.timer .num{font-size:20px}
+.last{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;margin-top:8px;padding:8px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.last .l{font-size:12px;font-weight:600;color:var(--bone-2);line-height:1.3}
+.last .v{display:flex;justify-content:space-between;font-family:var(--num);font-size:18px;font-weight:600}
+.serh{display:flex;justify-content:space-between;align-items:center;height:44px;margin-top:2px}
+.serh .t{font-size:14px;font-weight:700}
+.serh .t span{color:var(--bone-2);font-weight:600}
+.serh .e{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:700;height:44px}
+.s5 .sets .r{grid-template-columns:22px 1fr 1fr 28px;gap:10px;height:44px}
+.s5 .sets .r.hd{height:16px}
+.s5 .fld{height:40px;font-size:22px}
+.fld.act{background:var(--ink-3);border:2px solid var(--violet-tx);font-size:24px}
+.cta{position:absolute;left:20px;right:20px;bottom:28px;height:52px;font-size:16px;border-radius:16px}
+
+/* ---------- 6: napredak ---------- */
+.stats{display:grid;grid-template-columns:1fr 1fr;margin-top:20px}
+.stats > div + div{padding-left:18px;border-left:1px solid var(--line)}
+.stats .v{display:flex;align-items:baseline;gap:8px}
+.stats .num{font-size:64px}
+.stats .v span:not(.num){font-size:15px;font-weight:700}
+.stats .s{font-size:12.5px;color:var(--bone-2);margin-top:4px}
+.mo{font-size:13px;color:var(--bone-2);margin-top:12px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.mo b{color:var(--bone);font-family:var(--num);font-size:17px;font-weight:600}
+.act-h{display:flex;justify-content:space-between;align-items:flex-end;margin-top:16px}
+.act-h .t{font-size:15px;font-weight:700}
+.act-h .s{font-size:12.5px;color:var(--bone-2)}
+.act-h .avg{text-align:right}
+.act-h .avg .num{font-size:30px}
+.act-h .avg small{display:block;font-size:11px;font-weight:600;color:var(--bone-2)}
+.hm{display:grid;grid-template-columns:16px repeat(8,1fr);gap:4px 5px;margin-top:10px;align-items:center}
+.hm span{font-size:11px;font-weight:600;color:var(--bone-2)}
+.hm i{display:block;height:15px;border-radius:4px;background:var(--ink-3)}
+.hm i.y{background:var(--bone)}
+.hm i.wk{background:transparent;border:1px dashed #4A4A55}
+.hm-x{display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--bone-2);margin:6px 0 0 21px}
+.rec-t{font-size:15px;font-weight:700;margin-top:16px}
+.rec{display:grid;grid-template-columns:60px minmax(0,1fr) auto;gap:12px;align-items:center;padding:8px 0}
+.rec + .rec{border-top:1px solid var(--line)}
+.rec .n{font-size:14px;font-weight:700;line-height:1.25}
+.rec .s{font-size:12px;color:var(--bone-2);margin-top:1px}
+.rec .num{font-size:22px;white-space:nowrap}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V20h-5.5v-6h-5v6H4z"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.8 2.9-6.2 6.5-6.2s6.5 2.4 6.5 6.2M15.5 4.6a3.4 3.4 0 0 1 0 6.8M18 14.2c2.2.7 3.5 2.7 3.5 5.8"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><path d="M3.5 5.5h17v15h-17zM3.5 10h17M8 3v4.5M16 3v4.5"/></symbol>
+  <symbol id="i-calplus" viewBox="0 0 24 24"><path d="M3.5 5.5h17v15h-17zM3.5 10h17M8 3v4.5M16 3v4.5M12 12.5v6M9 15.5h6"/></symbol>
+  <symbol id="i-bars" viewBox="0 0 24 24"><path d="M4.5 20.5h15M6.5 17v-5M12 17V6.5M17.5 17v-8"/></symbol>
+  <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M2 12.5h4.2l2.4-6 4.2 12 2.6-6H22"/></symbol>
+  <symbol id="i-dumb" viewBox="0 0 24 24"><path d="M6.5 6.5v11M3.5 9v6M17.5 6.5v11M20.5 9v6M6.5 12h11"/></symbol>
+  <symbol id="i-trend" viewBox="0 0 24 24"><path d="M3.5 17.5l6-6 4 4 7-7M15 8.5h5.5V14"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24"><path d="M3 5.5h18v13H3zM3 10h18M6.5 14.5h4"/></symbol>
+  <symbol id="i-cl" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-cr" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+  <symbol id="i-cd" viewBox="0 0 24 24"><path d="M5 9l7 7 7-7"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M10.3 2.8h3.4l.6 2.6 1.6.9 2.5-.9 1.7 2.9-1.9 1.8v1.8l1.9 1.8-1.7 2.9-2.5-.9-1.6.9-.6 2.6h-3.4l-.6-2.6-1.6-.9-2.5.9-1.7-2.9 1.9-1.8v-1.8L3.9 8.3l1.7-2.9 2.5.9 1.6-.9z"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15zM10 21h4"/></symbol>
+  <symbol id="i-msg" viewBox="0 0 24 24"><path d="M4 5h16v11.5H9.5L4 20.5z"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20.6 4.2 12.8a4.9 4.9 0 0 1 6.9-6.9l.9.9.9-.9a4.9 4.9 0 0 1 6.9 6.9z"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12.4 2.4c.4 3.4 5.6 5.7 5.6 11.2A6 6 0 0 1 6 13.6c0-2.6 1.2-4.3 2.5-5.5.2 1.8 1 3 2.3 3.6-.4-3.7.3-6.8 1.6-9.3z"/></symbol>
+  <symbol id="i-watch" viewBox="0 0 24 24"><path d="M7.5 7h9v10h-9zM9.5 7l.5-3.5h4l.5 3.5M9.5 17l.5 3.5h4l.5-3.5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 6.5v11M15 6.5v11"/></symbol>
+  <symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9.5M9.5 2.8h5M18.2 6.2l1.4-1.4"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4.5 19.5l1-4.2L16 4.8l3.2 3.2L8.7 18.5zM13.8 7l3.2 3.2"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="18.5" cy="12" r="1.8"/></symbol>
+  <symbol id="i-cash" viewBox="0 0 24 24"><path d="M2.5 6.5h19v11h-19z"/><circle cx="12" cy="12" r="2.6"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 3h8.5L19 7.5V21H6zM14 3v5h5M9 13h7M9 17h5"/></symbol>
+  <symbol id="sb-sig" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx=".7"/><rect x="5" y="5.5" width="3" height="6.5" rx=".7"/><rect x="10" y="3" width="3" height="9" rx=".7"/><rect x="15" y="0" width="3" height="12" rx=".7"/></symbol>
+  <symbol id="sb-wifi" viewBox="0 0 16 12"><path d="M8 11.6 5.6 9.2a3.4 3.4 0 0 1 4.8 0zM3.4 7a6.6 6.6 0 0 1 9.2 0l1.6-1.6a8.9 8.9 0 0 0-12.4 0zM.6 4.2a10.6 10.6 0 0 1 14.8 0L16 3.6V3.4A12.2 12.2 0 0 0 0 3.4v.2z"/></symbol>
+  <symbol id="sb-bat" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" fill="none" stroke="currentColor" opacity=".45"/><rect x="2.5" y="2.5" width="19" height="8" rx="2"/><path d="M25 4.5v4a2 2 0 0 0 0-4z" opacity=".45"/></symbol>
+</svg>
+
+<header class="wrap">
+  <div class="head">
+    <div class="intro">
+      <h1>FitLink po anti-slop skilu</h1>
+      <p>Anti-slop ne nameće stil, nego za svaku odluku traži razlog. Zato je FitLink ostao tamni, jer se aplikacija gleda usred treninga, sa klupe i iz daljine, a ljubičasta je ostala boja marke, ali samo na dugmetu koje nešto potvrđuje ili pokreće. Ljubičasto-roze prelivi, sjaj oko kartica i duga u zonama pulsa su otpali jer ništa ne govore: puls je sada jedna topla skala, od sive za laganu zonu do crvene za maksimalnu. Brojke su u uskom slovu sa putokaza (Barlow Condensed) da se pročitaju iz daljine, a imena i reči ostaju u Plus Jakarta Sans.</p>
+    </div>
+    <div class="read">
+      <dl>
+        <dt>Čitanje</dt><dd>Radni alat za trenere i vežbače, gleda se u teretani između serija; jezik semafora u sali: grafit, uske brojke, jedan naglasak.</dd>
+        <dt>Brojčanici</dt><dd>Energija 2, ritam 2, pokret 1 (mirno, bez animacija)</dd>
+        <dt>Boje</dt><dd class="sw"><span><i style="background:#0E0E11"></i>grafit</span><span><i style="background:#F2EEE7"></i>kost</span><span><i style="background:#6343E6"></i>ljubičasta, radnja</span><span><i style="background:#FF7A3D"></i>žar, živo telo</span></dd>
+        <dt>Zone</dt><dd><span class="ramp" aria-hidden="true"><i style="background:#8E8880"></i><i style="background:#D8C29C"></i><i style="background:#FFB36B"></i><i style="background:#FF7A3D"></i><i style="background:#FF4B3A"></i></span> zona 1 do 5, toplije je teže</dd>
+        <dt>Slova</dt><dd>Barlow Condensed za brojke, Plus Jakarta Sans za reči</dd>
+      </dl>
+    </div>
+  </div>
+  <nav aria-label="Ekrani">
+    <ol>
+      <li><a href="#ekran-1"><b>1</b>Početna trenera</a></li>
+      <li><a href="#ekran-2"><b>2</b>Uživo, jedan vežbač</a></li>
+      <li><a href="#ekran-3"><b>3</b>Kalendar</a></li>
+      <li><a href="#ekran-4"><b>4</b>Uplate i članarine</a></li>
+      <li><a href="#ekran-5"><b>5</b>Trening u toku</a></li>
+      <li><a href="#ekran-6"><b>6</b>Napredak</a></li>
+    </ol>
+  </nav>
+</header>
+
+<main class="wrap grid">
+
+<!-- ================= 1 ================= -->
+<section class="shot" id="ekran-1" aria-labelledby="h-1">
+  <h2 id="h-1"><b>1</b> Početna <span>trener</span></h2>
+  <div class="slot">
+    <div class="phone">
+      <div class="scr">
+        <div class="island"></div>
+        <div class="sb"><span>9:41</span><span class="ic" aria-hidden="true"><svg width="18" height="12" fill="currentColor"><use href="#sb-sig"/></svg><svg width="16" height="12" fill="currentColor"><use href="#sb-wifi"/></svg><svg width="27" height="13" fill="currentColor"><use href="#sb-bat"/></svg></span></div>
+        <div class="ct">
+          <div class="hdr">
+            <span class="av">M</span>
+            <div class="hdr-t"><p class="t-19">Zdravo, Marko</p><p class="t-sub">Studio Forma</p></div>
+            <span class="ib"><svg class="g" aria-hidden="true"><use href="#i-msg"/></svg><b class="cnt">2</b><span class="vh">poruke</span></span>
+            <span class="ib"><svg class="g" aria-hidden="true"><use href="#i-bell"/></svg><b class="cnt">5</b><span class="vh">obaveštenja</span></span>
+          </div>
+
+          <div class="sec-h">
+            <p class="sec-t"><i class="live-dot" aria-hidden="true"></i>Trenira sada <span class="dim">2</span></p>
+            <div class="colh" aria-hidden="true"><span>puls</span><span>kcal</span></div>
+          </div>
+          <div class="live">
+            <div class="lrow">
+              <span class="av">AM</span>
+              <div>
+                <p class="nm">Ana Marković</p>
+                <p class="ex">Sa šipkom veslanje u pretklonu</p>
+                <p class="meta"><span class="st">Odmor 0:40</span>· serija 3</p>
+                <p class="dev"><svg class="g xs" aria-hidden="true"><use href="#i-watch"/></svg>Apple Watch 64%</p>
+              </div>
+              <div class="nv"><span class="num c-z4">151</span><span class="heat" role="img" aria-label="zona 4"><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i><i></i></span></div>
+              <div class="nv"><span class="num">512</span><span class="sp"></span></div>
+            </div>
+            <div class="lrow">
+              <span class="av">LP</span>
+              <div>
+                <p class="nm">Luka Petrović</p>
+                <p class="ex">Rumunsko mrtvo dizanje</p>
+                <p class="meta"><span class="st">Vežba</span>· serija 3</p>
+                <p class="dev"><svg class="g xs" aria-hidden="true"><use href="#i-watch"/></svg>Apple Watch 82%</p>
+              </div>
+              <div class="nv"><span class="num c-z2">132</span><span class="heat" role="img" aria-label="zona 2"><i class="l1"></i><i class="l2"></i><i></i><i></i><i></i></span></div>
+              <div class="nv"><span class="num">386</span><span class="sp"></span></div>
+            </div>
+          </div>
+
+          <div class="pay">
+            <div class="pay-r">
+              <div><p class="t">Uplate na čekanju</p><p class="s">2 zahteva, keš i račun</p></div>
+              <p class="amt"><span class="num">36.000</span><small>RSD</small></p>
+            </div>
+            <span class="btn pri">Pregledaj zahteve</span>
+          </div>
+
+          <div class="sec-h" style="margin-top:22px"><p class="sec-t">Ističu u 14 dana <span class="dim">2</span></p></div>
+          <div class="exp">
+            <div class="erow">
+              <span class="av md">NS</span>
+              <div><p class="n">Nikola Savić</p><p class="p">Mesečna 8</p></div>
+              <p class="days"><span class="num">2</span><small>dana</small></p>
+            </div>
+            <div class="erow">
+              <span class="av md">LP</span>
+              <div><p class="n">Luka Petrović</p><p class="p">Mesečna 12</p></div>
+              <p class="days"><span class="num">9</span><small>dana</small></p>
+            </div>
+          </div>
+        </div>
+        <div class="tabs" aria-hidden="true">
+          <span class="tab on"><svg class="g"><use href="#i-home"/></svg>Početna</span>
+          <span class="tab"><svg class="g"><use href="#i-users"/></svg>Vežbači</span>
+          <span class="tab mid"><span class="bub live"><svg class="g"><use href="#i-pulse"/></svg><b class="cnt">2</b></span></span>
+          <span class="tab"><svg class="g"><use href="#i-cal"/></svg>Kalendar</span>
+          <span class="tab"><svg class="g"><use href="#i-bars"/></svg>Finansije</span>
+        </div>
+        <div class="hi"></div>
+      </div>
+    </div>
+  </div>
+  <p class="cap">Vrh ekrana je ko trenira sada. Puls i kalorije stoje u dve iste kolone, a boja pulsa i mali merač pod njim kažu zonu. Ispod su uplate koje čekaju i članarine koje ističu, sa brojem dana kao jedinom brojkom.</p>
+  <details>
+    <summary>Prazno, učitavanje, greška</summary>
+    <ul>
+      <li><b>Prazno:</b> "Trenutno niko ne trenira. Kad neko pokrene trening, pojavi se ovde uživo."</li>
+      <li><b>Učitavanje:</b> "Učitavam..." na mestu spiska, bez kostura.</li>
+      <li><b>Greška:</b> "Podaci nisu učitani. Proveri vezu i povuci nadole da osvežiš."</li>
+    </ul>
+  </details>
+</section>
+
+<!-- ================= 2 ================= -->
+<section class="shot" id="ekran-2" aria-labelledby="h-2">
+  <h2 id="h-2"><b>2</b> Uživo, jedan vežbač <span>trener</span></h2>
+  <div class="slot">
+    <div class="phone">
+      <div class="scr">
+        <div class="island"></div>
+        <div class="sb"><span>9:41</span><span class="ic" aria-hidden="true"><svg width="18" height="12" fill="currentColor"><use href="#sb-sig"/></svg><svg width="16" height="12" fill="currentColor"><use href="#sb-wifi"/></svg><svg width="27" height="13" fill="currentColor"><use href="#sb-bat"/></svg></span></div>
+        <div class="ct">
+          <div class="top">
+            <span class="ib"><svg class="g" aria-hidden="true"><use href="#i-cl"/></svg><span class="vh">nazad</span></span>
+            <div class="who"><p class="n">Ana Marković</p><p class="s"><svg class="g xs" aria-hidden="true"><use href="#i-pause"/></svg>Na odmoru</p></div>
+            <p class="el"><span class="num">1:05:00</span><small>trajanje</small></p>
+          </div>
+
+          <div class="twin">
+            <div>
+              <p class="l"><svg class="g xs f c-z4" aria-hidden="true"><use href="#i-heart"/></svg>Puls</p>
+              <p class="v"><span class="num c-z4">151</span><small>bpm</small></p>
+              <p class="u c-z4">Zona 4</p>
+            </div>
+            <div>
+              <p class="l"><svg class="g xs f" aria-hidden="true" style="color:var(--bone-2)"><use href="#i-flame"/></svg>Kalorije</p>
+              <p class="v"><span class="num">512</span><small>kcal</small></p>
+              <p class="u dim" style="font-weight:600">Apple Watch 64%</p>
+            </div>
+          </div>
+          <div class="zwrap" role="img" aria-label="zona 4 od 5">
+            <div class="zbar"><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4 cur"></i><i></i></div>
+            <div class="zlab" aria-hidden="true"><span>Z1</span><span>Z2</span><span>Z3</span><span class="cur">Z4</span><span>Z5</span></div>
+          </div>
+
+          <div class="block rest">
+            <div><p class="t"><svg class="g s" aria-hidden="true"><use href="#i-pause"/></svg>Odmor</p></div>
+            <span class="num">0:40</span>
+            <p class="s">Vežbač se odmara, cilj 1:30</p>
+            <div class="prog"><i></i></div>
+          </div>
+
+          <div class="block chart">
+            <p class="h">Puls, poslednjih 10 min <span>min 96 · max 158</span></p>
+            <svg width="323" height="40" viewBox="0 0 325 72" preserveAspectRatio="none" role="img" aria-label="Puls raste od 96 do 158 i spušta se na 151">
+              <line x1="0" y1="10" x2="325" y2="10" stroke="#2E2E36" stroke-width="1" vector-effect="non-scaling-stroke"/>
+              <line x1="0" y1="63" x2="325" y2="63" stroke="#2E2E36" stroke-width="1" vector-effect="non-scaling-stroke"/>
+              <polyline fill="none" stroke="#FF7A3D" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" points="0,62.9 16.25,61.2 32.5,56.1 48.75,49.2 65,44.1 81.25,41.5 97.5,39 113.75,36.4 130,34.7 146.25,33 162.5,30.5 178.75,27.9 195,24.5 211.25,20.2 227.5,15.1 243.75,11.7 260,10 276.25,10.8 292.5,12.5 308.75,14.2 321,15.9"/>
+              <ellipse cx="321" cy="15.9" rx="3.5" ry="6.3" fill="#FF7A3D"/>
+            </svg>
+            <p class="x"><span>pre 10 min</span><span>sada</span></p>
+          </div>
+
+          <div class="tr-h">
+            <div><p class="t">Leđa i biceps</p><p class="s">6 od 22 serija</p></div>
+            <span class="btn sec sm"><svg class="g s" aria-hidden="true"><use href="#i-pen"/></svg>Izmeni</span>
+          </div>
+
+          <div class="done">
+            <span class="thumb" style="width:54px;height:36px"><img src="../assets/baza/thumbs/shoulder-grip-pull-up.jpg" width="54" height="36" alt="Zgib hvatom na širini ramena"></span>
+            <div><p class="n">Zgib hvatom na širini ramena</p><p class="s">4 × 8, urađeno</p></div>
+            <span class="ok"><svg class="g s" aria-hidden="true"><use href="#i-check"/></svg></span>
+          </div>
+
+          <div class="block cur-ex">
+            <div class="cur-h">
+              <span class="thumb" style="width:64px;height:43px"><img src="../assets/baza/thumbs/barbell-bent-over-row.jpg" width="64" height="43" alt="Sa šipkom veslanje u pretklonu"></span>
+              <div><p class="n">Sa šipkom veslanje u pretklonu</p><p class="s">4 × 10 · 65 kg</p></div>
+              <span class="tag">Sad</span>
+            </div>
+            <div class="sets">
+              <div class="r hd"><span></span><span>Prošli put</span><span>kg</span><span>pon.</span><span></span></div>
+              <div class="r"><span class="k">W</span><span class="pp">60 kg × 8</span><span class="fld">62,5</span><span class="fld">10</span><span class="ok"><svg class="g s" aria-hidden="true"><use href="#i-check"/></svg></span></div>
+              <div class="r"><span class="k">2</span><span class="pp">60 kg × 8</span><span class="fld">65</span><span class="fld">9</span><span class="ok"><svg class="g s" aria-hidden="true"><use href="#i-check"/></svg></span></div>
+              <div class="r"><span class="k">3</span><span class="pp">62,5 kg × 6</span><span class="fld tg">65</span><span class="fld tg">10</span><span class="ring"></span></div>
+              <div class="r"><span class="k">D</span><span class="pp">-</span><span class="fld tg">65</span><span class="fld tg">10</span><span class="ring"></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="hi"></div>
+      </div>
+    </div>
+  </div>
+  <p class="cap">Puls i kalorije su blizanci od 64 pt, a zona je ista topla skala kao na početnoj, samo veća. Odmor ima cilj, puls 10 minuta ima samo min i max, a serije pokazuju prošli put pored današnjeg broja. Isprekidano polje je cilj, puno polje je urađeno.</p>
+  <details>
+    <summary>Prazno, učitavanje, greška</summary>
+    <ul>
+      <li><b>Bez pulsa:</b> "Nema pulsa" na mestu broja, kalorije ostaju.</li>
+      <li><b>Kraj:</b> "Trening završen. Ana Marković više ne trenira."</li>
+      <li><b>Učitavanje i greška:</b> "Učitavam...", pa "Podaci nisu učitani. Proveri vezu i povuci nadole da osvežiš."</li>
+    </ul>
+  </details>
+</section>
+
+<!-- ================= 3 ================= -->
+<section class="shot" id="ekran-3" aria-labelledby="h-3">
+  <h2 id="h-3"><b>3</b> Kalendar <span>trener</span></h2>
+  <div class="slot">
+    <div class="phone">
+      <div class="scr">
+        <div class="island"></div>
+        <div class="sb"><span>9:41</span><span class="ic" aria-hidden="true"><svg width="18" height="12" fill="currentColor"><use href="#sb-sig"/></svg><svg width="16" height="12" fill="currentColor"><use href="#sb-wifi"/></svg><svg width="27" height="13" fill="currentColor"><use href="#sb-bat"/></svg></span></div>
+        <div class="ct">
+          <div class="k-h">
+            <div><p class="m">Novembar 2026</p><p class="t">Kalendar</p></div>
+            <div class="nav2">
+              <span class="ib"><svg class="g" aria-hidden="true"><use href="#i-cl"/></svg><span class="vh">prethodna nedelja</span></span>
+              <span class="ib"><svg class="g" aria-hidden="true"><use href="#i-cr"/></svg><span class="vh">sledeća nedelja</span></span>
+              <span class="ib"><svg class="g" aria-hidden="true"><use href="#i-gear"/></svg><span class="vh">podešavanja rasporeda</span></span>
+            </div>
+          </div>
+          <div class="week">
+            <span class="on">Pon<b>2</b></span><span>Uto<b>3</b></span><span>Sre<b>4</b></span><span>Čet<b>5</b></span><span>Pet<b>6</b></span><span>Sub<b>7</b></span><span>Ned<b>8</b></span>
+          </div>
+          <div class="sum">
+            <span class="num">12</span>
+            <div><p class="t">rezervacija danas</p><p class="s">3 termina · 3 slobodno · 2 čekaju</p></div>
+          </div>
+
+          <div class="tl">
+            <span class="h">07:00</span>
+            <div class="slot-c">
+              <div class="r1"><p class="n">Personalni trening</p><p class="cap2">Pun 1/1</p></div>
+              <div class="r2"><span class="av sm">LP</span>Luka Petrović · 07:00 - 08:00</div>
+            </div>
+
+            <span class="h">09:00</span>
+            <div class="slot-c">
+              <div class="r1"><p class="n">Group HIIT</p><p class="cap2">Pun 8/8</p></div>
+              <div class="r2"><span class="stack"><span class="av sm">AM</span><span class="av sm">JN</span><span class="av sm">SI</span><span class="av sm">+5</span></span>09:00 - 09:45 · 1 kasno otkazao</div>
+              <div class="wl">
+                <p class="lt">Lista čekanja</p>
+                <p class="w"><i>1</i>Nikola Savić</p>
+                <p class="w"><i>2</i>Mila Jović</p>
+                <p class="note">Kad se mesto oslobodi, prvi sa liste automatski dobija termin.</p>
+              </div>
+            </div>
+
+            <div class="now"><span>09:41</span><i></i></div>
+
+            <span class="h">17:00</span>
+            <div class="slot-c">
+              <div class="r1"><p class="n">Mobilnost</p><p class="cap2">3/6 · <span class="free">3 slobodno</span></p></div>
+              <div class="r2"><span class="stack"><span class="av sm">TL</span><span class="av sm">MĐ</span><span class="av sm">SP</span></span>17:00 - 18:00</div>
+            </div>
+
+            <span class="h">18:00</span>
+            <p class="cancel"><s>Personalni</s> · otkazan za danas</p>
+          </div>
+        </div>
+        <div class="tabs" aria-hidden="true">
+          <span class="tab"><svg class="g"><use href="#i-home"/></svg>Početna</span>
+          <span class="tab"><svg class="g"><use href="#i-users"/></svg>Vežbači</span>
+          <span class="tab mid"><span class="bub live"><svg class="g"><use href="#i-pulse"/></svg><b class="cnt">2</b></span></span>
+          <span class="tab on"><svg class="g"><use href="#i-cal"/></svg>Kalendar</span>
+          <span class="tab"><svg class="g"><use href="#i-bars"/></svg>Finansije</span>
+        </div>
+        <div class="hi"></div>
+      </div>
+    </div>
+  </div>
+  <p class="cap">Nedelja stane u jedan red, bez trake koja beži u stranu. Broj rezervacija je jedini veliki broj, a pun termin, slobodna mesta i lista čekanja čitaju se bez otvaranja termina. Ljubičasto je samo ono što trener može da popuni.</p>
+  <details>
+    <summary>Prazno, učitavanje, greška</summary>
+    <ul>
+      <li><b>Prazno:</b> "Nema termina za ovaj dan."</li>
+      <li><b>Učitavanje:</b> "Učitavam..." umesto spiska termina.</li>
+      <li><b>Greška:</b> raspored istog dana ostaje, uz poruku "Podaci nisu učitani. Proveri vezu i povuci nadole da osvežiš."</li>
+    </ul>
+  </details>
+</section>
+
+<!-- ================= 4 ================= -->
+<section class="shot" id="ekran-4" aria-labelledby="h-4">
+  <h2 id="h-4"><b>4</b> Uplate i članarine <span>trener</span></h2>
+  <div class="slot">
+    <div class="phone">
+      <div class="scr">
+        <div class="island"></div>
+        <div class="sb"><span>9:41</span><span class="ic" aria-hidden="true"><svg width="18" height="12" fill="currentColor"><use href="#sb-sig"/></svg><svg width="16" height="12" fill="currentColor"><use href="#sb-wifi"/></svg><svg width="27" height="13" fill="currentColor"><use href="#sb-bat"/></svg></span></div>
+        <div class="ct">
+          <div style="height:52px;display:flex;align-items:center"><span class="ib"><svg class="g" aria-hidden="true"><use href="#i-cl"/></svg><span class="vh">nazad</span></span></div>
+          <p class="pt">Uplate i članarine</p>
+          <div class="seg"><span class="on">Zahtevi 2</span><span>Članarine</span></div>
+
+          <div class="tot">
+            <p class="l"><span>Na čekanju</span><span>2 zahteva</span></p>
+            <p class="amt"><span class="num">36.000</span><small>RSD</small></p>
+            <div class="split" aria-hidden="true"><i></i><i></i></div>
+            <p class="split-l"><span><b>Keš</b> 22.000</span><span><b>Račun</b> 14.000</span></p>
+          </div>
+
+          <div class="block req" style="margin-top:20px">
+            <div class="req-h">
+              <span class="av">AM</span>
+              <div><p class="nm">Ana Marković</p><p class="p">Mesečna 8 · 8 treninga · 30 dana</p></div>
+              <div class="rt"><p class="amt"><span class="num">14.000</span></p><p class="meth"><svg class="g xs" aria-hidden="true"><use href="#i-doc"/></svg>Račun</p></div>
+            </div>
+            <div class="acts">
+              <span class="btn sec"><svg class="g s" aria-hidden="true"><use href="#i-x"/></svg>Odbij</span>
+              <span class="btn pri"><svg class="g s" aria-hidden="true"><use href="#i-check"/></svg>Potvrdi</span>
+            </div>
+          </div>
+
+          <div class="block req">
+            <div class="req-h">
+              <span class="av">LP</span>
+              <div><p class="nm">Luka Petrović</p><p class="p">Personalni 10 · 10 treninga · 45 dana</p></div>
+              <div class="rt"><p class="amt"><span class="num">22.000</span></p><p class="meth"><svg class="g xs" aria-hidden="true"><use href="#i-cash"/></svg>Keš</p></div>
+            </div>
+            <div class="acts">
+              <span class="btn sec"><svg class="g s" aria-hidden="true"><use href="#i-x"/></svg>Odbij</span>
+              <span class="btn pri"><svg class="g s" aria-hidden="true"><use href="#i-check"/></svg>Potvrdi</span>
+            </div>
+          </div>
+        </div>
+        <div class="tabs" aria-hidden="true">
+          <span class="tab"><svg class="g"><use href="#i-home"/></svg>Početna</span>
+          <span class="tab"><svg class="g"><use href="#i-users"/></svg>Vežbači</span>
+          <span class="tab mid"><span class="bub live"><svg class="g"><use href="#i-pulse"/></svg><b class="cnt">2</b></span></span>
+          <span class="tab"><svg class="g"><use href="#i-cal"/></svg>Kalendar</span>
+          <span class="tab on"><svg class="g"><use href="#i-bars"/></svg>Finansije</span>
+        </div>
+        <div class="hi"></div>
+      </div>
+    </div>
+  </div>
+  <p class="cap">Ukupno na čekanju je jedna velika brojka, a traka ispod je podela na keš i račun u pravom odnosu. Zahtev je jedina kartica jer se na njemu radi: Odbij ili Potvrdi, a način plaćanja piše rečju, ne bojom.</p>
+  <details>
+    <summary>Prazno, učitavanje, greška</summary>
+    <ul>
+      <li><b>Prazno:</b> "Sve je rešeno. Novi zahtevi za članarinu stižu ovde."</li>
+      <li><b>Učitavanje:</b> "Učitavam..." u istoj kartici.</li>
+      <li><b>Greška:</b> "Zahtevi nisu učitani. Povuci nadole da osvežiš."</li>
+    </ul>
+  </details>
+</section>
+
+<!-- ================= 5 ================= -->
+<section class="shot" id="ekran-5" aria-labelledby="h-5">
+  <h2 id="h-5"><b>5</b> Trening u toku <span>vežbač</span></h2>
+  <div class="slot">
+    <div class="phone">
+      <div class="scr s5">
+        <div class="island"></div>
+        <div class="hero"><img src="../assets/baza/thumbs/barbell-bent-over-row.jpg" width="300" height="200" alt="Sa šipkom veslanje u pretklonu, mišići leđa označeni" loading="lazy"></div>
+        <div class="sb"><span>9:41</span><span class="ic" aria-hidden="true"><svg width="18" height="12" fill="currentColor"><use href="#sb-sig"/></svg><svg width="16" height="12" fill="currentColor"><use href="#sb-wifi"/></svg><svg width="27" height="13" fill="currentColor"><use href="#sb-bat"/></svg></span></div>
+        <div class="ov">
+          <span class="ib"><svg class="g" aria-hidden="true"><use href="#i-cd"/></svg><span class="vh">spusti trening</span></span>
+          <span class="chip">Vežba <span class="num">2</span> od 6 · <span class="num">24:13</span></span>
+          <span class="ib"><svg class="g" aria-hidden="true"><use href="#i-more"/></svg><span class="vh">još</span></span>
+        </div>
+        <div class="ct">
+          <div class="exprog" role="img" aria-label="vežba 2 od 6"><i class="d"></i><i class="c"></i><i></i><i></i><i></i><i></i></div>
+          <div class="tw5">
+            <div><svg class="g s f c-z2" aria-hidden="true"><use href="#i-heart"/></svg><span class="num c-z2">132</span><small>bpm</small></div>
+            <div><svg class="g s f" aria-hidden="true" style="color:var(--bone-2)"><use href="#i-flame"/></svg><span class="num">214</span><small>kcal</small></div>
+          </div>
+          <p class="zrow"><b>Zona 2</b><span>Apple Watch 86%</span></p>
+          <div class="zbar" role="img" aria-label="zona 2 od 5"><i class="l1"></i><i class="l2 cur"></i><i></i><i></i><i></i></div>
+
+          <div class="exname">
+            <div><p class="l">Leđa · 4 serije</p><p class="n">Sa šipkom veslanje u pretklonu</p></div>
+            <span class="timer"><svg class="g s" aria-hidden="true"><use href="#i-timer"/></svg><span class="num">1:30</span></span>
+          </div>
+          <div class="last">
+            <p class="l">Prošli put<br>uto, 8. sep</p>
+            <p class="v"><span>60×10</span><span>60×10</span><span>62,5×8</span><span>62,5×8</span></p>
+          </div>
+          <div class="serh">
+            <p class="t">Serija 4 <span>· Drop set</span></p>
+            <span class="e"><svg class="g s" aria-hidden="true"><use href="#i-pen"/></svg>Ispravi serije</span>
+          </div>
+          <div class="sets">
+            <div class="r hd"><span></span><span style="text-align:center">kg</span><span style="text-align:center">pon.</span><span></span></div>
+            <div class="r"><span class="k">W</span><span class="fld">40</span><span class="fld">12</span><span class="ok"><svg class="g s" aria-hidden="true"><use href="#i-check"/></svg></span></div>
+            <div class="r"><span class="k">2</span><span class="fld">65</span><span class="fld">10</span><span class="ok"><svg class="g s" aria-hidden="true"><use href="#i-check"/></svg></span></div>
+            <div class="r"><span class="k">3</span><span class="fld">67,5</span><span class="fld">10</span><span class="ok"><svg class="g s" aria-hidden="true"><use href="#i-check"/></svg></span></div>
+            <div class="r"><span class="k" style="color:var(--bone)">D</span><span class="fld act">65</span><span class="fld act">10</span><span class="ring"></span></div>
+          </div>
+        </div>
+        <span class="btn pri cta">Završi set 4</span>
+        <div class="hi"></div>
+      </div>
+    </div>
+  </div>
+  <p class="cap">Slika te vežbe je vrh ekrana, sa označenim mišićima. Ispod su puls i kalorije kao blizanci i zona na toploj skali, pa prošli put u jednom redu. Polja serije su brojevi koje dodir otvara u brojčaniku, bez plus i minus i bez tastature.</p>
+  <details>
+    <summary>Prazno, učitavanje, greška</summary>
+    <ul>
+      <li><b>Prazno:</b> "Ovaj dan još nema vežbe. Javi treneru da doda vežbe."</li>
+      <li><b>Bez sata:</b> "Nema pulsa" na mestu broja, kalorije i serije rade dalje.</li>
+      <li><b>Greška:</b> "Trening nije završen. Pokušaj ponovo."</li>
+    </ul>
+  </details>
+</section>
+
+<!-- ================= 6 ================= -->
+<section class="shot" id="ekran-6" aria-labelledby="h-6">
+  <h2 id="h-6"><b>6</b> Napredak <span>vežbač</span></h2>
+  <div class="slot">
+    <div class="phone">
+      <div class="scr">
+        <div class="island"></div>
+        <div class="sb"><span>9:41</span><span class="ic" aria-hidden="true"><svg width="18" height="12" fill="currentColor"><use href="#sb-sig"/></svg><svg width="16" height="12" fill="currentColor"><use href="#sb-wifi"/></svg><svg width="27" height="13" fill="currentColor"><use href="#sb-bat"/></svg></span></div>
+        <div class="ct">
+          <p class="pt" style="margin-top:14px">Tvoj napredak</p>
+          <div class="seg"><span class="on">Treninzi</span><span>Telo</span></div>
+
+          <div class="stats">
+            <div><p class="v"><span class="num">48</span><span>treninga</span></p><p class="s">sa trenerom Marko</p></div>
+            <div><p class="v"><span class="num">12</span><span>dana u nizu</span></p><p class="s">najbolji niz 21</p></div>
+          </div>
+          <p class="mo"><b>9</b> ovog meseca · <b>0</b> ove nedelje · <b>7</b> ostalo</p>
+
+          <div class="act-h">
+            <div><p class="t">Aktivnost po nedeljama</p><p class="s">poslednjih 8 nedelja</p></div>
+            <p class="avg"><span class="num">3,2</span><small>prosek nedeljno</small></p>
+          </div>
+          <div class="hm" role="img" aria-label="Treninzi po danima, poslednjih 8 nedelja, ukupno 26">
+            <span>P</span><i></i><i></i><i class="y"></i><i class="y"></i><i></i><i class="y"></i><i class="y"></i><i class="wk"></i>
+            <span>U</span><i></i><i></i><i class="y"></i><i></i><i class="y"></i><i class="y"></i><i></i><i class="wk"></i>
+            <span>S</span><i></i><i></i><i></i><i class="y"></i><i class="y"></i><i></i><i class="y"></i><i class="wk"></i>
+            <span>Č</span><i></i><i></i><i class="y"></i><i class="y"></i><i></i><i class="y"></i><i class="y"></i><i class="wk"></i>
+            <span>P</span><i></i><i class="y"></i><i class="y"></i><i></i><i class="y"></i><i class="y"></i><i></i><i class="wk"></i>
+            <span>S</span><i></i><i class="y"></i><i></i><i class="y"></i><i class="y"></i><i></i><i class="y"></i><i class="wk"></i>
+            <span>N</span><i></i><i></i><i class="y"></i><i class="y"></i><i></i><i class="y"></i><i class="y"></i><i class="wk"></i>
+          </div>
+          <p class="hm-x"><span>pre 8 nedelja</span><span>ova nedelja</span></p>
+
+          <p class="rec-t">Lični rekordi</p>
+          <div class="rec">
+            <span class="thumb" style="width:60px;height:40px"><img src="../assets/baza/thumbs/barbell-bent-over-row.jpg" width="60" height="40" alt="Sa šipkom veslanje u pretklonu" loading="lazy"></span>
+            <div><p class="n">Sa šipkom veslanje u pretklonu</p><p class="s">1RM ~82,3 kg · 14. sep</p></div>
+            <span class="num">65 kg × 8</span>
+          </div>
+          <div class="rec">
+            <span class="thumb" style="width:60px;height:40px"><img src="../assets/baza/thumbs/barbell-squat.jpg" width="60" height="40" alt="Čučanj sa šipkom" loading="lazy"></span>
+            <div><p class="n">Čučanj sa šipkom</p></div>
+            <span class="num">100 kg × 6</span>
+          </div>
+          <div class="rec">
+            <span class="thumb" style="width:60px;height:40px"><img src="../assets/baza/thumbs/barbell-curl.jpg" width="60" height="40" alt="Sa šipkom pregib" loading="lazy"></span>
+            <div><p class="n">Sa šipkom pregib</p></div>
+            <span class="num">30 kg × 10</span>
+          </div>
+        </div>
+        <div class="tabs" aria-hidden="true">
+          <span class="tab"><svg class="g"><use href="#i-home"/></svg>Početna</span>
+          <span class="tab"><svg class="g"><use href="#i-calplus"/></svg>Rezerviši</span>
+          <span class="tab mid"><span class="bub go"><svg class="g"><use href="#i-dumb"/></svg></span></span>
+          <span class="tab on"><svg class="g"><use href="#i-trend"/></svg>Napredak</span>
+          <span class="tab"><svg class="g"><use href="#i-card"/></svg>Članarina</span>
+        </div>
+        <div class="hi"></div>
+      </div>
+    </div>
+  </div>
+  <p class="cap">Treninzi i niz dana su dva ista broja jedan pored drugog. Mreža aktivnosti je kost na grafitu, a prazna kolona je ova nedelja, tačno ono što piše "0 ove nedelje". Rekordi su lista sa slikom vežbe, ne traka koja beži u stranu, i bez pehara iz emodžija.</p>
+  <details>
+    <summary>Prazno, učitavanje, greška</summary>
+    <ul>
+      <li><b>Prazno:</b> brojke stoje na 0, mreža je prazna, a rekordi se ne prikazuju dok ih nema.</li>
+      <li><b>Učitavanje:</b> "Učitavam..." umesto brojki.</li>
+      <li><b>Greška:</b> "Podaci nisu učitani. Proveri vezu i povuci nadole da osvežiš."</li>
+    </ul>
+  </details>
+</section>
+
+</main>
+
+<footer class="wrap">
+  <p>Mockup za poređenje tri skila. Ništa od ovoga nije u aplikaciji. Imena, brojke i rekordi su iz demo režima aplikacije, slike vežbi su postojeće slike iz baze.</p>
+</footer>
+
+<script>
+(function(){
+  var W = 415;
+  function fit(){
+    var slots = document.querySelectorAll('.slot');
+    for (var i = 0; i < slots.length; i++){
+      var p = slots[i].firstElementChild;
+      var z = Math.min(1, slots[i].clientWidth / W);
+      p.style.zoom = z;
+    }
+  }
+  fit();
+  window.addEventListener('resize', fit);
+})();
+</script>
+</body>
+</html>

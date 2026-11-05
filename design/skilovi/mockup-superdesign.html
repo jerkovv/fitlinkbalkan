@@ -1,0 +1,902 @@
+<!doctype html>
+<html lang="sr-Latn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FitLink superdesign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@1,600;1,700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Ponoć tokeni, preuzeti 1:1 iz fitlink-ios/FitLink/Design/Tema.swift (superdesign: sistem je tvrda granica) */
+:root{
+  --ink:#0B0A10;--s1:#15121C;--s2:#1F1B28;--s3:#2A2535;--line:rgba(236,228,255,.08);--line2:rgba(236,228,255,.14);
+  --tx:#F6F3FB;--tx2:#B9B2C9;--tx3:#8A83A0;
+  --violet:#8B3DEB;--indigo:#5B4BEF;--magenta:#E24CA6;--vlt:#C4A2FF;
+  --ok:#3DDC97;--warn:#FFB547;--bad:#FF6B61;--rest:#5AC8FA;--kcal:#FF8A4C;--gold:#FFE1B0;
+  --z1:#0A84FF;--z2:#30D158;--z3:#FFD60A;--z4:#FF9F0A;--z5:#FF453A;
+  --brand:linear-gradient(135deg,#8B3DEB 0%,#5B4BEF 55%,#E24CA6 100%);
+  --brandtx:linear-gradient(135deg,#B57BFF 0%,#8C7DFF 50%,#FF7CC6 100%);
+  --k:1;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:#070609;color-scheme:dark}
+body{background:#070609;color:var(--tx);font-family:Poppins,system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+svg{display:block}
+.fig{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Inter Tight",system-ui,sans-serif;font-style:italic;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em;line-height:1}
+.gtx{background:var(--brandtx);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* ---------- stranica ---------- */
+.intro{max-width:780px;margin:0 auto;padding:64px 16px 44px}
+.intro .tag{display:inline-flex;gap:8px;align-items:center;font:600 11px/1 Poppins;letter-spacing:1.6px;text-transform:uppercase;color:var(--vlt)}
+.intro .tag i{width:7px;height:7px;border-radius:50%;background:var(--brand)}
+.intro h1{font:700 36px/1.12 Poppins;letter-spacing:-1.1px;margin:14px 0 16px}
+.intro p{font-size:16px;line-height:1.7;color:var(--tx2)}
+.intro p b{color:var(--tx);font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,calc(417px * var(--k)));justify-content:center;gap:64px 44px;padding:0 16px 96px}
+.slot{width:calc(417px * var(--k))}
+.dev{zoom:var(--k);width:417px;height:876px;border-radius:66px;padding:12px;background:#17161c;box-shadow:0 0 0 1px #2d2b34,inset 0 0 0 1px #3a3842,0 40px 90px -20px rgba(0,0,0,.8),0 0 120px -40px rgba(139,61,235,.35)}
+figcaption{margin-top:20px;display:flex;gap:12px;font-size:13.5px;line-height:1.6;color:var(--tx2)}
+figcaption .n{flex:none;font:600 12px/1.9 Poppins;color:var(--vlt);letter-spacing:1px}
+figcaption b{color:var(--tx);font-weight:600}
+
+/* ---------- ekran ---------- */
+.scr{position:relative;width:393px;height:852px;border-radius:54px;overflow:hidden;background:var(--ink);isolation:isolate;font-size:14px;color:var(--tx)}
+.glow{position:absolute;left:0;right:0;top:0;height:460px;z-index:0;pointer-events:none;background:radial-gradient(120% 72% at 50% -10%,rgba(139,61,235,.44) 0%,rgba(91,75,239,.14) 46%,rgba(11,10,16,0) 72%)}
+.island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:124px;height:36px;border-radius:20px;background:#000;z-index:80}
+.sb{position:absolute;top:0;left:0;right:0;height:54px;padding:6px 30px 0 48px;display:flex;align-items:center;justify-content:space-between;z-index:75;font:600 16.5px/1 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;letter-spacing:-.2px;color:#fff}
+.sb .ic{display:flex;gap:6px;align-items:center}
+.pg{position:absolute;inset:0;padding:54px 20px 0;z-index:2}
+.hi{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:var(--tx);z-index:90}
+.fadeb{position:absolute;left:0;right:0;bottom:0;height:120px;z-index:30;pointer-events:none;background:linear-gradient(rgba(11,10,16,0),rgba(11,10,16,.92) 70%,var(--ink))}
+
+.ov{display:flex;align-items:center;gap:5px;font:600 10.5px/1.2 Poppins;letter-spacing:1.5px;text-transform:uppercase;color:var(--tx2)}
+.ov svg{width:12px;height:12px}
+.h1{font:700 32px/1.08 Poppins;letter-spacing:-.96px}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:22px}
+.av{flex:none;display:grid;place-items:center;border-radius:50%;background:var(--brand);color:#fff;font-weight:600;position:relative}
+.rb{flex:none;position:relative;width:42px;height:42px;border-radius:50%;background:rgba(21,18,28,.85);border:1px solid var(--line2);display:grid;place-items:center;color:var(--tx)}
+.rb svg{width:19px;height:19px}
+.bdg{position:absolute;top:-4px;right:-4px;min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:var(--brand);font:700 10.5px/19px Poppins;text-align:center;color:#fff;box-shadow:0 0 0 2px var(--ink)}
+.chip{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:999px;font:600 11.5px/1 Poppins;white-space:nowrap}
+.chip svg{width:11px;height:11px}
+.c-ok{background:rgba(61,220,151,.13);color:var(--ok)}
+.c-warn{background:rgba(255,181,71,.14);color:var(--warn)}
+.c-bad{background:rgba(255,107,97,.14);color:var(--bad)}
+.c-v{background:rgba(139,61,235,.22);color:var(--vlt)}
+.c-rest{background:rgba(90,200,250,.14);color:var(--rest)}
+.clamp2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sub{font-size:12px;line-height:1.4;color:var(--tx2)}
+.mut{color:var(--tx3)}
+.sec{display:flex;align-items:baseline;justify-content:space-between;margin:14px 2px 8px}
+.sec b{font:600 16px/1.2 Poppins}
+.sec span{font-size:12px;color:var(--tx3)}
+.ib{flex:none;width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:var(--s2);color:var(--vlt)}
+.ib svg{width:20px;height:20px}
+.chev{width:16px;height:16px;color:var(--tx3);flex:none}
+
+/* donja traka, mere iz Delovi.swift: visina 92, FAB 66 sa prstenom */
+.tab{position:absolute;left:0;right:0;bottom:0;height:92px;z-index:40;padding:13px 4px 0;display:grid;grid-template-columns:1fr 1fr 84px 1fr 1fr;background:rgba(21,18,28,.94);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border-top:1px solid var(--line2);border-radius:30px 30px 0 0}
+.tab::before{content:"";position:absolute;left:0;right:0;top:-34px;height:34px;pointer-events:none;background:linear-gradient(rgba(11,10,16,0),rgba(11,10,16,.9))}
+.tab a:nth-of-type(3){grid-column:4}.tab a:nth-of-type(4){grid-column:5}
+.tab a{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--tx3);font:500 11px/1.2 Poppins;text-decoration:none}
+.tab a svg{width:24px;height:24px}
+.tab a.on{color:var(--tx);font-weight:600}
+.tab a.on::after{content:"";width:4px;height:4px;border-radius:50%;background:var(--vlt)}
+.fab{position:absolute;left:50%;top:-33px;margin-left:-33px;width:66px;height:66px;border-radius:50%;background:var(--brand);display:grid;place-items:center;color:#fff;box-shadow:0 0 0 6px var(--ink),0 0 0 7px rgba(236,228,255,.08),0 12px 34px rgba(139,61,235,.6)}
+.fab svg{width:28px;height:28px}
+.fab .bdg{background:#fff;color:var(--ink);top:-6px;right:-6px;min-width:22px;height:22px;line-height:22px;font-size:11.5px;box-shadow:0 0 0 3px var(--ink)}
+
+/* ---------- 1. trener, početna ---------- */
+.hd{display:flex;align-items:center;gap:12px;padding-top:4px}
+.hd .t{flex:1;min-width:0}
+.hd .t b{display:block;font:600 19px/1.25 Poppins;letter-spacing:-.3px}
+.hd .t span{font-size:13px;color:var(--tx2)}
+.live{margin-top:12px;padding:14px 14px 0;border-radius:24px;background:linear-gradient(180deg,rgba(139,61,235,.16),rgba(21,18,28,.9) 38%),var(--s1);border:1px solid rgba(196,162,255,.18);box-shadow:0 20px 50px -24px rgba(139,61,235,.55)}
+.lg{display:grid;grid-template-columns:42px minmax(0,1fr) 52px 53px;column-gap:10px}
+.live-h{align-items:center;padding-bottom:9px;border-bottom:1px solid var(--line)}
+.live-h .ttl{grid-column:1/3;display:flex;align-items:center;gap:8px;font:600 15px/1 Poppins}
+.ld{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px rgba(61,220,151,.16);animation:breathe 2.4s ease-in-out infinite}
+.live-h .cnt{font:600 11px/1 Poppins;color:var(--tx3);letter-spacing:.3px}
+.colh{display:flex;justify-content:center;align-items:center;gap:4px;font:600 10px/1 Poppins;letter-spacing:1.2px;text-transform:uppercase;color:var(--tx2)}
+.colh svg{width:11px;height:11px}
+.lr{padding:10px 0;border-bottom:1px solid var(--line);row-gap:6px}
+.lr .av{width:42px;height:42px;font-size:14px;grid-row:1/3;align-self:start;box-shadow:0 0 0 2px var(--s1),0 0 0 4px var(--zc)}
+.lr .av i{position:absolute;right:-1px;bottom:-1px;width:11px;height:11px;border-radius:50%;border:2px solid var(--s1)}
+.lr .tx{grid-row:1/3;min-width:0}
+.lr .nm{font:600 15px/1.25 Poppins}
+.lr .ex{font-size:12.5px;line-height:1.35;color:var(--tx2);margin-top:1px}
+.lr .mt{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:11.5px;color:var(--tx3);white-space:nowrap}
+.lr .mt .chip{height:20px;padding:0 7px;font-size:11px}
+.lr .num{font-size:27px;text-align:center;align-self:start;padding-top:2px}
+.lg>.k{border-left:1px solid var(--line2);padding-left:1px}
+.lr .num.k{padding-top:2px;padding-bottom:2px}
+.lr .src{grid-column:3/5;justify-self:end;align-self:end;display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--tx3);white-space:nowrap}
+.lr .src svg{width:11px;height:11px}
+.lr .src b{color:var(--tx2);font-weight:600}
+.lock{display:flex;align-items:center;gap:12px;padding:11px 0 12px}
+.lock .ib{width:36px;height:36px;border-radius:12px;color:var(--tx2)}
+.lock .ib svg{width:17px;height:17px}
+.lock .t{flex:1;min-width:0}
+.lock b{display:block;font:600 13.5px/1.3 Poppins}
+.lock span{display:block;font-size:11.5px;line-height:1.35;color:var(--tx3)}
+.tg{flex:none;width:50px;height:30px;border-radius:15px;background:var(--violet);position:relative;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.tg::after{content:"";position:absolute;right:3px;top:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.prow{display:flex;align-items:center;gap:12px;padding:10px 14px}
+.prow .t{flex:1;min-width:0}
+.prow .t b{display:block;font:600 14.5px/1.3 Poppins}
+.amt{text-align:right;white-space:nowrap}
+.amt .fig{font-size:22px}
+.amt small{display:block;margin-top:3px;font:600 10px/1 Poppins;letter-spacing:1.2px;color:var(--tx3)}
+.exp{margin-top:8px;padding:2px 14px}
+.exp-h{display:flex;align-items:center;justify-content:space-between;padding:9px 0 7px;border-bottom:1px solid var(--line)}
+.exp-h b{font:600 14.5px/1.3 Poppins}
+.er{display:grid;grid-template-columns:34px minmax(0,1fr) 54px;column-gap:12px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.er:last-child{border-bottom:0}
+.er .av{width:34px;height:34px;font-size:12px}
+.er .nm{font:600 14px/1.3 Poppins}
+.er .dn{text-align:right}
+.er .dn .fig{font-size:20px}
+.er .dn small{display:block;font-size:10.5px;color:var(--tx3);margin-top:2px}
+
+/* ---------- 2. trener, uživo ---------- */
+.s2 .glow{background:radial-gradient(90% 46% at 30% 6%,rgba(255,159,10,.26),rgba(11,10,16,0) 70%),radial-gradient(120% 70% at 50% -10%,rgba(139,61,235,.4),rgba(11,10,16,0) 70%)}
+.nav{display:flex;align-items:center;gap:10px;padding-top:6px}
+.who{flex:1;min-width:0;display:flex;align-items:center;gap:10px;height:48px;padding:0 14px 0 7px;border-radius:24px;background:rgba(21,18,28,.7);border:1px solid var(--line2)}
+.who .av{width:34px;height:34px;font-size:12px;box-shadow:0 0 0 2px var(--rest)}
+.who .s{display:flex;align-items:center;gap:5px;font:600 10px/1.2 Poppins;letter-spacing:1.4px;color:var(--rest);text-transform:uppercase}
+.who .s i{width:6px;height:6px;border-radius:50%;background:var(--rest);animation:breathe 2s ease-in-out infinite}
+.who .n{font:600 14px/1.3 Poppins;white-space:nowrap}
+.tmr{flex:none;display:flex;align-items:center;gap:8px;height:42px;padding:0 13px;border-radius:21px;background:rgba(21,18,28,.7);border:1px solid var(--line2)}
+.tmr .fig{font-size:16px}
+.tmr svg{width:16px;height:16px;color:var(--tx2)}
+.twins{display:grid;grid-template-columns:1fr 1px 1fr;margin-top:16px;align-items:end}
+.twins .dv{width:1px;height:96px;background:var(--line2);align-self:center}
+.tw{text-align:center}
+.tw .ov{justify-content:center}
+.tw .big{font-size:64px;margin-top:8px}
+.tw .u{font-size:13px;color:var(--tx2);margin-top:4px}
+.zbar{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:16px}
+.zbar i{height:8px;border-radius:4px;opacity:.28}
+.zbar i.on{opacity:1;box-shadow:0 0 14px currentColor}
+.zdot{position:absolute;top:-4px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px var(--ink),0 0 12px rgba(255,159,10,.9)}
+.zlab{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+.zlab .src{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--tx2)}
+.zlab .src svg{width:13px;height:13px}
+.zlab .src b{color:var(--tx);font-weight:600}
+.rest{display:flex;align-items:center;gap:12px;margin-top:12px;padding:11px 16px 11px 12px;border-radius:20px;background:linear-gradient(90deg,rgba(90,200,250,.14),rgba(90,200,250,.04));border:1px solid rgba(90,200,250,.28)}
+.rest .pp{flex:none;width:36px;height:36px;border-radius:50%;background:var(--rest);color:var(--ink);display:grid;place-items:center}
+.rest .pp svg{width:15px;height:15px}
+.rest .t{flex:1}
+.rest b{display:block;font:600 15px/1.25 Poppins}
+.rest .fig{font-size:30px;color:var(--rest)}
+.hr{margin-top:10px;padding:12px 14px 10px}
+.hr .top{display:flex;justify-content:space-between;align-items:center}
+.hr .top span{font-size:11.5px;color:var(--tx2)}
+.hr svg{margin-top:8px;overflow:visible}
+.hr .line{stroke-dasharray:420;stroke-dashoffset:420;animation:draw 1.6s .3s ease-out forwards}
+.trh{display:flex;align-items:center;justify-content:space-between;margin:12px 2px 8px}
+.trh .sub{margin-top:3px}
+.btn-s{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:18px;background:rgba(139,61,235,.2);border:1px solid rgba(196,162,255,.25);color:var(--vlt);font:600 13px/1 Poppins;white-space:nowrap}
+.btn-s svg{width:15px;height:15px}
+.xr{display:flex;align-items:center;gap:12px;padding:8px 12px 8px 8px}
+.th{flex:none;width:46px;height:46px;border-radius:13px;background:#fff center/cover no-repeat;overflow:hidden}
+.th img{width:100%;height:100%;object-fit:cover;display:block}
+.xr .t{flex:1;min-width:0}
+.xr .t b{display:block;font:600 14px/1.3 Poppins}
+.okc{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:rgba(61,220,151,.16);color:var(--ok)}
+.okc svg{width:15px;height:15px}
+.okc.new{background:var(--ok);color:var(--ink);box-shadow:0 0 16px rgba(61,220,151,.55)}
+.emc{flex:none;width:28px;height:28px;border-radius:50%;border:2px solid var(--s3)}
+.cur{margin-top:8px;padding:10px 12px 12px 8px;border-radius:22px;background:var(--s1);border:1px solid rgba(196,162,255,.35);box-shadow:0 0 0 4px rgba(139,61,235,.08)}
+.cur .xr{padding:0 0 10px}
+.cur .xr .th{width:52px;height:52px}
+.cur .xr .t b{font-size:15px}
+.st{display:grid;grid-template-columns:24px minmax(0,1fr) 62px 52px 30px;column-gap:7px;align-items:center;padding-left:6px}
+.st.hd2{padding-top:4px;padding-bottom:6px}
+.st.hd2 span{font:600 9.5px/1 Poppins;letter-spacing:1.2px;text-transform:uppercase;color:var(--tx3)}
+.st.hd2 span.c{text-align:center}
+.st.r{height:44px}
+.st .sl{font:700 13px/1 Poppins;text-align:center}
+.st .pp2{font-size:12.5px;color:var(--tx2);white-space:nowrap}
+.cell{height:36px;border-radius:11px;background:var(--s2);display:grid;place-items:center;font:600 15px/1 Poppins}
+.cell.tg2{background:transparent;border:1px dashed var(--s3);color:var(--tx3);font-weight:500}
+
+/* ---------- 3. kalendar ---------- */
+.ch{display:flex;align-items:flex-end;justify-content:space-between;padding-top:8px}
+.ch .btns{display:flex;gap:8px}
+.ch .rb{width:38px;height:38px}
+.ch .rb svg{width:17px;height:17px}
+.wk{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:16px}
+.wd{height:60px;border-radius:17px;background:var(--s1);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}
+.wd small{font:600 9px/1 Poppins;letter-spacing:1px;color:var(--tx3)}
+.wd .fig{font-size:20px}
+.wd .dots{display:flex;gap:3px;height:4px}
+.wd .dots i{width:4px;height:4px;border-radius:50%;background:var(--vlt);opacity:.7}
+.wd.on{background:var(--brand);border-color:transparent;box-shadow:0 10px 26px -8px rgba(139,61,235,.8)}
+.wd.on small{color:rgba(255,255,255,.85)}
+.wd.on .dots i{background:#fff;opacity:1}
+.wd.off .fig{color:var(--tx3)}
+.sum{display:flex;align-items:center;gap:14px;margin-top:14px}
+.sum .big{font-size:54px;padding-right:4px}
+.sum b{display:block;font:600 16px/1.3 Poppins}
+.sum .sub{font-size:12.5px;margin-top:2px}
+.cap{display:flex;gap:6px;margin-top:12px}
+.cap .g{display:flex;gap:2px}
+.cap .g i{flex:1;height:8px;border-radius:3px;background:var(--s3)}
+.capl{display:flex;justify-content:space-between;margin-top:6px;font-size:10.5px;color:var(--tx3)}
+.capl b{color:var(--tx2);font-weight:600}
+.tl{position:relative;margin-top:16px;display:grid;grid-template-columns:44px minmax(0,1fr);row-gap:8px}
+.tl::before{content:"";position:absolute;left:51px;top:6px;bottom:4px;width:2px;border-radius:1px;background:var(--s2)}
+.tm{font:500 12px/1 Poppins;color:var(--tx3);padding-top:14px}
+.ev{position:relative;margin-left:16px;padding:11px 12px 12px 14px;border-radius:18px;border:1px solid var(--ec35);background:linear-gradient(90deg,var(--ec22),var(--ec06))}
+.ev::before{content:"";position:absolute;left:-1px;top:-1px;bottom:-1px;width:4px;border-radius:18px 0 0 18px;background:var(--ec)}
+.ev .r1{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.ev .r1 b{font:600 15px/1.25 Poppins}
+.ev .r2{display:flex;align-items:center;gap:8px;margin-top:7px;font-size:12px;color:var(--tx2);white-space:nowrap}
+.avs{display:flex}
+.avs .av{width:24px;height:24px;font-size:8.5px;box-shadow:0 0 0 2px #17131f;margin-left:-6px}
+.avs .av:first-child{margin-left:0}
+.avs .av.more{background:var(--s3)}
+.ev .r3{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:9px}
+.ev .r3 .ch2{display:flex;gap:5px}
+.wl{margin-top:10px;padding-top:9px;border-top:1px solid rgba(236,228,255,.1)}
+.wl .ov{font-size:9.5px}
+.wlr{display:flex;align-items:center;gap:9px;margin-top:7px;font:600 13px/1.2 Poppins}
+.wlr i{flex:none;width:22px;height:22px;border-radius:50%;background:rgba(255,181,71,.15);color:var(--warn);font:700 11px/22px Poppins;font-style:normal;text-align:center}
+.wl p{margin-top:7px;font-size:11px;line-height:1.35;color:var(--tx3)}
+.now{grid-column:1/3;position:relative;height:22px;margin:-2px 0}
+.now::before{content:"";position:absolute;left:47px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--magenta);box-shadow:0 0 12px var(--magenta)}
+.now::after{content:"";position:absolute;left:57px;right:86px;top:10px;height:2px;background:linear-gradient(90deg,var(--magenta),rgba(226,76,166,.4))}
+.now span{position:absolute;right:0;top:0;height:22px;padding:0 10px;border-radius:11px;background:var(--magenta);font:600 11.5px/22px Poppins;color:#fff;box-shadow:0 0 18px rgba(226,76,166,.5)}
+.cx{display:inline-flex;align-items:center;margin-left:16px;height:30px;padding:0 12px;border-radius:15px;border:1px solid var(--line2);font-size:12px;color:var(--tx3);text-decoration:line-through}
+
+/* ---------- 4. uplate ---------- */
+.back{padding-top:4px}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:14px;padding:4px;border-radius:22px;background:var(--s1);border:1px solid var(--line)}
+.sg span{height:38px;border-radius:18px;display:grid;place-items:center;font:600 13.5px/1 Poppins;color:var(--tx2)}
+.sg span.on{background:var(--brand);color:#fff;box-shadow:0 8px 20px -8px rgba(139,61,235,.8)}
+.sg.soft span.on{background:var(--s2);box-shadow:inset 0 0 0 1px rgba(196,162,255,.3)}
+.pend{position:relative;margin-top:12px;padding:16px 20px 16px;border-radius:26px;background:var(--brand);overflow:hidden;box-shadow:0 24px 50px -22px rgba(139,61,235,.9)}
+.pend::after{content:"";position:absolute;right:-60px;top:-80px;width:220px;height:220px;border-radius:50%;background:radial-gradient(rgba(255,255,255,.22),rgba(255,255,255,0) 70%)}
+.pend .top{display:flex;justify-content:space-between;align-items:center}
+.pend .ov{color:rgba(255,255,255,.82)}
+.pend .chip{background:rgba(255,255,255,.2);color:#fff}
+.pend .v{display:flex;align-items:baseline;gap:8px;margin-top:8px}
+.pend .v .fig{font-size:56px;color:#fff}
+.pend .v small{font:600 12px/1 Poppins;letter-spacing:1.6px;color:rgba(255,255,255,.8)}
+.split{display:flex;gap:4px;margin-top:14px}
+.split i{height:8px;border-radius:4px}
+.splitl{display:flex;justify-content:space-between;margin-top:8px;font-size:12.5px;color:rgba(255,255,255,.85)}
+.splitl b{font-weight:600;color:#fff}
+.rq{margin-top:10px;padding:13px 14px}
+.rq .top{display:grid;grid-template-columns:44px minmax(0,1fr) auto;column-gap:12px;align-items:start}
+.rq .av{width:44px;height:44px;font-size:15px}
+.rq .nm{font:600 15px/1.3 Poppins}
+.rq .sub{margin-top:2px}
+.rq .amt .fig{font-size:24px}
+.rq .amt .chip{margin-top:7px;height:22px;font-size:11px}
+.acts{display:grid;grid-template-columns:1fr 1.35fr;gap:8px;margin-top:12px}
+.b{height:46px;border-radius:16px;display:flex;align-items:center;justify-content:center;gap:7px;font:600 14.5px/1 Poppins;white-space:nowrap}
+.b svg{width:17px;height:17px}
+.b.o{border:1px solid var(--line2);color:var(--tx)}
+.b.p{background:var(--brand);color:#fff;box-shadow:0 10px 24px -10px rgba(139,61,235,.9)}
+
+/* ---------- 5. vežbač, trening ---------- */
+.s5 .hero{position:absolute;left:0;right:0;top:0;height:264px;z-index:1;overflow:hidden;background:#2a2620}
+.s5 .hero video,.s5 .hero img{width:100%;height:100%;object-fit:cover;object-position:52% 40%;display:block}
+.s5 .hero::before{content:"";position:absolute;inset:0;z-index:2;background:linear-gradient(rgba(11,10,16,.6),rgba(11,10,16,0) 34%,rgba(11,10,16,0) 66%,rgba(11,10,16,.7) 88%,var(--ink))}
+.s5 .pg{z-index:3}
+.topc{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:6px}
+.topc .rb{background:rgba(11,10,16,.5);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.cnt2{display:flex;align-items:center;gap:6px;height:38px;padding:0 15px;border-radius:19px;background:rgba(11,10,16,.5);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid var(--line2);font-size:13px;color:var(--tx2);white-space:nowrap}
+.cnt2 b{color:var(--tx);font-weight:600}
+.cnt2 .fig{font-size:15px;color:var(--tx)}
+.tws{margin-top:12px;padding:12px 14px 11px;border-radius:22px;background:var(--s1);border:1px solid var(--line)}
+.tw2{display:grid;grid-template-columns:1fr 1px 1fr;align-items:center}
+.tw2 .dv{width:1px;height:32px;background:var(--line2)}
+.tw2 .c{display:flex;align-items:baseline;justify-content:center;gap:6px}
+.tw2 .c svg{width:15px;height:15px;align-self:center}
+.tw2 .fig{font-size:34px}
+.tw2 small{font-size:12px;color:var(--tx2)}
+.zrow{display:flex;align-items:flex-start;gap:12px;margin-top:11px}
+.zb2{flex:1;display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.zb2 div{text-align:center;white-space:nowrap}
+.zb2 i{display:block;height:6px;border-radius:3px;opacity:.3}
+.zb2 span{display:block;margin-top:5px;font:600 9.5px/1 Poppins;color:var(--tx3);letter-spacing:.3px}
+.zb2 .on i{opacity:1;box-shadow:0 0 12px currentColor}
+.zb2 .on span{color:var(--z2)}
+.zf{flex:none;display:flex;align-items:center;gap:4px;margin-top:-3px;font-size:11px;color:var(--tx2)}
+.zf svg{width:12px;height:12px}
+.zf b{color:var(--tx);font-weight:600}
+.prog{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-top:168px}
+.prog i{height:4px;border-radius:2px;background:var(--s3)}
+.ttl5{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-top:12px}
+.ttl5 .ov{color:var(--vlt)}
+.ttl5 h3{font:700 21px/1.2 Poppins;letter-spacing:-.4px;margin-top:5px}
+.rt{flex:none;display:flex;align-items:center;gap:7px;height:40px;padding:0 13px;margin-top:14px;border-radius:21px;border:1px solid var(--line2);background:var(--s1)}
+.rt svg{width:17px;height:17px;color:var(--tx2)}
+.rt .fig{font-size:18px}
+.st5{display:grid;grid-template-columns:22px 70px minmax(0,1fr) minmax(0,1fr) 34px;column-gap:8px;align-items:center}
+.st5.h{margin-top:12px;padding-bottom:5px}
+.st5.h span{font:600 9.5px/1 Poppins;letter-spacing:1.2px;text-transform:uppercase;color:var(--tx3);text-align:center}
+.st5.h span:nth-child(2){text-align:left}
+.st5.h em{display:block;margin-top:3px;font:500 10px/1 Poppins;font-style:normal;letter-spacing:0;text-transform:none;color:var(--tx3)}
+.st5.h{align-items:end}
+.st5.r{height:46px}
+.st5 .sl{font:700 14px/1 Poppins;text-align:center}
+.st5 .pp2{font-size:12.5px;color:var(--tx3);white-space:nowrap}
+.st5 .cell{height:40px;border-radius:13px;font-size:17px}
+.st5 .cell.act{position:relative;background:linear-gradient(var(--s1),var(--s1)) padding-box,linear-gradient(135deg,#8B3DEB,#5B4BEF,#E24CA6) border-box;border:2px solid transparent;box-shadow:0 0 22px -6px rgba(139,61,235,.8)}
+.st5 .cell.act .fig{font-size:23px}
+.st5 .okc,.st5 .emc{width:32px;height:32px;justify-self:center}
+.hint{display:flex;align-items:center;justify-content:space-between;margin-top:6px;font-size:11.5px;color:var(--tx3)}
+.hint span{display:flex;align-items:center;gap:6px}
+.hint svg{width:13px;height:13px}
+.hint a{display:flex;align-items:center;gap:5px;color:var(--vlt);font-weight:600;text-decoration:none}
+.rpe{margin-top:12px}
+.rpe .ov{font-size:10px}
+.rpe .keys{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin-top:8px}
+.rpe .keys span{height:32px;border-radius:10px;background:var(--s1);border:1px solid var(--line);display:grid;place-items:center;font:600 13px/1 Poppins;color:var(--tx2)}
+.cta{position:absolute;left:20px;right:20px;bottom:26px;height:54px;border-radius:20px;background:var(--brand);display:flex;align-items:center;justify-content:center;gap:8px;font:700 16px/1 Poppins;color:#fff;z-index:20;box-shadow:0 16px 36px -12px rgba(139,61,235,.95)}
+.cta svg{width:19px;height:19px}
+
+/* ---------- 6. napredak ---------- */
+.nh{padding-top:8px}
+.stat{margin-top:12px;padding:14px 16px 12px;border-radius:24px;background:linear-gradient(160deg,rgba(139,61,235,.2),rgba(21,18,28,.9) 55%),var(--s1);border:1px solid rgba(196,162,255,.16)}
+.stat .ov{color:var(--vlt)}
+.stat .mid{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.stat .lft{flex:1;min-width:0}
+.stat .v{display:flex;align-items:baseline;gap:8px;margin-top:6px}
+.stat .v .fig{font-size:60px}
+.stat .v span{font-size:15px;color:var(--tx2)}
+.ring{flex:none;position:relative;width:100px;height:100px}
+.ring svg{position:absolute;inset:0}
+.ring .in{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .in svg{position:static;width:14px;height:14px;color:var(--warn)}
+.ring .fig{display:flex;align-items:center;gap:3px;font-size:25px;color:#FFE1B0}
+.ring small{font-size:10px;line-height:1.2;color:var(--warn);margin-top:4px}
+.ring em{font-style:normal;font-size:9.5px;line-height:1.2;color:var(--tx3);margin-top:1px}
+.s3c{display:grid;grid-template-columns:repeat(3,1fr);margin-top:8px;padding-top:9px;border-top:1px solid var(--line)}
+.s3c div{padding-left:9px;border-left:1px solid var(--line)}
+.s3c div:first-child{padding-left:0;border-left:0}
+.s3c .fig{font-size:19px}
+.s3c span{display:block;font-size:10.5px;color:var(--tx2);margin-top:4px;white-space:nowrap}
+.actv{margin-top:10px;padding:12px 14px 10px}
+.actv .top{display:flex;justify-content:space-between;align-items:flex-start}
+.actv .avg{text-align:right}
+.actv .avg .fig{font-size:26px}
+.actv .avg .ov{justify-content:flex-end;margin-top:4px;font-size:9.5px}
+.hm{display:grid;grid-template-columns:14px repeat(8,1fr);gap:3px 4px;margin-top:10px;align-items:center}
+.hm b{font:600 9.5px/1 Poppins;color:var(--tx3);text-align:left}
+.hm i{height:10px;border-radius:3px;background:var(--s2)}
+.hm i.y{background:var(--violet);box-shadow:0 0 10px -2px rgba(139,61,235,.7)}
+.hm .tot{font:700 11.5px/1 -apple-system,BlinkMacSystemFont,system-ui;font-style:italic;text-align:center;color:var(--tx2);padding-top:5px}
+.hm .tot.z{color:var(--tx3)}
+.hm .tot.nw{color:var(--vlt)}
+.prl{padding:2px 12px}
+.pr{display:grid;grid-template-columns:58px minmax(0,1fr) auto;column-gap:12px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
+.pr:last-child{border-bottom:0}
+.pr .th{width:58px;height:42px;border-radius:12px;position:relative}
+.pr .th svg{position:absolute;top:4px;right:4px;width:16px;height:16px;padding:3px;border-radius:50%;background:rgba(11,10,16,.6);color:var(--z3)}
+.pr b{display:block;font:600 13.5px/1.3 Poppins}
+.pr .sub{font-size:11px;margin-top:2px;color:var(--tx3)}
+.pr .v{text-align:right;white-space:nowrap}
+.pr .v .fig{font-size:18px;color:var(--gold)}
+.pr .v small{display:block;font-size:10.5px;color:var(--tx3);margin-top:3px}
+
+@keyframes breathe{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes draw{to{stroke-dashoffset:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}.hr .line{stroke-dashoffset:0}}
+@media (max-width:460px){:root{--k:.9}}
+@media (max-width:480px){.intro{padding-top:48px}.intro h1{font-size:30px;letter-spacing:-.8px}.intro p{font-size:15px}}
+@media (max-width:400px){:root{--k:.84}}
+@media (max-width:360px){:root{--k:.78}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 10.2 12 3.5l8.5 6.7V19a1.5 1.5 0 0 1-1.5 1.5h-4.2v-5.6H9.2v5.6H5A1.5 1.5 0 0 1 3.5 19z" fill="currentColor"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.6" fill="currentColor"/><path d="M2.5 19.5c.4-3.6 3-5.6 6.5-5.6s6.1 2 6.5 5.6z" fill="currentColor"/><circle cx="17" cy="9" r="2.8" fill="currentColor" opacity=".7"/><path d="M16.4 13.6c3 .1 4.8 2 5.1 5.4h-4.6c-.2-2.2-1-4-2.4-5.1.6-.2 1.2-.3 1.9-.3z" fill="currentColor" opacity=".7"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></g><circle cx="8.5" cy="14" r="1.2" fill="currentColor"/><circle cx="12" cy="14" r="1.2" fill="currentColor"/><circle cx="15.5" cy="14" r="1.2" fill="currentColor"/></symbol>
+    <symbol id="i-calplus" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M20.5 11V8a3 3 0 0 0-3-3h-11a3 3 0 0 0-3 3v9.5a3 3 0 0 0 3 3H12M3.5 10h17M8 3v4M16 3v4"/><path d="M18 14.5v6M15 17.5h6"/></g></symbol>
+    <symbol id="i-bars" viewBox="0 0 24 24"><rect x="3.5" y="11" width="4.6" height="9.5" rx="1.6" fill="currentColor"/><rect x="9.7" y="6.5" width="4.6" height="14" rx="1.6" fill="currentColor"/><rect x="15.9" y="3.5" width="4.6" height="17" rx="1.6" fill="currentColor"/></symbol>
+    <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M2.5 12.5h4.2l2.4-6 4.4 12 2.6-6.5h5.4" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-dumb" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6.5 6.5v11M3.5 9.5v5M17.5 6.5v11M20.5 9.5v5M6.5 12h11"/></g></symbol>
+    <symbol id="i-trend" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 3.5v17h17"/><path d="m7 15 3.6-4.2 3.2 2.6 5.2-6.4"/></g></symbol>
+    <symbol id="i-card" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="3" fill="currentColor"/><rect x="2.5" y="8.6" width="19" height="2.6" fill="#15121C" opacity=".85"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M12 4C6.8 4 3 7.3 3 11.3c0 2.2 1.1 4.1 2.9 5.4L5 20l3.9-1.9c1 .3 2 .4 3.1.4 5.2 0 9-3.3 9-7.2S17.2 4 12 4z" fill="currentColor"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M12 3.2c-3.3 0-5.8 2.6-5.8 5.9v3.6L4.4 16h15.2l-1.8-3.3V9.1c0-3.3-2.5-5.9-5.8-5.9z" fill="currentColor"/><path d="M9.6 18.2a2.5 2.5 0 0 0 4.8 0z" fill="currentColor"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="6.5" y="3" width="11" height="18" rx="2.8"/><path d="M10.5 15.5h3"/></g><rect x="9.8" y="10" width="4.4" height="3.6" rx="1" fill="currentColor"/></symbol>
+    <symbol id="i-cl" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-cr" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-cd" viewBox="0 0 24 24"><path d="m5 9 7 7 7-7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></g></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m4.5 12.5 4.8 4.8L19.5 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M5 5.5h11.5a2 2 0 0 1 2 2V8H5.2a1.3 1.3 0 0 1 0-2.5z" fill="currentColor" opacity=".55"/><path d="M4 7.5h15.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 18.5z" fill="currentColor"/><rect x="14.5" y="11.6" width="7.5" height="4.6" rx="2.3" fill="#1F1B28"/><circle cx="17" cy="13.9" r="1.1" fill="currentColor"/></symbol>
+    <symbol id="i-timer" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M10 2.5h4M12 13.5l3-3"/></g></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20.6 4.3 13a4.9 4.9 0 0 1 7-6.9l.7.7.7-.7a4.9 4.9 0 0 1 7 6.9z" fill="currentColor"/></symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 22c4 0 7-2.7 7-6.6 0-3-1.8-5.4-3.6-7.2-.3 1.6-1.1 2.8-2.3 3.4C13.4 8.1 12 4.8 9.6 2.5 9.8 6 7.5 8.3 6.2 10.3 5.4 11.6 5 13.2 5 15.4 5 19.3 8 22 12 22z" fill="currentColor"/></symbol>
+    <symbol id="i-watch" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6.5" y="6" width="11" height="12" rx="3.2"/><path d="M9 6 9.6 2.5h4.8L15 6M9 18l.6 3.5h4.8L15 18"/></g></symbol>
+    <symbol id="i-batt" viewBox="0 0 24 24"><rect x="2" y="7" width="18" height="10" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="4" y="9" width="10.5" height="6" rx="1.4" fill="currentColor"/><path d="M21.5 10.5v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/></g></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="2" fill="currentColor"/><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="18.5" cy="12" r="2" fill="currentColor"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4.5" width="4.2" height="15" rx="1.4" fill="currentColor"/><rect x="13.8" y="4.5" width="4.2" height="15" rx="1.4" fill="currentColor"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20l1-4.2L15.8 5a2 2 0 0 1 2.9 0l.3.3a2 2 0 0 1 0 2.9L8.2 19z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 2.5c.5 4.7 2.8 7 7.5 7.5-4.7.5-7 2.8-7.5 7.5-.5-4.7-2.8-7-7.5-7.5 4.7-.5 7-2.8 7.5-7.5z" fill="currentColor"/><path d="M19 15.5c.2 1.8 1 2.6 2.8 2.8-1.8.2-2.6 1-2.8 2.8-.2-1.8-1-2.6-2.8-2.8 1.8-.2 2.6-1 2.8-2.8z" fill="currentColor"/></symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M7 3.5h10v5.8a5 5 0 0 1-10 0z" fill="currentColor"/><path d="M7 5.5H4.2v1.6A3.6 3.6 0 0 0 7.6 11M17 5.5h2.8v1.6A3.6 3.6 0 0 1 16.4 11" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10.6 14.2h2.8l.5 3.3h-3.8zM7.8 18h8.4v2.5H7.8z" fill="currentColor"/></symbol>
+    <symbol id="i-hand" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 9h2M11 9h2M15 9h2M7 13h2M11 13h2M15 13h2M9 17h6"/></g></symbol>
+    <symbol id="i-sig" viewBox="0 0 20 12"><rect x="0" y="8" width="3.2" height="4" rx="1" fill="currentColor"/><rect x="5.2" y="5.6" width="3.2" height="6.4" rx="1" fill="currentColor"/><rect x="10.4" y="3" width="3.2" height="9" rx="1" fill="currentColor"/><rect x="15.6" y="0" width="3.2" height="12" rx="1" fill="currentColor"/></symbol>
+    <symbol id="i-wifi" viewBox="0 0 18 13"><path d="M9 12.6 6.3 9.8a3.8 3.8 0 0 1 5.4 0zM3.6 7.2a7.6 7.6 0 0 1 10.8 0l-1.5 1.5a5.5 5.5 0 0 0-7.8 0zM.9 4.4a11.4 11.4 0 0 1 16.2 0l-1.5 1.5a9.3 9.3 0 0 0-13.2 0z" fill="currentColor"/></symbol>
+    <symbol id="i-bat" viewBox="0 0 28 13"><rect x=".6" y=".6" width="23.6" height="11.8" rx="3.6" fill="none" stroke="currentColor" stroke-opacity=".4" stroke-width="1.2"/><rect x="2.4" y="2.4" width="20" height="8.2" rx="2.2" fill="currentColor"/><path d="M26 4.4v4.2a2.2 2.2 0 0 0 0-4.2z" fill="currentColor" fill-opacity=".45"/></symbol>
+  </defs>
+</svg>
+
+<header class="intro">
+  <span class="tag"><i></i>superdesign-skill · 6 ekrana</span>
+  <h1>FitLink, dizajniran unutar sopstvenog sistema</h1>
+  <p>Superdesign ne donosi nov stil, nego prvo čita kod aplikacije i dizajnira u njenom postojećem sistemu: zato su ostali Ponoć boje, Poppins, iskošene brojke i donja traka sa centralnim dugmetom. Njegovo pravilo kaže da se varijacije menjaju samo kroz raspored i hijerarhiju, pa je od dva isprobana pravca (kokpit i dan kao vremenska linija) izabran <b>kokpit</b>: svaki ekran ima jedan jak vrh, a sve brojke stoje u istim poravnatim kolonama. Time su puls i kalorije svuda blizanci, a ispravljena su i mesta gde je sadašnja aplikacija kršila svoja pravila, kao mali kcal pored velikog pulsa i lični rekordi u traci koja se lista u stranu.</p>
+</header>
+
+<main class="grid">
+
+<!-- ===================== 1. TRENER, POČETNA ===================== -->
+<figure class="slot">
+<div class="dev"><div class="scr">
+  <div class="glow"></div>
+  <div class="island"></div>
+  <div class="sb"><span>09:41</span><span class="ic"><svg width="19" height="12"><use href="#i-sig"/></svg><svg width="17" height="12"><use href="#i-wifi"/></svg><svg width="27" height="13"><use href="#i-bat"/></svg></span></div>
+  <div class="pg">
+    <div class="hd">
+      <div class="av" style="width:46px;height:46px;font-size:18px">M</div>
+      <div class="t"><b>Zdravo, Marko</b><span>Studio Forma</span></div>
+      <div class="rb"><svg><use href="#i-chat"/></svg><span class="bdg">2</span></div>
+      <div class="rb"><svg><use href="#i-bell"/></svg><span class="bdg">5</span></div>
+    </div>
+
+    <section class="live">
+      <div class="lg live-h">
+        <div class="ttl"><span class="ld"></span>Sada trenira<span class="cnt">2 VEŽBAČA</span></div>
+        <div class="colh"><svg style="color:var(--bad)"><use href="#i-heart"/></svg>Puls</div>
+        <div class="colh k"><svg style="color:var(--kcal)"><use href="#i-flame"/></svg>Kcal</div>
+      </div>
+      <div class="lg lr">
+        <div class="av" style="--zc:var(--z4)">AM<i style="background:var(--rest)"></i></div>
+        <div class="tx">
+          <div class="nm">Ana Marković</div>
+          <div class="ex clamp2">Rumunsko mrtvo dizanje</div>
+          <div class="mt"><span class="chip c-rest"><svg><use href="#i-pause"/></svg>0:41</span>Serija 2 · 1h 05min</div>
+        </div>
+        <div class="num fig" style="color:var(--z4)">151</div>
+        <div class="num fig k">512</div>
+        <div class="src"><svg><use href="#i-watch"/></svg>Apple Watch <b>64%</b></div>
+      </div>
+      <div class="lg lr">
+        <div class="av" style="--zc:var(--z2)">LP<i style="background:var(--ok)"></i></div>
+        <div class="tx">
+          <div class="nm">Luka Petrović</div>
+          <div class="ex clamp2">Sa šipkom veslanje u pretklonu</div>
+          <div class="mt">Serija 3 · 42min</div>
+        </div>
+        <div class="num fig" style="color:var(--z2)">132</div>
+        <div class="num fig k">386</div>
+        <div class="src"><svg><use href="#i-watch"/></svg>Apple Watch <b>82%</b></div>
+      </div>
+      <div class="lock">
+        <span class="ib"><svg><use href="#i-lock"/></svg></span>
+        <div class="t"><b>Prati na zaključanom ekranu</b><span>Uključeno</span></div>
+        <span class="tg"></span>
+      </div>
+    </section>
+
+    <div class="sec"><b>Čeka tebe</b><span>2 stvari</span></div>
+    <div class="card prow">
+      <span class="ib"><svg><use href="#i-wallet"/></svg></span>
+      <div class="t"><b>Uplate na čekanju</b><div class="sub">2 zahteva · keš i račun</div></div>
+      <div class="amt"><span class="fig">36.000</span><small>RSD</small></div>
+      <svg class="chev"><use href="#i-cr"/></svg>
+    </div>
+    <div class="card exp">
+      <div class="exp-h"><b>Članarine ističu</b><span class="sub mut">3 od 24 aktivna</span></div>
+      <div class="er"><div class="av">SI</div><div><div class="nm">Stefan Ilić</div><div class="sub">Mesečna 8 · do 6. nov</div></div><div class="dn"><span class="fig" style="color:var(--warn)">4</span><small>dana</small></div></div>
+      <div class="er"><div class="av">LP</div><div><div class="nm">Luka Petrović</div><div class="sub">Personalni 10 · do 11. nov</div></div><div class="dn"><span class="fig">9</span><small>dana</small></div></div>
+      <div class="er"><div class="av">JN</div><div><div class="nm">Jovana Nikolić</div><div class="sub">Mesečna 8 · do 14. nov</div></div><div class="dn"><span class="fig">12</span><small>dana</small></div></div>
+    </div>
+  </div>
+  <nav class="tab">
+    <a class="on"><svg><use href="#i-home"/></svg>Početna</a>
+    <a><svg><use href="#i-users"/></svg>Vežbači</a>
+    <span class="fab"><svg><use href="#i-pulse"/></svg><span class="bdg">2</span></span>
+    <a><svg><use href="#i-cal"/></svg>Kalendar</a>
+    <a><svg><use href="#i-bars"/></svg>Finansije</a>
+  </nav>
+  <div class="hi"></div>
+</div></div>
+<figcaption><span class="n">01</span><span><b>Trener, početna.</b> Tabela uživo: puls i kcal u dve iste kolone za svakog vežbača, sat i baterija ispod. Odmah zatim sve što čeka trenera: uplate i članarine koje ističu, sa danima u istoj koloni.</span></figcaption>
+</figure>
+
+<!-- ===================== 2. TRENER, UŽIVO ===================== -->
+<figure class="slot">
+<div class="dev"><div class="scr s2">
+  <div class="glow"></div>
+  <div class="island"></div>
+  <div class="sb"><span>09:41</span><span class="ic"><svg width="19" height="12"><use href="#i-sig"/></svg><svg width="17" height="12"><use href="#i-wifi"/></svg><svg width="27" height="13"><use href="#i-bat"/></svg></span></div>
+  <div class="pg">
+    <div class="nav">
+      <div class="rb"><svg><use href="#i-cl"/></svg></div>
+      <div class="who">
+        <div class="av">AM</div>
+        <div><div class="s"><i></i>Na odmoru</div><div class="n">Ana Marković</div></div>
+      </div>
+      <div class="tmr"><span class="fig">1:05:00</span><svg><use href="#i-more"/></svg></div>
+    </div>
+
+    <div class="twins">
+      <div class="tw">
+        <div class="ov"><svg style="color:var(--bad)"><use href="#i-heart"/></svg>Puls</div>
+        <div class="big fig" style="color:var(--z4)">151</div>
+        <div class="u">bpm</div>
+      </div>
+      <div class="dv"></div>
+      <div class="tw">
+        <div class="ov"><svg style="color:var(--kcal)"><use href="#i-flame"/></svg>Kalorije</div>
+        <div class="big fig">512</div>
+        <div class="u">kcal</div>
+      </div>
+    </div>
+
+    <div class="zbar">
+      <i style="background:var(--z1);color:var(--z1)"></i><i style="background:var(--z2);color:var(--z2)"></i><i style="background:var(--z3);color:var(--z3)"></i><i class="on" style="background:var(--z4);color:var(--z4)"></i><i style="background:var(--z5);color:var(--z5)"></i>
+      <span class="zdot" style="left:calc(63% + 4px)"></span>
+    </div>
+    <div class="zlab">
+      <span class="chip" style="background:rgba(255,159,10,.16);color:var(--z4)">Zona 4 · Naporno</span>
+      <span class="src"><svg><use href="#i-watch"/></svg>Apple Watch <svg style="width:16px;height:16px"><use href="#i-batt"/></svg><b>64%</b></span>
+    </div>
+
+    <div class="rest">
+      <span class="pp"><svg><use href="#i-pause"/></svg></span>
+      <div class="t"><b>Odmor</b><span class="sub">Vežbač se odmara</span></div>
+      <span class="fig">0:40</span>
+    </div>
+
+    <div class="card hr">
+      <div class="top"><span class="ov">Puls poslednjih 10 min</span><span>min 96 · max 158</span></div>
+      <svg width="313" height="64" viewBox="0 0 313 64" aria-hidden="true">
+        <defs>
+          <linearGradient id="hrg" x1="0" y1="64" x2="0" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#30D158"/><stop offset=".5" stop-color="#FFD60A"/><stop offset="1" stop-color="#FF9F0A"/></linearGradient>
+          <linearGradient id="hrf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF9F0A" stop-opacity=".22"/><stop offset="1" stop-color="#FF9F0A" stop-opacity="0"/></linearGradient>
+        </defs>
+        <path d="M0 27H313M0 11H313" stroke="rgba(236,228,255,.1)" stroke-dasharray="3 4"/>
+        <text x="0" y="24" text-anchor="start" fill="#8A83A0" font-size="9" font-family="Poppins" font-weight="600">Z3</text>
+        <text x="0" y="8" text-anchor="start" fill="#8A83A0" font-size="9" font-family="Poppins" font-weight="600">Z4</text>
+        <polygon fill="url(#hrf)" points="3,64 3,58 19.2,50.5 35.3,46.3 51.5,41.2 67.6,36.2 83.8,30.3 99.9,32.8 116.1,27 132.3,21.1 148.4,23.6 164.6,16.9 180.7,13.5 196.9,9.4 213.1,6 229.2,11 245.4,20.3 261.5,24.5 277.7,16.1 293.8,10.2 310,11.9 310,64"/>
+        <polyline class="line" fill="none" stroke="url(#hrg)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" points="3,58 19.2,50.5 35.3,46.3 51.5,41.2 67.6,36.2 83.8,30.3 99.9,32.8 116.1,27 132.3,21.1 148.4,23.6 164.6,16.9 180.7,13.5 196.9,9.4 213.1,6 229.2,11 245.4,20.3 261.5,24.5 277.7,16.1 293.8,10.2 310,11.9"/>
+        <circle cx="310" cy="11.9" r="4" fill="#FF9F0A" stroke="#15121C" stroke-width="2"/>
+      </svg>
+    </div>
+
+    <div class="trh">
+      <div><div class="ov">Trening</div><div class="sub">Leđa i biceps · 6 od 22 serija</div></div>
+      <span class="btn-s"><svg><use href="#i-sliders"/></svg>Izmeni</span>
+    </div>
+
+    <div class="card xr">
+      <span class="th"><img src="../assets/baza/thumbs/shoulder-grip-pull-up.jpg" alt="Zgib hvatom na širini ramena"></span>
+      <div class="t"><b style="color:var(--tx2)">Zgib hvatom na širini ramena</b><span class="sub mut">4 x 8 · urađeno</span></div>
+      <span class="okc"><svg><use href="#i-check"/></svg></span>
+    </div>
+
+    <div class="cur">
+      <div class="xr">
+        <span class="th"><img src="../assets/baza/thumbs/barbell-bent-over-row.jpg" alt="Sa šipkom veslanje u pretklonu"></span>
+        <div class="t"><b class="clamp2">Sa šipkom veslanje u pretklonu</b><span class="sub">4 x 10 · 65 kg</span></div>
+        <span class="chip c-v">Sad</span>
+      </div>
+      <div class="st hd2"><span></span><span>Prošli put</span><span class="c">Kg</span><span class="c">Pon.</span><span></span></div>
+      <div class="st r"><span class="sl" style="color:var(--z3)">W</span><span class="pp2">60 kg × 8</span><span class="cell">62,5</span><span class="cell">10</span><span class="okc"><svg><use href="#i-check"/></svg></span></div>
+      <div class="st r"><span class="sl" style="color:var(--ok)">2</span><span class="pp2">60 kg × 8</span><span class="cell">65</span><span class="cell">9</span><span class="okc new"><svg><use href="#i-check"/></svg></span></div>
+      <div class="st r"><span class="sl mut">3</span><span class="pp2">62,5 kg × 6</span><span class="cell tg2">65</span><span class="cell tg2">10</span><span class="emc"></span></div>
+      <div class="st r"><span class="sl" style="color:var(--z1)">D</span><span class="pp2">-</span><span class="cell tg2">65</span><span class="cell tg2">10</span><span class="emc"></span></div>
+    </div>
+  </div>
+  <div class="fadeb"></div>
+  <div class="hi"></div>
+</div></div>
+<figcaption><span class="n">02</span><span><b>Trener, uživo.</b> Puls i kalorije kao blizanci od 64 pt na vrhu, ispod traka zona sa tačkom na trenutnom pulsu. Zatim odmor, 10 minuta pulsa sa granicama zona i serije sa kolonom prošli put.</span></figcaption>
+</figure>
+
+<!-- ===================== 3. TRENER, KALENDAR ===================== -->
+<figure class="slot">
+<div class="dev"><div class="scr">
+  <div class="glow"></div>
+  <div class="island"></div>
+  <div class="sb"><span>09:41</span><span class="ic"><svg width="19" height="12"><use href="#i-sig"/></svg><svg width="17" height="12"><use href="#i-wifi"/></svg><svg width="27" height="13"><use href="#i-bat"/></svg></span></div>
+  <div class="pg">
+    <div class="ch">
+      <div><div class="ov">Novembar 2026</div><div class="h1" style="margin-top:8px">Kalendar</div></div>
+      <div class="btns">
+        <span class="rb"><svg><use href="#i-cl"/></svg></span>
+        <span class="rb"><svg><use href="#i-cr"/></svg></span>
+        <span class="rb"><svg><use href="#i-gear"/></svg></span>
+      </div>
+    </div>
+
+    <div class="wk">
+      <div class="wd on"><small>PON</small><span class="fig">2</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <div class="wd"><small>UTO</small><span class="fig">3</span><span class="dots"><i></i><i></i></span></div>
+      <div class="wd"><small>SRE</small><span class="fig">4</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <div class="wd"><small>ČET</small><span class="fig">5</span><span class="dots"><i></i><i></i></span></div>
+      <div class="wd"><small>PET</small><span class="fig">6</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <div class="wd"><small>SUB</small><span class="fig">7</span><span class="dots"><i></i></span></div>
+      <div class="wd off"><small>NED</small><span class="fig">8</span><span class="dots"></span></div>
+    </div>
+
+    <div class="sum">
+      <span class="big fig gtx">12</span>
+      <div><b>rezervacija danas</b><div class="sub">3 termina · <span style="color:var(--ok)">3 slobodno</span> · <span style="color:var(--warn)">2 čekaju</span></div></div>
+    </div>
+    <div class="cap">
+      <div class="g" style="flex:1"><i style="background:var(--violet)"></i></div>
+      <div class="g" style="flex:8"><i style="background:var(--ok)"></i><i style="background:var(--ok)"></i><i style="background:var(--ok)"></i><i style="background:var(--ok)"></i><i style="background:var(--ok)"></i><i></i><i></i><i></i></div>
+      <div class="g" style="flex:6"><i style="background:var(--warn)"></i><i style="background:var(--warn)"></i><i style="background:var(--warn)"></i><i style="background:var(--warn)"></i><i style="background:var(--warn)"></i><i style="background:var(--warn)"></i></div>
+    </div>
+    <div class="capl"><span><b>12 od 15</b> mesta popunjeno</span><span>07:00 · 09:00 · 17:00</span></div>
+
+    <div class="tl">
+      <div class="tm">07:00</div>
+      <div class="ev" style="--ec:var(--violet);--ec35:rgba(139,61,235,.35);--ec22:rgba(139,61,235,.2);--ec06:rgba(139,61,235,.05)">
+        <div class="r1"><b>Personalni trening</b><span class="chip c-ok">Pun · 1/1</span></div>
+        <div class="r2"><div class="avs"><span class="av">LP</span></div>Luka Petrović · 07:00 - 08:00</div>
+      </div>
+
+      <div class="tm">09:00</div>
+      <div class="ev" style="--ec:var(--ok);--ec35:rgba(61,220,151,.35);--ec22:rgba(61,220,151,.16);--ec06:rgba(61,220,151,.04)">
+        <div class="r1"><b>Group HIIT</b><span class="chip c-v">5/8 · 3 slob.</span></div>
+        <div class="r3">
+          <div class="r2" style="margin-top:0"><div class="avs"><span class="av">AM</span><span class="av">JN</span><span class="av">SI</span><span class="av more">+2</span></div>09:00 - 09:45</div>
+          <span class="chip c-bad">1 kasno</span>
+        </div>
+        <div class="wl">
+          <div class="ov">Lista čekanja · <span style="color:var(--warn)">2 čekaju</span></div>
+          <div class="wlr"><i>1</i>Nikola Stojanović</div>
+          <div class="wlr"><i>2</i>Jelena Kostić</div>
+        </div>
+      </div>
+
+      <div class="now"><span>sada 09:41</span></div>
+
+      <div class="tm">17:00</div>
+      <div class="ev" style="--ec:var(--warn);--ec35:rgba(255,181,71,.32);--ec22:rgba(255,181,71,.15);--ec06:rgba(255,181,71,.04)">
+        <div class="r1"><b>Mobilnost</b><span class="chip c-ok">Pun · 6/6</span></div>
+        <div class="r2"><div class="avs"><span class="av">TL</span><span class="av">MĐ</span><span class="av">SP</span><span class="av more">+3</span></div>17:00 - 18:00</div>
+      </div>
+
+      <div class="tm" style="padding-top:8px">18:00</div>
+      <div><span class="cx">Personalni · otkazan</span></div>
+    </div>
+  </div>
+  <nav class="tab">
+    <a><svg><use href="#i-home"/></svg>Početna</a>
+    <a><svg><use href="#i-users"/></svg>Vežbači</a>
+    <span class="fab"><svg><use href="#i-pulse"/></svg><span class="bdg">2</span></span>
+    <a class="on"><svg><use href="#i-cal"/></svg>Kalendar</a>
+    <a><svg><use href="#i-bars"/></svg>Finansije</a>
+  </nav>
+  <div class="hi"></div>
+</div></div>
+<figcaption><span class="n">03</span><span><b>Trener, kalendar.</b> Cela nedelja bez listanja u stranu, popunjenost dana kao jedna traka mesta po terminu. Termin u toku je otvoren: ko je upisan, lista čekanja po redu i kasni otkaz.</span></figcaption>
+</figure>
+
+<!-- ===================== 4. TRENER, UPLATE ===================== -->
+<figure class="slot">
+<div class="dev"><div class="scr">
+  <div class="glow"></div>
+  <div class="island"></div>
+  <div class="sb"><span>09:41</span><span class="ic"><svg width="19" height="12"><use href="#i-sig"/></svg><svg width="17" height="12"><use href="#i-wifi"/></svg><svg width="27" height="13"><use href="#i-bat"/></svg></span></div>
+  <div class="pg">
+    <div class="back"><span class="rb"><svg><use href="#i-cl"/></svg></span></div>
+    <div class="ov" style="margin-top:12px">Naplata</div>
+    <div class="h1" style="margin-top:8px">Uplate i članarine</div>
+    <div class="sg"><span class="on">Zahtevi (2)</span><span>Članarine</span></div>
+
+    <div class="pend">
+      <div class="top"><span class="ov">Na čekanju</span><span class="chip">2 zahteva</span></div>
+      <div class="v"><span class="fig">36.000</span><small>RSD</small></div>
+      <div class="split"><i style="flex:22;background:#fff"></i><i style="flex:14;background:rgba(255,255,255,.42)"></i></div>
+      <div class="splitl"><span><b>Keš</b> · 22.000</span><span><b>Račun</b> · 14.000</span></div>
+    </div>
+
+    <div class="card rq">
+      <div class="top">
+        <div class="av">AM</div>
+        <div><div class="nm">Ana Marković</div><div class="sub">Mesečna 8 · 8 treninga · 30 dana</div></div>
+        <div class="amt"><span class="fig">14.000</span><br><span class="chip" style="background:rgba(10,132,255,.16);color:#5EA8FF">Račun</span></div>
+      </div>
+      <div class="acts"><span class="b o"><svg><use href="#i-x"/></svg>Odbij</span><span class="b p"><svg><use href="#i-check"/></svg>Potvrdi</span></div>
+    </div>
+    <div class="card rq">
+      <div class="top">
+        <div class="av">LP</div>
+        <div><div class="nm">Luka Petrović</div><div class="sub">Personalni 10 · 10 treninga · 45 dana</div></div>
+        <div class="amt"><span class="fig">22.000</span><br><span class="chip c-warn">Keš</span></div>
+      </div>
+      <div class="acts"><span class="b o"><svg><use href="#i-x"/></svg>Odbij</span><span class="b p"><svg><use href="#i-check"/></svg>Potvrdi</span></div>
+    </div>
+  </div>
+  <nav class="tab">
+    <a><svg><use href="#i-home"/></svg>Početna</a>
+    <a><svg><use href="#i-users"/></svg>Vežbači</a>
+    <span class="fab"><svg><use href="#i-pulse"/></svg><span class="bdg">2</span></span>
+    <a><svg><use href="#i-cal"/></svg>Kalendar</a>
+    <a class="on"><svg><use href="#i-bars"/></svg>Finansije</a>
+  </nav>
+  <div class="hi"></div>
+</div></div>
+<figcaption><span class="n">04</span><span><b>Trener, uplate.</b> Ukupno na čekanju sa podelom keš i račun u jednoj traci. Svaki zahtev ima iznos i način plaćanja u istoj desnoj koloni i cela dugmad Odbij i Potvrdi.</span></figcaption>
+</figure>
+
+<!-- ===================== 5. VEŽBAČ, TRENING ===================== -->
+<figure class="slot">
+<div class="dev"><div class="scr s5">
+  <div class="hero">
+    <video autoplay muted loop playsinline preload="metadata" poster="../assets/vezbe/veslanje.jpg" aria-label="Snimak vežbe: veslanje sa šipkom u pretklonu">
+      <source src="../assets/vezbe/veslanje.mp4" type="video/mp4">
+    </video>
+  </div>
+  <div class="island"></div>
+  <div class="sb"><span>09:41</span><span class="ic"><svg width="19" height="12"><use href="#i-sig"/></svg><svg width="17" height="12"><use href="#i-wifi"/></svg><svg width="27" height="13"><use href="#i-bat"/></svg></span></div>
+  <div class="pg">
+    <div class="topc">
+      <span class="rb"><svg><use href="#i-cd"/></svg></span>
+      <span class="cnt2">Vežba <b>2</b> od 6 · <span class="fig">24:13</span></span>
+      <span class="rb"><svg><use href="#i-more"/></svg></span>
+    </div>
+
+    <div class="prog"><i style="background:var(--tx)"></i><i style="background:linear-gradient(90deg,var(--vlt) 75%,var(--s3) 75%)"></i><i></i><i></i><i></i><i></i></div>
+
+    <div class="ttl5">
+      <div><div class="ov">Leđa · 4 serije</div><h3 class="clamp2">Sa šipkom veslanje u pretklonu</h3></div>
+      <span class="rt"><svg><use href="#i-timer"/></svg><span class="fig">1:30</span></span>
+    </div>
+
+    <div class="tws">
+      <div class="tw2">
+        <div class="c"><svg style="color:var(--z2)"><use href="#i-heart"/></svg><span class="fig">132</span><small>bpm</small></div>
+        <div class="dv"></div>
+        <div class="c"><svg style="color:var(--kcal)"><use href="#i-flame"/></svg><span class="fig">214</span><small>kcal</small></div>
+      </div>
+      <div class="zrow">
+        <div class="zb2">
+          <div><i style="background:var(--z1)"></i><span>Z1</span></div>
+          <div class="on"><i style="background:var(--z2);color:var(--z2)"></i><span>Z2 Lagano</span></div>
+          <div><i style="background:var(--z3)"></i><span>Z3</span></div>
+          <div><i style="background:var(--z4)"></i><span>Z4</span></div>
+          <div><i style="background:var(--z5)"></i><span>Z5</span></div>
+        </div>
+        <div class="zf"><svg><use href="#i-watch"/></svg>Apple Watch<svg style="width:15px;height:15px;color:var(--ok);margin-left:2px"><use href="#i-batt"/></svg><b>86%</b></div>
+      </div>
+    </div>
+
+    <div class="st5 h"><span></span><span>Prošli put<em>uto, 8. sep</em></span><span>Kg</span><span>Pon.</span><span></span></div>
+    <div class="st5 r"><span class="sl" style="color:var(--z3)">W</span><span class="pp2">60×10</span><span class="cell">40</span><span class="cell">12</span><span class="okc"><svg><use href="#i-check"/></svg></span></div>
+    <div class="st5 r"><span class="sl mut">2</span><span class="pp2">60×10</span><span class="cell">65</span><span class="cell">10</span><span class="okc"><svg><use href="#i-check"/></svg></span></div>
+    <div class="st5 r"><span class="sl mut">3</span><span class="pp2">62,5×8</span><span class="cell">67,5</span><span class="cell">10</span><span class="okc"><svg><use href="#i-check"/></svg></span></div>
+    <div class="st5 r"><span class="sl" style="color:var(--z1)">D</span><span class="pp2" style="color:var(--tx2)">62,5×8</span><span class="cell act"><span class="fig">65</span></span><span class="cell act"><span class="fig">10</span></span><span class="emc"></span></div>
+    <div class="hint"><span><svg><use href="#i-hand"/></svg>Serija 4 · Drop set · dodir na broj otvara brojčanik</span></div>
+
+    <div class="rpe">
+      <div class="ov">RPE · težina 1-10</div>
+      <div class="keys"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span></div>
+    </div>
+  </div>
+  <div class="cta"><svg><use href="#i-check"/></svg>Završi set 4</div>
+  <div class="hi"></div>
+</div></div>
+<figcaption><span class="n">05</span><span><b>Vežbač, trening u toku.</b> Snimak vežbe preko celog vrha, puls i kcal kao blizanci sa trakom zona. Prošli put je kolona u tabeli serija, a kg i ponavljanja se upisuju dodirom koji otvara brojčanik.</span></figcaption>
+</figure>
+
+<!-- ===================== 6. VEŽBAČ, NAPREDAK ===================== -->
+<figure class="slot">
+<div class="dev"><div class="scr">
+  <div class="glow"></div>
+  <div class="island"></div>
+  <div class="sb"><span>09:41</span><span class="ic"><svg width="19" height="12"><use href="#i-sig"/></svg><svg width="17" height="12"><use href="#i-wifi"/></svg><svg width="27" height="13"><use href="#i-bat"/></svg></span></div>
+  <div class="pg">
+    <div class="nh"><div class="ov">Statistike</div><div class="h1" style="margin-top:8px">Tvoj napredak</div></div>
+    <div class="sg soft"><span class="on" style="color:var(--tx)">Treninzi</span><span>Telo</span></div>
+
+    <div class="stat">
+      <div class="mid">
+        <div class="lft">
+          <div class="ov"><svg><use href="#i-spark"/></svg>Sa trenerom Marko</div>
+          <div class="v"><span class="fig gtx">48</span><span>treninga</span></div>
+          <div class="s3c">
+            <div><span class="fig">9</span><span>ovog meseca</span></div>
+            <div><span class="fig">0</span><span>ove nedelje</span></div>
+            <div><span class="fig">7</span><span>ostalo</span></div>
+          </div>
+        </div>
+        <div class="ring">
+          <svg width="100" height="100" viewBox="0 0 104 104" aria-hidden="true">
+            <defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFB547"/><stop offset="1" stop-color="#E24CA6"/></linearGradient></defs>
+            <circle cx="52" cy="52" r="46" fill="rgba(255,181,71,.06)" stroke="rgba(255,181,71,.16)" stroke-width="5"/>
+            <circle cx="52" cy="52" r="46" fill="none" stroke="url(#rg)" stroke-width="5" stroke-linecap="round" stroke-dasharray="165.2 289" transform="rotate(-90 52 52)"/>
+          </svg>
+          <div class="in"><span class="fig"><svg><use href="#i-flame"/></svg>12</span><small>dana u nizu</small><em>najbolji 21</em></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card actv">
+      <div class="top">
+        <div><div class="ov">Aktivnost</div><div class="sub" style="margin-top:4px;font-size:13px">Poslednjih 8 nedelja</div></div>
+        <div class="avg"><span class="fig">3,2</span><div class="ov">Prosek/ned</div></div>
+      </div>
+      <div class="hm">
+        <b>P</b><i></i><i></i><i class="y"></i><i class="y"></i><i></i><i class="y"></i><i class="y"></i><i></i>
+        <b>U</b><i></i><i></i><i class="y"></i><i></i><i class="y"></i><i class="y"></i><i></i><i></i>
+        <b>S</b><i></i><i></i><i></i><i class="y"></i><i class="y"></i><i></i><i class="y"></i><i></i>
+        <b>Č</b><i></i><i></i><i class="y"></i><i class="y"></i><i></i><i class="y"></i><i class="y"></i><i></i>
+        <b>P</b><i></i><i class="y"></i><i class="y"></i><i></i><i class="y"></i><i class="y"></i><i></i><i></i>
+        <b>S</b><i></i><i class="y"></i><i></i><i class="y"></i><i class="y"></i><i></i><i class="y"></i><i></i>
+        <b>N</b><i></i><i></i><i class="y"></i><i class="y"></i><i></i><i class="y"></i><i class="y"></i><i></i>
+        <b></b><span class="tot z">0</span><span class="tot">2</span><span class="tot">5</span><span class="tot">5</span><span class="tot">4</span><span class="tot">5</span><span class="tot">5</span><span class="tot nw">0</span>
+      </div>
+    </div>
+
+    <div class="sec" style="margin-top:14px"><b style="display:flex;align-items:center;gap:7px">Lični rekordi<svg style="width:17px;height:17px;color:var(--z3)"><use href="#i-trophy"/></svg></b><span>3 vežbe</span></div>
+    <div class="card prl">
+      <div class="pr">
+        <span class="th"><img src="../assets/baza/thumbs/barbell-bent-over-row.jpg" alt="Sa šipkom veslanje u pretklonu"><svg><use href="#i-trophy"/></svg></span>
+        <div><b class="clamp2">Sa šipkom veslanje u pretklonu</b><div class="sub">14. sep · 1RM ~82,3 kg</div></div>
+        <div class="v"><span class="fig">65 kg × 8</span></div>
+      </div>
+      <div class="pr">
+        <span class="th"><img src="../assets/baza/thumbs/barbell-squat.jpg" alt="Čučanj sa šipkom"><svg><use href="#i-trophy"/></svg></span>
+        <div><b>Čučanj sa šipkom</b></div>
+        <div class="v"><span class="fig">100 kg × 6</span></div>
+      </div>
+      <div class="pr">
+        <span class="th"><img src="../assets/baza/thumbs/barbell-curl.jpg" alt="Sa šipkom pregib"><svg><use href="#i-trophy"/></svg></span>
+        <div><b>Sa šipkom pregib</b></div>
+        <div class="v"><span class="fig">30 kg × 10</span></div>
+      </div>
+    </div>
+  </div>
+  <nav class="tab">
+    <a><svg><use href="#i-home"/></svg>Početna</a>
+    <a><svg><use href="#i-calplus"/></svg>Rezerviši</a>
+    <span class="fab"><svg><use href="#i-dumb"/></svg></span>
+    <a class="on"><svg><use href="#i-trend"/></svg>Napredak</a>
+    <a><svg><use href="#i-card"/></svg>Članarina</a>
+  </nav>
+  <div class="hi"></div>
+</div></div>
+<figcaption><span class="n">06</span><span><b>Vežbač, napredak.</b> 48 treninga i niz od 12 dana na vrhu, ispod meseca i nedelje u tri poravnate kolone. Aktivnost po nedeljama dobija zbir ispod svake kolone, a lični rekordi su spisak sa slikom vežbe umesto trake u stranu.</span></figcaption>
+</figure>
+
+</main>
+
+<script>
+(function(){
+  var root=document.documentElement;
+  function fit(){
+    var w=Math.min(window.innerWidth,document.documentElement.clientWidth||window.innerWidth);
+    var k=Math.min(1,(w-32)/417);
+    root.style.setProperty('--k',k.toFixed(4));
+  }
+  fit();
+  window.addEventListener('resize',fit);
+  try{
+    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+      document.querySelectorAll('video').forEach(function(v){v.removeAttribute('autoplay');v.pause();});
+    }
+  }catch(e){}
+})();
+</script>
+</body>
+</html>

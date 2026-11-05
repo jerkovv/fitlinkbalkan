@@ -446,7 +446,7 @@
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "FitLink-Watch-Watch-App-Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "FitLink Watch";
+				INFOPLIST_KEY_CFBundleDisplayName = FitLink;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "FitLink koristi puls sa Apple Watch-a za pracenje intenziteta treninga.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "FitLink cuva tvoje treninge u Health aplikaciji.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "FitLink koristi senzore za pracenje aktivnosti tokom treninga.";
@@ -496,7 +496,7 @@
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "FitLink-Watch-Watch-App-Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "FitLink Watch";
+				INFOPLIST_KEY_CFBundleDisplayName = FitLink;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "FitLink koristi puls sa Apple Watch-a za pracenje intenziteta treninga.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "FitLink cuva tvoje treninge u Health aplikaciji.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "FitLink koristi senzore za pracenje aktivnosti tokom treninga.";

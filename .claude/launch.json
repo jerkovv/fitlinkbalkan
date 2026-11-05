@@ -2,6 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     { "name": "fitlink-dev", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 8080 },
-    { "name": "design-static", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "8091", "--directory", "design"], "port": 8091 }
+    { "name": "design-static", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "8091", "--directory", "design"], "port": 8091 },
+    { "name": "landing-static", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "8092", "--directory", "/Users/jerkov/Documents/fitlink-landing"], "port": 8092 }
   ]
 }
