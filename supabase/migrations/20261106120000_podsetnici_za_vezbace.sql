@@ -60,7 +60,7 @@ BEGIN
     SELECT trainer_id, poc, leads, det, min(date) AS date, min(start_time) AS start_time,
            CASE WHEN grp = 'per_session' THEN coalesce(session_type_id::text, type_name, '') ELSE '' END AS kljuc
     FROM k
-    WHERE poc > p_sada AND poc <= p_sada + interval '121 minutes'
+    WHERE poc > p_sada AND poc <= p_sada + interval '1441 minutes'
       AND cardinality(leads) > 0
       AND (session_type_id IS NULL OR NOT session_type_id = ANY (utisane))
     GROUP BY trainer_id, poc, leads, det,
