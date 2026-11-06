@@ -185,6 +185,8 @@ function kanalZa(kind: string | undefined): string {
     case "session_reminder":
     case "day_digest":
     case "tomorrow_digest":
+    case "booking_reminder":
+    case "booking_day_reminder":
       return "fitlink_termini";
     case "membership_expiring":
     case "membership_expired":
