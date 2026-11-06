@@ -227,14 +227,14 @@ $function$;
 -- Trener podesava za sve svoje klijente (Podesavanja > Podsetnici za klijente), kolone client_*
 -- u trainer_notification_prefs:
 --   client_reminders     glavni prekidac (cuva izabrana vremena kad se iskljuci)
---   client_reminder_leads  minuta pre termina, od 15, 30, 60, 120, 180
+--   client_reminder_leads  minuta pre termina: 15, 30 min, 1 do 6 h, 12 h, 1440 = dan pre u isto vreme
 --   client_evening_at    vece pre termina u izabrano vreme (NULL = ne)
 --   client_morning_at    ujutru na dan termina u izabrano vreme (NULL = ne)
 --                        ukupno najvise 3 podsetnika (leads + vece + jutro)
 --   client_cancel_info   red "Otkazivanje bez gubitka treninga do 16:00" (po trainers.cancel_cutoff_hours)
 --   client_message       recenica trenera u svakom podsetniku (do 140 znakova)
 --   client_muted_types   vrste treninga bez podsetnika
--- Trener bez reda: ukljuceno, 1 h pre, sa rokom za otkazivanje.
+-- Trener bez reda: ukljuceno, 1 h pre, bez roka za otkazivanje (samo kad i kod koga).
 --
 -- Vezbac samo gasi za sebe: athlete_notification_prefs.session_reminders, kroz
 -- set_my_session_reminders; my_session_reminders vraca sta mu trener salje.
@@ -247,13 +247,13 @@ ALTER TABLE public.trainer_notification_prefs
   ADD COLUMN IF NOT EXISTS client_reminder_leads integer[] NOT NULL DEFAULT ARRAY[60],
   ADD COLUMN IF NOT EXISTS client_evening_at time,
   ADD COLUMN IF NOT EXISTS client_morning_at time,
-  ADD COLUMN IF NOT EXISTS client_cancel_info boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS client_cancel_info boolean NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS client_message text,
   ADD COLUMN IF NOT EXISTS client_muted_types uuid[] NOT NULL DEFAULT '{}';
 
 ALTER TABLE public.trainer_notification_prefs DROP CONSTRAINT IF EXISTS trainer_notif_prefs_klijenti;
 ALTER TABLE public.trainer_notification_prefs ADD CONSTRAINT trainer_notif_prefs_klijenti CHECK (
-  client_reminder_leads <@ ARRAY[15, 30, 60, 120, 180]
+  client_reminder_leads <@ ARRAY[15, 30, 60, 120, 180, 240, 300, 360, 720, 1440]
   AND cardinality(client_reminder_leads)
       + (client_evening_at IS NOT NULL)::int + (client_morning_at IS NOT NULL)::int <= 3
   AND (client_message IS NULL OR char_length(client_message) <= 140)
@@ -325,7 +325,7 @@ BEGIN
            coalesce(nullif(btrim(s.type_name), ''), 'Trening') AS tip,
            public._pocetak_termina(s.date, s.start_time) AS poc,
            coalesce(p.client_reminder_leads, ARRAY[60]) AS leads,
-           coalesce(p.client_cancel_info, true) AS rok_info,
+           coalesce(p.client_cancel_info, false) AS rok_info,
            nullif(btrim(p.client_message), '') AS poruka,
            coalesce(t.cancel_cutoff_hours, 0) AS rok_h
     FROM public.session_bookings s
@@ -339,7 +339,7 @@ BEGIN
       AND coalesce(a.session_reminders, true)
       AND (s.session_type_id IS NULL OR NOT s.session_type_id = ANY (coalesce(p.client_muted_types, '{}')))
   LOOP
-    CONTINUE WHEN NOT (b.poc > p_sada AND b.poc <= p_sada + interval '181 minutes');
+    CONTINUE WHEN NOT (b.poc > p_sada AND b.poc <= p_sada + interval '1441 minutes');
     -- Najmanji podsetnik koji je dosao na red, a termin je zakazan pre njega
     -- (ko zakaze 20 min pre, ne dobija "za 20 min" odmah posle zakazivanja).
     SELECT min(l) INTO v_faza FROM unnest(b.leads) l
@@ -356,7 +356,12 @@ BEGIN
 
     v_min := ceil(extract(epoch FROM (b.poc - p_sada)) / 60)::int;
     v_za := public._za_minuta(v_min);
-    v_naslov := 'Trening ' || v_za;
+    -- Sutrasnji termin (12 h, dan pre): "Sutra trening u 7:00"; inace "Trening za 2 h".
+    IF b.date > v_danas THEN
+      v_naslov := 'Sutra trening u ' || to_char(b.poc AT TIME ZONE 'Europe/Belgrade', 'FMHH24:MI');
+    ELSE
+      v_naslov := 'Trening ' || v_za;
+    END IF;
     v_tekst := b.tip || ' u ' || to_char(b.poc AT TIME ZONE 'Europe/Belgrade', 'FMHH24:MI')
       || ', trener ' || public._ime_trenera(b.trainer_id);
     IF b.rok_info AND b.rok_h > 0 THEN
@@ -386,7 +391,7 @@ BEGIN
   --    vremena, jednom po vezbacu i danu; vise termina istog dana ide u jednu poruku.
   FOR g IN
     SELECT s.athlete_id, s.trainer_id, x.faza, s.date,
-           bool_and(coalesce(p.client_cancel_info, true)) AS rok_info,
+           bool_and(coalesce(p.client_cancel_info, false)) AS rok_info,
            min(nullif(btrim(p.client_message), '')) AS poruka,
            min(coalesce(t.cancel_cutoff_hours, 0)) AS rok_h,
            array_agg(public._pocetak_termina(s.date, s.start_time) ORDER BY s.start_time) AS pocetci,
@@ -400,10 +405,11 @@ BEGIN
       AND x.u IS NOT NULL AND v_sat >= x.u AND v_sat < x.u + interval '10 minutes'
       AND s.status = 'booked' AND s.athlete_id IS NOT NULL
       AND public._pocetak_termina(s.date, s.start_time) > p_sada
-      -- Jutro preskace termin za koji uskoro stize podsetnik pred termin (dve poruke u istom trenu).
-      AND (x.faza = 'vece' OR public._pocetak_termina(s.date, s.start_time)
-           - make_interval(mins => coalesce((SELECT max(l) FROM unnest(p.client_reminder_leads) l), 0))
-           > p_sada + interval '30 minutes')
+      -- Vece/jutro preskace termin za koji podsetnik pred termin stize u roku od 30 min (dve poruke u istom trenu).
+      AND NOT EXISTS (
+        SELECT 1 FROM unnest(p.client_reminder_leads) l
+        WHERE abs(extract(epoch FROM (public._pocetak_termina(s.date, s.start_time)
+                                      - make_interval(mins => l) - p_sada))) <= 1800)
       AND coalesce(a.session_reminders, true)
       AND (s.session_type_id IS NULL OR NOT s.session_type_id = ANY (p.client_muted_types))
     GROUP BY s.athlete_id, s.trainer_id, x.faza, s.date
