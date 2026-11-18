@@ -86,6 +86,31 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Bez aktivne FitLink pretplate nema poziva. Ova funkcija pise service role kljucem,
+    // pa je brana na tabeli invites (RLS) ne dotice: provera mora da stoji ovde.
+    const { data: imaPretplatu, error: pretplataErr } = await admin.rpc(
+      "trainer_has_active_fitlink_sub",
+      { p_trainer_id: trainerId },
+    );
+    if (pretplataErr) {
+      return new Response(JSON.stringify({ error: pretplataErr.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (imaPretplatu !== true) {
+      return new Response(
+        JSON.stringify({
+          error: "Nalog nema aktivnu FitLink pretplatu.",
+          code: "pretplata_istekla",
+        }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     // 1) Kreiraj invite (7 dana)
     const code = generateCode(10);
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
