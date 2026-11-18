@@ -40,7 +40,9 @@ function fmtDate(s: string | null | undefined): string | null {
 }
 
 type Row = { label: string; value: string };
-type Step = { title: string; text: string };
+// titleHtml: naslov koraka kao gotov HTML, kad nosi link. Adresa napisana kao obican tekst
+// u Apple Mail-u sama postane plav podvucen link; zato je svaka adresa ili pravi link ili je nema.
+type Step = { title: string; text: string; titleHtml?: string };
 
 // ---- Interna autorizacija (kopija iz send-push) ------------------------------
 // Pozivalac je baza preko pg_net, koja salje Bearer <service_role_key> iz Vault-a.
@@ -168,7 +170,7 @@ function renderTemplate(o: {
         <div class="krug" style="width:28px; height:28px; border-radius:14px; background-color:#efe6fd; color:#8a36e8; font-size:13px; font-weight:600; line-height:28px; text-align:center;">${i + 1}</div>
       </td>
       <td valign="top" class="${i > 0 ? "hairline" : ""}" style="padding:16px 18px 16px 12px; ${i > 0 ? "border-top:1px solid #e8e8f0;" : ""}">
-        <div class="t-primary" style="font-size:15px; font-weight:600; color:#16161f; line-height:1.35;">${esc(k.title)}</div>
+        <div class="t-primary" style="font-size:15px; font-weight:600; color:#16161f; line-height:1.35;">${k.titleHtml ?? esc(k.title)}</div>
         <div class="t-muted" style="font-size:13px; color:#8c8c99; line-height:1.55; padding-top:2px;">${esc(k.text)}</div>
       </td>
     </tr>`
@@ -269,7 +271,9 @@ function buildEmail(
   daysLeft?: number,
   sub: Pretplata = {}
 ): { subject: string; html: string } | null {
-  const greet = name ? `Zdravo ${esc(name)}, ` : "Zdravo, ";
+  // Samo ime: "Zdravo Dejan", ne "Zdravo Dejan Jerkov".
+  const ime = (name ?? "").trim().split(/\s+/)[0];
+  const greet = ime ? `Zdravo ${esc(ime)}, ` : "Zdravo, ";
   const endsFmt = fmtDate(m.ends_on);
 
   if (event === "membership_activated") {
@@ -318,15 +322,19 @@ function buildEmail(
   // Salje okidac na auth.users (tg_trener_mejl_pretplata_na_sajtu). Bez cena u tekstu.
   if (event === "trainer_billing_intro") {
     return {
-      subject: "Još jedan korak: pokreni pretplatu na fitlink.rs",
+      subject: "Još jedan korak: pokreni pretplatu na sajtu",
       html: renderTemplate({
         previewText: "Pretplata se pokreće na sajtu, a aplikacija se otključa sama.",
         eyebrow: "Sledeći korak",
         heading: "Pretplata se pokreće na sajtu, ne u aplikaciji",
-        bodyHtml: `${greet}tvoj nalog je potvrđen. Ostao je još jedan korak: pokreni pretplatu na fitlink.rs. Prvih 30 dana je besplatno, a aplikacija se otključa sama čim završiš.`,
+        bodyHtml: `${greet}tvoj nalog je potvrđen. Ostao je još jedan korak: pokreni pretplatu na našem sajtu. Prvih 30 dana je besplatno, a aplikacija se otključa sama čim završiš.`,
         rows: [],
         steps: [
-          { title: "Otvori fitlink.rs/pretplata", text: "Prijavi se istim mejlom i lozinkom kao u aplikaciji." },
+          {
+            title: "Otvori fitlink.rs/pretplata",
+            titleHtml: `Otvori <a class="t-accent" href="${BILLING_URL}" style="color:#8a36e8; text-decoration:none;">fitlink.rs/pretplata</a>`,
+            text: "Prijavi se istim mejlom i lozinkom kao u aplikaciji.",
+          },
           { title: "Izaberi plan", text: "Mesečni ili godišnji. Mesečni kreće sa 30 dana besplatno." },
           { title: "Vrati se u aplikaciju", text: "Otključa se sama, za nekoliko sekundi." },
         ],
