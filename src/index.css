@@ -168,22 +168,22 @@
   }
 
   body {
-    font-family: 'Inter', system-ui, -apple-system, 'SF Pro Text', sans-serif;
+    /* Poppins kao u iPhone aplikaciji (400, 500, 600, 700); ucitava se u index.html i ugc-kreatori.html */
+    font-family: 'Poppins', system-ui, -apple-system, 'SF Pro Text', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    font-feature-settings: 'cv11', 'ss01', 'ss03';
     text-rendering: optimizeLegibility;
   }
 
   h1, h2, h3, h4, .font-display {
-    font-family: 'Inter Tight', 'Inter', system-ui, sans-serif;
+    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
     letter-spacing: -0.025em;
-    font-weight: 800;
+    font-weight: 700;
   }
 
   /* Editorial sport eyebrow - uppercase tracked label */
   .eyebrow {
-    font-family: 'Inter Tight', 'Inter', system-ui, sans-serif;
+    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
     text-transform: uppercase;
     letter-spacing: 0.18em;
     font-weight: 700;

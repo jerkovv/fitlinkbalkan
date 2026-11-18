@@ -43,7 +43,7 @@ export default function ProveriMejl() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f7f7fb] px-5">
       <div className="w-full max-w-md rounded-3xl bg-white border border-[#ececf2] shadow-sm px-7 py-10 text-center">
-        <div className="text-[22px] font-extrabold tracking-tight text-[#16161f] mb-8">
+        <div className="text-[22px] font-bold tracking-tight text-[#16161f] mb-8">
           Fit<span className="text-[#8935E9]">Link</span>
         </div>
 

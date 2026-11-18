@@ -302,7 +302,7 @@ const UgcKreatori = () => {
           </a>
 
           <p className="eyebrow mt-14 text-white/60 sm:mt-20">Saradnja sa kreatorima</p>
-          <h1 className="mt-4 font-display text-[2.75rem] font-extrabold uppercase leading-[0.92] tracking-tightest sm:text-7xl lg:text-8xl">
+          <h1 className="mt-4 font-display text-[2.75rem] font-bold uppercase leading-[0.92] tracking-tightest sm:text-7xl lg:text-8xl">
             Tražimo UGC fitness kreatore
           </h1>
           <p className="mt-6 max-w-xl text-base leading-relaxed text-white/75 sm:text-lg">
@@ -344,7 +344,7 @@ const UgcKreatori = () => {
               <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-brand text-white shadow-brand">
                 <Check className="h-7 w-7" />
               </div>
-              <h2 className="font-display text-4xl font-extrabold uppercase leading-[0.95] tracking-tightest sm:text-5xl">
+              <h2 className="font-display text-4xl font-bold uppercase leading-[0.95] tracking-tightest sm:text-5xl">
                 Prijava poslata
               </h2>
               <p className="mt-4 text-base text-muted-foreground">Javljamo se svima koji uđu u uži izbor.</p>
@@ -359,7 +359,7 @@ const UgcKreatori = () => {
             <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
               <div className="mb-2">
                 <p className="eyebrow text-primary">Prijava</p>
-                <h2 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+                <h2 className="mt-2 font-display text-3xl font-bold tracking-tight sm:text-4xl">
                   Pošalji nam svoj rad
                 </h2>
                 <p className="mt-2 text-sm text-muted-foreground">
