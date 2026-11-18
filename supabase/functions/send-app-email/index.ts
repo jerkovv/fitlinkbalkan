@@ -7,6 +7,10 @@ const APP_URL = "https://app.fitlink.rs";
 // Trener placa FitLink na sajtu, ne u aplikaciji (mejl sme da nosi link, aplikacija ne).
 const BILLING_URL = "https://fitlink.rs/pretplata";
 const FROM = "FitLink <noreply@fitlink.rs>";
+// Zvanican logo kao slika (natpis se ne kuca fontom). Dve verzije: tamna slova za svetlu
+// karticu i svetla slova za tamnu temu; klijent bira kroz prefers-color-scheme.
+const LOGO_SVETLA = "https://fitlink.rs/slike/mejl-logo-svetla.png";
+const LOGO_TAMNA = "https://fitlink.rs/slike/mejl-logo-tamna.png";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -36,6 +40,7 @@ function fmtDate(s: string | null | undefined): string | null {
 }
 
 type Row = { label: string; value: string };
+type Step = { title: string; text: string };
 
 // ---- Interna autorizacija (kopija iz send-push) ------------------------------
 // Pozivalac je baza preko pg_net, koja salje Bearer <service_role_key> iz Vault-a.
@@ -122,6 +127,14 @@ function renderTemplate(o: {
   rows: Row[];
   ctaText: string;
   ctaUrl: string;
+  /** Numerisani koraci umesto tabele (mejl posle potvrde naloga). */
+  steps?: Step[];
+  /** Sitan tekst ispod dugmeta; vec gotov HTML. */
+  noteHtml?: string;
+  /** Dugme preko cele sirine. */
+  ctaBlock?: boolean;
+  /** Potpis u dnu; podrazumevan je onaj za vezbace. */
+  footer?: string;
 }): string {
   const rowsHtml = o.rows.length
     ? `
@@ -141,7 +154,33 @@ function renderTemplate(o: {
   const ctaHtml = o.ctaUrl
     ? `
   <div style="height:28px; line-height:28px; font-size:0;">&nbsp;</div>
-  <a href="${o.ctaUrl}" style="display:inline-block; background-color:#8a36e8; background-image:linear-gradient(135deg,#8a36e8 0%,#603dea 55%,#e84bae 100%); color:#ffffff; font-family:'Inter Tight',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:15px; font-weight:600; text-decoration:none; padding:15px 32px; border-radius:12px; box-shadow:0 8px 22px -8px rgba(138,54,232,0.5);">${esc(o.ctaText)}</a>`
+  <a href="${o.ctaUrl}" style="display:${o.ctaBlock ? "block; text-align:center" : "inline-block"}; background-color:#8a36e8; background-image:linear-gradient(135deg,#8a36e8 0%,#603dea 55%,#e84bae 100%); color:#ffffff; font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:15px; font-weight:600; text-decoration:none; padding:15px 32px; border-radius:12px; box-shadow:0 8px 22px -8px rgba(138,54,232,0.5);">${esc(o.ctaText)}</a>`
+    : "";
+
+  const stepsHtml = o.steps?.length
+    ? `
+  <div style="height:24px; line-height:24px; font-size:0;">&nbsp;</div>
+  <table role="presentation" class="panel" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f6f6fa; border:1px solid #e8e8f0; border-radius:14px;">
+    ${o.steps
+      .map(
+        (k, i) => `<tr>
+      <td valign="top" width="44" class="${i > 0 ? "hairline" : ""}" style="padding:16px 0 16px 18px; ${i > 0 ? "border-top:1px solid #e8e8f0;" : ""}">
+        <div class="krug" style="width:28px; height:28px; border-radius:14px; background-color:#efe6fd; color:#8a36e8; font-size:13px; font-weight:600; line-height:28px; text-align:center;">${i + 1}</div>
+      </td>
+      <td valign="top" class="${i > 0 ? "hairline" : ""}" style="padding:16px 18px 16px 12px; ${i > 0 ? "border-top:1px solid #e8e8f0;" : ""}">
+        <div class="t-primary" style="font-size:15px; font-weight:600; color:#16161f; line-height:1.35;">${esc(k.title)}</div>
+        <div class="t-muted" style="font-size:13px; color:#8c8c99; line-height:1.55; padding-top:2px;">${esc(k.text)}</div>
+      </td>
+    </tr>`
+      )
+      .join("")}
+  </table>`
+    : "";
+
+  const noteHtml = o.noteHtml
+    ? `
+  <div style="height:18px; line-height:18px; font-size:0;">&nbsp;</div>
+  <div class="t-muted" style="font-size:13px; color:#8c8c99; line-height:1.6;">${o.noteHtml}</div>`
     : "";
 
   return `<!DOCTYPE html>
@@ -152,7 +191,7 @@ function renderTemplate(o: {
 <title>FitLink</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 <meta name="color-scheme" content="light dark">
 <meta name="supported-color-schemes" content="light dark">
 <style>
@@ -166,6 +205,15 @@ function renderTemplate(o: {
     .t-footer { color: #74747f !important; }
     .panel { background-color: #1b1b22 !important; border-color: #292932 !important; }
     .hairline { border-color: #292932 !important; }
+    .krug { background-color: #2a2140 !important; color: #b58cff !important; }
+    .t-accent { color: #b58cff !important; }
+    .logo-svetla { display: none !important; }
+    .logo-tamna { display: block !important; }
+  }
+  @media (max-width: 620px) {
+    .pad { padding: 32px 26px 30px 26px !important; }
+    .pad-foot { padding: 20px 26px 24px 26px !important; }
+    .email-wrap { padding: 18px 14px !important; }
   }
 </style>
 </head>
@@ -174,31 +222,34 @@ function renderTemplate(o: {
 
 <table role="presentation" class="email-bg" width="100%" cellpadding="0" cellspacing="0" style="background-color:#ededf3;">
 <tr>
-<td align="center" style="padding:40px 16px;">
+<td align="center" class="email-wrap" style="padding:40px 16px;">
 
-<table role="presentation" class="email-card" width="600" cellpadding="0" cellspacing="0" style="width:600px; max-width:600px; background-color:#ffffff; border-radius:20px; border:1px solid #e6e6ee; box-shadow:0 4px 28px rgba(22,22,38,0.07); overflow:hidden;">
+<table role="presentation" class="email-card" width="600" cellpadding="0" cellspacing="0" style="width:100%; max-width:600px; background-color:#ffffff; border-radius:20px; border:1px solid #e6e6ee; box-shadow:0 4px 28px rgba(22,22,38,0.07); overflow:hidden;">
 
-<tr><td style="padding:44px 44px 38px 44px; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<tr><td class="pad" style="padding:44px 44px 38px 44px; font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
 
-  <div class="t-primary" style="font-family:'Inter Tight',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:22px; font-weight:800; letter-spacing:-0.5px; color:#16161f;">Fit<span style="color:#8a36e8;">Link</span></div>
+  <img class="logo-svetla" src="${LOGO_SVETLA}" width="148" height="25" alt="FitLink" style="display:block; border:0; outline:none; width:148px; height:25px; margin-left:-2px;">
+  <!--[if !mso]><!--><img class="logo-tamna" src="${LOGO_TAMNA}" width="148" height="25" alt="FitLink" style="display:none; border:0; outline:none; width:148px; height:25px; margin-left:-2px;"><!--<![endif]-->
 
   <div style="height:22px; line-height:22px; font-size:0;">&nbsp;</div>
   <div class="hairline" style="border-top:1px solid #ececf2; font-size:0; line-height:0;">&nbsp;</div>
   <div style="height:30px; line-height:30px; font-size:0;">&nbsp;</div>
 
-  <div style="font-size:12px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase; color:#8a36e8;">${esc(o.eyebrow)}</div>
+  <div class="t-accent" style="font-size:12px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase; color:#8a36e8;">${esc(o.eyebrow)}</div>
   <div style="height:8px; line-height:8px; font-size:0;">&nbsp;</div>
-  <div class="t-primary" style="font-family:'Inter Tight',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:25px; font-weight:700; letter-spacing:-0.4px; color:#16161f; line-height:1.25;">${esc(o.heading)}</div>
+  <div class="t-primary" style="font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:24px; font-weight:600; letter-spacing:-0.4px; color:#16161f; line-height:1.25;">${esc(o.heading)}</div>
 
   <div style="height:14px; line-height:14px; font-size:0;">&nbsp;</div>
   <div class="t-body" style="font-size:15px; color:#4b4b57; line-height:1.7;">${o.bodyHtml}</div>
 ${rowsHtml}
+${stepsHtml}
 ${ctaHtml}
+${noteHtml}
 
 </td></tr>
 
-<tr><td class="hairline" style="padding:24px 44px 30px 44px; border-top:1px solid #eeeef4; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-  <div class="t-muted" style="font-size:13px; color:#8c8c99; line-height:1.6;">FitLink, tvoj trening na jednom mestu.</div>
+<tr><td class="hairline pad-foot" style="padding:24px 44px 30px 44px; border-top:1px solid #eeeef4; font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <div class="t-muted" style="font-size:13px; color:#8c8c99; line-height:1.6;">${esc(o.footer ?? "FitLink, tvoj trening na jednom mestu.")}</div>
   <div style="height:3px; line-height:3px; font-size:0;">&nbsp;</div>
   <div class="t-footer" style="font-size:12px; color:#abacb6; line-height:1.6;">Ovo je automatska poruka, ne odgovaraj na ovaj mejl.</div>
 </td></tr>
@@ -259,6 +310,31 @@ function buildEmail(
         rows,
         ctaText: "Otvori FitLink",
         ctaUrl: APP_URL,
+      }),
+    };
+  }
+
+  // Trener je upravo potvrdio mejl: pretplata se pokrece na sajtu, ne u aplikaciji.
+  // Salje okidac na auth.users (tg_trener_mejl_pretplata_na_sajtu). Bez cena u tekstu.
+  if (event === "trainer_billing_intro") {
+    return {
+      subject: "Još jedan korak: pokreni pretplatu na fitlink.rs",
+      html: renderTemplate({
+        previewText: "Pretplata se pokreće na sajtu, a aplikacija se otključa sama.",
+        eyebrow: "Sledeći korak",
+        heading: "Pretplata se pokreće na sajtu, ne u aplikaciji",
+        bodyHtml: `${greet}tvoj nalog je potvrđen. Ostao je još jedan korak: pokreni pretplatu na fitlink.rs. Prvih 30 dana je besplatno, a aplikacija se otključa sama čim završiš.`,
+        rows: [],
+        steps: [
+          { title: "Otvori fitlink.rs/pretplata", text: "Prijavi se istim mejlom i lozinkom kao u aplikaciji." },
+          { title: "Izaberi plan", text: "Mesečni ili godišnji. Mesečni kreće sa 30 dana besplatno." },
+          { title: "Vrati se u aplikaciju", text: "Otključa se sama, za nekoliko sekundi." },
+        ],
+        ctaText: "Pokreni 30 dana besplatno",
+        ctaUrl: BILLING_URL,
+        ctaBlock: true,
+        noteHtml: `U aplikaciji nema kupovine. Plan, kartice i fakture su uvek na <a class="t-accent" href="${BILLING_URL}" style="color:#8a36e8; text-decoration:none; font-weight:500;">fitlink.rs/pretplata</a>`,
+        footer: "FitLink, aplikacija za trenere.",
       }),
     };
   }
