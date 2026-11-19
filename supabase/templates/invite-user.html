@@ -33,7 +33,7 @@
 </style>
 </head>
 <body class="email-bg" style="margin:0; padding:0; background-color:#ededf3; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;">
-<div style="display:none; max-height:0; overflow:hidden; opacity:0;">Tvoj trener te poziva na FitLink.</div>
+<div style="display:none; max-height:0; overflow:hidden; opacity:0;">{{ if .Data.trainer_name }}Trener {{ .Data.trainer_name }} te poziva na FitLink.{{ else }}Tvoj trener te poziva na FitLink.{{ end }}</div>
 
 <table role="presentation" class="email-bg" width="100%" cellpadding="0" cellspacing="0" style="background-color:#ededf3;">
 <tr>
@@ -55,7 +55,7 @@
   <div class="t-primary" style="font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:24px; font-weight:600; letter-spacing:-0.4px; color:#16161f; line-height:1.25;">Pozvan si na FitLink</div>
 
   <div style="height:14px; line-height:14px; font-size:0;">&nbsp;</div>
-  <div class="t-body" style="font-size:15px; color:#4b4b57; line-height:1.7;">Tvoj trener te poziva na FitLink. Otvori FitLink aplikaciju, izaberi <b>Ja sam vežbač</b> i unesi ovaj kod:</div>
+  <div class="t-body" style="font-size:15px; color:#4b4b57; line-height:1.7;">{{ if .Data.trainer_name }}Trener <b>{{ .Data.trainer_name }}</b> te poziva{{ else }}Tvoj trener te poziva{{ end }} na FitLink. Otvori FitLink aplikaciju, izaberi <b>Ja sam vežbač</b> i unesi ovaj kod:</div>
   <div style="height:24px; line-height:24px; font-size:0;">&nbsp;</div>
   <table role="presentation" class="panel" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f6f6fa; border:1px solid #e8e8f0; border-radius:14px;">
     <tr><td align="center" class="t-primary" style="padding:22px 12px 6px 20px; font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:32px; font-weight:600; letter-spacing:8px; color:#16161f;">{{ .Token }}</td></tr>

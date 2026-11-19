@@ -93,10 +93,11 @@ var FITLINK_MEJLOVI = {
     dugme: 'Potvrdi nalog',
   },
   'invite-user': {
-    tema: 'Pozvan si na FitLink',
-    pre: 'Tvoj trener te poziva na FitLink.',
+    // Ime trenera stize iz pozivnice (send-invite ga upisuje u podatke naloga kao trainer_name).
+    tema: '{{ if .Data.trainer_name }}{{ .Data.trainer_name }} te poziva na FitLink{{ else }}Pozvan si na FitLink{{ end }}',
+    pre: '{{ if .Data.trainer_name }}Trener {{ .Data.trainer_name }} te poziva na FitLink.{{ else }}Tvoj trener te poziva na FitLink.{{ end }}',
     nadnaslov: 'Pozivnica', naslov: 'Pozvan si na FitLink',
-    tekst: 'Tvoj trener te poziva na FitLink. Otvori FitLink aplikaciju, izaberi <b>Ja sam vežbač</b> i unesi ovaj kod:',
+    tekst: '{{ if .Data.trainer_name }}Trener <b>{{ .Data.trainer_name }}</b> te poziva{{ else }}Tvoj trener te poziva{{ end }} na FitLink. Otvori FitLink aplikaciju, izaberi <b>Ja sam vežbač</b> i unesi ovaj kod:',
     kod: true, vaziKod: 'Kod važi 24 sata',
     napomena: 'Kod je istekao? Traži od trenera da ti pošalje novi.',
   },

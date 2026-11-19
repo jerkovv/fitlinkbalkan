@@ -110,6 +110,9 @@ async function isAuthorizedToken(
 }
 
 type Pretplata = { access_until?: string | null; probni?: boolean | null; vezbaca?: number | null };
+// Trener kod koga je clanarina. Ime ide u recenicu samo u nominativu ("koje vodi Marko Markovic"),
+// jer se tudje ime ne moze pouzdano menjati po padezima.
+type Trener = { ime: string | null; studio: string | null };
 
 /** 2, 3, 4 (ali ne 12-14) traze "gube", ostali "gubi". */
 function gube(n: number): boolean {
@@ -267,27 +270,35 @@ ${noteHtml}
 function buildEmail(
   event: string,
   name: string | null,
-  m: { plan_name?: string; ends_on?: string | null; sessions_total?: number | null; price?: number | null },
+  m: { plan_name?: string; ends_on?: string | null; sessions_total?: number | null; price?: number | null; trainer_id?: string | null },
   daysLeft?: number,
-  sub: Pretplata = {}
+  sub: Pretplata = {},
+  trener: Trener = { ime: null, studio: null }
 ): { subject: string; html: string } | null {
   // Samo ime: "Zdravo Dejan", ne "Zdravo Dejan Jerkov".
   const ime = (name ?? "").trim().split(/\s+/)[0];
   const greet = ime ? `Zdravo ${esc(ime)}, ` : "Zdravo, ";
   const endsFmt = fmtDate(m.ends_on);
+  // Mejlovi vezbacu uvek kazu kod kog trenera je clanarina: u recenici i u tabeli.
+  const kodKoga = trener.ime ? ` za treninge koje vodi <span class="t-primary" style="font-weight:600; color:#16161f;">${esc(trener.ime)}</span>` : "";
+  const redoviTrenera: Row[] = [];
+  if (trener.ime) redoviTrenera.push({ label: "Trener", value: trener.ime });
+  if (trener.studio && trener.studio !== trener.ime) redoviTrenera.push({ label: "Studio", value: trener.studio });
 
   if (event === "membership_activated") {
-    const rows: Row[] = [];
+    const rows: Row[] = [...redoviTrenera];
     if (m.plan_name) rows.push({ label: "Plan", value: m.plan_name });
     if (m.sessions_total != null) rows.push({ label: "Treninzi", value: String(m.sessions_total) });
     if (endsFmt) rows.push({ label: "Važi do", value: endsFmt });
     return {
       subject: "Tvoja članarina je aktivna",
       html: renderTemplate({
-        previewText: "Tvoja članarina je aktivna.",
+        previewText: trener.ime
+          ? `Aktivna je tvoja članarina za treninge koje vodi ${trener.ime}.`
+          : "Tvoja članarina je aktivna.",
         eyebrow: "Članarina",
         heading: "Članarina je aktivna",
-        bodyHtml: `${greet}tvoja članarina je aktivna i možeš da nastaviš sa treninzima. Detalji su ispod.`,
+        bodyHtml: `${greet}aktivna je tvoja članarina${kodKoga}. Možeš da nastaviš sa treninzima, a detalji su ispod.`,
         rows,
         ctaText: "Otvori FitLink",
         ctaUrl: APP_URL,
@@ -299,18 +310,22 @@ function buildEmail(
     const dl = typeof daysLeft === "number" ? daysLeft : 3;
     let subject: string;
     if (dl <= 0) subject = "Članarina ti ističe danas";
-    else if (dl === 1) subject = "Članarina ti ističe za 1 dan";
+    else if (dl === 1) subject = "Članarina ti ističe sutra";
     else subject = `Članarina ti ističe za ${dl} dana`;
-    const rows: Row[] = [];
+    const rows: Row[] = [...redoviTrenera];
     if (m.plan_name) rows.push({ label: "Plan", value: m.plan_name });
     if (endsFmt) rows.push({ label: "Ističe", value: endsFmt });
+    // Datum vec nosi tacku na kraju ("21.11.2026."), pa posle njega nema jos jedne.
+    const kad = endsFmt ?? "uskoro.";
     return {
       subject,
       html: renderTemplate({
-        previewText: "Tvoja članarina uskoro ističe.",
+        previewText: trener.ime
+          ? `Članarina za treninge koje vodi ${trener.ime} ističe ${kad}`
+          : `Tvoja članarina ističe ${kad}`,
         eyebrow: "Podsetnik",
         heading: "Članarina uskoro ističe",
-        bodyHtml: `${greet}tvoja članarina ističe ${endsFmt || "uskoro"}. Javi se treneru da je obnoviš i nastaviš trening bez prekida.`,
+        bodyHtml: `${greet}tvoja članarina${kodKoga} ističe ${kad} Zatraži novi paket u aplikaciji ili se javi treneru i nastavi bez pauze.`,
         rows,
         ctaText: "Otvori FitLink",
         ctaUrl: APP_URL,
@@ -426,7 +441,26 @@ Deno.serve(async (req) => {
     const { data: prof } = await admin.from("profiles").select("full_name").eq("id", athlete_id).maybeSingle();
     const name = prof?.full_name ?? null;
 
-    const built = buildEmail(event, name, membership ?? {}, days_left, subscription ?? {});
+    // Mejl vezbacu o clanarini nosi ime trenera. Baza salje trainer_id clanarine; ako ga nema
+    // (stariji pozivalac), uzima se trener kod koga je vezbac sada.
+    let trener: Trener = { ime: null, studio: null };
+    if (event === "membership_activated" || event === "membership_expiring") {
+      let trainerId: string | null = membership?.trainer_id ?? null;
+      if (!trainerId) {
+        const { data: a } = await admin.from("athletes").select("trainer_id").eq("id", athlete_id).maybeSingle();
+        trainerId = a?.trainer_id ?? null;
+      }
+      if (trainerId) {
+        const [{ data: tp }, { data: tr }] = await Promise.all([
+          admin.from("profiles").select("full_name").eq("id", trainerId).maybeSingle(),
+          admin.from("trainers").select("studio_name").eq("id", trainerId).maybeSingle(),
+        ]);
+        const cist = (v: unknown) => String(v ?? "").trim() || null;
+        trener = { ime: cist(tp?.full_name) ?? cist(tr?.studio_name), studio: cist(tr?.studio_name) };
+      }
+    }
+
+    const built = buildEmail(event, name, membership ?? {}, days_left, subscription ?? {}, trener);
     if (!built) return json({ error: "unknown event" }, 400);
 
     const resp = await fetch("https://api.resend.com/emails", {
