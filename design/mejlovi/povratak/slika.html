@@ -1,0 +1,25 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+/* Slike za mejlove: pravi ekrani aplikacije na Ponoc podlozi. Parametri idu kroz hash:
+   #w=400&h=432&t=ime,x,y,sirina,ugao;ime,x,y,sirina,ugao&s=x,y,precnik */
+html,body{margin:0;background:#0B0A10}
+#p{position:relative;overflow:hidden;background:#0B0A10}
+#p .s{position:absolute;border-radius:50%;background:radial-gradient(closest-side,rgba(139,61,235,.62),rgba(91,75,239,.24) 55%,rgba(91,75,239,0))}
+#p img{position:absolute;display:block;transform-origin:50% 100%;filter:drop-shadow(0 30px 50px rgba(0,0,0,.55))}
+#p .m{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(11,10,16,0),rgba(11,10,16,.92))}
+/* par: natpis iznad svakog telefona i strelica izmedju (trener -> klijent) */
+@font-face{font-family:Pop;src:url(../../motion/ava-fitlink/zajednicko/font/Poppins-SemiBold.ttf);font-weight:600}
+#p .n{position:absolute;top:34px;width:380px;text-align:center;font:600 24px Pop;letter-spacing:3.4px;text-transform:uppercase}
+#p .st{position:absolute;left:480px;top:330px;width:64px;height:64px;border-radius:32px;background:#fff;display:grid;place-items:center;box-shadow:0 12px 34px rgba(0,0,0,.5)}
+</style></head><body><div id="p"></div><script>
+const q = Object.fromEntries(location.hash.slice(1).split('&').map(x => x.split('=')));
+const p = document.getElementById('p'); p.style.width = q.w + 'px'; p.style.height = q.h + 'px';
+(q.s || '').split(';').filter(Boolean).forEach(s => { const [x, y, d] = s.split(',').map(Number);
+  p.insertAdjacentHTML('beforeend', `<div class="s" style="left:${x - d / 2}px;top:${y - d / 2}px;width:${d}px;height:${d}px"></div>`); });
+q.t.split(';').forEach(t => { const [ime, x, y, w, u] = t.split(',');
+  p.insertAdjacentHTML('beforeend', `<img src="../../motion/zajednicko/ekrani/okvir-${ime}.webp" style="left:${x}px;top:${y}px;width:${w}px;transform:rotate(${u || 0}deg)">`); });
+if (q.par) p.insertAdjacentHTML('beforeend', `<div class="n" style="left:96px;color:#C4A2FF">Ti</div><div class="n" style="left:548px;color:#F6F3FB">Tvoj klijent</div>`);
+if (q.m) p.insertAdjacentHTML('beforeend', `<div class="m" style="height:${q.m}px"></div>`);
+if (q.par) p.insertAdjacentHTML('beforeend', `<div class="st"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#5B4BEF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>`);
+document.fonts.ready.then(() => { document.body.dataset.spremno = '1'; });
+</script></body></html>
