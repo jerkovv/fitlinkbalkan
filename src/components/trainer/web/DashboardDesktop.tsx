@@ -257,7 +257,7 @@ export const DashboardDesktop = (p: Props) => {
                           )}
                         </span>
                         <span className="flex min-w-0 items-center gap-2 text-[13px] text-muted-foreground">
-                          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.type_color }} />
+                          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: bojaTermina(s.type_color) }} />
                           {s.type_name}
                         </span>
                         <span className="flex justify-end">
@@ -368,3 +368,11 @@ export const DashboardDesktop = (p: Props) => {
 };
 
 export default DashboardDesktop;
+
+// Boja vrste termina stize kao ime ("emerald", "amber"...), a ne kao CSS boja. Samo "violet" i
+// "indigo" su slucajno i CSS imena, pa su ostale tacke bile prazne.
+const IMENA_BOJA = new Set(["violet", "indigo", "emerald", "amber", "rose", "sky"]);
+function bojaTermina(boja?: string | null): string | undefined {
+  if (!boja) return undefined;
+  return IMENA_BOJA.has(boja) ? `hsl(var(--session-${boja}-fg))` : boja;
+}
