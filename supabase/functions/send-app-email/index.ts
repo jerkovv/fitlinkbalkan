@@ -409,6 +409,32 @@ function buildEmail(
   return null;
 }
 
+// Mejl adminu: novi trener je napravio nalog. Bez cena; dugme vodi na trenera u adminu.
+function adminNoviTrener(ime: string | null, mejl: string | null, kad: string | null, id: string) {
+  const vreme = kad
+    ? new Intl.DateTimeFormat("sr-Latn-RS", {
+      timeZone: "Europe/Belgrade", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+    }).format(new Date(kad))
+    : null;
+  const rows: Row[] = [];
+  if (ime) rows.push({ label: "Ime", value: esc(ime) });
+  if (mejl) rows.push({ label: "Mejl", value: esc(mejl) });
+  if (vreme) rows.push({ label: "Registrovan", value: vreme });
+  return {
+    subject: `Novi trener: ${ime || mejl || "bez imena"}`,
+    html: renderTemplate({
+      previewText: `${ime || mejl || "Novi trener"} je upravo napravio FitLink nalog.`,
+      eyebrow: "Admin",
+      heading: "Novi trener se registrovao",
+      bodyHtml: `${esc(ime || mejl || "Novi trener")} je upravo napravio nalog trenera. Probu bez kartice dobija čim potvrdi mejl.`,
+      rows,
+      ctaText: "Otvori u adminu",
+      ctaUrl: `https://admin.fitlink.rs/treneri/${id}`,
+      footer: "Obaveštenje iz FitLink admina. Isključuje se u admin podešavanjima.",
+    }),
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -435,8 +461,11 @@ Deno.serve(async (req) => {
 
     const { data: ures, error: uerr } = await admin.auth.admin.getUserById(athlete_id);
     if (uerr) return json({ error: "getUser failed", detail: uerr.message }, 500);
-    const email = ures?.user?.email;
-    if (!email) return json({ error: "athlete has no email" }, 404);
+    // Obavestenje adminu o novom treneru: athlete_id je novi trener, a mejl ide na adresu iz
+    // admin podesavanja (salje okidac na trainers, samo baza sa service_role kljucem).
+    const zaAdmina = event === "admin_novi_trener";
+    const email = zaAdmina ? String(payload.to ?? "").trim() : ures?.user?.email;
+    if (!email) return json({ error: zaAdmina ? "missing to" : "athlete has no email" }, zaAdmina ? 400 : 404);
 
     const { data: prof } = await admin.from("profiles").select("full_name").eq("id", athlete_id).maybeSingle();
     const name = prof?.full_name ?? null;
@@ -460,7 +489,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    const built = buildEmail(event, name, membership ?? {}, days_left, subscription ?? {}, trener);
+    const built = zaAdmina
+      ? adminNoviTrener(name, ures?.user?.email ?? null, ures?.user?.created_at ?? null, athlete_id)
+      : buildEmail(event, name, membership ?? {}, days_left, subscription ?? {}, trener);
     if (!built) return json({ error: "unknown event" }, 400);
 
     // Dnevnik za admin (/mejlovi): red pre slanja, pa slika 1x1 koja belezi otvaranje
@@ -468,7 +499,7 @@ Deno.serve(async (req) => {
     let logId: string | null = null;
     try {
       const { data: red } = await admin.from("app_email_log")
-        .insert({ user_id: athlete_id, email, event, subject: built.subject })
+        .insert({ user_id: zaAdmina ? null : athlete_id, email, event, subject: built.subject })
         .select("id").single();
       logId = (red as { id?: string } | null)?.id ?? null;
     } catch { /* dnevnik nije presudan */ }
