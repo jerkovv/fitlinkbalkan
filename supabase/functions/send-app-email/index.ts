@@ -411,6 +411,109 @@ function buildEmail(
 }
 
 // Mejl adminu: novi trener je napravio nalog. Bez cena; dugme vodi na trenera u adminu.
+/** Obavestenje koje trener salje svim vezbacima ("Pošalji svima"): isti tekst kao u aplikaciji. */
+function trenerObavestenje(
+  ime: string | null,
+  trener: Trener,
+  naslov: string | null,
+  poruka: string
+): { subject: string; html: string } {
+  const prvo = (ime ?? "").trim().split(/\s+/)[0];
+  const greet = prvo ? `Zdravo ${esc(prvo)},` : "Zdravo,";
+  const ko = trener.ime ?? "Tvoj trener";
+  const naslovCist = (naslov ?? "").trim();
+  // Ime trenera u nominativu ("Dejan Jerkov ti šalje"), ne "od Dejan Jerkov".
+  const subject = naslovCist || `${ko} ti šalje obaveštenje`;
+  const telo = esc(poruka.trim()).replace(/\r?\n/g, "<br>");
+  const kratko = poruka.replace(/\s+/g, " ").trim();
+  return {
+    subject,
+    html: renderTemplate({
+      previewText: kratko.length > 110 ? kratko.slice(0, 107) + "..." : kratko,
+      eyebrow: "Obaveštenje od trenera",
+      heading: naslovCist || "Novo obaveštenje",
+      bodyHtml: `${greet} <span class="t-primary" style="font-weight:600; color:#16161f;">${esc(ko)}</span> ti šalje obaveštenje:
+  <div style="height:16px; line-height:16px; font-size:0;">&nbsp;</div>
+  <div class="panel t-primary" style="background-color:#f6f6fa; border:1px solid #e8e8f0; border-radius:14px; padding:18px 20px; font-size:15px; color:#16161f; line-height:1.7;">${telo}</div>`,
+      rows: [],
+      // Vezbacu bez dugmeta: app.fitlink.rs je stara web verzija, a aplikaciju vec ima na telefonu.
+      ctaText: "",
+      ctaUrl: "",
+      footer: "Ovo obaveštenje vidiš i u aplikaciji FitLink.",
+    }),
+  };
+}
+
+/** "Pošalji svima": jedan poziv iz baze za sve vezbace, mejlovi idu preko Resend batch-a (do 100). */
+async function posaljiObavestenjeTrenera(
+  admin: ReturnType<typeof createClient>,
+  payload: { trainer_id?: string; athlete_ids?: string[]; title?: string | null; body?: string }
+): Promise<Response> {
+  const trainerId = String(payload.trainer_id ?? "");
+  const ids = Array.isArray(payload.athlete_ids) ? payload.athlete_ids.map(String).slice(0, 2000) : [];
+  const poruka = String(payload.body ?? "");
+  if (!trainerId || !ids.length || !poruka.trim()) return json({ error: "missing trainer_id, athlete_ids or body" }, 400);
+
+  const [{ data: tp }, { data: tr }] = await Promise.all([
+    admin.from("profiles").select("full_name").eq("id", trainerId).maybeSingle(),
+    admin.from("trainers").select("studio_name").eq("id", trainerId).maybeSingle(),
+  ]);
+  const cist = (v: unknown) => String(v ?? "").trim() || null;
+  const trener: Trener = { ime: cist(tp?.full_name) ?? cist(tr?.studio_name), studio: cist(tr?.studio_name) };
+
+  const { data: profili } = await admin.from("profiles").select("id, full_name").in("id", ids);
+  const imena = new Map((profili ?? []).map((p: { id: string; full_name: string | null }) => [p.id, p.full_name]));
+
+  // Mejl adrese su u auth.users; vezbaca jednog trenera je malo, pa po jedan upit.
+  const primaoci: { id: string; email: string }[] = [];
+  for (const id of ids) {
+    const { data } = await admin.auth.admin.getUserById(id);
+    const email = data?.user?.email;
+    if (email) primaoci.push({ id, email });
+  }
+
+  let poslato = 0;
+  for (let i = 0; i < primaoci.length; i += 100) {
+    const deo = primaoci.slice(i, i + 100);
+    const mejlovi: { from: string; to: string; subject: string; html: string }[] = [];
+    const logIds: (string | null)[] = [];
+    for (const p of deo) {
+      const built = trenerObavestenje(imena.get(p.id) ?? null, trener, payload.title ?? null, poruka);
+      let logId: string | null = null;
+      try {
+        const { data: red } = await admin.from("app_email_log")
+          .insert({ user_id: p.id, email: p.email, event: "trener_obavestenje", subject: built.subject })
+          .select("id").single();
+        logId = (red as { id?: string } | null)?.id ?? null;
+      } catch { /* dnevnik nije presudan */ }
+      const piksel = logId
+        ? `<img src="https://fitlink.rs/api/mejl?o=${logId}" width="1" height="1" alt="" style="display:block; border:0; width:1px; height:1px;">`
+        : "";
+      const html = piksel ? built.html.replace("</body>", `${piksel}</body>`) : built.html;
+      mejlovi.push({ from: FROM, to: p.email, subject: built.subject, html });
+      logIds.push(logId);
+    }
+    const resp = await fetch("https://api.resend.com/emails/batch", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify(mejlovi),
+    });
+    const text = await resp.text();
+    if (!resp.ok) {
+      for (const l of logIds) if (l) await admin.from("app_email_log").update({ greska: `resend ${resp.status}` }).eq("id", l);
+      continue;
+    }
+    let odgovor: { id?: string }[] = [];
+    try { odgovor = JSON.parse(text)?.data ?? []; } catch { /* ignore */ }
+    for (let k = 0; k < logIds.length; k++) {
+      const l = logIds[k];
+      if (l) await admin.from("app_email_log").update({ resend_id: odgovor[k]?.id ?? null }).eq("id", l);
+    }
+    poslato += deo.length;
+  }
+  return json({ ok: true, poslato, bez_mejla: ids.length - primaoci.length });
+}
+
 function adminNoviTrener(ime: string | null, mejl: string | null, kad: string | null, id: string) {
   const vreme = kad
     ? new Intl.DateTimeFormat("sr-Latn-RS", {
@@ -454,6 +557,9 @@ Deno.serve(async (req) => {
 
     const payload = await req.json().catch(() => null);
     if (!payload) return json({ error: "invalid json" }, 400);
+    if (payload.event === "trener_obavestenje") {
+      return await posaljiObavestenjeTrenera(createClient(SUPABASE_URL, SERVICE_ROLE_KEY), payload);
+    }
     // athlete_id je id primaoca (vezbac ili, za pretplatu, trener).
     const { event, athlete_id, membership, days_left, subscription } = payload;
     if (!event || !athlete_id) return json({ error: "missing event or athlete_id" }, 400);
