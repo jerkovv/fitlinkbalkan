@@ -463,16 +463,34 @@ Deno.serve(async (req) => {
     const built = buildEmail(event, name, membership ?? {}, days_left, subscription ?? {}, trener);
     if (!built) return json({ error: "unknown event" }, 400);
 
+    // Dnevnik za admin (/mejlovi): red pre slanja, pa slika 1x1 koja belezi otvaranje
+    // (fitlink.rs/api/mejl -> mejl_dogadjaj). Ako upis ne prodje, mejl ide i bez nje.
+    let logId: string | null = null;
+    try {
+      const { data: red } = await admin.from("app_email_log")
+        .insert({ user_id: athlete_id, email, event, subject: built.subject })
+        .select("id").single();
+      logId = (red as { id?: string } | null)?.id ?? null;
+    } catch { /* dnevnik nije presudan */ }
+    const piksel = logId
+      ? `<img src="https://fitlink.rs/api/mejl?o=${logId}" width="1" height="1" alt="" style="display:block; border:0; width:1px; height:1px;">`
+      : "";
+    const html = piksel && built.html.includes("</body>") ? built.html.replace("</body>", `${piksel}</body>`) : built.html;
+
     const resp = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: FROM, to: email, subject: built.subject, html: built.html }),
+      body: JSON.stringify({ from: FROM, to: email, subject: built.subject, html }),
     });
     const text = await resp.text();
-    if (!resp.ok) return json({ error: "resend failed", status: resp.status, body: text }, 502);
+    if (!resp.ok) {
+      if (logId) await admin.from("app_email_log").update({ greska: `resend ${resp.status}` }).eq("id", logId);
+      return json({ error: "resend failed", status: resp.status, body: text }, 502);
+    }
 
     let id: string | null = null;
     try { id = JSON.parse(text)?.id ?? null; } catch { /* ignore */ }
+    if (logId) await admin.from("app_email_log").update({ resend_id: id }).eq("id", logId);
     return json({ ok: true, id, to: email, event });
   } catch (e) {
     return json({ error: String(e) }, 500);
