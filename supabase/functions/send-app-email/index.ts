@@ -3,7 +3,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const APP_URL = "https://app.fitlink.rs";
 // Trener placa FitLink na sajtu, ne u aplikaciji (mejl sme da nosi link, aplikacija ne).
 const BILLING_URL = "https://fitlink.rs/pretplata";
 const FROM = "FitLink <noreply@fitlink.rs>";
@@ -300,8 +299,9 @@ function buildEmail(
         heading: "Članarina je aktivna",
         bodyHtml: `${greet}aktivna je tvoja članarina${kodKoga}. Možeš da nastaviš sa treninzima, a detalji su ispod.`,
         rows,
-        ctaText: "Otvori FitLink",
-        ctaUrl: APP_URL,
+        // Vezbacu bez dugmeta: app.fitlink.rs je stara web verzija, a aplikaciju vec ima na telefonu.
+        ctaText: "",
+        ctaUrl: "",
       }),
     };
   }
@@ -327,8 +327,9 @@ function buildEmail(
         heading: "Članarina uskoro ističe",
         bodyHtml: `${greet}tvoja članarina${kodKoga} ističe ${kad} Zatraži novi paket u aplikaciji ili se javi treneru i nastavi bez pauze.`,
         rows,
-        ctaText: "Otvori FitLink",
-        ctaUrl: APP_URL,
+        // Vezbacu bez dugmeta: app.fitlink.rs je stara web verzija, a aplikaciju vec ima na telefonu.
+        ctaText: "",
+        ctaUrl: "",
       }),
     };
   }
