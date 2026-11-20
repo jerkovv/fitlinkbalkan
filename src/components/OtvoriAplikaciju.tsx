@@ -6,8 +6,9 @@ const GOOGLE_PLAY = "https://play.google.com/store/apps/details?id=rs.fitlink.ap
 
 // Na fitlink.rs/dashboard stari svetli izgled za telefon se vise ne prikazuje: kad je prozor
 // uzak (telefon ili skupljen prozor na racunaru), ili kad dashboard otvori vezbac, stoji ovaj
-// ekran i salje na aplikaciju. app.fitlink.rs i aplikacije u prodavnicama ga nikad ne vide.
-export function OtvoriAplikaciju({ zaVezbaca = false }: { zaVezbaca?: boolean }) {
+// ekran i salje na aplikaciju. Od 2026-11-20 isti ekran stoji i na app.fitlink.rs (stara web
+// aplikacija), osim stranica do kojih vode linkovi iz mejlova. Aplikacije u prodavnicama ga ne vide.
+export function OtvoriAplikaciju({ zaVezbaca = false, naStarojAdresi = false }: { zaVezbaca?: boolean; naStarojAdresi?: boolean }) {
   // Pozadina iza ekrana (i "odskok" pri skrolu) ostaje tamna.
   useEffect(() => {
     const html = document.documentElement;
@@ -36,7 +37,7 @@ export function OtvoriAplikaciju({ zaVezbaca = false }: { zaVezbaca?: boolean })
         <img src={natpis} alt="FitLink" className="h-[22px] w-auto" style={belo} />
 
         <div className="mt-12 text-[12px] font-semibold uppercase" style={{ letterSpacing: "1.4px", color: "#B58CFF" }}>
-          {zaVezbaca ? "FitLink za vežbače" : "FitLink na telefonu"}
+          {zaVezbaca ? "FitLink za vežbače" : naStarojAdresi ? "FitLink aplikacija" : "FitLink na telefonu"}
         </div>
         <h1 className="mt-3 text-[34px] leading-[1.12] font-bold" style={{ letterSpacing: "-0.6px" }}>
           Otvori aplikaciju na telefonu
@@ -44,6 +45,8 @@ export function OtvoriAplikaciju({ zaVezbaca = false }: { zaVezbaca?: boolean })
         <p className="mt-4 text-[15.5px] leading-[1.65]" style={{ color: "#B9B4C8" }}>
           {zaVezbaca
             ? "Treninzi, ishrana, termini i članarina su u aplikaciji. Prijavi se istim mejlom i lozinkom."
+            : naStarojAdresi
+            ? "FitLink radi u aplikaciji za iPhone i Android. Preuzmi je i prijavi se istim mejlom i lozinkom. Trener na računaru radi na fitlink.rs/dashboard."
             : "Na ovoj širini ekrana FitLink radi u aplikaciji. Dashboard se otvara na računaru, u širem prozoru."}
         </p>
 

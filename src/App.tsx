@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -72,6 +72,20 @@ const athlete = (el: JSX.Element) => <ProtectedRoute requireRole="athlete">{el}<
 // vidi basename=undefined, dakle nula promena tamo.
 const dashboardHost = isDashboardHost();
 
+// app.fitlink.rs je stara web verzija aplikacije: umesto nje stoji poziv da se preuzme aplikacija
+// iz App Store-a ili sa Google Play-a. Ostaju samo stranice do kojih vode linkovi iz mejlova
+// (pozivnica vezbacu, kod, potvrda) i javna stranica trenera. Na localhost-u i u aplikaciji
+// iz prodavnice (drugo ime domena) ovo ne vazi.
+const naStarojAdresi = typeof window !== "undefined" && window.location.hostname === "app.fitlink.rs";
+const SLOBODNE_PUTANJE = ["/invite/", "/poziv", "/proveri-mejl", "/spremno", "/t/"];
+const StaraAdresa = ({ children }: { children: JSX.Element }) => {
+  const { pathname } = useLocation();
+  if (naStarojAdresi && !SLOBODNE_PUTANJE.some((p) => pathname === p || pathname.startsWith(p))) {
+    return <OtvoriAplikaciju naStarojAdresi />;
+  }
+  return children;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -81,6 +95,7 @@ const App = () => (
         <AuthProvider>
           <ConfirmProvider>
           <div vaul-drawer-wrapper="" className="h-full bg-background">
+          <StaraAdresa>
           <Routes>
             {/* Na fitlink.rs/dashboard je "/" (posle basename-a) trenerska
                 pocetna, ne marketinska Index stranica - bare /dashboard
@@ -154,6 +169,7 @@ const App = () => (
 
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </StaraAdresa>
           </div>
           </ConfirmProvider>
         </AuthProvider>

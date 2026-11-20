@@ -12,9 +12,9 @@
 // pregled mogao da ucita.
 
 export type Mejl = { tema: string; html: string };
-// Linkovi jednog mejla. Kad mejl ide po rasporedu, "pretplata" i "app" vode kroz fitlink.rs/api/mejl
+// Linkovi jednog mejla. Kad mejl ide po rasporedu, "pretplata" vodi kroz fitlink.rs/api/mejl
 // (belezi klik pa salje dalje), "piksel" belezi otvaranje, a "odjava" nosi kljuc reda iz dnevnika.
-export type Veze = { odjava: string; pretplata?: string; app?: string; piksel?: string };
+export type Veze = { odjava: string; pretplata?: string; piksel?: string };
 // Sta se zna o treneru. Brojke su za vreme probe; nula znaci da toga jos nema.
 export type Trener = {
   ime: string;
@@ -26,7 +26,10 @@ export type Trener = {
 
 const SLIKE = "https://fitlink.rs/slike/mejl/";
 const PRETPLATA_URL = "https://fitlink.rs/pretplata";
-const APP_URL = "https://app.fitlink.rs";
+// Aplikacija se otvara iz prodavnice; app.fitlink.rs je stara web verzija i ne sme u mejl.
+const APP_STORE = "https://apps.apple.com/rs/app/fitlink-trener-i-ve%C5%BEba%C4%8Di/id6766111046";
+const GOOGLE_PLAY = "https://play.google.com/store/apps/details?id=rs.fitlink.app";
+const SAJT = "https://fitlink.rs";
 const DASHBOARD = "fitlink.rs/dashboard";
 const LOGO_SVETLA = "https://fitlink.rs/slike/mejl-logo-svetla.png";
 const LOGO_TAMNA = "https://fitlink.rs/slike/mejl-logo-tamna.png";
@@ -40,8 +43,11 @@ const veza = (href: string, t: string) =>
   `<a class="t-accent" href="${href}" style="color:${LJUBICASTA}; text-decoration:none; font-weight:500;">${t}</a>`;
 const dugme = (href: string, t: string) =>
   `<a href="${href}" style="display:block; text-align:center; background-color:${LJUBICASTA}; background-image:linear-gradient(135deg,#8a36e8 0%,#603dea 55%,#e84bae 100%); color:#ffffff; font-family:${FONT}; font-size:16px; font-weight:600; text-decoration:none; padding:16px 32px; border-radius:12px; box-shadow:0 8px 22px -8px rgba(138,54,232,0.5);">${t}</a>`;
-const dugmeTiho = (href: string, t: string) =>
-  `<a class="panel t-accent" href="${href}" style="display:block; text-align:center; background-color:#f6f6fa; border:1px solid #e8e8f0; color:${LJUBICASTA}; font-family:${FONT}; font-size:15px; font-weight:600; text-decoration:none; padding:14px 28px; border-radius:12px;">${t}</a>`;
+// Dva dugmeta jedno pored drugog: App Store i Google Play.
+const prodavnice = () => `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+    <td width="50%" style="padding-right:6px;"><a href="${APP_STORE}" style="display:block; text-align:center; background-color:${LJUBICASTA}; background-image:linear-gradient(135deg,#8a36e8 0%,#603dea 55%,#e84bae 100%); color:#ffffff; font-family:${FONT}; font-size:15px; font-weight:600; text-decoration:none; padding:15px 10px; border-radius:12px;">App Store</a></td>
+    <td width="50%" style="padding-left:6px;"><a href="${GOOGLE_PLAY}" style="display:block; text-align:center; background-color:${LJUBICASTA}; background-image:linear-gradient(135deg,#8a36e8 0%,#603dea 55%,#e84bae 100%); color:#ffffff; font-family:${FONT}; font-size:15px; font-weight:600; text-decoration:none; padding:15px 10px; border-radius:12px;">Google Play</a></td>
+  </tr></table>`;
 const nadnaslov = (t: string) =>
   `<div class="t-accent" style="font-size:12px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase; color:${LJUBICASTA};">${t}</div>`;
 const naslov = (t: string, px = 26) =>
@@ -212,7 +218,7 @@ const kakoPretplata = (pretplata: string) => koraci([
 ]);
 
 // Isti nalog i na racunaru.
-function racunar(app: string): string {
+function racunar(): string {
   return `${nadnaslov("I na računaru")}
   ${raz(8)}
   ${naslov("Tvoj studio na velikom ekranu", 21)}
@@ -226,7 +232,6 @@ function racunar(app: string): string {
 
 // ---- Mejl: proba je pocela ----
 export function dobrodoslica(t: Trener, veze: Veze): Mejl {
-  const app = veze.app ?? APP_URL;
   return {
     tema: "Tvojih 30 dana je počelo",
     html: mejl({
@@ -247,7 +252,9 @@ export function dobrodoslica(t: Trener, veze: Veze): Mejl {
     ["Otvori termine", "Klijenti rezervišu sami, a ti u kalendaru vidiš ko dolazi."],
   ])}
   ${raz(26)}
-  ${dugme(app, "Otvori FitLink")}
+  ${tekst("Aplikacija je na telefonu. Ako je još nemaš, preuzmi je i prijavi se istim mejlom i lozinkom:")}
+  ${raz(14)}
+  ${prodavnice()}
   ${raz(38)}
   ${nadnaslov("Šta sve dobijaš")}
   ${raz(8)}
@@ -268,7 +275,7 @@ export function dobrodoslica(t: Trener, veze: Veze): Mejl {
       "Paketi na mesec ili na broj treninga. Zahtev potvrdiš jednim dodirom i vidiš ko još nije platio.",
       "Vidi koliko mu je treninga ostalo, a podsetnik pred istek stiže sam.",
       "Uplate i članarine kod trenera i početni ekran vežbača"],
-  ].map((c) => par(app, ...(c as [string, string, string, string, string]))).join(raz(38))}
+  ].map((c) => par(SAJT, ...(c as [string, string, string, string, string]))).join(raz(38))}
   ${raz(36)}
   ${crta()}
   ${raz(30)}
@@ -283,7 +290,7 @@ export function dobrodoslica(t: Trener, veze: Veze): Mejl {
   ${raz(34)}
   ${crta()}
   ${raz(30)}
-  ${racunar(app)}
+  ${racunar()}
   ${raz(34)}
   ${crta()}
   ${raz(24)}
@@ -295,7 +302,6 @@ export function dobrodoslica(t: Trener, veze: Veze): Mejl {
 // ---- Mejl: 7 dana pre kraja ----
 export function proba7(t: Trener, veze: Veze): Mejl {
   const pretplata = veze.pretplata ?? PRETPLATA_URL;
-  const app = veze.app ?? APP_URL;
   const ima = t.vezbaca > 0;
   return {
     tema: "Još 7 dana probe",
@@ -337,7 +343,7 @@ export function proba7(t: Trener, veze: Veze): Mejl {
     ["Otvori Uživo dok trenira", "Vidiš seriju, kilažu i puls u istom trenutku."],
   ])}
   ${raz(26)}
-  ${dugme(app, "Pozovi prvog klijenta")}
+  ${prodavnice()}
   ${raz(18)}
   ${sitno(`Za nastavak posle probe, pretplata se pokreće na ${veza(pretplata, "fitlink.rs/pretplata")}`)}`,
     }),
@@ -424,7 +430,6 @@ export function probaIstekla(t: Trener, veze: Veze): Mejl {
 // ---- Mejl: pretplata je pokrenuta ----
 export function pretplataAktivna(t: Trener, veze: Veze): Mejl {
   const pretplata = veze.pretplata ?? PRETPLATA_URL;
-  const app = veze.app ?? APP_URL;
   return {
     tema: "Pretplata je aktivna",
     html: mejl({
@@ -453,7 +458,7 @@ export function pretplataAktivna(t: Trener, veze: Veze): Mejl {
   ${raz(34)}
   ${crta()}
   ${raz(30)}
-  ${racunar(app)}
+  ${racunar()}
   ${raz(34)}
   ${crta()}
   ${raz(30)}
@@ -461,7 +466,9 @@ export function pretplataAktivna(t: Trener, veze: Veze): Mejl {
   ${raz(8)}
   ${tekst(`Plan, karticu i fakture menjaš na ${veza(pretplata, "fitlink.rs/pretplata")}. Tamo možeš i da otkažeš, kad god hoćeš.`)}
   ${raz(26)}
-  ${dugmeTiho(app, "Otvori FitLink")}`,
+  ${tekst("FitLink na telefonu:")}
+  ${raz(12)}
+  ${prodavnice()}`,
     }),
   };
 }
