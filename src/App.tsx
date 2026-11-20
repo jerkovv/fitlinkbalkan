@@ -10,10 +10,11 @@ import { AthleteLayout } from "@/components/AthleteLayout";
 import { TrainerLayout } from "@/components/TrainerLayout";
 import { TrainerDesktopChrome } from "@/components/trainer/web/TrainerDesktopChrome";
 import { isDashboardHost } from "@/hooks/useDesktopWeb";
+import { OtvoriAplikaciju } from "@/components/OtvoriAplikaciju";
+import { DashboardPrijava } from "@/components/DashboardPrijava";
 
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
-import Auth from "./pages/Auth.tsx";
 import Invite from "./pages/Invite.tsx";
 import InviteCode from "./pages/InviteCode.tsx";
 import ProveriMejl from "./pages/ProveriMejl.tsx";
@@ -88,7 +89,7 @@ const App = () => (
               path="/"
               element={dashboardHost ? <Navigate to="/trener" replace /> : <Index />}
             />
-            <Route path="/auth" element={<Auth />} />
+            <Route path="/auth" element={<DashboardPrijava />} />
             <Route path="/invite/:code" element={<Invite />} />
             <Route path="/poziv" element={<InviteCode />} />
             <Route path="/proveri-mejl" element={<ProveriMejl />} />
@@ -129,7 +130,9 @@ const App = () => (
             {/* Vežbač - protected, umotano u AthleteLayout (deljen lock sheet preko
                 ClanarinaLockProvider + auto-enter u aktivan trening, montiran na svim tabovima).
                 Sve stranice se vide normalno; pojedine AKCIJE su zakljucane bez clanarine. */}
-            <Route element={<AthleteLayout />}>
+            {/* Na fitlink.rs/dashboard vezbac dobija poziv da otvori aplikaciju: dashboard je
+                za trenere, a stari svetli izgled za telefon se tamo vise ne prikazuje. */}
+            <Route element={dashboardHost ? <OtvoriAplikaciju zaVezbaca /> : <AthleteLayout />}>
               <Route path="/vezbac" element={athlete(<AthleteHome />)} />
               <Route path="/vezbac/trening" element={athlete(<AthleteWorkoutHome />)} />
               <Route path="/vezbac/trening/aktivan/:dayId" element={athlete(<AthleteWorkout />)} />
