@@ -175,6 +175,7 @@ function kanalZa(kind: string | undefined): string {
   switch (kind ?? "") {
     case "message_from_trainer":
     case "message":
+    case "podrska_odgovor":
       return "fitlink_poruke";
     case "waitlist_promoted":
     case "booking_canceled_by_trainer":
