@@ -93,6 +93,17 @@ async function grantYearly(session: Stripe.Checkout.Session) {
     console.log("stripe-webhook: grantYearly bez trainer_id");
     return;
   }
+  // Placeno tokom probe bez kartice: godina se racuna od kraja probe, da preostali dani ne propadnu.
+  const { data: tekuci } = await admin
+    .from("trainer_subscriptions")
+    .select("status, stripe_subscription_id, access_until, trial_ends_at")
+    .eq("trainer_id", trainerId)
+    .maybeSingle();
+  const t = tekuci as { status?: string; stripe_subscription_id?: string | null; access_until?: string | null; trial_ends_at?: string | null } | null;
+  const krajProbe = t?.status === "trialing" && !t?.stripe_subscription_id && t?.trial_ends_at && t?.access_until
+    ? new Date(t.access_until).getTime()
+    : 0;
+  const od = Math.max(Date.now(), krajProbe);
   const { error } = await admin.from("trainer_subscriptions").upsert(
     {
       trainer_id: trainerId,
@@ -100,7 +111,7 @@ async function grantYearly(session: Stripe.Checkout.Session) {
       stripe_subscription_id: null,
       plan: "yearly",
       status: "active",
-      access_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      access_until: new Date(od + 365 * 24 * 60 * 60 * 1000).toISOString(),
       current_period_end: null,
       trial_ends_at: null,
       cancel_at_period_end: false,

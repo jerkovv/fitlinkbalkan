@@ -67,11 +67,26 @@ Deno.serve(async (req) => {
     // Obezbedi Stripe customer-a (za portal i sledece kupovine); zapamti ga u bazi.
     const { data: subRow } = await admin
       .from("trainer_subscriptions")
-      .select("stripe_customer_id")
+      .select("stripe_customer_id, stripe_subscription_id, status, access_until, trial_ends_at")
       .eq("trainer_id", user.id)
       .maybeSingle();
-    let customerId: string | null | undefined = (subRow as { stripe_customer_id?: string | null } | null)
-      ?.stripe_customer_id;
+    const red = subRow as {
+      stripe_customer_id?: string | null;
+      stripe_subscription_id?: string | null;
+      status?: string | null;
+      access_until?: string | null;
+      trial_ends_at?: string | null;
+    } | null;
+    let customerId: string | null | undefined = red?.stripe_customer_id;
+
+    // Proba bez kartice (od 2026-11-20): trener vec ima 30 dana bez Stripe-a. Ko plati tokom
+    // probe ne gubi preostale dane: naplata krece kad proba istekne (Stripe trazi bar 48 h
+    // unapred). Ko je probu vec imao, nikad ne dobija novu probu od Stripe-a.
+    const krajProbe = red?.status === "trialing" && !red?.stripe_subscription_id && red?.trial_ends_at && red?.access_until
+      ? new Date(red.access_until).getTime()
+      : 0;
+    const probaJosTraje = krajProbe > Date.now() + 49 * 60 * 60 * 1000;
+    const imaoProbu = !!red?.trial_ends_at;
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: user.email ?? undefined,
@@ -110,7 +125,11 @@ Deno.serve(async (req) => {
         ? {
             subscription_data: {
               metadata: { trainer_id: user.id, plan },
-              ...(row.trial_days > 0 ? { trial_period_days: row.trial_days } : {}),
+              ...(probaJosTraje
+                ? { trial_end: Math.floor(krajProbe / 1000) }
+                : !imaoProbu && row.trial_days > 0
+                ? { trial_period_days: row.trial_days }
+                : {}),
             },
             payment_method_collection: "always",
           }
