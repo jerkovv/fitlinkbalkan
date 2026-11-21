@@ -86,24 +86,43 @@ async function upsertFromSubscription(
 
 // Godisnji jednokratni: 365 dana pristupa. Poziva se SAMO kad je placanje stvarno naplaceno
 // (payment_status paid ili async_payment_succeeded) - nikad na sam "completed" za async metode.
-async function grantYearly(session: Stripe.Checkout.Session) {
+async function grantYearly(session: Stripe.Checkout.Session, eventId: string) {
   const trainerId = session.metadata?.trainer_id;
   const customer = session.customer as string;
   if (!trainerId) {
     console.log("stripe-webhook: grantYearly bez trainer_id");
     return;
   }
+  // Godina se sada dodaje na preostale dane, pa ista uplata ne sme da se obradi dvaput.
+  // Ako ova provera ne uspe, pristup se ipak daje, ali bez dodavanja na preostale dane.
+  const { data: ranije, error: ranijeGreska } = await admin
+    .from("stripe_events")
+    .select("id, type, naplata:payload->data->object->>payment_status")
+    .eq("payload->data->object->>id", session.id)
+    .neq("id", eventId)
+    .in("type", ["checkout.session.completed", "checkout.session.async_payment_succeeded"]);
+  if (ranijeGreska) console.log("stripe-webhook: provera ranije uplate:", ranijeGreska.message);
+  const vecDodeljeno = ((ranije ?? []) as unknown as { type: string; naplata: string | null }[])
+    .some((e) => e.type === "checkout.session.async_payment_succeeded" || e.naplata === "paid");
+  if (vecDodeljeno) {
+    console.log("stripe-webhook: uplata " + session.id + " je vec obradjena, preskacem");
+    return;
+  }
   // Placeno tokom probe bez kartice: godina se racuna od kraja probe, da preostali dani ne propadnu.
   const { data: tekuci } = await admin
     .from("trainer_subscriptions")
-    .select("status, stripe_subscription_id, access_until, trial_ends_at")
+    .select("plan, status, stripe_subscription_id, access_until, trial_ends_at")
     .eq("trainer_id", trainerId)
     .maybeSingle();
-  const t = tekuci as { status?: string; stripe_subscription_id?: string | null; access_until?: string | null; trial_ends_at?: string | null } | null;
+  const t = tekuci as { plan?: string; status?: string; stripe_subscription_id?: string | null; access_until?: string | null; trial_ends_at?: string | null } | null;
   const krajProbe = t?.status === "trialing" && !t?.stripe_subscription_id && t?.trial_ends_at && t?.access_until
     ? new Date(t.access_until).getTime()
     : 0;
-  const od = Math.max(Date.now(), krajProbe);
+  // Obnova godisnje pre isteka: nova godina ide na preostale placene dane.
+  const krajGodine = !ranijeGreska && t?.plan === "yearly" && t?.status === "active" && !t?.stripe_subscription_id && t?.access_until
+    ? new Date(t.access_until).getTime()
+    : 0;
+  const od = Math.max(Date.now(), krajProbe, krajGodine);
   const { error } = await admin.from("trainer_subscriptions").upsert(
     {
       trainer_id: trainerId,
@@ -178,7 +197,7 @@ Deno.serve(async (req) => {
           // Godisnji jednokratni: dodeli SAMO ako je placanje naplaceno. Za async metode
           // (SEPA/ACH/"processing") payment_status je "unpaid" ovde -> cekaj async_payment_succeeded.
           if (session.payment_status === "paid") {
-            await grantYearly(session);
+            await grantYearly(session, event.id);
           } else {
             console.log(
               "stripe-webhook: yearly completed, payment_status=" +
@@ -202,7 +221,7 @@ Deno.serve(async (req) => {
         // Async naplata (npr. SEPA) uspela -> tek sad dodeli godisnji pristup.
         // Subscription async naplatu vode subscription/invoice eventi, pa hvatamo samo mode payment.
         const session = event.data.object as Stripe.Checkout.Session;
-        if (session.mode === "payment") await grantYearly(session);
+        if (session.mode === "payment") await grantYearly(session, event.id);
         break;
       }
 
