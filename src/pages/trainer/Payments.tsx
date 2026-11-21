@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Card, Chip, Avatar } from "@/components/ui-bits";
@@ -15,12 +15,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useConfirm } from "@/hooks/useConfirm";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { cn } from "@/lib/utils";
-import { Loader2, Banknote, Receipt, Check, X, Inbox, ChevronRight, IdCard, ArrowDown } from "lucide-react";
+import {
+  Loader2, Banknote, Receipt, Check, X, Inbox, ChevronRight, IdCard, ArrowDown,
+  MoreHorizontal, UserRound, Pencil, CircleCheck, CircleX, Plus,
+} from "lucide-react";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { MembershipEditSheet } from "@/components/trainer/MembershipEditSheet";
@@ -84,8 +94,10 @@ const daysLeftBadge = (daysLeft: number | null): { label: string; tone: "success
   return { label: "Aktivna", tone: "success" };
 };
 
-const categoryOf = (m: MembershipOverviewRow): OverviewCategory => {
+const categoryOf = (m: MembershipOverviewRow, desktop = false): OverviewCategory => {
   if (m.membership_id == null) return "none";
+  // Racunar kao iOS: pauzirana ili otkazana ne vazi iako joj rok jos traje.
+  if (desktop && m.status && m.status !== "active") return "expired";
   const dl = m.days_left;
   if (dl != null && dl < 0) return "expired";
   if (dl != null && dl <= 7) return "expiringSoon";
@@ -140,7 +152,7 @@ const StatTile = ({
 
 // ---- Racunar ----
 // Kolone tabele clanarina; zaglavlje i redovi dele isti sablon da se poravnaju.
-const OV_GRID = "grid grid-cols-[minmax(0,1fr)_128px_132px_150px_132px_16px] items-center gap-4 px-5";
+const OV_GRID = "grid grid-cols-[minmax(0,1fr)_128px_132px_150px_132px_32px] items-center gap-4 px-5";
 
 const OV_DOT: Record<OverviewCategory, string> = {
   active: "bg-success-soft-foreground",
@@ -241,6 +253,7 @@ const Payments = () => {
   const { user } = useAuth();
   const confirm = useConfirm();
   const desktop = useDesktopWeb();
+  const navigate = useNavigate();
 
   // Tab 1 - zahtevi na cekanju (postojeci tok, netaknut)
   const [loading, setLoading] = useState(true);
@@ -300,7 +313,16 @@ const Payments = () => {
 
   const rejectPurchase = async (p: Purchase) => {
     if (locked) return openLock();
-    if (!(await confirm({ title: `Odbiti zahtev "${p.package_name}"?`, confirmLabel: "Odbij", destructive: true }))) return;
+    if (!(await confirm(
+      desktop
+        ? {
+            title: "Odbiti zahtev?",
+            description: `${p.athlete_name} · ${p.package_name} · ${p.price_rsd.toLocaleString("sr-Latn-RS")} RSD`,
+            confirmLabel: "Odbij zahtev",
+            destructive: true,
+          }
+        : { title: `Odbiti zahtev "${p.package_name}"?`, confirmLabel: "Odbij", destructive: true },
+    ))) return;
     setBusyId(p.id);
     const { error } = await supabase.rpc("reject_membership_purchase", {
       p_purchase_id: p.id,
@@ -317,6 +339,8 @@ const Payments = () => {
   const [overview, setOverview] = useState<MembershipOverviewRow[]>([]);
   const [ovFilter, setOvFilter] = useState<OverviewFilter>("all");
   const [sortKey, setSortKey] = useState<SortKey>("expiry");
+  // Racunar: neplacene kao jos jedan filter, kao na iOS-u.
+  const [samoNeplacene, setSamoNeplacene] = useState(false);
   const [editMembershipId, setEditMembershipId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
 
@@ -335,20 +359,28 @@ const Payments = () => {
   const counts = useMemo(() => {
     let active = 0, expiringSoon = 0, expired = 0, none = 0;
     overview.forEach((m) => {
-      const cat = categoryOf(m);
+      const cat = categoryOf(m, desktop);
       if (cat === "active") active++;
       else if (cat === "expiringSoon") expiringSoon++;
       else if (cat === "expired") expired++;
       else none++;
     });
     return { active, expiringSoon, expired, none };
-  }, [overview]);
+  }, [overview, desktop]);
+
+  const brojNeplacenih = useMemo(
+    () => overview.filter((m) => m.membership_id != null && m.paid === false).length,
+    [overview],
+  );
 
   const sortedOverview = useMemo(() => {
-    const filtered = overview.filter((m) => ovFilter === "all" || categoryOf(m) === ovFilter);
+    const filtered = overview.filter(
+      (m) => (ovFilter === "all" || categoryOf(m, desktop) === ovFilter)
+        && (!desktop || !samoNeplacene || (m.membership_id != null && m.paid === false)),
+    );
     const arr = filtered.slice();
     if (sortKey === "name") {
-      arr.sort((a, b) => (a.athlete_name ?? "").localeCompare(b.athlete_name ?? ""));
+      arr.sort((a, b) => (a.athlete_name ?? "").localeCompare(b.athlete_name ?? "", desktop ? "sr-Latn" : undefined));
     } else if (sortKey === "activity") {
       arr.sort((a, b) => (b.workouts_30d ?? 0) - (a.workouts_30d ?? 0));
     } else {
@@ -362,15 +394,125 @@ const Payments = () => {
       });
     }
     return arr;
-  }, [overview, ovFilter, sortKey]);
+  }, [overview, ovFilter, sortKey, desktop, samoNeplacene]);
+
+  // Izbor kategorije na racunaru gasi filter neplacenih, kao na iOS-u.
+  const izaberiFilter = (k: OverviewFilter) => {
+    setSamoNeplacene(false);
+    setOvFilter(k);
+  };
+
+  const brojZaFilter = (k: OverviewFilter) =>
+    k === "all"
+      ? overview.length
+      : k === "active"
+        ? counts.active
+        : k === "expiringSoon"
+          ? counts.expiringSoon
+          : k === "expired"
+            ? counts.expired
+            : counts.none;
 
   const [editPurchase, setEditPurchase] = useState<{ id: string | null; paid: boolean | null }>({ id: null, paid: null });
 
   const openEdit = (m: MembershipOverviewRow) => {
     if (locked) return openLock();
     setEditMembershipId(m.membership_id);
+    setEditAthleteId(undefined);
+    setEditName(m.athlete_name);
     setEditPurchase({ id: m.purchase_id ?? null, paid: m.paid ?? null });
     setEditOpen(true);
+  };
+
+  // Bez membershipId isti prozor radi kao "Dodaj clanarinu" za ovog vezbaca.
+  const [editAthleteId, setEditAthleteId] = useState<string | undefined>(undefined);
+  const [editName, setEditName] = useState<string | undefined>(undefined);
+  const openAdd = (m: MembershipOverviewRow) => {
+    if (locked) return openLock();
+    setEditMembershipId(null);
+    setEditAthleteId(m.athlete_id);
+    setEditName(m.athlete_name);
+    setEditPurchase({ id: null, paid: null });
+    setEditOpen(true);
+  };
+
+  // Stavka iz menija reda. Ide preko clanarine, a ne zahteva, jer rucno uneta
+  // clanarina jos nema zapis o uplati i server ga pravi ovde (kao iOS).
+  const setMembershipPaid = async (m: MembershipOverviewRow, paid: boolean) => {
+    if (locked) return openLock();
+    if (!m.membership_id || payingId) return;
+    const opis = m.plan_name ? `${m.athlete_name} · ${m.plan_name}` : m.athlete_name;
+    const ok = await confirm(
+      paid
+        ? { title: "Označiti kao plaćeno?", description: opis, confirmLabel: "Plaćeno" }
+        : {
+            title: "Označiti kao neplaćeno?",
+            description: m.paid
+              ? `${opis}. Uplata izlazi iz prihoda, a datum uplate se briše.`
+              : opis,
+            confirmLabel: "Neplaćeno",
+            destructive: !!m.paid,
+          },
+    );
+    if (!ok) return;
+    setPayingId(m.purchase_id ?? m.membership_id);
+    const { error } = await supabase.rpc("trainer_set_membership_paid", {
+      p_membership_id: m.membership_id,
+      p_paid: paid,
+    });
+    setPayingId(null);
+    if (error) return toast.error(porukaGreske(error));
+    toast.success(
+      paid
+        ? `Članarina za ${m.athlete_name} je označena kao plaćena.`
+        : `Članarina za ${m.athlete_name} se vodi kao neplaćena.`,
+    );
+    loadOverview();
+  };
+
+  // Meni reda na racunaru: iste stavke kao dugi pritisak na iOS-u. Meni se crta van
+  // reda, ali React klik ipak penje do reda, pa ga ovde treba zaustaviti.
+  const rowMenu = (m: MembershipOverviewRow) => {
+    const ima = m.membership_id != null;
+    return (
+      <span className="flex justify-end" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label={`Opcije za ${m.athlete_name}`}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-surface-3 hover:text-foreground data-[state=open]:bg-surface-3"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuItem onSelect={() => navigate(`/trener/vezbaci/${m.athlete_id}`)}>
+              <UserRound className="mr-2 h-4 w-4" /> Profil vežbača
+            </DropdownMenuItem>
+            {ima && (
+              <DropdownMenuItem onSelect={() => openEdit(m)}>
+                <Pencil className="mr-2 h-4 w-4" /> <LockMark className="mr-1" />Izmeni članarinu
+              </DropdownMenuItem>
+            )}
+            {ima && m.paid !== true && (
+              <DropdownMenuItem onSelect={() => setMembershipPaid(m, true)}>
+                <CircleCheck className="mr-2 h-4 w-4" /> <LockMark className="mr-1" />Označi kao plaćeno
+              </DropdownMenuItem>
+            )}
+            {ima && m.paid !== false && (
+              <DropdownMenuItem onSelect={() => setMembershipPaid(m, false)}>
+                <CircleX className="mr-2 h-4 w-4" /> <LockMark className="mr-1" />Označi kao neplaćeno
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => openAdd(m)}>
+              <Plus className="mr-2 h-4 w-4" /> <LockMark className="mr-1" />Dodaj novu članarinu
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </span>
+    );
   };
 
   // Brza oznaka sa reda: neplacena clanarina postaje placena.
@@ -580,35 +722,59 @@ const Payments = () => {
                       label="Aktivnih"
                       value={counts.active}
                       dot={OV_DOT.active}
-                      active={ovFilter === "active"}
-                      onClick={() => setOvFilter(ovFilter === "active" ? "all" : "active")}
+                      active={ovFilter === "active" && !samoNeplacene}
+                      onClick={() => izaberiFilter(ovFilter === "active" ? "all" : "active")}
                     />
                     <DesktopFilterTile
                       label="Ističe u 7 dana"
                       value={counts.expiringSoon}
                       dot={OV_DOT.expiringSoon}
-                      active={ovFilter === "expiringSoon"}
-                      onClick={() => setOvFilter(ovFilter === "expiringSoon" ? "all" : "expiringSoon")}
+                      active={ovFilter === "expiringSoon" && !samoNeplacene}
+                      onClick={() => izaberiFilter(ovFilter === "expiringSoon" ? "all" : "expiringSoon")}
                     />
                     <DesktopFilterTile
                       label="Isteklih"
                       value={counts.expired}
                       dot={OV_DOT.expired}
-                      active={ovFilter === "expired"}
-                      onClick={() => setOvFilter(ovFilter === "expired" ? "all" : "expired")}
+                      active={ovFilter === "expired" && !samoNeplacene}
+                      onClick={() => izaberiFilter(ovFilter === "expired" ? "all" : "expired")}
                     />
                     <DesktopFilterTile
                       label="Bez članarine"
                       value={counts.none}
                       dot={OV_DOT.none}
-                      active={ovFilter === "none"}
-                      onClick={() => setOvFilter(ovFilter === "none" ? "all" : "none")}
+                      active={ovFilter === "none" && !samoNeplacene}
+                      onClick={() => izaberiFilter(ovFilter === "none" ? "all" : "none")}
                     />
                   </div>
 
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <Segmented options={OV_FILTERS} value={ovFilter} onChange={(k) => setOvFilter(k)} />
-                    <Segmented options={SORT_OPTIONS} value={sortKey} onChange={(k) => setSortKey(k)} />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Segmented
+                        options={OV_FILTERS.map((f) => ({ key: f.key, label: `${f.label} ${brojZaFilter(f.key)}` }))}
+                        value={samoNeplacene ? ("" as OverviewFilter) : ovFilter}
+                        onChange={izaberiFilter}
+                      />
+                      {(brojNeplacenih > 0 || samoNeplacene) && (
+                        <button
+                          type="button"
+                          onClick={() => { setSamoNeplacene((v) => !v); setOvFilter("all"); }}
+                          aria-pressed={samoNeplacene}
+                          className={cn(
+                            "inline-flex h-10 items-center gap-1.5 rounded-full border px-3.5 text-[12px] font-semibold transition",
+                            samoNeplacene
+                              ? "border-transparent bg-warning text-warning-foreground"
+                              : "border-warning/35 bg-warning-soft text-warning-soft-foreground hover:opacity-85",
+                          )}
+                        >
+                          Nije plaćeno <span className="font-bold tnum">{brojNeplacenih}</span>
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[12px] text-muted-foreground tnum">{sortedOverview.length} vežbača</span>
+                      <Segmented options={SORT_OPTIONS} value={sortKey} onChange={(k) => setSortKey(k)} />
+                    </div>
                   </div>
 
                   <div className="card-premium overflow-hidden">
@@ -649,6 +815,10 @@ const Payments = () => {
                               <div className="flex flex-col items-start gap-1">
                                 {noMembership ? (
                                   <Chip tone="muted">Bez članarine</Chip>
+                                ) : m.status === "paused" ? (
+                                  <Chip tone="danger">Pauzirana</Chip>
+                                ) : m.status === "cancelled" ? (
+                                  <Chip tone="danger">Otkazana</Chip>
                                 ) : (
                                   <Chip tone={badge.tone}>{badge.label}</Chip>
                                 )}
@@ -710,18 +880,25 @@ const Payments = () => {
                                 )}
                               </div>
 
-                              <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
+                              {rowMenu(m)}
                             </>
                           );
 
+                          // Div umesto Link-a: dugme menija ne sme da stoji unutar <a>.
                           return noMembership ? (
-                            <Link
+                            <div
                               key={m.athlete_id}
-                              to={`/trener/vezbaci/${m.athlete_id}`}
-                              className={cn(OV_GRID, "py-3 transition hover:bg-surface-2")}
+                              role="link"
+                              tabIndex={0}
+                              onClick={() => navigate(`/trener/vezbaci/${m.athlete_id}`)}
+                              onKeyDown={(e) => {
+                                if (e.target !== e.currentTarget || e.key !== "Enter") return;
+                                navigate(`/trener/vezbaci/${m.athlete_id}`);
+                              }}
+                              className={cn(OV_GRID, "cursor-pointer py-3 transition hover:bg-surface-2")}
                             >
                               {cells}
-                            </Link>
+                            </div>
                           ) : (
                             <div
                               key={m.athlete_id}
@@ -1001,6 +1178,8 @@ const Payments = () => {
         open={editOpen}
         onClose={() => setEditOpen(false)}
         membershipId={editMembershipId}
+        athleteId={editAthleteId}
+        athleteName={editName}
         purchaseId={editPurchase.id}
         paid={editPurchase.paid}
         onSaved={loadOverview}
@@ -1010,10 +1189,14 @@ const Payments = () => {
       <AlertDialog open={!!confirmFor} onOpenChange={(o) => { if (!o) setConfirmFor(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Potvrditi "{confirmFor?.package_name}"?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {desktop ? "Da li je plaćeno?" : `Potvrditi "${confirmFor?.package_name}"?`}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmFor
-                ? `${confirmFor.athlete_name} · ${confirmFor.price_rsd.toLocaleString("sr-Latn-RS")} RSD. Da li je novac stigao?`
+                ? desktop
+                  ? `${confirmFor.athlete_name} · ${confirmFor.package_name} · ${confirmFor.price_rsd.toLocaleString("sr-Latn-RS")} RSD. Članarina se aktivira odmah, a neplaćena ne ulazi u zaradu dok je ne označiš.`
+                  : `${confirmFor.athlete_name} · ${confirmFor.price_rsd.toLocaleString("sr-Latn-RS")} RSD. Da li je novac stigao?`
                 : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1023,7 +1206,7 @@ const Payments = () => {
               onClick={() => confirmFor && doConfirm(confirmFor, false)}
               className={buttonVariants({ variant: "outline" })}
             >
-              Nije plaćeno
+              {desktop ? "Nije plaćeno, platiće kasnije" : "Nije plaćeno"}
             </AlertDialogAction>
             <AlertDialogAction
               onClick={() => confirmFor && doConfirm(confirmFor, true)}

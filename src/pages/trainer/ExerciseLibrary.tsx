@@ -19,10 +19,14 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Search, Dumbbell, Loader2, User2, Globe2, PlayCircle } from "lucide-react";
+import { ArrowLeft, Plus, Search, Dumbbell, Loader2, User2, Globe2, PlayCircle, Bookmark, LayoutGrid } from "lucide-react";
 import { toast } from "sonner";
 import { VideoModal } from "@/components/VideoModal";
+import { MediaReportButton } from "@/components/workout/MediaReportButton";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { LockMark } from "@/components/pretplata/LockMark";
+import { useExerciseBookmarks } from "@/hooks/useExerciseBookmarks";
+import { toEmbedUrl } from "@/lib/videoEmbed";
 import { cn } from "@/lib/utils";
 
 type Exercise = {
@@ -39,6 +43,8 @@ type Exercise = {
   created_by: string | null;
   video_url: string | null;
   thumbnail_url?: string | null;
+  // Stize tek sa celim redom, kad se vezba otvori.
+  is_duration_based?: boolean | null;
 };
 
 const MUSCLE_GROUPS = [
@@ -74,7 +80,7 @@ const EQUIPMENT = [
 ];
 
 /** Kolone koje kartica u listi stvarno koristi. Ceo red ide tek na otvaranje vezbe. */
-const KOLONE_LISTE = "id, name, name_en, primary_muscle, equipment, is_global, created_by, thumbnail_url";
+const KOLONE_LISTE = "id, name, name_en, description, primary_muscle, equipment, is_global, created_by, thumbnail_url";
 const STRANA = 60;
 
 const OPSEZI = [
@@ -85,6 +91,8 @@ const OPSEZI = [
 
 const muscleLabel = (v: string) => MUSCLE_GROUPS.find((m) => m.value === v)?.label ?? v;
 const equipLabel = (v: string) => EQUIPMENT.find((e) => e.value === v)?.label ?? v;
+// Naziv kategorije velikim pocetnim slovom svake reci, kao na iOS-u.
+const kategorijaLabel = (k: string) => k.replace(/(^|\s)(\S)/g, (_, a: string, b: string) => a + b.toUpperCase());
 
 const ExerciseLibrary = () => {
   const { locked, openLock, guard } = usePretplataLock();
@@ -104,6 +112,9 @@ const ExerciseLibrary = () => {
   const [query, setQuery] = useState("");
   const [muscleFilter, setMuscleFilter] = useState("all");
   const [scopeFilter, setScopeFilter] = useState<"all" | "global" | "mine">("all");
+  // Kategorija je odvojena od misicne grupe (exercises.category). Samo na racunaru.
+  const [kategorija, setKategorija] = useState<string | null>(null);
+  const [kategorije, setKategorije] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Exercise | null>(null);
 
@@ -116,6 +127,46 @@ const ExerciseLibrary = () => {
   const [equipment, setEquipment] = useState<string>("bucice");
   const [submitting, setSubmitting] = useState(false);
   const [videoOpenFor, setVideoOpenFor] = useState<Exercise | null>(null);
+
+  const { bookmarks, toggle: prebaciOmiljenu, isLoading: omiljeneSeUcitavaju } = useExerciseBookmarks();
+
+  // PostgREST nema DISTINCT, a globalnih vezbi je vise od granice jednog odgovora.
+  // Zato se ide od kategorije do kategorije: jedan mali upit po kategoriji.
+  useEffect(() => {
+    if (!desktop) return;
+    let ziv = true;
+    (async () => {
+      const nadjene: string[] = [];
+      let posle: string | null = null;
+      for (let i = 0; i < 60; i++) {
+        let q = supabase
+          .from("exercises")
+          .select("category")
+          .eq("is_global", true)
+          .not("category", "is", null)
+          .order("category")
+          .limit(1);
+        if (posle != null) q = q.gt("category", posle as any);
+        const { data, error } = await q;
+        if (!ziv) return;
+        if (error) { toast.error(porukaGreske(error)); break; }
+        const k = (data as unknown as { category: string | null }[] | null)?.[0]?.category;
+        if (k == null) break;
+        if (k.trim()) nadjene.push(k);
+        posle = k;
+      }
+      if (ziv) setKategorije(nadjene.sort((a, b) => a.localeCompare(b, "sr")));
+    })();
+    return () => { ziv = false; };
+  }, [desktop]);
+
+  const imaFiltere = !!query.trim() || muscleFilter !== "all" || scopeFilter !== "all" || kategorija != null;
+  const ponistiFiltere = () => {
+    setQuery("");
+    setMuscleFilter("all");
+    setScopeFilter("all");
+    setKategorija(null);
+  };
 
   /**
    * Lista je do sada bila `select("*")` bez opsega, pa je PostgREST vracao svojih
@@ -139,15 +190,24 @@ const ExerciseLibrary = () => {
       else q = q.eq("is_global", true);
 
       if (muscleFilter !== "all") q = q.eq("primary_muscle", muscleFilter as any);
+      if (kategorija) q = q.eq("category", kategorija as any);
       if (scopeFilter === "global") q = q.eq("is_global", true);
       if (scopeFilter === "mine" && user?.id) {
         q = q.eq("is_global", false).eq("created_by", user.id);
       }
       const s = query.trim().replace(/[%,]/g, "");
-      if (s) q = q.or(`name.ilike.%${s}%,name_en.ilike.%${s}%`);
+      if (s) {
+        // Racunar trazi i kroz opis, kao iOS; zagrade bi pokvarile or() izraz.
+        const uOpisu = desktop ? s.replace(/[()]/g, " ").trim() : "";
+        q = q.or(
+          uOpisu
+            ? `name.ilike.%${uOpisu}%,name_en.ilike.%${uOpisu}%,description.ilike.%${uOpisu}%`
+            : `name.ilike.%${s}%,name_en.ilike.%${s}%`,
+        );
+      }
       return q;
     },
-    [muscleFilter, scopeFilter, query, user?.id],
+    [muscleFilter, scopeFilter, kategorija, query, user?.id, desktop],
   );
 
   const ucitajStranu = useCallback(
@@ -275,7 +335,7 @@ const ExerciseLibrary = () => {
               {ukupno != null ? ukupno.toLocaleString("sr-Latn-RS") : "-"}
             </span>
             <p className="mt-2.5 text-[13px] text-muted-foreground tnum">
-              {query.trim() || muscleFilter !== "all" || scopeFilter !== "all" ? "vežbi za ovaj izbor" : "vežbi u biblioteci"}
+              {imaFiltere ? "vežbi za ovaj izbor" : "vežbi sa ilustracijom i snimkom"}
               {ukupno != null && items.length < ukupno && ` · prikazano ${items.length}`}
             </p>
           </div>
@@ -431,6 +491,26 @@ const ExerciseLibrary = () => {
               </button>
             ))}
           </div>
+          {kategorije.length > 0 && (
+            <div role="group" aria-label="Kategorija" className="flex flex-wrap items-center gap-2">
+              <LayoutGrid className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+              {kategorije.map((k) => (
+                <button
+                  key={k}
+                  onClick={() => setKategorija(kategorija === k ? null : k)}
+                  aria-pressed={kategorija === k}
+                  className={cn(
+                    "pill px-3.5 py-1.5 text-xs whitespace-nowrap",
+                    kategorija === k
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-surface-2 text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {kategorijaLabel(k)}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       ) : (
         <>
@@ -492,6 +572,15 @@ const ExerciseLibrary = () => {
             <Dumbbell className="h-5 w-5 text-muted-foreground" />
           </div>
           <p className="text-sm text-muted-foreground">Nema rezultata</p>
+          {desktop && imaFiltere && (
+            <button
+              type="button"
+              onClick={ponistiFiltere}
+              className="mt-3 h-9 rounded-full bg-primary-soft px-4 text-[12.5px] font-semibold text-primary transition hover:opacity-80"
+            >
+              Poništi filtere
+            </button>
+          )}
         </div>
       ) : desktop ? (
         // Racunar: mreza kartica iste visine - ime u dva reda, misic i oprema kao
@@ -542,6 +631,10 @@ const ExerciseLibrary = () => {
                 </div>
                 {drugoIme && (
                   <div className="mt-0.5 w-full text-[11.5px] leading-snug text-muted-foreground">{ex.name}</div>
+                )}
+                {/* Pogodak iz opisa mora da se vidi, inace kartica izgleda kao pogresan rezultat. */}
+                {!!query.trim() && !!ex.description?.toLowerCase().includes(query.trim().toLowerCase()) && (
+                  <div className="mt-1 line-clamp-2 w-full text-[11px] leading-snug text-muted-foreground">{ex.description}</div>
                 )}
                 <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-2.5">
                   <span className="inline-flex items-center rounded-full bg-surface-2 px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground">
@@ -615,8 +708,15 @@ const ExerciseLibrary = () => {
       )}
 
       {/* Detail dialog */}
-      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <DialogContent className="max-w-md">
+      <Dialog
+        open={!!selected}
+        onOpenChange={(o) => {
+          if (o) return;
+          setSelected(null);
+          setVideoOpenFor(null);
+        }}
+      >
+        <DialogContent className={cn("max-w-md", desktop && "max-h-[88vh] overflow-y-auto")}>
           {selected && (
             <>
               <DialogHeader>
@@ -648,9 +748,15 @@ const ExerciseLibrary = () => {
                   </div>
                 </div>
 
+                {desktop && selected.is_duration_based === true && (
+                  <span className="inline-flex rounded-full bg-primary-soft px-2.5 py-1 text-[11.5px] font-semibold text-primary">
+                    Na vreme
+                  </span>
+                )}
+
                 {selected.secondary_muscles && selected.secondary_muscles.length > 0 && (
                   <div>
-                    <div className="eyebrow text-muted-foreground mb-2">Sekundarni mišići</div>
+                    <div className="eyebrow text-muted-foreground mb-2">{desktop ? "Pomoćni" : "Sekundarni mišići"}</div>
                     <div className="flex flex-wrap gap-1.5">
                       {selected.secondary_muscles.map((m) => (
                         <span key={m} className="pill px-2.5 py-1 text-xs bg-surface-2">
@@ -670,46 +776,105 @@ const ExerciseLibrary = () => {
 
                 {selected.instructions && (
                   <div>
-                    <div className="eyebrow text-muted-foreground mb-1">Uputstvo</div>
+                    <div className="eyebrow text-muted-foreground mb-1">{desktop ? "Kako se radi" : "Uputstvo"}</div>
                     <p className="text-sm whitespace-pre-line">{selected.instructions}</p>
                   </div>
                 )}
 
-                {selected.video_url && (
-                  <div className="w-full aspect-video rounded-2xl overflow-hidden bg-surface-2">
-                    {/\.(png|jpe?g|gif|webp|avif)(\?|$)/i.test(selected.video_url) ? (
-                      <img
-                        src={selected.video_url}
-                        alt={selected.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <video
-                        src={selected.video_url}
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        preload="auto"
-                        className="w-full h-full object-cover"
-                      />
-                    )}
-                  </div>
-                )}
+                {selected.video_url && (() => {
+                  const url = selected.video_url;
+                  const slika = /\.(png|jpe?g|gif|webp|avif)(\?|$)/i.test(url);
+                  const tip = toEmbedUrl(url)?.type;
+                  // <video> ne moze da pusti YouTube i Vimeo, pa bi ostao prazan okvir.
+                  const spoljni = desktop && (tip === "youtube" || tip === "vimeo");
+                  return (
+                    <>
+                      <div className="relative">
+                      {spoljni ? (
+                        <button
+                          type="button"
+                          onClick={() => setVideoOpenFor(selected)}
+                          aria-label="Pusti video"
+                          className="relative flex w-full aspect-video items-center justify-center overflow-hidden rounded-2xl bg-surface-2 bg-contain bg-center bg-no-repeat transition hover:opacity-90"
+                          style={selected.thumbnail_url ? { backgroundImage: `url(${selected.thumbnail_url})` } : undefined}
+                        >
+                          <PlayCircle className="h-12 w-12 text-primary" strokeWidth={1.75} />
+                        </button>
+                      ) : (
+                        <div className="w-full aspect-video rounded-2xl overflow-hidden bg-surface-2">
+                          {slika ? (
+                            <img
+                              src={url}
+                              alt={selected.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <video
+                              src={url}
+                              autoPlay
+                              loop
+                              muted
+                              playsInline
+                              preload="auto"
+                              className="w-full h-full object-cover"
+                            />
+                          )}
+                        </div>
+                      )}
+                      {desktop && <MediaReportButton exerciseId={selected.id} />}
+                      </div>
+                      {desktop && !slika && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setVideoOpenFor(selected)}
+                          className="h-11 w-full rounded-2xl"
+                        >
+                          <PlayCircle className="h-4 w-4 mr-2" />
+                          Pogledaj video
+                        </Button>
+                      )}
+                    </>
+                  );
+                })()}
+
+                {desktop && (() => {
+                  const omiljena = bookmarks.has(selected.id);
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => prebaciOmiljenu(selected.id)}
+                      aria-pressed={omiljena}
+                      // Mesto je zauzeto od pocetka; natpis se ne prikazuje dok se ne zna stanje.
+                      className={cn(
+                        "flex h-12 w-full items-center justify-center gap-2 rounded-2xl border text-[14px] font-semibold transition",
+                        omiljena
+                          ? "border-primary/30 bg-primary-soft text-primary"
+                          : "border-hairline bg-surface text-foreground hover:bg-surface-2",
+                        (omiljeneSeUcitavaju || !user?.id) && "invisible",
+                      )}
+                    >
+                      <Bookmark className={cn("h-4 w-4", omiljena && "fill-current")} />
+                      <LockMark />
+                      {omiljena ? "U omiljenim" : "Dodaj u omiljene"}
+                    </button>
+                  );
+                })()}
               </div>
+
+              {/* Unutar detalja, da Radix slozi dva prozora i spoljni ne zatvori unutrasnji. */}
+              {videoOpenFor?.video_url && (
+                <VideoModal
+                  url={videoOpenFor.video_url}
+                  title={videoOpenFor.name}
+                  open={!!videoOpenFor}
+                  onOpenChange={(o) => !o && setVideoOpenFor(null)}
+                />
+              )}
             </>
           )}
         </DialogContent>
       </Dialog>
-
-      {videoOpenFor?.video_url && (
-        <VideoModal
-          url={videoOpenFor.video_url}
-          title={videoOpenFor.name}
-          open={!!videoOpenFor}
-          onOpenChange={(o) => !o && setVideoOpenFor(null)}
-        />
-      )}
     </div>
   );
 };

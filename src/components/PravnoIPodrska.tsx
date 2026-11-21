@@ -1,4 +1,5 @@
 import { ChevronRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Card } from "@/components/ui-bits";
 
 // Pravne stranice i kontakt podrske. Stoji u profilu OBE uloge: App Review
@@ -15,28 +16,35 @@ const stavke = [
   { label: "Podrška", href: `mailto:${SUPPORT_EMAIL}` },
 ];
 
-export const PravnoIPodrska = () => (
+const klasaReda =
+  "flex items-center justify-between gap-3 px-1 py-2.5 text-[13.5px] font-medium text-foreground active:opacity-60 transition";
+
+// podrskaTo: trener na racunaru ima cet sa timom, pa "Podrška" vodi tamo umesto na mejl.
+// izdavac: red sa izdavacem kao na ekranu Pravno u aplikaciji (trener na racunaru).
+export const PravnoIPodrska = ({ podrskaTo, izdavac = false }: { podrskaTo?: string; izdavac?: boolean }) => (
   <Card className="p-5 space-y-3">
     <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
       Pravno i podrška
     </div>
     <div className="-mx-1">
-      {stavke.map(({ label, href }) => (
-        <a
-          key={href}
-          href={href}
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-center justify-between gap-3 px-1 py-2.5 text-[13.5px] font-medium text-foreground active:opacity-60 transition"
-        >
-          {label}
-          <ChevronRight className="h-4 w-4 flex-none text-muted-foreground" />
-        </a>
-      ))}
+      {stavke.map(({ label, href }) =>
+        podrskaTo && href.startsWith("mailto:") ? (
+          <Link key={href} to={podrskaTo} className={klasaReda}>
+            {label}
+            <ChevronRight className="h-4 w-4 flex-none text-muted-foreground" />
+          </Link>
+        ) : (
+          <a key={href} href={href} target="_blank" rel="noreferrer" className={klasaReda}>
+            {label}
+            <ChevronRight className="h-4 w-4 flex-none text-muted-foreground" />
+          </a>
+        ),
+      )}
     </div>
     <p className="text-[11.5px] text-muted-foreground">
       Za pitanja i prijavu problema: {SUPPORT_EMAIL}
     </p>
+    {izdavac && <p className="text-[11.5px] text-muted-foreground">Izdavač: APGREJD LTD</p>}
   </Card>
 );
 

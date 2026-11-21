@@ -11,9 +11,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 
 type MembershipStatus = "active" | "paused" | "expired" | "cancelled";
 
@@ -89,15 +91,20 @@ interface MembershipEditSheetProps {
   // Koristi se SAMO kad membershipId nije prosledjen - tad sheet radi u
   // rezimu kreiranja nove clanarine za ovog vezbaca umesto izmene postojece.
   athleteId?: string;
+  // Ime vezbaca iznad forme na racunaru, kao na iOS-u.
+  athleteName?: string;
   // Zahtev iz kog je clanarina nastala; sa njim sheet nudi i placeno / nije placeno.
   purchaseId?: string | null;
   paid?: boolean | null;
   onSaved: () => void;
 }
 
-export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, purchaseId, paid, onSaved }: MembershipEditSheetProps) => {
+export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, athleteName, purchaseId, paid, onSaved }: MembershipEditSheetProps) => {
   const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
+  const desktop = useDesktopWeb();
+  // Racunar: prekidac "Bez roka". Datum ostaje u formi, pa se vraca kad se prekidac ugasi.
+  const [bezRoka, setBezRoka] = useState(false);
   const isCreate = !membershipId;
   const [loading, setLoading] = useState(!isCreate);
   const [saving, setSaving] = useState(false);
@@ -130,22 +137,26 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, pu
       // Kreiranje: nema sta da se ucita sa servera - prazna forma sa razumnim
       // podrazumevanim vrednostima (danasnji datum, aktivna, 0 iskoriscenih).
       setOriginalStatus(null);
+      setBezRoka(false);
       setForm({
         ...emptyForm,
         status: "active",
         starts_on: todayDateInputValue(),
+        // Racunar kao iOS: nova clanarina krece sa rokom od 30 dana.
+        ends_on: desktop ? addDaysToDateStr(todayDateInputValue(), 30) : "",
         sessions_used: "0",
       });
       setSelectedPackageId(null);
       setLoading(false);
       if (user) {
         (async () => {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from("membership_packages")
             .select("id, name, sessions_count, duration_days, price_rsd")
             .eq("trainer_id", user.id)
             .eq("is_active", true)
-            .order("created_at");
+            .order(desktop ? "price_rsd" : "created_at");
+          if (error) toast.error(porukaGreske(error));
           setPackages((data as MembershipPackageRow[] | null) ?? []);
         })();
       } else {
@@ -176,6 +187,7 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, pu
       setHasPurchase(!!uplata.purchase_id);
       setPaidForm(uplata.purchase_id ? !!uplata.membership_purchases?.paid_at : null);
       setOriginalStatus(row.status);
+      setBezRoka(!row.ends_on);
       setForm({
         plan_name: row.plan_name ?? "",
         price: row.price != null ? String(row.price) : "",
@@ -199,6 +211,7 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, pu
   // + trajanje). Ostala polja ostaju posle ovoga i dalje rucno editabilna.
   const selectPackage = (pkg: MembershipPackageRow) => {
     setSelectedPackageId(pkg.id);
+    if (pkg.duration_days != null) setBezRoka(false);
     setForm((f) => {
       const starts = f.starts_on || todayDateInputValue();
       return {
@@ -234,7 +247,8 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, pu
     if (form.sessions_used.trim() && !Number.isFinite(parseInt(form.sessions_used, 10))) {
       return toast.error("Iskorišćeno treninga mora biti broj");
     }
-    if (form.starts_on && form.ends_on && form.ends_on < form.starts_on) {
+    const endsOn = desktop && bezRoka ? "" : form.ends_on;
+    if (form.starts_on && endsOn && endsOn < form.starts_on) {
       return toast.error("Datum isteka ne sme biti pre datuma početka");
     }
 
@@ -250,7 +264,7 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, pu
       price: form.price.trim() ? parseFloat(form.price) : null,
       status: form.status,
       starts_on: form.starts_on || null,
-      ends_on: form.ends_on || null,
+      ends_on: endsOn || null,
       sessions_total: sessionsTotal,
       sessions_used: sessionsUsed,
     };
@@ -301,9 +315,14 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, pu
       ) : (
         <>
           <FullScreenSheetScroll className="pt-5 space-y-4">
+            {desktop && athleteName && (
+              <div className="text-[11px] font-semibold uppercase tracking-[0.13em] text-muted-foreground">
+                {athleteName}
+              </div>
+            )}
             {isCreate && packages.length > 0 && (
               <div className="space-y-1.5">
-                <Label>Izaberi paket</Label>
+                <Label>{desktop ? "Iz paketa" : "Izaberi paket"}</Label>
                 <div className="space-y-2">
                   {packages.map((p) => (
                     <button
@@ -382,8 +401,8 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, pu
 
             {(
               <div className="space-y-1.5">
-                <Label>Uplata</Label>
-                {paidForm == null && (
+                <Label>{desktop ? "Plaćanje" : "Uplata"}</Label>
+                {!desktop && paidForm == null && (
                   <p className="text-[12px] text-muted-foreground">Uplata nije zabeležena. Izaberi kad znaš.</p>
                 )}
                 <div className="grid grid-cols-2 gap-2">
@@ -409,6 +428,15 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, pu
                     </button>
                   ))}
                 </div>
+                {desktop && (
+                  <p className={cn("pl-1 text-[12px]", paidForm === true ? "text-muted-foreground" : "text-warning-soft-foreground")}>
+                    {paidForm === true
+                      ? "Ulazi u zaradu ovog meseca."
+                      : paidForm == null
+                        ? "Uplata nije zabeležena. Klikni Plaćeno kad dobiješ novac."
+                        : "Vežbač trenira, a uplata čeka. Klikni Plaćeno kad dobiješ novac."}
+                  </p>
+                )}
               </div>
             )}
 
@@ -423,6 +451,7 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, pu
               />
             </div>
 
+            {!(desktop && bezRoka) && (
             <div className="space-y-1.5">
               <Label>Brza izmena isteka</Label>
               <div className="flex gap-2">
@@ -438,9 +467,32 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, pu
                 ))}
               </div>
             </div>
+            )}
 
             <div className="space-y-1.5">
-              <Label htmlFor="mem-ends">Ističe</Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="mem-ends">Ističe</Label>
+                {desktop && (
+                  <label className="flex cursor-pointer items-center gap-2 text-[12.5px] font-semibold text-muted-foreground">
+                    Bez roka
+                    <Switch
+                      checked={bezRoka}
+                      onCheckedChange={(v) => {
+                        setBezRoka(v);
+                        // Clanarina koja nije imala rok dobija pocetnih 30 dana, kao na iOS-u.
+                        if (!v && !form.ends_on) {
+                          setForm((f) => ({ ...f, ends_on: addDaysToDateStr(todayDateInputValue(), 30) }));
+                        }
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+              {desktop && bezRoka ? (
+                <div className="flex h-14 items-center rounded-2xl border border-hairline bg-surface px-4 text-base text-muted-foreground">
+                  Bez roka
+                </div>
+              ) : (
               <Input
                 id="mem-ends"
                 type="date"
@@ -448,6 +500,7 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, pu
                 onChange={(e) => setForm((f) => ({ ...f, ends_on: e.target.value }))}
                 className="h-14 text-base rounded-2xl"
               />
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -477,7 +530,7 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, pu
 
             {showActivateWarning && (
               <p className="text-[12.5px] font-medium text-warning-soft-foreground bg-warning-soft rounded-2xl px-3.5 py-3">
-                Vezbac ce dobiti mejl o aktiviranoj clanarini.
+                Vežbač će dobiti mejl o aktiviranoj članarini.
               </p>
             )}
           </FullScreenSheetScroll>
@@ -488,7 +541,7 @@ export const MembershipEditSheet = ({ open, onClose, membershipId, athleteId, pu
               className="w-full bg-gradient-brand text-white shadow-brand"
             >
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {membershipId ? "Sačuvaj" : "Dodaj članarinu"}
+              {desktop && saving ? "Čuvam..." : membershipId ? "Sačuvaj" : "Dodaj članarinu"}
             </Button>
           </FullScreenSheetFooter>
         </>

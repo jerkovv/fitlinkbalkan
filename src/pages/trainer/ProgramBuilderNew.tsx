@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
@@ -26,10 +26,15 @@ import {
   FullScreenSheetScroll,
   FullScreenSheetFooter,
 } from "@/components/ui/full-screen-sheet";
-import { Plus, Loader2, Dumbbell, Trash2, GripVertical, ChevronDown, ChevronUp, UserPlus, Check, Send, X, Settings2, Link2, Unlink, Pencil } from "lucide-react";
+import { Plus, Loader2, Dumbbell, Trash2, GripVertical, ChevronDown, ChevronUp, UserPlus, Check, Send, X, Settings2, Link2, Unlink, Pencil, ArrowUp, ArrowDown, Scissors, Timer, EyeOff } from "lucide-react";
+import { IzborTipaSerije } from "@/components/trainer/web/serije/IzborTipaSerije";
+import { OznakaSerije } from "@/components/trainer/web/serije/OznakaSerije";
+import { StatistikaDana } from "@/components/trainer/web/serije/StatistikaDana";
+import { opisSerije, serijaRec, tipSerije } from "@/components/trainer/web/serije/tipSerije";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { ExercisePickerSheet } from "@/components/exercises/ExercisePickerSheet";
+import { DodelaVezbacu } from "@/components/trainer/web/vezbaci/DodelaVezbacu";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { LockMark } from "@/components/pretplata/LockMark";
 import { useLastPerformance } from "@/hooks/useLastPerformance";
@@ -62,8 +67,14 @@ type SetRow = {
   reps: string;
   weight_kg: number | null;
   rest_seconds: number | null;
+  /**
+   * Tip serije (null = obicna). undefined = tip nije poznat (red nije stigao iz
+   * baze): tada se kljuc ne salje i server zadrzava ono sto ima na tom mestu.
+   * Vrednost se cuva sirova, da nepoznat tip ne bi bio obrisan pri cuvanju.
+   */
+  set_type?: string | null;
 };
-type Athlete = { id: string; full_name: string | null; email: string };
+type Athlete ={ id: string; full_name: string | null; email: string };
 
 type ProgramBuilderMode = "template" | "assigned";
 
@@ -100,6 +111,10 @@ function SortableExerciseRow({
     </div>
   );
 }
+
+// Alatke otvorene vezbe na racunaru, iste kao red alatki u nativnom editoru.
+const ALAT_VEZBE =
+  "inline-flex h-8 min-w-[34px] items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-hairline bg-surface-2 px-2.5 text-[12px] font-semibold text-muted-foreground transition hover:text-foreground hover:border-primary/40 disabled:opacity-40 disabled:hover:text-muted-foreground disabled:hover:border-hairline";
 
 const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) => {
   const { locked, openLock, guard } = usePretplataLock();
@@ -153,6 +168,10 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
   const [spajam, setSpajam] = useState<{ dayId: string; ids: Set<string> } | null>(null);
   const [ssSalje, setSsSalje] = useState(false);
   const [loading, setLoading] = useState(true);
+  // Serija ciji tip trener menja (po id-ju reda, da ostane ta i kad se ostale pomere).
+  const [izborSerije, setIzborSerije] = useState<{ exId: string; rowId: string } | null>(null);
+  // Cuvanja jedne vezbe idu redom: kasniji odgovor ne sme da pregazi noviju izmenu.
+  const redCuvanja = useRef<Record<string, Promise<void>>>({});
 
   // "Prosli put" po vezbi - samo u rezimu dodeljenog plana, gde postoji
   // konkretan vezbac. Sablon se pravi unapred i nije ni za koga, pa tamo
@@ -214,16 +233,18 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
       const exIds = exList.map((e) => e.id);
       const setsNext: Record<string, SetRow[]> = {};
       if (exIds.length) {
-        const { data: setRows } = await supabase
+        const { data: setRows, error: setsError } = await supabase
           .from(cfg.setsTable as any)
           .select("*")
           .in(cfg.setsFk, exIds)
           .order("set_number", { ascending: true });
+        if (setsError) toast.error(porukaGreske(setsError));
         for (const s of ((setRows as any[]) ?? [])) {
           const fk = s[cfg.setsFk] as string;
           (setsNext[fk] ??= []).push({
             id: s.id, set_number: s.set_number, reps: s.reps ?? "",
             weight_kg: s.weight_kg, rest_seconds: s.rest_seconds,
+            set_type: s.set_type,
           });
         }
       }
@@ -343,30 +364,78 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
   // u p_sets) + sync parenta (sets/reps/weight_kg) u jednoj transakciji. FE ne dira parent
   // ni viskove. Redosled p_sets = redosled setova; id i set_number se NE salju (server dodeljuje).
   // (Bez load() na uspeh - lokalni setsByEx je vec azuriran optimisticki, da input ne treperi.)
-  const saveSets = async (exId: string, rows: SetRow[]) => {
-    if (locked) return openLock();
+  //
+  // set_type: server bez kljuca cita stari tip PO MESTU, pa bi posle brisanja serije tip
+  // ostao na pogresnom redu. Zato se salje uvek kad je poznat (null = obicna serija).
+  const saveSets = (exId: string, rows: SetRow[]) => {
     const p_sets = rows.map((r) => ({
       reps: r.reps?.trim() ? r.reps.trim() : null,
       weight_kg: r.weight_kg,
       rest_seconds: r.rest_seconds,
       notes: null,
+      ...(r.set_type !== undefined ? { set_type: r.set_type } : {}),
     }));
-    const { data, error } = await supabase.rpc("save_exercise_sets" as any, {
-      p_scope: mode,            // "template" | "assigned"
-      p_exercise_id: exId,
-      p_sets: p_sets,
-    } as any);
-    if (error || (data && (data as any).success === false)) {
-      toast.error(error ? porukaGreske(error) : (data as any)?.error ?? "Greška pri snimanju setova");
-      load();   // revert: RPC je atomican -> neuspeh = nepromenjeno; ponovo ucitaj iz baze
-    }
+    const posalji = async () => {
+      try {
+        const { data, error } = await supabase.rpc("save_exercise_sets" as any, {
+          p_scope: mode,            // "template" | "assigned"
+          p_exercise_id: exId,
+          p_sets: p_sets,
+        } as any);
+        if (error || (data && (data as any).success === false)) {
+          toast.error(error ? porukaGreske(error) : (data as any)?.error ?? "Serije nisu sačuvane.");
+          load();   // revert: RPC je atomican -> neuspeh = nepromenjeno; ponovo ucitaj iz baze
+        }
+      } catch (e) {
+        toast.error(porukaGreske(e));
+        load();
+      }
+    };
+    const red = (redCuvanja.current[exId] ?? Promise.resolve()).then(posalji);
+    redCuvanja.current[exId] = red;
+    return red;
   };
+
+  /** Serije koje jos putuju idu pre dodele i slanja, da vezbac dobije poslednju verziju. */
+  const sacekajCuvanje = () => Promise.all(Object.values(redCuvanja.current));
 
   // Optimisticki lokalni update + snimanje (bez reload-a na uspeh, fokus/unos ostaju).
   const applySets = (exId: string, rows: SetRow[]) => {
+    if (locked) return openLock();
     setSetsByEx((prev) => ({ ...prev, [exId]: rows }));
     void saveSets(exId, rows);
   };
+
+  const postaviTipSerije = (exId: string, rowId: string, tip: string | null) =>
+    applySets(exId, (setsByEx[exId] ?? []).map((r) => (r.id === rowId ? { ...r, set_type: tip } : r)));
+
+  const ukloniSerijuPoId = (exId: string, rowId: string) => {
+    const rows = setsByEx[exId] ?? [];
+    if (rows.length > 1) applySets(exId, rows.filter((r) => r.id !== rowId));
+  };
+
+  /** Nova serija nosi cilj poslednje, ali bez tipa. */
+  const dodajSet = (exId: string, rows: SetRow[]) => {
+    const last = rows[rows.length - 1];
+    applySets(exId, [...rows, {
+      id: crypto.randomUUID(),
+      set_number: rows.length + 1,
+      reps: last?.reps ?? "10",
+      weight_kg: last?.weight_kg ?? null,
+      rest_seconds: last?.rest_seconds ?? 90,
+      set_type: null,
+    }]);
+  };
+
+  /** Oznacavanje za superset. Na racunaru kao na telefonu: bez kardija, najvise pet. */
+  const oznaciZaSpajanje = (exId: string, kardio: boolean) =>
+    setSpajam((st) => {
+      if (!st || (desktop && kardio)) return st;
+      const n = new Set(st.ids);
+      if (n.has(exId)) n.delete(exId);
+      else if (!desktop || n.size < 5) n.add(exId);
+      return { ...st, ids: n };
+    });
 
   const removeExercise = async (exId: string, dayId?: string) => {
     if (locked) return openLock();
@@ -428,13 +497,42 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
   // polje takodje, da ostatak koda koji ga cita ostane tacan), pa batch-update
   // position za SVE pogodjene redove u tom danu. Neuspeh -> reload iz baze (revert).
   const onExerciseDragEnd = (dayId: string) => async (event: DragEndEvent) => {
-    if (locked) return openLock();
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const current = exByDay[dayId] ?? [];
-    const oldIndex = current.findIndex((e) => e.id === active.id);
-    const newIndex = current.findIndex((e) => e.id === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
+    await premestiVezbu(
+      dayId,
+      current.findIndex((e) => e.id === active.id),
+      current.findIndex((e) => e.id === over.id),
+    );
+  };
+
+  /** Spajanje sa sledecom vezbom; postojeci krug se prosiruje (najvise pet clanova). */
+  const spojiSaSledecom = async (dayId: string, exIdx: number) => {
+    if (locked) return openLock();
+    const lista = exByDay[dayId] ?? [];
+    const ova = lista[exIdx];
+    const sledeca = lista[exIdx + 1];
+    if (!ova || !sledeca) return;
+    const ids = ova.superset_group != null
+      ? [...lista.filter((e) => e.superset_group === ova.superset_group).map((e) => e.id), sledeca.id]
+      : [ova.id, sledeca.id];
+    setSsSalje(true);
+    const { error } = await supabase.rpc("builder_set_superset" as any, {
+      p_scope: mode === "assigned" ? "assigned" : "template",
+      p_day_id: dayId,
+      p_ex_ids: ids,
+    });
+    setSsSalje(false);
+    if (error) { toast.error(porukaGreske(error)); return; }
+    toast.success("Vežbe su spojene u superset.");
+    load();
+  };
+
+  const premestiVezbu = async (dayId: string, oldIndex: number, newIndex: number) => {
+    if (locked) return openLock();
+    const current = exByDay[dayId] ?? [];
+    if (oldIndex === -1 || newIndex === -1 || newIndex >= current.length) return;
     let reordered = arrayMove(current, oldIndex, newIndex).map((e, i) => ({ ...e, position: i + 1 }));
 
     // UZASTOPNOST JE INVARIJANTA. Motor redja blokove po najmanjoj poziciji u
@@ -471,6 +569,8 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
 
   const openAssign = async () => {
     setAssignOpen(true);
+    // Racunar: DodelaVezbacu sama ucitava spisak.
+    if (desktop) return;
     if (athletes.length === 0) {
       const { data, error } = await supabase.rpc("get_my_athletes" as any);
       if (error) {
@@ -510,6 +610,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
     if (!parentId) return;
     setAssigning(targetAthleteId);
     try {
+      await sacekajCuvanje();
       await assignProgramToAthlete(parentId, targetAthleteId);
       toast.success("Program dodeljen vežbaču");
       setAssignOpen(false);
@@ -526,6 +627,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
     if (locked) return openLock();
     if (!parentId) return;
     setNotifying(true);
+    await sacekajCuvanje();
     const { data, error } = await supabase.rpc("notify_athlete_about_program", {
       p_assigned_program_id: parentId,
     } as any);
@@ -542,6 +644,17 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
   // telefonu (harmonika ispod zaglavlja dana) i na racunaru (desna kolona).
   const renderDayBody = (d: Day, exList: Exercise[]) => (
     <div className="border-t border-hairline px-4 py-3 space-y-2 bg-surface-2/50">
+      {desktop && exList.length > 0 && (
+        <StatistikaDana
+          vezbe={exList.map((e) => ({
+            kardio: !!e.exercises?.is_duration_based,
+            minuta: e.duration_minutes,
+            misic: e.exercises?.primary_muscle ?? null,
+            poRuci: jePoRuci(e),
+            serije: setsByEx[e.id] ?? [],
+          }))}
+        />
+      )}
       {exList.length === 0 && (
         <p className="text-xs text-muted-foreground text-center py-3">Nema vežbi u ovom danu</p>
       )}
@@ -549,10 +662,15 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
           Rezim je vezan za JEDAN dan - vezbe iz dva dana ne mogu u
           isti krug. U rezimu se hendl za prevlacenje ne renderuje,
           pa dnd i oznacavanje ne otimaju iste dodire. */}
-      {exList.length >= 2 && (
+      {(desktop ? exList.filter((e) => !e.exercises?.is_duration_based).length >= 2 : exList.length >= 2) && (
         <div className="flex items-center gap-1.5 pb-2">
           {spajam?.dayId === d.id ? (
             <>
+              {desktop && (
+                <span className="px-1 text-[12.5px] font-semibold text-muted-foreground tnum">
+                  {spajam.ids.size} izabrano
+                </span>
+              )}
               <button
                 type="button"
                 disabled={ssSalje || spajam.ids.size < 2}
@@ -560,24 +678,24 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                 className="h-8 flex-1 rounded-lg bg-primary text-primary-foreground text-[12px] font-semibold inline-flex items-center justify-center gap-1.5 disabled:opacity-40 transition"
               >
                 <Link2 className="h-3.5 w-3.5" strokeWidth={2.4} />
-                Spoji {spajam.ids.size >= 2 ? spajam.ids.size : ""}
+                {desktop ? "Spoji u superset" : <>Spoji {spajam.ids.size >= 2 ? spajam.ids.size : ""}</>}
               </button>
               <button
                 type="button"
                 onClick={() => setSpajam(null)}
                 className="h-8 px-3 rounded-lg bg-surface-2 text-[12px] font-semibold text-muted-foreground"
               >
-                Otkaži
+                {desktop ? "Otkaži spajanje" : "Otkaži"}
               </button>
             </>
           ) : (
             <button
               type="button"
-              onClick={() => { setOpenExId(null); setSpajam({ dayId: d.id, ids: new Set() }); }}
+              onClick={guard(() => { setOpenExId(null); setSpajam({ dayId: d.id, ids: new Set() }); })}
               className="h-8 rounded-lg border border-hairline bg-surface-2 px-3 text-[12px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 transition"
             >
               <Link2 className="h-3.5 w-3.5" strokeWidth={2.2} />
-              Napravi superset
+              {desktop ? "Spoji više vežbi" : "Napravi superset"}
             </button>
           )}
         </div>
@@ -603,10 +721,19 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
         const thumb = ex.exercises?.thumbnail_url;
         const setCount = rows.length || ex.sets;
         const poRuci = jePoRuci(ex);
-        const summary = isDuration
-          ? (ex.duration_minutes != null ? `${ex.duration_minutes} min` : "Trajanje")
-          : `${setCount} ${setCount === 1 ? "serija" : "serije"}${rows[0]?.weight_kg != null ? ` · ${prefiksRuku(poRuci)}${rows[0].weight_kg} kg` : poRuci ? " · 2× po ruci" : ""}`;
+        const summary = desktop
+          ? isDuration
+            ? (ex.duration_minutes != null ? `${ex.duration_minutes} min` : "Kardio · upiši minute")
+            : `${serijaRec(setCount)}${Number(rows[0]?.weight_kg) > 0
+                ? ` · ${prefiksRuku(poRuci)}${rows[0].weight_kg} kg`
+                : rows[0]?.reps ? ` · ${rows[0].reps} pon.` : ""}`
+          : isDuration
+            ? (ex.duration_minutes != null ? `${ex.duration_minutes} min` : "Trajanje")
+            : `${setCount} ${setCount === 1 ? "serija" : "serije"}${rows[0]?.weight_kg != null ? ` · ${prefiksRuku(poRuci)}${rows[0].weight_kg} kg` : poRuci ? " · 2× po ruci" : ""}`;
         const cols = advanced ? "28px 1fr 1fr 60px 24px" : "28px 1fr 1fr 24px";
+        const sledecaVezba = exList[exIdx + 1];
+        const clanovaKruga = ss != null ? exList.filter((e) => e.superset_group === ss).length : 0;
+        const slovoKruga = ss != null ? String.fromCharCode(64 + Math.min(Math.max(ss, 1), 26)) : null;
         return (
           <SortableExerciseRow key={ex.id} id={ex.id}>
             {({ setActivatorNodeRef, attributes, listeners }) => (
@@ -644,17 +771,11 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                 // dnd ne hvata dodire, pa se ne otimaju sa oznacavanjem.
                 <button
                   type="button"
-                  onClick={() =>
-                    setSpajam((st) => {
-                      if (!st) return st;
-                      const n = new Set(st.ids);
-                      if (n.has(ex.id)) n.delete(ex.id); else n.add(ex.id);
-                      return { ...st, ids: n };
-                    })
-                  }
+                  disabled={desktop && isDuration}
+                  onClick={() => oznaciZaSpajanje(ex.id, isDuration)}
                   aria-label={`Označi ${name}`}
                   aria-pressed={oznacena}
-                  className={`shrink-0 h-7 w-7 rounded-lg border-2 flex items-center justify-center transition ${oznacena ? "border-primary bg-primary text-primary-foreground" : "border-hairline bg-surface hover:border-primary/50"}`}
+                  className={`shrink-0 h-7 w-7 rounded-lg border-2 flex items-center justify-center transition disabled:opacity-40 ${oznacena ? "border-primary bg-primary text-primary-foreground" : "border-hairline bg-surface hover:border-primary/50"}`}
                 >
                   {oznacena && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
                 </button>
@@ -674,12 +795,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
               <button
                 onClick={() =>
                   uSpajanju
-                    ? setSpajam((st) => {
-                        if (!st) return st;
-                        const n = new Set(st.ids);
-                        if (n.has(ex.id)) n.delete(ex.id); else n.add(ex.id);
-                        return { ...st, ids: n };
-                      })
+                    ? oznaciZaSpajanje(ex.id, isDuration)
                     : setOpenExId(open ? null : ex.id)
                 }
                 className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
@@ -695,6 +811,14 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                   <div className="font-display font-semibold text-sm truncate">{name}</div>
                   <div className="text-[12px] text-muted-foreground truncate">{summary}</div>
                 </div>
+                {desktop && uSpajanju && isDuration && (
+                  <span className="shrink-0 text-[11px] text-muted-foreground">Kardio</span>
+                )}
+                {desktop && !uSpajanju && slovoKruga && (
+                  <span className="shrink-0 rounded-full bg-sky-400/15 px-2 py-0.5 text-[10.5px] font-semibold text-sky-300">
+                    Superset {slovoKruga}
+                  </span>
+                )}
                 {uSpajanju ? null : open ? <ChevronUp className="h-4 w-4 text-primary shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
               </button>
               {!uSpajanju && (
@@ -717,14 +841,15 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                 {isDuration ? (
                   // Vezba na minute (trcanje/hodanje): jedno polje "Minuti".
                   <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-semibold">Minuti</div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-semibold">{desktop ? "Trajanje (min)" : "Minuti"}</div>
                     <Input
                       type="number"
                       min={1}
                       defaultValue={ex.duration_minutes ?? ""}
                       onBlur={(e) => {
                         const v = e.target.value === "" ? null : parseInt(e.target.value);
-                        if (v !== ex.duration_minutes) updateExercise(ex.id, { duration_minutes: v });
+                        // Racunar: bez ponovnog ucitavanja, da se kartica ne zatvori i brojke dana odmah prate.
+                        if (v !== ex.duration_minutes) updateExercise(ex.id, { duration_minutes: v }, desktop ? d.id : undefined);
                       }}
                       className="h-8 text-sm"
                       placeholder="npr. 20"
@@ -734,18 +859,32 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                   // Per-set tabela (izvor istine). Pauza skrivena dok se ne ukey "napredno".
                   <div>
                     <div className="grid items-center gap-2 mb-1.5" style={{ gridTemplateColumns: cols }}>
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">Set</span>
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">{desktop ? "Ser." : "Set"}</span>
                       <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">{poRuci ? "2× kg" : "Kg"}</span>
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">Reps</span>
-                      {advanced && <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">Pauza (s)</span>}
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">{desktop ? "Pon." : "Reps"}</span>
+                      {advanced && <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold text-center">{desktop ? "Pauza s" : "Pauza (s)"}</span>}
                       <span />
                     </div>
 
                     {rows.map((r, idx) => (
                       <div key={r.id} className="grid items-center gap-2 mb-2" style={{ gridTemplateColumns: cols }}>
+                        {desktop ? (
+                          // Broj serije otvara tip serije i uklanjanje.
+                          <button
+                            type="button"
+                            onClick={guard(() => setIzborSerije({ exId: ex.id, rowId: r.id }))}
+                            aria-label={`${opisSerije(idx + 1, r.set_type)}. Tip serije ili uklanjanje serije`}
+                            title="Tip serije"
+                            className="mx-auto flex h-7 w-7 items-center justify-center rounded-full text-[12px] font-bold text-primary-soft-foreground ring-primary/50 transition hover:ring-2"
+                            style={{ background: tipSerije(r.set_type) ? `${tipSerije(r.set_type)!.boja}2E` : "hsl(var(--primary) / 0.18)" }}
+                          >
+                            <OznakaSerije broj={idx + 1} tip={r.set_type} />
+                          </button>
+                        ) : (
                         <span className="h-6 w-6 mx-auto rounded-md bg-primary-soft text-primary text-[12px] font-bold flex items-center justify-center">
                           {idx + 1}
                         </span>
+                        )}
                         <Input
                           key={`w-${r.id}`}
                           type="number"
@@ -757,7 +896,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                           }}
                           aria-label={poRuci ? `Kilaža po ruci, set ${idx + 1}` : `Kilaža, set ${idx + 1}`}
                           className="h-8 text-sm text-center"
-                          placeholder="-"
+                          placeholder={desktop ? "kg" : "-"}
                         />
                         <Input
                           key={`r-${r.id}`}
@@ -766,7 +905,8 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                             if (e.target.value !== r.reps) applySets(ex.id, rows.map((row, i) => (i === idx ? { ...row, reps: e.target.value } : row)));
                           }}
                           className="h-8 text-sm text-center"
-                          placeholder="8-12"
+                          aria-label={`Ponavljanja, serija ${idx + 1}`}
+                          placeholder={desktop ? "8-10" : "8-12"}
                         />
                         {advanced && (
                           <Input
@@ -792,18 +932,10 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                       </div>
                     ))}
 
+                    {!desktop && (<>
                     <div className="flex items-center justify-between mt-1">
                       <button
-                        onClick={() => {
-                          const last = rows[rows.length - 1];
-                          applySets(ex.id, [...rows, {
-                            id: crypto.randomUUID(),
-                            set_number: rows.length + 1,
-                            reps: last?.reps ?? "10",
-                            weight_kg: last?.weight_kg ?? null,
-                            rest_seconds: last?.rest_seconds ?? 90,
-                          }]);
-                        }}
+                        onClick={() => dodajSet(ex.id, rows)}
                         className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary"
                       >
                         <Plus className="h-4 w-4" /> Dodaj set
@@ -838,6 +970,89 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                         Kilaža je za jednu ruku, broji se duplo.
                       </p>
                     )}
+                    </>)}
+                  </div>
+                )}
+
+                {/* Racunar: isti redovi alatki kao na telefonu, i za kardio. */}
+                {desktop && (
+                  <div className="mt-3 space-y-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {!isDuration && (
+                        <>
+                          <button type="button" onClick={() => dodajSet(ex.id, rows)} className={ALAT_VEZBE}>
+                            <Plus className="h-3.5 w-3.5" strokeWidth={2.4} />
+                            Serija
+                          </button>
+                          <button
+                            type="button"
+                            aria-pressed={advanced}
+                            onClick={() => setAdvancedByEx((p) => ({ ...p, [ex.id]: !advanced }))}
+                            className={cn(ALAT_VEZBE, advanced && "border-primary/50 text-primary-soft-foreground")}
+                          >
+                            <Timer className="h-3.5 w-3.5" strokeWidth={2.2} />
+                            {advanced ? "Pauze ✓" : "Pauze"}
+                          </button>
+                        </>
+                      )}
+                      <span className="flex-1" />
+                      <button
+                        type="button"
+                        disabled={exIdx === 0}
+                        onClick={() => void premestiVezbu(d.id, exIdx, exIdx - 1)}
+                        aria-label={`Pomeri gore: ${name}`}
+                        title="Pomeri gore"
+                        className={ALAT_VEZBE}
+                      >
+                        <ArrowUp className="h-3.5 w-3.5" strokeWidth={2.4} />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={exIdx >= exList.length - 1}
+                        onClick={() => void premestiVezbu(d.id, exIdx, exIdx + 1)}
+                        aria-label={`Pomeri dole: ${name}`}
+                        title="Pomeri dole"
+                        className={ALAT_VEZBE}
+                      >
+                        <ArrowDown className="h-3.5 w-3.5" strokeWidth={2.4} />
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {ss != null ? (
+                        <>
+                          <button type="button" disabled={ssSalje} onClick={() => void razdvojSuperset(d.id, ex.id)} className={ALAT_VEZBE}>
+                            <Scissors className="h-3.5 w-3.5" strokeWidth={2.2} />
+                            Razdvoji
+                          </button>
+                          {/* Server odbija sesti clan u krugu. */}
+                          {clanovaKruga < 5 && sledecaVezba && sledecaVezba.superset_group !== ss
+                            && !sledecaVezba.exercises?.is_duration_based && (
+                            <button type="button" disabled={ssSalje} onClick={() => void spojiSaSledecom(d.id, exIdx)} className={ALAT_VEZBE}>
+                              <Link2 className="h-3.5 w-3.5" strokeWidth={2.2} />
+                              + sledeća
+                            </button>
+                          )}
+                        </>
+                      ) : sledecaVezba ? (
+                        <button type="button" disabled={ssSalje} onClick={() => void spojiSaSledecom(d.id, exIdx)} className={ALAT_VEZBE}>
+                          <Link2 className="h-3.5 w-3.5" strokeWidth={2.2} />
+                          Spoji sa sledećom
+                        </button>
+                      ) : null}
+                      {!isDuration && (
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={poRuci}
+                          aria-label="Kilaža po ruci, dve bučice"
+                          onClick={() => void updateExercise(ex.id, { kg_po_ruci: !poRuci }, d.id)}
+                          className={cn(ALAT_VEZBE, poRuci && "border-primary-soft-foreground/60 bg-primary text-primary-foreground hover:text-primary-foreground")}
+                        >
+                          <Dumbbell className="h-3.5 w-3.5" strokeWidth={2.2} />
+                          2× po ruci
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -855,22 +1070,25 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
         onClick={() => openExercisePicker(d.id)}
         className="w-full py-2.5 rounded-lg border-2 border-dashed border-hairline text-sm text-muted-foreground hover:border-primary hover:text-primary transition flex items-center justify-center gap-1.5"
       >
-        <Plus className="h-4 w-4" /> Dodaj vežbu
+        <Plus className="h-4 w-4" /> {desktop ? "Dodaj vežbe" : "Dodaj vežbu"}
       </button>
 
+      {/* Racunar: "Obriši dan" je u zaglavlju dana, pored "Preimenuj". */}
+      {!desktop && (
       <button
         onClick={() => handleDeleteDay(d.id)}
         className="w-full text-xs text-destructive py-2"
       >
         Obriši dan
       </button>
+      )}
     </div>
   );
 
   return (
     <PhoneShell
       back={mode === "assigned" && athleteId ? `/trener/vezbaci/${athleteId}` : "/trener/programi"}
-      eyebrow={mode === "assigned" ? templateName : "Program"}
+      eyebrow={mode === "assigned" ? (desktop ? "Program vežbača" : templateName) : "Program"}
       desktopWidth="wide"
       // Racunar: glavne akcije u zaglavlju, u visini naslova. Telefon ih ima kao
       // traku prilepljenu za dno (vidi nize) - na sirokom ekranu je ta traka
@@ -909,7 +1127,8 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
         ) : undefined
       }
       title={
-        mode === "assigned" ? (
+        // Racunar: i dodeljen program se preimenuje iz naslova, kao na telefonu.
+        mode === "assigned" && !desktop ? (
           "Izmeni plan"
         ) : (
           <button
@@ -924,6 +1143,12 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
         )
       }
     >
+      {desktop && !loading && mode === "assigned" && days.length > 0 && (
+        <div className="mb-4 flex items-center gap-2 rounded-[14px] bg-warning-soft/60 px-3 py-2.5 text-[12.5px] font-medium text-muted-foreground">
+          <EyeOff className="h-3.5 w-3.5 shrink-0 text-warning" strokeWidth={2.2} />
+          Vežbač vidi plan tek kada ga pošalješ.
+        </div>
+      )}
       {loading ? (
         <div className="flex justify-center py-10">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -1001,6 +1226,14 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                   <Pencil className="h-3.5 w-3.5 mr-1.5" />
                   Preimenuj
                 </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleDeleteDay(aktivniDan.id)}
+                  className="h-9 rounded-full px-3.5 text-destructive hover:bg-destructive-soft hover:text-destructive"
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                  Obriši dan
+                </Button>
               </div>
               {renderDayBody(aktivniDan, exByDay[aktivniDan.id] ?? [])}
             </div>
@@ -1075,13 +1308,13 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
 
       {/* Pomocni tekst u NORMALNOM toku (ne apsolutno preko sadrzaja), izmedju liste i
           razmaka za sticky "Posalji vezbacu" dugme - bez preklapanja sa "Dodaj vezbu". */}
-      {mode === "assigned" && days.length > 0 && (
+      {mode === "assigned" && days.length > 0 && !desktop && (
         <>
           <p className="text-[12px] text-muted-foreground text-center px-4 mt-3">
             Vežbač vidi plan tek kada ga pošaljete.
           </p>
           {/* Prostor da poslednji sadrzaj ne stoji ispod sticky "Posalji vezbacu" CTA */}
-          {!desktop && <div className="h-24" />}
+          <div className="h-24" />
         </>
       )}
 
@@ -1125,10 +1358,13 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                 id="day-name"
                 value={newDayName}
                 onChange={(e) => setNewDayName(e.target.value)}
-                placeholder={`Dan ${(days[days.length - 1]?.day_number ?? 0) + 1} - Push`}
+                placeholder={desktop ? "npr. Grudi i triceps" : `Dan ${(days[days.length - 1]?.day_number ?? 0) + 1} - Push`}
                 className="mt-1.5 h-14 text-base rounded-2xl"
                 autoFocus
               />
+              {desktop && (
+                <p className="mt-2 text-[12px] text-muted-foreground">Ime dana vežbač vidi u svom planu.</p>
+              )}
             </div>
           </FullScreenSheetScroll>
           <FullScreenSheetFooter>
@@ -1136,6 +1372,23 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
           </FullScreenSheetFooter>
         </form>
       </FullScreenSheet>
+
+      {desktop && izborSerije && (() => {
+        const { exId, rowId } = izborSerije;
+        const rows = setsByEx[exId] ?? [];
+        const idx = rows.findIndex((r) => r.id === rowId);
+        if (idx < 0) return null;
+        return (
+          <IzborTipaSerije
+            broj={idx + 1}
+            tip={rows[idx].set_type}
+            mozeUkloniti={rows.length > 1}
+            onIzaberi={(tip) => postaviTipSerije(exId, rowId, tip)}
+            onUkloni={() => ukloniSerijuPoId(exId, rowId)}
+            onClose={() => setIzborSerije(null)}
+          />
+        );
+      })()}
 
       {/* Exercise Picker */}
       <ExercisePickerSheet
@@ -1147,8 +1400,19 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
         onAdded={() => { setPickerDayId(null); load(); }}
       />
 
+      {/* Racunar: pretraga, izbor, pa potvrda, kao na telefonskoj aplikaciji. */}
+      {mode === "template" && desktop && (
+        <DodelaVezbacu
+          open={assignOpen}
+          onOpenChange={setAssignOpen}
+          naslov={templateName}
+          podnaslov="Dodeli program"
+          onDodeli={handleAssign}
+        />
+      )}
+
       {/* Assign Dialog - samo u template modu (dodeljeni plan je vec dodeljen) */}
-      {mode === "template" && (
+      {mode === "template" && !desktop && (
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
         <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
           <DialogHeader><DialogTitle>Dodeli vežbaču</DialogTitle></DialogHeader>

@@ -1,16 +1,23 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Activity, Dumbbell, Flame, Heart, Bike, Footprints, ChevronRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { Activity, Dumbbell, Flame, Heart, Bike, Footprints, ChevronRight, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui-bits";
 import { Skeleton } from "@/components/ui/skeleton";
+import { porukaGreske } from "@/lib/errorMessage";
 import { formatDuration } from "@/lib/wearable/hrZones";
 import { WorkoutDetailDialog } from "./WorkoutDetailDialog";
 
 interface Props {
   userId?: string;
   limit?: number;
+  /** Trener na racunaru: "Učitaj starije treninge" po 30 i poruka kad citanje padne. */
+  stranicenje?: boolean;
+  /** Tekst kad treninga nema, umesto opsteg. */
+  prazno?: string;
 }
 
 interface WorkoutRow {
@@ -58,23 +65,31 @@ const formatRelativeDay = (iso: string): string => {
   return d.toLocaleDateString("sr-Latn-RS", { day: "numeric", month: "short" });
 };
 
-export const WorkoutsList = ({ userId, limit = 10 }: Props) => {
+export const WorkoutsList = ({ userId, limit = 10, stranicenje = false, prazno }: Props) => {
   const { user } = useAuth();
   const targetId = userId ?? user?.id ?? null;
   const [openId, setOpenId] = useState<string | null>(null);
+  const [granica, setGranica] = useState(limit);
+  const koliko = stranicenje ? granica : limit;
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["wearable_workouts", targetId, limit],
+  const { data, isLoading, isError, error: greska, isPlaceholderData, refetch, isFetching } = useQuery({
+    queryKey: ["wearable_workouts", targetId, koliko],
     enabled: !!targetId,
+    // Dok stizu stariji, spisak ostaje na ekranu umesto da se zameni kosturom.
+    placeholderData: stranicenje ? keepPreviousData : undefined,
     queryFn: async (): Promise<WorkoutRow[]> => {
       const { data, error } = await supabase.rpc("get_athlete_workouts" as any, {
         p_user_id: targetId,
-        p_limit: limit,
+        p_limit: koliko,
       });
       if (error) throw error;
       return (data ?? []) as WorkoutRow[];
     },
   });
+
+  useEffect(() => {
+    if (stranicenje && greska) toast.error(porukaGreske(greska));
+  }, [stranicenje, greska]);
 
   if (isLoading) {
     return (
@@ -86,13 +101,33 @@ export const WorkoutsList = ({ userId, limit = 10 }: Props) => {
     );
   }
 
-  if (!data || data.length === 0) {
+  // Pad citanja nije isto sto i "nema treninga".
+  if (stranicenje && isError) {
     return (
       <Card className="p-5 text-center">
-        <div className="text-[12px] text-muted-foreground">Još nema treninga</div>
+        <div className="text-[13px] text-muted-foreground">Treninzi sa sata nisu učitani.</div>
+        <Button
+          variant="outline"
+          onClick={() => void refetch()}
+          disabled={isFetching}
+          className="mt-3 h-9 rounded-full px-4 text-[13px]"
+        >
+          {isFetching && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+          Pokušaj ponovo
+        </Button>
       </Card>
     );
   }
+
+  if (!data || data.length === 0) {
+    return (
+      <Card className="p-5 text-center">
+        <div className="text-[12px] text-muted-foreground">{prazno ?? "Još nema treninga"}</div>
+      </Card>
+    );
+  }
+
+  const imaJos = stranicenje && !isPlaceholderData && data.length >= koliko;
 
   return (
     <>
@@ -140,6 +175,17 @@ export const WorkoutsList = ({ userId, limit = 10 }: Props) => {
           );
         })}
       </div>
+      {(imaJos || (stranicenje && isPlaceholderData)) && (
+        <Button
+          variant="outline"
+          onClick={() => setGranica((n) => n + 30)}
+          disabled={isPlaceholderData}
+          className="mt-3 h-10 w-full rounded-full"
+        >
+          {isPlaceholderData && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+          Učitaj starije treninge
+        </Button>
+      )}
       <WorkoutDetailDialog
         workoutId={openId}
         open={!!openId}

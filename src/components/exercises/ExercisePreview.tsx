@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Bookmark, Check, X } from "lucide-react";
+import { toast } from "sonner";
+import { MediaReportButton } from "@/components/workout/MediaReportButton";
+import { porukaGreske } from "@/lib/errorMessage";
+import { supabase } from "@/lib/supabase";
 import { toEmbedUrl } from "@/lib/videoEmbed";
 import { isImageUrl } from "@/lib/exerciseMedia";
 import { exerciseVideoSrc, warmVideo } from "@/lib/videoWarmup";
@@ -141,6 +145,40 @@ export const ExercisePreview = ({
       : null;
   const grupa = ex ? MUSCLE_LABELS[ex.primary_muscle] ?? ex.primary_muscle : null;
 
+  // Racunar, kao VezbaDetaljView na telefonu: opis, uputstvo i pomocni misici stizu
+  // tek na otvaranje, jer ih spisak vezbi ne ucitava. Do odgovora tih delova nema.
+  const otvorenaId = desktop ? exercise?.id ?? null : null;
+  const [detalji, setDetalji] = useState<{
+    id: string;
+    description: string | null;
+    instructions: string | null;
+    secondary_muscles: string[] | null;
+  } | null>(null);
+  useEffect(() => {
+    if (!otvorenaId) return;
+    let ziv = true;
+    (async () => {
+      const { data, error } = await supabase
+        .from("exercises")
+        .select("id, description, instructions, secondary_muscles")
+        .eq("id", otvorenaId)
+        .maybeSingle();
+      if (!ziv) return;
+      if (error) {
+        toast.error(porukaGreske(error));
+        return;
+      }
+      setDetalji((data as typeof detalji) ?? null);
+    })();
+    return () => {
+      ziv = false;
+    };
+  }, [otvorenaId]);
+  const d = desktop && ex && detalji?.id === ex.id ? detalji : null;
+  const pomocni = (d?.secondary_muscles ?? []).slice(0, 4);
+  const opis = d?.description?.trim();
+  const uputstvo = d?.instructions?.trim();
+
   return (
     <DialogPrimitive.Root open={!!exercise} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogPrimitive.Portal>
@@ -176,6 +214,10 @@ export const ExercisePreview = ({
                   >
                     <X size={18} />
                   </DialogPrimitive.Close>
+                  {/* z-[120]: prozor prijave mora iznad ovog pregleda (z-110). */}
+                  {desktop && (ex.video_url || ex.thumbnail_url) && (
+                    <MediaReportButton exerciseId={ex.id} slojClassName="z-[120]" />
+                  )}
                 </div>
 
                 <div className="min-h-0 overflow-y-auto px-5 pt-4 pb-1 border-t border-hairline">
@@ -185,6 +227,28 @@ export const ExercisePreview = ({
                     <span className="mt-2.5 inline-flex rounded-full bg-primary-soft px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-primary">
                       {grupa}
                     </span>
+                  )}
+                  {pomocni.length > 0 && (
+                    <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                      <span className="text-[11.5px] text-muted-foreground">Pomoćni:</span>
+                      {pomocni.map((m) => (
+                        <span key={m} className="rounded-full bg-surface-2 px-2.5 py-1 text-[11.5px] font-medium text-muted-foreground">
+                          {MUSCLE_LABELS[m] ?? m}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {opis && (
+                    <section className="mt-4">
+                      <h4 className="text-[10.5px] font-semibold uppercase tracking-[0.13em] text-muted-foreground">Opis</h4>
+                      <p className="mt-1 whitespace-pre-line text-[13.5px] leading-relaxed">{opis}</p>
+                    </section>
+                  )}
+                  {uputstvo && (
+                    <section className="mt-4">
+                      <h4 className="text-[10.5px] font-semibold uppercase tracking-[0.13em] text-muted-foreground">Kako se radi</h4>
+                      <p className="mt-1 whitespace-pre-line text-[13.5px] leading-relaxed">{uputstvo}</p>
+                    </section>
                   )}
                 </div>
 

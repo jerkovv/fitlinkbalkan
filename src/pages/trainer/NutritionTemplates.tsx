@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { LockMark } from "@/components/pretplata/LockMark";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
+import { IzborCipovi } from "@/components/trainer/web/IzborCipovi";
 
 type Template = {
   id: string;
@@ -132,7 +133,17 @@ const NutritionTemplates = () => {
             </div>
             <div>
               <Label htmlFor="n-goal">Cilj</Label>
-              <Input id="n-goal" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Mršavljenje / Masa / Održavanje" className="mt-1.5 h-14 text-base rounded-2xl" />
+              {desktop && (
+                <IzborCipovi oznaka="Cilj" opcije={["Mršavljenje", "Održavanje", "Masa"]} vrednost={goal} naPromenu={setGoal} />
+              )}
+              <Input
+                id="n-goal"
+                value={desktop && ["Mršavljenje", "Održavanje", "Masa"].includes(goal) ? "" : goal}
+                onChange={(e) => setGoal(e.target.value)}
+                placeholder={desktop ? "ili upiši svoj" : "Mršavljenje / Masa / Održavanje"}
+                className={desktop ? "mt-2 h-11 text-[14px] rounded-xl" : "mt-1.5 h-14 text-base rounded-2xl"}
+              />
+
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>

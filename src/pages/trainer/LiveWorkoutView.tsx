@@ -11,6 +11,7 @@ import { Card } from "@/components/ui-bits";
 import { QuickMessagePanel } from "@/components/trainer/QuickMessagePanel";
 import { LiveWorkoutPlan } from "@/components/trainer/LiveWorkoutPlan";
 import { WatchSlash } from "@/components/trainer/WatchSlash";
+import { LiceZone } from "@/components/trainer/web/DashboardActiveAthletes";
 import { getHrColor, getZoneVar } from "@/lib/workout/hrZone";
 import { isHrSignalLive, isWatchConnected, type HrSource } from "@/lib/liveWorkout";
 import { jeSatUredjaj, kratkaOznakaIzvora, nazivUredjaja } from "@/lib/uredjaji";
@@ -647,6 +648,7 @@ const LiveWorkoutView = () => {
       athleteId={athleteId}
       currentIdx={state?.current_exercise_idx ?? null}
       currentSetNumber={state?.current_set_number ?? null}
+      onPlanPromenjen={() => void fetchLiveState()}
     />
   ) : null;
 
@@ -662,6 +664,14 @@ const LiveWorkoutView = () => {
             >
               <ChevronLeft className="h-4 w-4" strokeWidth={2.25} />
             </button>
+            <span className="mt-1">
+              <LiceZone
+                ime={athleteName}
+                boja={isResting ? "hsl(var(--session-sky-fg))" : "hsl(var(--success))"}
+                odmor={isResting}
+                velicina={42}
+              />
+            </span>
             <div className="min-w-0">
               <div className="mb-1 flex items-center gap-1.5">{statusOznaka}</div>
               <h1 className="font-display text-[30px] leading-[1.1] font-bold tracking-tightest truncate">
@@ -735,7 +745,7 @@ const LiveWorkoutView = () => {
 
             <Card className="p-5">
               <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-3">
-                Pošalji poruku
+                Poruka na ekran treninga
               </div>
               <QuickMessagePanel sessionId={session.id} />
             </Card>

@@ -20,6 +20,12 @@ import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { LockMark } from "@/components/pretplata/LockMark";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 import { MUSCLE_LABELS } from "@/lib/muscleGroups";
+import { IzborCipovi } from "@/components/trainer/web/IzborCipovi";
+
+// Iste ponude kao u TrenerProgrami.swift; polje ispod ostaje za svoju vrednost.
+const CILJEVI = ["Hipertrofija", "Snaga", "Mršavljenje", "Kondicija", "Opšte"] as const;
+const NIVOI = ["Početni", "Srednji", "Napredni"] as const;
+const jeUPonudi = (opcije: readonly string[], v: string) => opcije.includes(v);
 
 type Template = {
   id: string;
@@ -170,14 +176,28 @@ const ProgramTemplates = () => {
               <Label htmlFor="p-desc">Opis (opciono)</Label>
               <Textarea id="p-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="mt-1.5" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className={desktop ? "space-y-3" : "grid grid-cols-2 gap-3"}>
               <div>
                 <Label htmlFor="p-goal">Cilj</Label>
-                <Input id="p-goal" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Hipertrofija" className="mt-1.5 h-14 text-base rounded-2xl" />
+                {desktop && <IzborCipovi oznaka="Cilj" opcije={CILJEVI} vrednost={goal} naPromenu={setGoal} />}
+                <Input
+                  id="p-goal"
+                  value={desktop && jeUPonudi(CILJEVI, goal) ? "" : goal}
+                  onChange={(e) => setGoal(e.target.value)}
+                  placeholder={desktop ? "ili upiši svoj" : "Hipertrofija"}
+                  className={desktop ? "mt-2 h-11 text-[14px] rounded-xl" : "mt-1.5 h-14 text-base rounded-2xl"}
+                />
               </div>
               <div>
                 <Label htmlFor="p-level">Nivo</Label>
-                <Input id="p-level" value={level} onChange={(e) => setLevel(e.target.value)} placeholder="Srednji" className="mt-1.5 h-14 text-base rounded-2xl" />
+                {desktop && <IzborCipovi oznaka="Nivo" opcije={NIVOI} vrednost={level} naPromenu={setLevel} />}
+                <Input
+                  id="p-level"
+                  value={desktop && jeUPonudi(NIVOI, level) ? "" : level}
+                  onChange={(e) => setLevel(e.target.value)}
+                  placeholder={desktop ? "ili upiši svoj" : "Srednji"}
+                  className={desktop ? "mt-2 h-11 text-[14px] rounded-xl" : "mt-1.5 h-14 text-base rounded-2xl"}
+                />
               </div>
             </div>
           </FullScreenSheetScroll>

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui-bits";
@@ -17,16 +18,39 @@ import {
   IdCard,
   Wallet,
   Loader2,
+  TriangleAlert,
+  AlarmClock,
+  Users,
+  ChevronRight,
 } from "lucide-react";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
+import { NijeUcitano } from "@/components/trainer/web/podsetnici/delovi";
+import { useCuvanjePrefs } from "@/components/trainer/web/podsetnici/useCuvanjePrefs";
 
 type Vrsta = {
   kind: string;
   icon: typeof CalendarPlus;
   title: string;
   desc: string;
+  /** Prikazuje se samo na racunaru; telefonski ekran ostaje kakav je bio. */
+  samoRacunar?: boolean;
 };
+
+const PODSETNICI = [
+  {
+    to: "/trener/podsetnici",
+    icon: AlarmClock,
+    title: "Podsetnici za termine",
+    desc: "Pre termina, jedna za sve ili po terminu, pregled dana",
+  },
+  {
+    to: "/trener/podsetnici-klijenti",
+    icon: Users,
+    title: "Podsetnici za klijente",
+    desc: "Kada vežbačima stiže podsetnik za trening",
+  },
+];
 
 // Svaka vrsta obavestenja koja stize treneru, po odeljcima. Kljuc je notifications.kind;
 // iskljucene vrste server ne upisuje (trg_notifications_trainer_prefs), pa ne ide ni push.
@@ -57,6 +81,7 @@ const ODELJCI: { naslov: string; vrste: Vrsta[] }[] = [
     vrste: [
       { kind: "payment_request", icon: IdCard, title: "Zahtev za članarinu", desc: "Kad vežbač zatraži paket" },
       { kind: "payment_marked", icon: Wallet, title: "Potvrđena uplata", desc: "Kad vežbač označi da je platio" },
+      { kind: "membership_expired", icon: TriangleAlert, title: "Istekla članarina", desc: "Kad vežbaču istekne članarina", samoRacunar: true },
     ],
   },
 ];
@@ -65,54 +90,64 @@ const NotificationSettings = () => {
   const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
   const desktop = useDesktopWeb();
-  // Iskljucene vrste; prazno = sve stize.
-  const [utisane, setUtisane] = useState<Set<string>>(() => new Set());
+  const uid = user?.id;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  const zahtev = useRef(0);
+  const porukaUspeha = useRef("");
 
-  useEffect(() => {
-    if (!user) return;
-    (async () => {
-      setLoading(true);
-      const { data } = await supabase
+  // Iskljucene vrste; prazno = sve stize, null = server jos nije odgovorio. Neuspelo citanje
+  // ne sme da izgleda kao "nista nije iskljuceno": prvi prekidac bi tada obrisao sacuvane.
+  const { vrednost, cuva, primeni, izmeni } = useCuvanjePrefs<string[]>(
+    (muted) =>
+      supabase
+        .from("trainer_notification_prefs")
+        .upsert(
+          { trainer_id: uid, muted_kinds: muted, updated_at: new Date().toISOString() } as any,
+          { onConflict: "trainer_id" },
+        ),
+    { naUspeh: () => toast.success(porukaUspeha.current) },
+  );
+  const utisane = useMemo(() => new Set(vrednost ?? []), [vrednost]);
+
+  const ucitaj = useCallback(async () => {
+    if (!uid) return;
+    const broj = ++zahtev.current;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
         .from("trainer_notification_prefs")
         .select("muted_kinds")
-        .eq("trainer_id", user.id)
+        .eq("trainer_id", uid)
         .maybeSingle();
-      const muted = (data as { muted_kinds?: string[] | null } | null)?.muted_kinds ?? [];
-      setUtisane(new Set(muted));
+      if (broj !== zahtev.current) return;
+      if (error) throw error;
+      primeni((data as { muted_kinds?: string[] | null } | null)?.muted_kinds ?? []);
       setLoading(false);
-    })();
-  }, [user]);
-
-  const toggle = async (kind: string) => {
-    if (locked) return openLock();
-    if (!user) return;
-    const prethodne = utisane;
-    const sledece = new Set(utisane);
-    const ukljucujem = sledece.has(kind);
-    if (ukljucujem) sledece.delete(kind);
-    else sledece.add(kind);
-    setUtisane(sledece);
-    setSaving(kind);
-    const { error } = await supabase
-      .from("trainer_notification_prefs")
-      .upsert(
-        { trainer_id: user.id, muted_kinds: [...sledece], updated_at: new Date().toISOString() } as any,
-        { onConflict: "trainer_id" },
-      );
-    setSaving(null);
-    if (error) {
-      console.error("[notif prefs upsert]", error);
-      setUtisane(prethodne);
-      toast.error(porukaGreske(error));
-    } else {
-      toast.success(ukljucujem ? "Uključeno" : "Isključeno");
+    } catch (e) {
+      if (broj !== zahtev.current) return;
+      toast.error(porukaGreske(e));
+      setLoading(false);
     }
+  }, [uid, primeni]);
+
+  useEffect(() => {
+    void ucitaj();
+    return () => {
+      zahtev.current++;
+    };
+  }, [ucitaj]);
+
+  const toggle = (kind: string) => {
+    if (locked) return openLock();
+    const ukljucujem = utisane.has(kind);
+    porukaUspeha.current = ukljucujem ? "Uključeno" : "Isključeno";
+    setSaving(kind);
+    izmeni((s) => (ukljucujem ? s.filter((k) => k !== kind) : [...s, kind]));
   };
 
   const prekidac = ({ kind, title }: Vrsta) =>
-    saving === kind ? (
+    cuva && saving === kind ? (
       <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
     ) : (
       <Switch checked={!utisane.has(kind)} onCheckedChange={() => toggle(kind)} aria-label={title} />
@@ -121,17 +156,43 @@ const NotificationSettings = () => {
   const opis = "Izaberi koja obaveštenja želiš da dobijaš. Isključena ne stižu ni u aplikaciju ni kao push.";
 
   return (
-    <PhoneShell title="Obaveštenja" eyebrow="Podešavanja" back="/trener/profil">
+    <PhoneShell title="Obaveštenja" eyebrow={desktop ? "Notifikacije" : "Podešavanja"} back="/trener/profil">
       {desktop ? (
+        <>
+        <div className="grid grid-cols-2 gap-3">
+          {PODSETNICI.map((l) => {
+            const Icon = l.icon;
+            return (
+              <Link
+                key={l.to}
+                to={l.to}
+                className="card-premium-hover flex items-center gap-3 rounded-2xl p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <span className="h-10 w-10 rounded-xl bg-primary-soft text-primary-soft-foreground flex items-center justify-center shrink-0">
+                  <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block font-semibold text-[14px] leading-tight">{l.title}</span>
+                  <span className="block text-[12.5px] text-muted-foreground mt-1 leading-snug">{l.desc}</span>
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </Link>
+            );
+          })}
+        </div>
         <section className="card-premium overflow-hidden">
           <div className="border-b border-hairline px-6 py-5">
             <h2 className="font-display text-[17px] font-bold tracking-tight">Šta ti stiže</h2>
-            <p className="mt-1 text-[13px] text-muted-foreground">{opis}</p>
+            <p className="mt-1 text-[13px] text-muted-foreground">Isključene vrste ne stižu ni u aplikaciju ni kao push.</p>
           </div>
 
           {loading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : !vrednost ? (
+            <div className="p-6">
+              <NijeUcitano ponovo={ucitaj} />
             </div>
           ) : (
             <div className="space-y-6 p-6">
@@ -165,6 +226,7 @@ const NotificationSettings = () => {
             </div>
           )}
         </section>
+        </>
       ) : (
         <div className="space-y-5 pb-24">
           <p className="text-[13px] text-muted-foreground px-1">{opis}</p>
@@ -173,6 +235,8 @@ const NotificationSettings = () => {
             <div className="flex justify-center py-12">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
+          ) : !vrednost ? (
+            <NijeUcitano ponovo={ucitaj} />
           ) : (
             ODELJCI.map((o) => (
               <section key={o.naslov} className="space-y-2">
@@ -180,7 +244,7 @@ const NotificationSettings = () => {
                   {o.naslov}
                 </div>
                 <Card className="divide-y divide-hairline overflow-hidden p-0">
-                  {o.vrste.map((v) => {
+                  {o.vrste.filter((v) => !v.samoRacunar).map((v) => {
                     const Icon = v.icon;
                     return (
                       <div key={v.kind} className="flex items-center gap-3 px-4 py-3.5">

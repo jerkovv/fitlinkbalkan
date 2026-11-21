@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { PhoneShell } from "@/components/PhoneShell";
 import { Card, Chip } from "@/components/ui-bits";
 import { supabase } from "@/lib/supabase";
@@ -16,7 +16,14 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Plus, Loader2, Trash2, Pencil, Clock,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Plus, Loader2, Trash2, Pencil, Clock, MinusCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -73,10 +80,20 @@ const SessionSettings = () => {
     start_time: "08:00",
   });
   const [savingSlot, setSavingSlot] = useState(false);
+  // Racunar: isti termin odjednom za vise dana.
+  const [slotDani, setSlotDani] = useState<number[]>([]);
+  // Racunar: da li je raspored bar jednom stigao. Bez toga prazna mreza nije "prazan raspored".
+  const [ucitano, setUcitano] = useState(false);
+  const [neuspelo, setNeuspelo] = useState(false);
+  // Potvrda (z-50) bi na racunaru ostala ispod prozora vrste (z-100), pa se on sakrije dok se pita.
+  const [pitam, setPitam] = useState(false);
+  // Polje mreze koje se upravo dodaje, da drugi klik ne upise isti termin dvaput.
+  const uToku = useRef(new Set<string>());
 
   const load = async () => {
     if (!user) return;
-    setLoading(true);
+    // Racunar: osvezavanje posle izmene ne gasi mrezu.
+    if (!desktop || !ucitano) setLoading(true);
     const [tRes, sRes] = await Promise.all([
       supabase
         .from("session_types")
@@ -92,8 +109,23 @@ const SessionSettings = () => {
         .order("weekday")
         .order("start_time"),
     ]);
-    setTypes((tRes.data as any) ?? []);
-    setTemplates((sRes.data as any) ?? []);
+    const greska = tRes.error ?? sRes.error;
+    if (greska) {
+      toast.error(porukaGreske(greska));
+      // Neuspelo citanje ne sme da izgleda kao obrisan raspored: stari podaci ostaju.
+      if (desktop) {
+        setNeuspelo(!ucitano);
+        setLoading(false);
+        return;
+      }
+    }
+    const noveVrste = (tRes.data as unknown as SessionType[] | null) ?? [];
+    const noviSabloni = (sRes.data as unknown as Template[] | null) ?? [];
+    setTypes(noveVrste);
+    // Termini arhivirane vrste se ne crtaju, pa ne smeju ni u brojke (kao iOS).
+    setTemplates(desktop ? noviSabloni.filter((s) => noveVrste.some((v) => v.id === s.session_type_id)) : noviSabloni);
+    setUcitano(true);
+    setNeuspelo(false);
     setLoading(false);
   };
 
@@ -122,7 +154,8 @@ const SessionSettings = () => {
   const submitType = async () => {
     if (locked) return openLock();
     if (!user) return;
-    if (!typeForm.name.trim()) { toast.error("Naziv obavezan"); return; }
+    const naziv = typeForm.name.trim();
+    if (!naziv) { toast.error(desktop ? "Naziv je obavezan." : "Naziv obavezan"); return; }
     // Parsiraj i validiraj TEK ovde (na submit), ne na svaki keystroke - polje ostaje slobodno
     // za kucanje dok se edituje.
     const durationMin = parseInt(typeForm.duration_min, 10);
@@ -140,7 +173,7 @@ const SessionSettings = () => {
       const { error } = await supabase
         .from("session_types")
         .update({
-          name: typeForm.name,
+          name: naziv,
           color: typeForm.color,
           capacity,
           duration_min: durationMin,
@@ -148,18 +181,18 @@ const SessionSettings = () => {
         .eq("id", editingType.id);
       setSavingType(false);
       if (error) { toast.error(porukaGreske(error)); return; }
-      toast.success("Tip ažuriran");
+      toast.success(desktop ? "Vrsta sačuvana" : "Tip ažuriran");
     } else {
       const { error } = await supabase.from("session_types").insert({
         trainer_id: user.id,
-        name: typeForm.name,
+        name: naziv,
         color: typeForm.color,
         capacity,
         duration_min: durationMin,
       } as any);
       setSavingType(false);
       if (error) { toast.error(porukaGreske(error)); return; }
-      toast.success("Tip kreiran");
+      toast.success(desktop ? "Vrsta sačuvana" : "Tip kreiran");
     }
     setTypeOpen(false);
     load();
@@ -167,13 +200,26 @@ const SessionSettings = () => {
 
   const deleteType = async (t: SessionType) => {
     if (locked) return openLock();
-    if (!(await confirm({ title: `Obrisati tip "${t.name}"?`, description: "Postojeće rezervacije ostaju.", destructive: true }))) return;
+    setPitam(true);
+    const ok = await confirm(
+      desktop
+        ? {
+            title: `Obrisati vrstu ${t.name}?`,
+            description: "Postojeće rezervacije ostaju, a termini ove vrste nestaju iz rasporeda.",
+            confirmLabel: "Obriši",
+            destructive: true,
+          }
+        : { title: `Obrisati tip "${t.name}"?`, description: "Postojeće rezervacije ostaju.", destructive: true },
+    );
+    setPitam(false);
+    if (!ok) return;
     const { error } = await supabase
       .from("session_types")
       .update({ is_archived: true } as any)
       .eq("id", t.id);
     if (error) { toast.error(porukaGreske(error)); return; }
-    toast.success("Tip arhiviran");
+    toast.success(desktop ? "Vrsta obrisana" : "Tip arhiviran");
+    setTypeOpen(false);
     load();
   };
 
@@ -186,7 +232,75 @@ const SessionSettings = () => {
       weekday: weekday ?? 0,
       start_time: "08:00",
     });
+    // Sa dugmeta dana taj dan je vec izabran; sa glavnog dugmeta trener bira sam.
+    setSlotDani(weekday != null ? [weekday] : []);
     setSlotOpen(true);
+  };
+
+  const postoji = (typeId: string, weekday: number, vreme: string) =>
+    templates.some((x) => x.session_type_id === typeId && x.weekday === weekday && formatTime(x.start_time) === vreme);
+
+  // Racunar: jedan upis za sve izabrane dane, pa greska ne ostavlja pola rasporeda.
+  // Dan koji taj termin vec ima se samo preskace.
+  const submitSlotDani = async () => {
+    if (locked) return openLock();
+    if (!user || savingSlot) return;
+    const vrsta = types.find((t) => t.id === slotForm.session_type_id) ?? types[0];
+    if (!vrsta) { toast.error("Prvo napravi vrstu sesije."); return; }
+    if (slotDani.length === 0) { toast.error("Izaberi bar jedan dan."); return; }
+    const sat = slotForm.start_time.slice(0, 5);
+    if (!/^\d{2}:\d{2}$/.test(sat)) { toast.error("Izaberi vreme početka."); return; }
+    const novi = [...slotDani].sort((a, b) => a - b).filter((d) => !postoji(vrsta.id, d, sat));
+    const preskoceno = slotDani.length - novi.length;
+    if (novi.length === 0) {
+      toast.error(preskoceno === 1 ? "Taj dan već ima ovaj termin." : "Svi izabrani dani već imaju ovaj termin.");
+      return;
+    }
+    setSavingSlot(true);
+    const { error } = await supabase.from("session_slot_templates").insert(
+      novi.map((weekday) => ({
+        trainer_id: user.id,
+        session_type_id: vrsta.id,
+        weekday,
+        start_time: sat,
+      })) as any,
+    );
+    if (error) {
+      setSavingSlot(false);
+      toast.error(porukaGreske(error));
+      return;
+    }
+    await load();
+    setSavingSlot(false);
+    // Prozor ostaje otvoren da trener vidi sta je preskoceno, kao na iOS-u.
+    if (preskoceno > 0) {
+      toast.success(`Dodato ${novi.length}, preskočeno ${preskoceno} jer termin već postoji.`);
+      return;
+    }
+    toast.success(novi.length > 1 ? `Dodato ${novi.length} termina` : "Termin dodat u raspored");
+    setSlotOpen(false);
+  };
+
+  // Stavka "Dodaj: vrsta" iz menija polja u mrezi.
+  const dodajUPolje = async (vrsta: SessionType, weekday: number, vreme: string) => {
+    if (locked) return openLock();
+    if (!user) return;
+    if (postoji(vrsta.id, weekday, vreme)) { toast.error("Taj termin već postoji."); return; }
+    const k = `${vrsta.id}|${weekday}|${vreme}`;
+    if (uToku.current.has(k)) return;
+    uToku.current.add(k);
+    const { error } = await supabase.from("session_slot_templates").insert({
+      trainer_id: user.id,
+      session_type_id: vrsta.id,
+      weekday,
+      start_time: vreme,
+    } as any);
+    if (error) toast.error(porukaGreske(error));
+    else {
+      toast.success("Termin dodat u raspored");
+      await load();
+    }
+    uToku.current.delete(k);
   };
 
   const submitSlot = async () => {
@@ -208,7 +322,16 @@ const SessionSettings = () => {
 
   const deleteSlot = async (id: string) => {
     if (locked) return openLock();
-    if (!(await confirm({ title: "Ukloniti ovaj termin iz nedeljnog rasporeda?", destructive: true }))) return;
+    if (!(await confirm(
+      desktop
+        ? {
+            title: "Ukloniti termin iz nedeljnog rasporeda?",
+            description: "Već zakazane rezervacije ostaju.",
+            confirmLabel: "Ukloni",
+            destructive: true,
+          }
+        : { title: "Ukloniti ovaj termin iz nedeljnog rasporeda?", destructive: true },
+    ))) return;
     const { error } = await supabase.from("session_slot_templates").delete().eq("id", id);
     if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Termin uklonjen");
@@ -225,6 +348,12 @@ const SessionSettings = () => {
 
   const typeById = (id: string) => types.find((t) => t.id === id);
 
+  // Redovi mreze na racunaru: svako vreme koje postoji u nedeljnom rasporedu.
+  const vremena = useMemo(
+    () => Array.from(new Set(templates.map((t) => formatTime(t.start_time)))).sort(),
+    [templates],
+  );
+
   return (
     <PhoneShell
       back="/trener"
@@ -238,7 +367,7 @@ const SessionSettings = () => {
           <>
             <Button variant="outline" onClick={openNewType} className="h-10 rounded-full px-4">
               <Plus className="h-4 w-4 mr-1.5" />
-              Nov tip
+              Nova vrsta sesije
             </Button>
             <Button
               onClick={() => openNewSlot()}
@@ -256,13 +385,19 @@ const SessionSettings = () => {
         <div className="flex justify-center py-10">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
+      ) : desktop && neuspelo ? (
+        <div className="card-premium flex flex-col items-center gap-3 px-8 py-14 text-center">
+          <p className="text-[14px] font-semibold">Raspored nije učitan.</p>
+          <Button variant="outline" onClick={load} className="h-10 rounded-full px-4">
+            Pokušaj ponovo
+          </Button>
+        </div>
       ) : desktop ? (
-        // Racunar: tipovi kao mreza kartica, a nedeljni sablon kao tabla od sedam
-        // kolona (pon-ned), kao pravi kalendar. Sedam kartica jedna ispod druge je
-        // na sirokom ekranu bilo dugacko i prazno.
+        // Racunar: vrste kao mreza kartica, a nedeljni sablon kao mreza vreme x dan,
+        // ista kao na iOS-u: klik na polje dodaje ili uklanja vrstu u tom terminu.
         <div className="space-y-8">
           {/* Vrh (Ponoc): koliko termina i mesta nedeljni sablon daje. */}
-          {templates.length > 0 && (() => {
+          {(() => {
             const kap = new Map(types.map((t) => [t.id, t.capacity]));
             const mesta = templates.reduce((s2, x) => s2 + (kap.get(x.session_type_id) ?? 0), 0);
             return (
@@ -274,7 +409,7 @@ const SessionSettings = () => {
                 </div>
                 <div className="relative">
                   <span className="fig block text-[48px] leading-[0.95]">{mesta}</span>
-                  <small className="mt-1.5 block text-[12px] text-white/88">mesta nedeljno</small>
+                  <small className="mt-1.5 block text-[12px] text-white/88">mesta</small>
                 </div>
                 <div className="relative ml-auto flex flex-wrap justify-end gap-1.5">
                   {types.map((t) => {
@@ -336,7 +471,7 @@ const SessionSettings = () => {
                         {t.duration_min} min
                       </span>
                       <span className="inline-flex items-center rounded-full bg-surface-2 px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground tnum">
-                        max {t.capacity} ljudi
+                        do {t.capacity} {t.capacity === 1 ? "osobe" : "osoba"}
                       </span>
                       <span className="inline-flex items-center rounded-full bg-primary-soft px-2.5 py-1 text-[11.5px] font-semibold text-primary tnum">
                         {brojTermina}× nedeljno
@@ -353,10 +488,10 @@ const SessionSettings = () => {
                 )}
               >
                 <Plus className="h-5 w-5" />
-                <span className="text-sm font-semibold">Nov tip sesije</span>
+                <span className="text-sm font-semibold">Nova vrsta sesije</span>
                 {types.length === 0 && (
                   <span className="text-[13px] font-normal text-muted-foreground">
-                    Nemaš tipove sesija. Dodaj npr. "Personalni trening" ili "Group HIIT".
+                    Nemaš vrste sesija. Dodaj npr. "Personalni trening" ili "Group HIIT".
                   </span>
                 )}
               </button>
@@ -364,62 +499,103 @@ const SessionSettings = () => {
           </section>
 
           <section>
-            <div className="mb-3">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Raspored</div>
-              <div className="font-display text-lg font-bold tracking-tight">Nedeljni šablon</div>
+            <div className="mb-3 flex items-end justify-between gap-4">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Raspored</div>
+                <div className="font-display text-lg font-bold tracking-tight">Nedeljni šablon</div>
+              </div>
+              <p className="text-[12px] text-muted-foreground">
+                Klikni na polje da dodaš ili ukloniš vrstu u tom terminu.
+              </p>
             </div>
-            <div className="card-premium overflow-hidden">
-              <div className="grid grid-cols-7 divide-x divide-hairline">
-                {weekdayLabelsLong.map((label, wd) => {
-                  const dayTemplates = templatesByDay.get(wd) ?? [];
-                  return (
-                    <div key={wd} className="flex min-w-0 flex-col">
-                      <div className="border-b border-hairline bg-surface-2 px-3 py-2.5">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                          {weekdayLabelsShort[wd]}
-                        </div>
-                        <div className="text-[13px] font-semibold [overflow-wrap:anywhere]">{label}</div>
-                      </div>
-                      <div className="flex min-h-[260px] flex-1 flex-col gap-1.5 p-2">
-                        {dayTemplates.length === 0 ? (
-                          <div className="px-1 py-2 text-[12px] italic text-muted-foreground/70">Slobodan dan</div>
-                        ) : (
-                          dayTemplates.map((tpl) => {
-                            const type = typeById(tpl.session_type_id);
-                            if (!type) return null;
-                            const colors = sessionColorClasses(type.color);
-                            return (
-                              <div
-                                key={tpl.id}
-                                className={cn("group relative rounded-lg border px-2.5 py-2", colors.bg, colors.border)}
+            <div className="card-premium p-3">
+              <div className="grid grid-cols-[52px_repeat(7,minmax(0,1fr))] gap-1.5">
+                <span aria-hidden />
+                {weekdayLabelsShort.map((dan, wd) => (
+                  <button
+                    key={dan}
+                    type="button"
+                    onClick={() => openNewSlot(wd)}
+                    disabled={types.length === 0}
+                    aria-label={`Novi termin: ${weekdayLabelsLong[wd]}`}
+                    title={`Novi termin: ${weekdayLabelsLong[wd]}`}
+                    className="flex h-9 items-center justify-center gap-1 rounded-lg text-[11px] font-semibold tracking-[0.08em] text-muted-foreground transition hover:bg-surface-2 hover:text-primary disabled:pointer-events-none disabled:opacity-40"
+                  >
+                    {dan}
+                    <Plus className="h-3 w-3" />
+                  </button>
+                ))}
+
+                {vremena.length === 0 && (
+                  <p className="col-span-full py-8 text-center text-[13px] text-muted-foreground">
+                    Nedeljni raspored je prazan. Dodaj prvi termin.
+                  </p>
+                )}
+
+                {vremena.map((v) => (
+                  <Fragment key={v}>
+                    <span className="pt-3 text-[11.5px] font-semibold text-muted-foreground tnum">{v}</span>
+                    {weekdayLabelsLong.map((danIme, wd) => {
+                      // Vise vrsta u istom terminu (npr. personalni i grupni u 18:00) se sve vide.
+                      const lista = (templatesByDay.get(wd) ?? []).filter((x) => formatTime(x.start_time) === v);
+                      const ostale = types.filter((t) => !lista.some((x) => x.session_type_id === t.id));
+                      return (
+                        <DropdownMenu key={wd} modal={false}>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label={`${danIme} ${v}`}
+                              className={cn(
+                                "group flex min-h-[52px] min-w-0 flex-col gap-1 rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+                                lista.length === 0 && "items-center justify-center bg-surface-2/60 hover:bg-surface-2",
+                              )}
+                            >
+                              {lista.length === 0 ? (
+                                <Plus className="h-3.5 w-3.5 text-muted-foreground/0 transition group-hover:text-muted-foreground group-focus-visible:text-muted-foreground" />
+                              ) : (
+                                lista.map((x) => {
+                                  const vrsta = typeById(x.session_type_id);
+                                  if (!vrsta) return null;
+                                  const boje = sessionColorClasses(vrsta.color);
+                                  return (
+                                    <span
+                                      key={x.id}
+                                      className={cn("block flex-1 rounded-lg border px-2 py-1.5 text-left transition group-hover:brightness-110", boje.bg, boje.border)}
+                                    >
+                                      <span className={cn("block text-[11.5px] font-semibold leading-tight [overflow-wrap:anywhere]", boje.fg)}>
+                                        {vrsta.name}
+                                      </span>
+                                      <span className="block text-[10.5px] text-muted-foreground tnum">{vrsta.capacity} mesta</span>
+                                    </span>
+                                  );
+                                })
+                              )}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="center" className="w-60">
+                            {lista.map((x) => (
+                              <DropdownMenuItem
+                                key={x.id}
+                                onSelect={() => deleteSlot(x.id)}
+                                className="text-destructive focus:text-destructive"
                               >
-                                <div className={cn("font-display text-[14px] font-bold leading-none tnum", colors.fg)}>
-                                  {formatTime(tpl.start_time)}
-                                </div>
-                                <div className="mt-1 text-[11.5px] font-semibold leading-tight [overflow-wrap:anywhere]">{type.name}</div>
-                                <div className="text-[11px] text-muted-foreground tnum">{type.capacity} mesta</div>
-                                <button
-                                  onClick={() => deleteSlot(tpl.id)}
-                                  aria-label="Ukloni termin"
-                                  className="absolute right-1 top-1 h-6 w-6 rounded-full bg-surface flex items-center justify-center text-destructive opacity-0 shadow-sm transition hover:bg-destructive-soft group-hover:opacity-100 focus-visible:opacity-100"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </button>
-                              </div>
-                            );
-                          })
-                        )}
-                        <button
-                          onClick={() => openNewSlot(wd)}
-                          disabled={types.length === 0}
-                          className="mt-auto flex items-center justify-center gap-1 rounded-lg border border-dashed border-hairline py-2 text-[12px] font-semibold text-muted-foreground transition hover:border-primary hover:text-primary disabled:pointer-events-none disabled:opacity-40"
-                        >
-                          <Plus className="h-3.5 w-3.5" /> Dodaj
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+                                <MinusCircle className="mr-2 h-4 w-4 shrink-0" />
+                                Ukloni: {typeById(x.session_type_id)?.name ?? "Termin"}
+                              </DropdownMenuItem>
+                            ))}
+                            {lista.length > 0 && ostale.length > 0 && <DropdownMenuSeparator />}
+                            {ostale.map((t) => (
+                              <DropdownMenuItem key={t.id} onSelect={() => dodajUPolje(t, wd, v)}>
+                                <Plus className="mr-2 h-4 w-4 shrink-0" />
+                                Dodaj: {t.name}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      );
+                    })}
+                  </Fragment>
+                ))}
               </div>
             </div>
           </section>
@@ -557,13 +733,14 @@ const SessionSettings = () => {
       <FullScreenSheet
         open={typeOpen}
         onClose={() => setTypeOpen(false)}
-        title={editingType ? "Izmeni tip" : "Nov tip sesije"}
+        title={desktop ? (editingType ? "Izmeni vrstu" : "Nova vrsta") : (editingType ? "Izmeni tip" : "Nov tip sesije")}
+        hidden={pitam}
       >
         <FullScreenSheetScroll className="pt-5 space-y-3">
           <div>
             <label className="text-[12px] font-semibold text-muted-foreground mb-1.5 block">Naziv</label>
             <Input
-              placeholder="npr. Personalni trening"
+              placeholder={desktop ? "Personalni trening" : "npr. Personalni trening"}
               value={typeForm.name}
               onChange={(e) => setTypeForm({ ...typeForm, name: e.target.value })}
               className="h-14 text-base rounded-2xl"
@@ -622,14 +799,93 @@ const SessionSettings = () => {
         <FullScreenSheetFooter>
           <Button className="w-full bg-gradient-brand text-white shadow-brand" onClick={submitType} disabled={savingType}>
             {savingType && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {editingType ? "Sačuvaj" : "Kreiraj"}
+            {desktop || editingType ? "Sačuvaj" : "Kreiraj"}
           </Button>
+          {desktop && editingType && (
+            <button
+              type="button"
+              onClick={() => deleteType(editingType)}
+              disabled={savingType}
+              className="mt-2 h-10 w-full text-[14px] font-semibold text-destructive disabled:opacity-50"
+            >
+              Obriši vrstu
+            </button>
+          )}
         </FullScreenSheetFooter>
       </FullScreenSheet>
 
       {/* Slot sheet */}
-      <FullScreenSheet open={slotOpen} onClose={() => setSlotOpen(false)} title="Dodaj termin u raspored">
+      <FullScreenSheet
+        open={slotOpen}
+        onClose={() => setSlotOpen(false)}
+        title={desktop ? "Novi termin" : "Dodaj termin u raspored"}
+      >
         <FullScreenSheetScroll className="pt-5 space-y-3">
+          {desktop ? (
+            <>
+              <div>
+                <div className="text-[12px] font-semibold text-muted-foreground mb-1.5">Vrsta</div>
+                <div role="group" aria-label="Vrsta" className="flex flex-wrap gap-1.5">
+                  {types.map((t) => {
+                    const izabrana = slotForm.session_type_id === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setSlotForm({ ...slotForm, session_type_id: t.id })}
+                        aria-pressed={izabrana}
+                        className={cn(
+                          "inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[12.5px] font-semibold transition",
+                          izabrana
+                            ? "border-transparent bg-primary text-primary-foreground"
+                            : "border-hairline bg-surface text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        <span className={cn("h-2 w-2 rounded-full", sessionColorClasses(t.color).dot)} />
+                        {t.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <div className="text-[12px] font-semibold text-muted-foreground mb-1.5">Dani</div>
+                <div role="group" aria-label="Dani" className="grid grid-cols-7 gap-1.5">
+                  {weekdayLabelsShort.map((dan, wd) => {
+                    const izabran = slotDani.includes(wd);
+                    return (
+                      <button
+                        key={dan}
+                        type="button"
+                        onClick={() => setSlotDani((d) => (d.includes(wd) ? d.filter((x) => x !== wd) : [...d, wd]))}
+                        aria-pressed={izabran}
+                        aria-label={weekdayLabelsLong[wd]}
+                        className={cn(
+                          "h-10 rounded-xl text-[11px] font-semibold transition",
+                          izabran
+                            ? "bg-gradient-brand text-white"
+                            : "border border-hairline bg-surface text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {dan}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <label htmlFor="slot-pocetak" className="text-[12px] font-semibold text-muted-foreground mb-1.5 block">Početak</label>
+                <Input
+                  id="slot-pocetak"
+                  type="time"
+                  value={slotForm.start_time}
+                  onChange={(e) => setSlotForm({ ...slotForm, start_time: e.target.value })}
+                  className="h-14 text-base rounded-2xl"
+                />
+              </div>
+            </>
+          ) : (
+          <>
           <div>
             <label className="text-[12px] font-semibold text-muted-foreground mb-1.5 block">Tip</label>
             <Select
@@ -669,11 +925,17 @@ const SessionSettings = () => {
               className="h-14 text-base rounded-2xl"
             />
           </div>
+          </>
+          )}
         </FullScreenSheetScroll>
         <FullScreenSheetFooter>
-          <Button className="w-full bg-gradient-brand text-white shadow-brand" onClick={submitSlot} disabled={savingSlot}>
+          <Button
+            className="w-full bg-gradient-brand text-white shadow-brand"
+            onClick={desktop ? submitSlotDani : submitSlot}
+            disabled={savingSlot}
+          >
             {savingSlot && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Dodaj termin
+            {desktop && slotDani.length > 1 ? `Dodaj ${slotDani.length} termina` : "Dodaj termin"}
           </Button>
         </FullScreenSheetFooter>
       </FullScreenSheet>

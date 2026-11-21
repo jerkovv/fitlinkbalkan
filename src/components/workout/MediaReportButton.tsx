@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { porukaGreske } from "@/lib/errorMessage";
 
 // Suptilno "Prijavi" preko medija vezbe u toku treninga. Vezbac prijavi ako slika/video
 // ne radi ili je los; upisuje u exercise_media_reports (athlete insert RLS: reported_by=uid).
@@ -22,7 +23,14 @@ const REASONS = [
   "Drugo",
 ];
 
-export const MediaReportButton = ({ exerciseId }: { exerciseId: string }) => {
+export const MediaReportButton = ({
+  exerciseId,
+  slojClassName,
+}: {
+  exerciseId: string;
+  /** Racunar: z-index prozora prijave kad dugme stoji u pregledu iznad z-100. */
+  slojClassName?: string;
+}) => {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<string | null>(null);
   const [note, setNote] = useState("");
@@ -75,7 +83,7 @@ export const MediaReportButton = ({ exerciseId }: { exerciseId: string }) => {
     });
     setSubmitting(false);
     if (error) {
-      toast.error("Greška pri slanju prijave.");
+      toast.error(porukaGreske(error));
       return;
     }
     setReported(true);
@@ -107,6 +115,7 @@ export const MediaReportButton = ({ exerciseId }: { exerciseId: string }) => {
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side="bottom"
+          slojClassName={slojClassName}
           className="h-auto max-h-[85dvh] w-full max-w-[440px] mx-auto rounded-t-3xl p-0 flex flex-col"
         >
           <SheetTitle className="sr-only">Prijavi problem sa vežbom</SheetTitle>

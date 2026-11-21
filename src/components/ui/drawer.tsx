@@ -1,6 +1,7 @@
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Drawer as DrawerPrimitive } from "vaul";
+import { Capacitor } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
 
 import { cn } from "@/lib/utils";
@@ -87,6 +88,7 @@ const DrawerContent = React.forwardRef<
   // DrawerBody (flex-1 overflow-y-auto) skroluje do svih polja i dugmeta.
   const [keyboardHeight, setKeyboardHeight] = React.useState(0);
   React.useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
     const showPromise = Keyboard.addListener("keyboardWillShow", (info) => {
       setKeyboardHeight(info.keyboardHeight);
     });

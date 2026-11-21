@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -13,7 +15,6 @@ import { isDashboardHost } from "@/hooks/useDesktopWeb";
 import { OtvoriAplikaciju } from "@/components/OtvoriAplikaciju";
 import { DashboardPrijava } from "@/components/DashboardPrijava";
 
-import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Invite from "./pages/Invite.tsx";
 import InviteCode from "./pages/InviteCode.tsx";
@@ -41,6 +42,11 @@ import TrainerChatList from "./pages/trainer/ChatList.tsx";
 import TrainerChatThread from "./pages/trainer/ChatThread.tsx";
 import TrainerLiveWorkout from "./pages/trainer/LiveWorkoutView.tsx";
 import TrainerLiveAthletes from "./pages/trainer/LiveAthletesView.tsx";
+import TrainerPodsetnici from "./pages/trainer/Podsetnici.tsx";
+import TrainerPodsetniciKlijenti from "./pages/trainer/PodsetniciKlijenti.tsx";
+import TrainerJaviSe from "./pages/trainer/JaviSe.tsx";
+import TrainerObjave from "./pages/trainer/Objave.tsx";
+import TrainerPodrska from "./pages/trainer/Podrska.tsx";
 
 
 import AthleteHome from "./pages/athlete/Home.tsx";
@@ -86,6 +92,20 @@ const StaraAdresa = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
+// Koren aplikacije nema svoju stranicu. Na dashboardu ide na trenerovu pocetnu, na localhost-u
+// na racunarsku verziju, a u staroj aplikaciji iz prodavnice na prijavu.
+const Koren = () => {
+  const lokalno =
+    !dashboardHost &&
+    !Capacitor.isNativePlatform() &&
+    ["localhost", "127.0.0.1"].includes(window.location.hostname);
+  useEffect(() => {
+    if (lokalno) window.location.replace("/dashboard/trener");
+  }, [lokalno]);
+  if (dashboardHost) return <Navigate to="/trener" replace />;
+  return lokalno ? null : <Navigate to="/auth" replace />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -100,10 +120,7 @@ const App = () => (
             {/* Na fitlink.rs/dashboard je "/" (posle basename-a) trenerska
                 pocetna, ne marketinska Index stranica - bare /dashboard
                 odmah odlazi na /trener. */}
-            <Route
-              path="/"
-              element={dashboardHost ? <Navigate to="/trener" replace /> : <Index />}
-            />
+            <Route path="/" element={<Koren />} />
             <Route path="/auth" element={<DashboardPrijava />} />
             <Route path="/invite/:code" element={<Invite />} />
             <Route path="/poziv" element={<InviteCode />} />
@@ -139,6 +156,11 @@ const App = () => (
             <Route path="/trener/chat" element={trainer(<TrainerChatList />)} />
             <Route path="/trener/chat/:athleteId" element={trainer(<TrainerChatThread />)} />
             <Route path="/trener/vezbac/:athleteId/live" element={trainer(<TrainerLiveWorkout />)} />
+            <Route path="/trener/podsetnici" element={trainer(<TrainerPodsetnici />)} />
+            <Route path="/trener/podsetnici-klijenti" element={trainer(<TrainerPodsetniciKlijenti />)} />
+            <Route path="/trener/javi-se" element={trainer(<TrainerJaviSe />)} />
+            <Route path="/trener/objave" element={trainer(<TrainerObjave />)} />
+            <Route path="/trener/podrska" element={trainer(<TrainerPodrska />)} />
             </Route>
             </Route>
 

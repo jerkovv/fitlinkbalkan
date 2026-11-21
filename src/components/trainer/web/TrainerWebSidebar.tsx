@@ -3,6 +3,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   Home, Radio, Users, CalendarClock, CalendarCog, BarChart3,
   Dumbbell, ClipboardList, Apple, Wallet, IdCard, MessageCircle, Bell,
+  Send, Share2, AlarmClock, LifeBuoy, UserRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrandGlyph } from "@/components/BrandMark";
@@ -60,6 +61,16 @@ const GROUPS: { title: string; items: Item[] }[] = [
     items: [
       { to: "/trener/chat", label: "Poruke", icon: MessageCircle, znacka: "poruke" },
       { to: "/trener/notifikacije", label: "Obaveštenja", icon: Bell, takodje: /^\/trener\/podesavanja-obavestenja/ },
+      { to: "/trener/javi-se", label: "Javi se vežbačima", icon: Send },
+      { to: "/trener/objave", label: "Objave", icon: Share2 },
+      { to: "/trener/podsetnici", label: "Podsetnici", icon: AlarmClock, takodje: /^\/trener\/podsetnici-klijenti/ },
+      { to: "/trener/podrska", label: "Podrška", icon: LifeBuoy },
+    ],
+  },
+  {
+    title: "Nalog",
+    items: [
+      { to: "/trener/profil", label: "Profil", icon: UserRound },
     ],
   },
 ];

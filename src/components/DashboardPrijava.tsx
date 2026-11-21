@@ -3,8 +3,14 @@ import { useLocation } from "react-router-dom";
 import Auth from "@/pages/Auth";
 import { isDashboardHost, useDesktopWeb } from "@/hooks/useDesktopWeb";
 import { OtvoriAplikaciju } from "@/components/OtvoriAplikaciju";
+import { usePonoc } from "@/components/trainer/web/usePonoc";
 
 const PRAVI_DOMEN = new Set(["fitlink.rs", "www.fitlink.rs"]);
+
+const TamnaPrijava = () => {
+  usePonoc();
+  return <Auth />;
+};
 
 // Ruta /auth. Na app.fitlink.rs je to obicna forma za prijavu. Na fitlink.rs/dashboard stara
 // svetla forma se vise ne vidi: uzak prozor dobija "Otvori aplikaciju na telefonu", a sirok ide
@@ -26,7 +32,7 @@ export function DashboardPrijava() {
   if (!isDashboardHost()) return <Auth />;
   if (!desktop) return <OtvoriAplikaciju />;
   if (naSajtu) return <div className="min-h-[100dvh]" style={{ backgroundColor: "#0B0A10" }} />;
-  return <Auth />;
+  return <TamnaPrijava />;
 }
 
 export default DashboardPrijava;

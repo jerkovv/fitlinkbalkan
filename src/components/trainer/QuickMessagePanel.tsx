@@ -5,6 +5,7 @@ import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 
 type MessageType = "text" | "encouragement" | "warning";
 
@@ -37,6 +38,7 @@ const fmtTime = (iso: string) => {
 
 export const QuickMessagePanel = ({ sessionId }: QuickMessagePanelProps) => {
   const { locked, openLock } = usePretplataLock();
+  const desktop = useDesktopWeb();
   const [sending, setSending] = useState(false);
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<SentMessage[]>([]);
@@ -156,16 +158,26 @@ export const QuickMessagePanel = ({ sessionId }: QuickMessagePanelProps) => {
       </div>
 
       <form onSubmit={handleSubmit} className="flex items-center gap-2">
-        <input
-          ref={inputRef}
-          type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Napiši poruku..."
-          className="flex-1 h-12 px-4 rounded-2xl bg-surface border border-hairline text-[14px] focus:outline-none focus:border-primary/40 transition"
-          disabled={sending}
-          maxLength={200}
-        />
+        <div className="relative flex-1 min-w-0">
+          <input
+            ref={inputRef}
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Napiši poruku..."
+            className={cn(
+              "w-full h-12 px-4 rounded-2xl bg-surface border border-hairline text-[14px] focus:outline-none focus:border-primary/40 transition",
+              desktop && text && "pr-16",
+            )}
+            disabled={sending}
+            maxLength={200}
+          />
+          {desktop && text && (
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] tabular-nums text-muted-foreground">
+              {text.length}/200
+            </span>
+          )}
+        </div>
         <button
           type="submit"
           disabled={sending || !text.trim()}

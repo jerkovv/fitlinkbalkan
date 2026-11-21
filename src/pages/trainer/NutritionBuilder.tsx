@@ -24,12 +24,153 @@ import {
   FullScreenSheet, FullScreenSheetHeader, FullScreenSheetScroll, FullScreenSheetFooter,
 } from "@/components/ui/full-screen-sheet";
 import {
-  Plus, Loader2, Apple, Search, Trash2, ChevronDown, ChevronUp, GripVertical, UserPlus, Check, CalendarDays, Send,
+  Plus, Loader2, Apple, Search, Trash2, ChevronDown, ChevronUp, GripVertical, UserPlus, Check, CalendarDays, Send, Pencil,
 } from "lucide-react";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { DodelaVezbacu } from "@/components/trainer/web/vezbaci/DodelaVezbacu";
 import { LockMark } from "@/components/pretplata/LockMark";
+import { useAuth } from "@/hooks/useAuth";
+
+// ---- Namirnice na komad, 1:1 sa iOS Design/Komadi.swift ----
+// Baza cuva grame. Komad je samo nacin unosa i prikaza.
+
+/** Tezina komada; null kad se meri u gramima. 1 je podrazumevana vrednost kolone, ne tezina. */
+const tezinaKomada = (unit: string | null | undefined, gramaPoKomadu: number | null | undefined) =>
+  unit === "kom" && gramaPoKomadu != null && gramaPoKomadu > 1 ? gramaPoKomadu : null;
+
+/** Broj komada kad grami padaju na ceo ili pola komada; inace null. */
+const brojKomada = (grami: number, komad: number | null) => {
+  if (komad == null || grami <= 0) return null;
+  const n = Math.round((grami / komad) * 2) / 2;
+  return n >= 0.5 && Math.abs(n * komad - grami) <= 0.5 ? n : null;
+};
+
+/** 2 -> "2", 1.5 -> "1,5". */
+const cifra = (n: number) => {
+  const z = Math.round(n * 10) / 10;
+  return Number.isInteger(z) ? String(z) : z.toFixed(1).replace(".", ",");
+};
+
+/** "2 kom" za cele i polovine komada, inace "110 g". */
+const kolicinaTekst = (grami: number, komad: number | null) => {
+  const n = brojKomada(grami, komad);
+  return n != null ? `${cifra(n)} kom` : `${cifra(grami)} g`;
+};
+
+/** Grami za polje i upis, bez repa od mnozenja decimala. */
+const gramiTekst = (g: number) => String(Math.round(g * 100) / 100);
+
+/** Povratak na komade poravnava grame na pola komada. */
+const poravnajNaKomad = (grami: number, komad: number) =>
+  Math.max(0.5, Math.round((grami / komad) * 2) / 2) * komad;
+
+const PrekidacJedinice = ({ naKomad, onChange }: { naKomad: boolean; onChange: (v: boolean) => void }) => (
+  <div role="group" aria-label="Način unosa" className="grid grid-cols-2 gap-1 rounded-full border border-hairline bg-surface-2 p-[3px]">
+    {([["Na komad", true], ["U gramima", false]] as const).map(([natpis, vrednost]) => (
+      <button
+        key={natpis}
+        type="button"
+        onClick={() => onChange(vrednost)}
+        aria-pressed={naKomad === vrednost}
+        className={cn(
+          "h-8 rounded-full border text-[12px] font-semibold transition",
+          naKomad === vrednost
+            ? "border-primary/40 bg-primary/25 text-foreground"
+            : "border-transparent text-muted-foreground hover:text-foreground",
+        )}
+      >
+        {natpis}
+      </button>
+    ))}
+  </div>
+);
+
+/** Unos broja komada dodirom, uz dodatak pola komada. Javlja grame. */
+const IzborKomada = ({ grami, komad, onChange }: { grami: number; komad: number; onChange: (g: number) => void }) => {
+  const broj = Math.max(0.5, Math.round((grami / komad) * 2) / 2);
+  const celih = Math.floor(broj);
+  const pola = broj - celih >= 0.5;
+  const postavi = (n: number) => onChange(Math.max(0.5, n) * komad);
+  return (
+    <div className="space-y-2.5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-baseline gap-1.5">
+            <span className="fig text-[34px] leading-none">{cifra(broj)}</span>
+            <span className="text-[14px] font-semibold text-muted-foreground">kom</span>
+          </div>
+          <div className="mt-1 text-[11.5px] text-muted-foreground tnum">
+            {cifra(broj * komad)} g · jedan komad {cifra(komad)} g
+          </div>
+        </div>
+        <button
+          type="button"
+          aria-label="Pola komada više"
+          aria-pressed={pola}
+          // Bez celih komada pola ne moze da se skine: ostala bi nula.
+          onClick={() => postavi(pola ? Math.max(celih, 1) : celih + 0.5)}
+          className={cn(
+            "h-9 w-[62px] shrink-0 rounded-full border text-[13px] font-semibold transition",
+            pola ? "border-primary/40 bg-primary/25 text-foreground" : "border-hairline bg-surface-2 text-muted-foreground hover:text-foreground",
+          )}
+        >
+          + ½
+        </button>
+      </div>
+      <div className="grid grid-cols-5 gap-1.5">
+        {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => {
+          const izabran = celih === n;
+          return (
+            <button
+              key={n}
+              type="button"
+              aria-pressed={izabran}
+              // Dodir na izabran broj uz ukljuceno pola ostavlja samo pola komada.
+              onClick={() => {
+                if (izabran) { if (pola) postavi(0.5); } else postavi(n + (pola ? 0.5 : 0));
+              }}
+              className={cn(
+                "h-9 rounded-full border text-[15px] font-semibold tnum transition",
+                izabran ? "border-primary/40 bg-primary/25 text-foreground" : "border-hairline bg-surface-2 text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {n}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// Jedinice koje baza prima (food_items_unit_check).
+const JEDINICE = [
+  { v: "g", l: "Grami" },
+  { v: "ml", l: "Mililitri" },
+  { v: "kom", l: "Na komad" },
+] as const;
+
+// Podrazumevane kategorije kad spisak namirnica jos nije stigao (iOS NovaNamirnicaView).
+const KATEGORIJE_NAMIRNICA = [
+  "Meso", "Riba", "Jaja i mleko", "Povrće", "Voće", "Ugljeni hidrati", "Mahunarke",
+  "Orašasti plodovi", "Masnoće i ulja", "Začini i dodaci", "Pića", "Suplementi",
+  "Gotova jela", "Slatkiši",
+];
+
+// Redosled dana kao na iOS-u: ponedeljak prvi. U bazi je nedelja 0.
+const NEDELJA_OD_PONEDELJKA = [1, 2, 3, 4, 5, 6, 0];
+
+// "cevapi" nalazi "Ćevapi". Slovo đ se ne rastavlja, pa ide na oba nacina kucanja.
+const kljucPretrage = (s: string, dj: boolean) =>
+  s.toLowerCase().replace(/đ/g, dj ? "dj" : "d").normalize("NFD").replace(/[̀-ͯ]/g, "");
+const pogadja = (tekst: string, upit: string) =>
+  kljucPretrage(tekst, true).includes(kljucPretrage(upit, true))
+  || kljucPretrage(tekst, false).includes(kljucPretrage(upit, false));
+
+const KOLONE_NAMIRNICE =
+  "id, name, category, unit, grams_per_unit, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, serving_size_g, is_vegan, is_gluten_free, is_posno";
 
 type Day = { id: string; day_number: number; name: string };
 type Meal = { id: string; day_id: string; meal_order: number; name: string; time_hint: string | null };
@@ -37,6 +178,9 @@ type Food = {
   id: string;
   name: string;
   category: string | null;
+  // "kom" kad se broji na komad; tada grams_per_unit nosi tezinu komada.
+  unit?: string | null;
+  grams_per_unit?: number | null;
   kcal_per_100g: number;
   protein_per_100g: number;
   carbs_per_100g: number;
@@ -132,6 +276,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
       } as const;
   const confirm = useConfirm();
   const desktop = useDesktopWeb();
+  const { user } = useAuth();
   // Mali prag pomeranja pre nego sto se drag aktivira - obican tap na hendl (ili
   // slucajan dodir tokom skrola) ne sme da okine drag. TouchSensor uz delay+tolerance
   // je dopuna za touch uredjaje - razdvaja skrol/tap liste od namernog prevlacenja,
@@ -142,6 +287,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
   );
   const [templateName, setTemplateName] = useState("");
+  const [ciljKcal, setCiljKcal] = useState<number | null>(null);
   const [days, setDays] = useState<Day[]>([]);
   const [mealsByDay, setMealsByDay] = useState<Record<string, Meal[]>>({});
   const [itemsByMeal, setItemsByMeal] = useState<Record<string, MealItem[]>>({});
@@ -163,6 +309,9 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   const [foodQuery, setFoodQuery] = useState("");
   const [pickedFood, setPickedFood] = useState<Food | null>(null);
   const [pickedGrams, setPickedGrams] = useState("100");
+  // Racunar: unos brojem komada, ima smisla samo kad namirnica ima tezinu komada.
+  const [pickedNaKomad, setPickedNaKomad] = useState(false);
+  const [foodsLoading, setFoodsLoading] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [filterVegan, setFilterVegan] = useState(false);
   const [filterGlutenFree, setFilterGlutenFree] = useState(false);
@@ -181,6 +330,18 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   const [newFoodServingSize, setNewFoodServingSize] = useState("100");
   const [newFoodUnit, setNewFoodUnit] = useState("g");
 
+  // Racunar: preimenovanje dana.
+  const [renameDay, setRenameDay] = useState<Day | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [renaming, setRenaming] = useState(false);
+
+  // Racunar: izmena kolicine namirnice na komad (IzmenaKolicineView na iOS-u).
+  const [editItem, setEditItem] = useState<MealItem | null>(null);
+  const [editGrams, setEditGrams] = useState(0);
+  const [editText, setEditText] = useState("");
+  const [editNaKomad, setEditNaKomad] = useState(true);
+  const [editSaving, setEditSaving] = useState(false);
+
   // Schedule
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [schedule, setSchedule] = useState<Schedule[]>(WEEKDAYS.map((_, i) => ({ weekday: i, day_id: null })));
@@ -195,11 +356,12 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
     if (!parentId) return;
     setLoading(true);
     const [{ data: tpl }, { data: daysData }, { data: schedData }] = await Promise.all([
-      supabase.from(cfg.parentTable).select("name").eq("id", parentId).maybeSingle(),
+      supabase.from(cfg.parentTable).select("name, target_kcal").eq("id", parentId).maybeSingle(),
       supabase.from(cfg.daysTable).select("*").eq(cfg.parentCol, parentId).order("day_number"),
       supabase.from(cfg.scheduleTable).select("weekday, day_id").eq(cfg.parentCol, parentId),
     ]);
     setTemplateName((tpl as any)?.name ?? "Plan");
+    setCiljKcal((tpl as any)?.target_kcal ?? null);
     const dList = (daysData as any) ?? [];
     setDays(dList);
 
@@ -247,11 +409,16 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   useEffect(() => { load(); }, [parentId]);
 
   const loadFoods = async () => {
-    const { data } = await supabase
+    setFoodsLoading(true);
+    let q = supabase
       .from("food_items")
-      .select("id, name, category, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, serving_size_g, is_vegan, is_gluten_free, is_posno")
-      .eq("za_trenera", true)
-      .order("name");
+      .select(KOLONE_NAMIRNICE)
+      .eq("za_trenera", true);
+    // Licne namirnice drugih trenera ne idu na spisak (isti filter kao iOS).
+    if (desktop && user?.id) q = q.or(`is_global.eq.true,created_by.eq.${user.id}`);
+    const { data, error } = await q.order("name");
+    setFoodsLoading(false);
+    if (error) { toast.error(porukaGreske(error)); return; }
     setFoods((data as any) ?? []);
   };
 
@@ -280,10 +447,41 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
 
   const handleDeleteDay = async (dayId: string) => {
     if (locked) return openLock();
-    if (!(await confirm({ title: "Obrisati dan?", description: "Dan i svi obroci biće obrisani.", destructive: true }))) return;
+    const imeDana = days.find((d) => d.id === dayId)?.name;
+    if (!(await confirm({
+      title: "Obrisati dan?",
+      description: desktop && imeDana ? `${imeDana} i svi njegovi obroci nestaju iz plana.` : "Dan i svi obroci biće obrisani.",
+      confirmLabel: desktop ? "Obriši dan" : undefined,
+      destructive: true,
+    }))) return;
     const { error } = await supabase.from(cfg.daysTable).delete().eq("id", dayId);
     if (error) { toast.error(porukaGreske(error)); return; }
     load();
+  };
+
+  const openRenameDay = (d: Day) => {
+    if (locked) return openLock();
+    setRenameValue(d.name);
+    setRenameDay(d);
+  };
+
+  const saveRenameDay = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (locked) return openLock();
+    if (!renameDay || renaming) return;
+    const ime = renameValue.trim();
+    if (!ime) { toast.error("Naziv je obavezan"); return; }
+    const { id, name: staro } = renameDay;
+    setRenaming(true);
+    setDays((prev) => prev.map((d) => (d.id === id ? { ...d, name: ime } : d)));
+    const { error } = await supabase.from(cfg.daysTable).update({ name: ime } as any).eq("id", id);
+    setRenaming(false);
+    if (error) {
+      setDays((prev) => prev.map((d) => (d.id === id ? { ...d, name: staro } : d)));
+      toast.error(porukaGreske(error));
+      return;
+    }
+    setRenameDay(null);
   };
 
   const handleAddMeal = async (e: React.FormEvent) => {
@@ -304,8 +502,15 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
 
   const handleDeleteMeal = async (mealId: string) => {
     if (locked) return openLock();
-    if (!(await confirm({ title: "Obrisati obrok?", destructive: true }))) return;
-    await supabase.from(cfg.mealsTable).delete().eq("id", mealId);
+    const imeObroka = Object.values(mealsByDay).flat().find((m) => m.id === mealId)?.name;
+    if (!(await confirm({
+      title: "Obrisati obrok?",
+      description: desktop && imeObroka ? `${imeObroka} i sve namirnice u njemu.` : undefined,
+      confirmLabel: desktop ? "Obriši obrok" : undefined,
+      destructive: true,
+    }))) return;
+    const { error } = await supabase.from(cfg.mealsTable).delete().eq("id", mealId);
+    if (error) toast.error(porukaGreske(error));
     load();
   };
 
@@ -314,6 +519,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
     setPickerMealId(mealId);
     setPickedFood(null);
     setPickedGrams("100");
+    setPickedNaKomad(false);
     setFoodQuery("");
     setActiveCategory(null);
     setFilterVegan(false);
@@ -324,7 +530,54 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
 
   const selectFood = (f: Food) => {
     setPickedFood(f);
-    setPickedGrams(String(f.serving_size_g ?? 100));
+    // Namirnica na komad krece od jednog komada, ostale od svoje porcije.
+    const komad = desktop ? tezinaKomada(f.unit, f.grams_per_unit) : null;
+    setPickedNaKomad(komad != null);
+    setPickedGrams(komad != null ? gramiTekst(komad) : String(f.serving_size_g ?? 100));
+  };
+
+  const komadIzabrane = desktop && pickedFood ? tezinaKomada(pickedFood.unit, pickedFood.grams_per_unit) : null;
+
+  const promeniNacinUnosa = (komadi: boolean) => {
+    setPickedNaKomad(komadi);
+    if (komadi && komadIzabrane != null) {
+      setPickedGrams(gramiTekst(poravnajNaKomad(parseFloat(pickedGrams) || 0, komadIzabrane)));
+    }
+  };
+
+  // Kolicina koja ne pada na pola komada otvara se u gramima, da se ne promeni sama.
+  const openEditItem = (it: MealItem) => {
+    if (locked) return openLock();
+    const komad = tezinaKomada(it.food_items?.unit, it.food_items?.grams_per_unit);
+    setEditItem(it);
+    setEditGrams(it.grams);
+    setEditText(gramiTekst(it.grams));
+    setEditNaKomad(brojKomada(it.grams, komad) != null);
+  };
+
+  const saveEditItem = async () => {
+    if (locked) return openLock();
+    if (!editItem || editSaving || !(editGrams > 0)) return;
+    setEditSaving(true);
+    const { error } = await supabase
+      .from(cfg.itemsTable)
+      .update({ grams: Math.round(editGrams * 100) / 100 } as any)
+      .eq("id", editItem.id);
+    setEditSaving(false);
+    if (error) { toast.error(porukaGreske(error)); return; }
+    setEditItem(null);
+    load();
+  };
+
+  const removeEditItem = async () => {
+    if (locked) return openLock();
+    if (!editItem || editSaving) return;
+    setEditSaving(true);
+    const { error } = await supabase.from(cfg.itemsTable).delete().eq("id", editItem.id);
+    setEditSaving(false);
+    if (error) { toast.error(porukaGreske(error)); return; }
+    setEditItem(null);
+    load();
   };
 
   const openAddFood = () => {
@@ -347,8 +600,15 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
     const kcal = parseFloat(newFoodKcal);
     if (!Number.isFinite(kcal) || kcal < 0) { toast.error("Unesi ispravan broj kalorija"); return; }
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { toast.error("Niste prijavljeni"); return; }
+    const jedinica = newFoodUnit.trim() || "g";
+    const porcija = parseFloat(newFoodServingSize) || 100;
+    if (desktop && jedinica === "kom" && !(parseFloat(newFoodServingSize) > 1)) {
+      toast.error("Unesi težinu jednog komada u gramima.");
+      return;
+    }
+
+    const { data: { user: autor } } = await supabase.auth.getUser();
+    if (!autor) { toast.error("Niste prijavljeni"); return; }
 
     setSavingNewFood(true);
     const { data, error } = await supabase
@@ -360,18 +620,42 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
         protein_per_100g: parseFloat(newFoodProtein) || 0,
         carbs_per_100g: parseFloat(newFoodCarbs) || 0,
         fat_per_100g: parseFloat(newFoodFat) || 0,
-        serving_size_g: parseFloat(newFoodServingSize) || 100,
-        unit: newFoodUnit.trim() || "g",
-        created_by: user.id,
+        serving_size_g: porcija,
+        unit: jedinica,
+        // Tezina komada ide u grams_per_unit; za grame i mililitre kolona ostaje 1.
+        ...(desktop ? { grams_per_unit: jedinica === "kom" ? porcija : 1 } : {}),
+        created_by: autor.id,
         is_global: false,
         za_trenera: true,
       } as any)
-      .select("id, name, category, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, serving_size_g, is_vegan, is_gluten_free, is_posno")
+      .select(KOLONE_NAMIRNICE)
       .single();
+
+    // Ime je jedinstveno u celoj bazi, a deo namirnica se ne vidi na trenerovom spisku.
+    // Ako takva vec postoji, bira se ona umesto poruke bez izlaza (kao iOS).
+    if (desktop && error?.code === "23505") {
+      const { data: ista } = await supabase
+        .from("food_items")
+        .select(KOLONE_NAMIRNICE)
+        .eq("name", name)
+        .limit(1)
+        .maybeSingle();
+      setSavingNewFood(false);
+      if (!ista) {
+        toast.error("Namirnica sa tim imenom već postoji. Dodaj nešto uz ime, na primer marku ili način pripreme.");
+        return;
+      }
+      const postojeca = ista as unknown as Food;
+      setFoods((prev) => (prev.some((f) => f.id === postojeca.id) ? prev : [...prev, postojeca]));
+      setAddFoodOpen(false);
+      selectFood(postojeca);
+      return;
+    }
+
     setSavingNewFood(false);
     if (error || !data) { toast.error(porukaGreske(error)); return; }
 
-    const created = data as Food;
+    const created = data as unknown as Food;
     setFoods((prev) => [...prev, created]);
     setAddFoodOpen(false);
     selectFood(created);
@@ -396,7 +680,8 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
 
   const removeItem = async (itemId: string) => {
     if (locked) return openLock();
-    await supabase.from(cfg.itemsTable).delete().eq("id", itemId);
+    const { error } = await supabase.from(cfg.itemsTable).delete().eq("id", itemId);
+    if (error) toast.error(porukaGreske(error));
     load();
   };
 
@@ -425,7 +710,8 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
 
   const updateItemGrams = async (itemId: string, grams: number) => {
     if (locked) return openLock();
-    await supabase.from(cfg.itemsTable).update({ grams } as any).eq("id", itemId);
+    const { error } = await supabase.from(cfg.itemsTable).update({ grams } as any).eq("id", itemId);
+    if (error) toast.error(porukaGreske(error));
     load();
   };
 
@@ -448,10 +734,11 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
       if (filterVegan && !f.is_vegan) return false;
       if (filterGlutenFree && !f.is_gluten_free) return false;
       if (filterPosno && !f.is_posno) return false;
+      if (q && desktop) return pogadja(f.name, q) || pogadja(f.category ?? "", q);
       if (q && !f.name.toLowerCase().includes(q) && !(f.category ?? "").toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [foods, foodQuery, activeCategory, filterVegan, filterGlutenFree, filterPosno]);
+  }, [foods, foodQuery, activeCategory, filterVegan, filterGlutenFree, filterPosno, desktop]);
 
   const setScheduleDay = async (weekday: number, dayId: string | null) => {
     if (locked) return openLock();
@@ -473,6 +760,8 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
 
   const openAssign = async () => {
     setAssignOpen(true);
+    // Racunar: DodelaVezbacu sama ucitava spisak.
+    if (desktop) return;
     if (athletes.length === 0) {
       const { data, error } = await supabase.rpc("get_my_athletes" as any);
       if (error) {
@@ -532,7 +821,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
     setNotifying(false);
     if (error) { toast.error(porukaGreske(error)); return; }
     if (data === true) toast.success("Plan poslat vežbaču");
-    else toast("Plan je već poslat");
+    else toast(desktop ? "Izmene su sačuvane. Plan je već poslat vežbaču." : "Plan je već poslat");
   };
 
   // Racunar: dan u desnoj koloni. Dok trener ne izabere drugi, to je prvi dan.
@@ -560,6 +849,8 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
               </div>
               <button
                 onClick={() => handleDeleteMeal(m.id)}
+                aria-label={`Obriši obrok: ${m.name}`}
+                title="Obriši obrok"
                 className="h-7 w-7 rounded-md hover:bg-destructive-soft flex items-center justify-center transition"
               >
                 <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -595,18 +886,34 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
                       {x.kcal} kcal · P{x.p} U{x.c} M{x.fat}
                     </div>
                   </div>
-                  <Input
-                    type="number"
-                    defaultValue={it.grams}
-                    onBlur={(e) => {
-                      const v = parseFloat(e.target.value);
-                      if (v && v !== it.grams) updateItemGrams(it.id, v);
-                    }}
-                    className={cn("h-7 text-xs text-right", desktop ? "w-20" : "w-16")}
-                  />
-                  <span className="text-[10px] text-muted-foreground w-3">g</span>
+                  {desktop && tezinaKomada(it.food_items?.unit, it.food_items?.grams_per_unit) != null ? (
+                    // Namirnica na komad dobija svoj prozor sa brojem komada.
+                    <button
+                      type="button"
+                      onClick={() => openEditItem(it)}
+                      title="Izmeni količinu"
+                      className="h-7 w-[104px] shrink-0 rounded-md bg-surface-2 text-xs font-semibold tnum transition hover:bg-surface-3"
+                    >
+                      {kolicinaTekst(it.grams, tezinaKomada(it.food_items?.unit, it.food_items?.grams_per_unit))}
+                    </button>
+                  ) : (
+                    <>
+                      <Input
+                        type="number"
+                        defaultValue={it.grams}
+                        onBlur={(e) => {
+                          const v = parseFloat(e.target.value);
+                          if (v && v !== it.grams) updateItemGrams(it.id, v);
+                        }}
+                        className={cn("h-7 text-xs text-right", desktop ? "w-20" : "w-16")}
+                      />
+                      <span className="text-[10px] text-muted-foreground w-3">g</span>
+                    </>
+                  )}
                   <button
                     onClick={() => removeItem(it.id)}
+                    aria-label="Ukloni namirnicu"
+                    title="Ukloni namirnicu"
                     className="h-6 w-6 rounded-md hover:bg-destructive-soft flex items-center justify-center"
                   >
                     <Trash2 className="h-3 w-3 text-destructive" />
@@ -768,10 +1075,24 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
                     <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                       Dan {aktivniDan.day_number}
                     </div>
-                    <h2 className="truncate font-display text-[22px] font-bold tracking-tight">{aktivniDan.name}</h2>
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <h2 className="truncate font-display text-[22px] font-bold tracking-tight">{aktivniDan.name}</h2>
+                      <button
+                        type="button"
+                        onClick={() => openRenameDay(aktivniDan)}
+                        className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[12px] font-semibold text-muted-foreground transition hover:bg-surface-2 hover:text-foreground"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        <LockMark />
+                        Preimenuj dan
+                      </button>
+                    </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className={cn(chip, "bg-primary-soft text-primary")}>{tot.kcal} kcal</span>
+                    {ciljKcal != null && ciljKcal > 0 && (
+                      <span className={cn(chip, "bg-surface-2 text-muted-foreground")}>cilj {ciljKcal}</span>
+                    )}
                     <span className={cn(chip, "bg-surface-2 text-muted-foreground")}>P {tot.p} g</span>
                     <span className={cn(chip, "bg-surface-2 text-muted-foreground")}>U {tot.c} g</span>
                     <span className={cn(chip, "bg-surface-2 text-muted-foreground")}>M {tot.fat} g</span>
@@ -907,7 +1228,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
               {/* Dietary toggle filteri */}
               <div className="flex gap-1.5 flex-wrap">
                 {[
-                  { key: "vegan", label: "Veganski", active: filterVegan, set: setFilterVegan },
+                  { key: "vegan", label: desktop ? "Vegan" : "Veganski", active: filterVegan, set: setFilterVegan },
                   { key: "gf", label: "Bez glutena", active: filterGlutenFree, set: setFilterGlutenFree },
                   { key: "posno", label: "Posno", active: filterPosno, set: setFilterPosno },
                 ].map((t) => (
@@ -960,7 +1281,11 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
             </FullScreenSheetHeader>
 
             <FullScreenSheetScroll>
-              {filteredFoods.length === 0 ? (
+              {desktop && foodsLoading ? (
+                <div className="flex justify-center py-10">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : filteredFoods.length === 0 ? (
                 <div className="text-center py-8 space-y-3">
                   <p className="text-sm text-muted-foreground">
                     Nema namirnica za odabrane filtere
@@ -998,11 +1323,28 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
                       </div>
                       <div className="text-xs text-muted-foreground truncate mt-0.5">
                         {f.category && <span>{f.category} · </span>}
-                        {f.kcal_per_100g} kcal · P{f.protein_per_100g} U{f.carbs_per_100g} M{f.fat_per_100g} /100g
+                        {(() => {
+                          // Uz namirnicu na komad stoje vrednosti jednog komada.
+                          const k = desktop ? tezinaKomada(f.unit, f.grams_per_unit) : null;
+                          if (k == null) return `${f.kcal_per_100g} kcal · P${f.protein_per_100g} U${f.carbs_per_100g} M${f.fat_per_100g} /100g`;
+                          const v = (x: number) => Math.round((x * k) / 100);
+                          return `1 kom ${cifra(k)} g · ${v(f.kcal_per_100g)} kcal · P${v(f.protein_per_100g)} U${v(f.carbs_per_100g)} M${v(f.fat_per_100g)}`;
+                        })()}
                       </div>
                     </div>
                   </button>
                 ))
+              )}
+              {/* Na iOS-u je dodavanje uvek na dnu spiska, ne samo kad nema rezultata. */}
+              {desktop && !foodsLoading && filteredFoods.length > 0 && (
+                <button
+                  type="button"
+                  onClick={openAddFood}
+                  className="flex h-12 w-full items-center justify-center gap-1.5 text-[13px] font-semibold text-primary hover:underline"
+                >
+                  <Plus className="h-4 w-4" />
+                  Nema je na listi? Dodaj je
+                </button>
               )}
             </FullScreenSheetScroll>
           </>
@@ -1015,6 +1357,17 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
               </div>
             </div>
 
+            {komadIzabrane != null && (
+              <PrekidacJedinice naKomad={pickedNaKomad} onChange={promeniNacinUnosa} />
+            )}
+
+            {komadIzabrane != null && pickedNaKomad ? (
+              <IzborKomada
+                grami={parseFloat(pickedGrams) || komadIzabrane}
+                komad={komadIzabrane}
+                onChange={(g) => setPickedGrams(gramiTekst(g))}
+              />
+            ) : (
             <div>
               <Label htmlFor="grams">Količina (g)</Label>
               <Input
@@ -1048,6 +1401,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
                 )}
               </div>
             </div>
+            )}
 
             {pickedGrams && parseFloat(pickedGrams) > 0 && (
               <div className="text-center text-sm bg-gradient-brand-soft rounded-2xl p-4">
@@ -1063,7 +1417,13 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
             )}
             <div className="flex gap-2 pt-1">
               <Button variant="outline" onClick={() => setPickedFood(null)} className="flex-1">Nazad</Button>
-              <Button onClick={addFoodToMeal} className="flex-1">Dodaj</Button>
+              <Button onClick={addFoodToMeal} className="min-w-0 flex-1">
+                <span className="truncate">
+                  {desktop
+                    ? `Dodaj u ${Object.values(mealsByDay).flat().find((m) => m.id === pickerMealId)?.name ?? "obrok"}`
+                    : "Dodaj"}
+                </span>
+              </Button>
             </div>
           </FullScreenSheetScroll>
         )}
@@ -1073,7 +1433,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
       <FullScreenSheet
         open={addFoodOpen}
         onClose={() => setAddFoodOpen(false)}
-        title="Dodaj namirnicu"
+        title={desktop ? "Nova namirnica" : "Dodaj namirnicu"}
       >
         <FullScreenSheetScroll className="pt-5 space-y-4">
           <div>
@@ -1096,7 +1456,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
               className="mt-1.5 w-full h-14 text-base rounded-2xl border border-hairline bg-surface px-4"
             >
               <option value="">Izaberi kategoriju</option>
-              {availableCategories.map((c) => (
+              {(desktop && availableCategories.length === 0 ? KATEGORIJE_NAMIRNICA : availableCategories).map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
@@ -1126,7 +1486,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
               />
             </div>
             <div>
-              <Label htmlFor="new-food-carbs">Ugljeni hidrati /100g</Label>
+              <Label htmlFor="new-food-carbs">{desktop ? "Ugljeni hidr. /100g" : "Ugljeni hidrati /100g"}</Label>
               <Input
                 id="new-food-carbs"
                 type="number"
@@ -1149,6 +1509,51 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
             </div>
           </div>
 
+          {desktop ? (
+            <>
+              <div>
+                <Label>Kako se meri</Label>
+                <div role="group" aria-label="Kako se meri" className="mt-1.5 grid grid-cols-3 gap-1.5">
+                  {JEDINICE.map((j) => (
+                    <button
+                      key={j.v}
+                      type="button"
+                      onClick={() => setNewFoodUnit(j.v)}
+                      aria-pressed={newFoodUnit === j.v}
+                      className={cn(
+                        "h-10 rounded-full border text-[12.5px] font-semibold transition",
+                        newFoodUnit === j.v
+                          ? "border-primary/40 bg-primary/25 text-foreground"
+                          : "border-hairline bg-surface text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {j.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                {/* Za namirnicu na komad porcija je tezina jednog komada. */}
+                <Label htmlFor="new-food-serving">
+                  {newFoodUnit === "kom" ? "Težina jednog komada (g)" : `Porcija (${newFoodUnit === "ml" ? "ml" : "g"})`}
+                </Label>
+                <Input
+                  id="new-food-serving"
+                  type="number"
+                  inputMode="decimal"
+                  value={newFoodServingSize}
+                  onChange={(e) => setNewFoodServingSize(e.target.value)}
+                  placeholder={newFoodUnit === "kom" ? "55" : "100"}
+                  className="mt-1.5 h-14 text-base rounded-2xl"
+                />
+                {newFoodUnit === "kom" && (
+                  <p className="mt-1.5 text-[11.5px] text-muted-foreground">
+                    Vrednosti iznad su i dalje na 100 g. U planu se unosi broj komada, a aplikacija računa grame.
+                  </p>
+                )}
+              </div>
+            </>
+          ) : (
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label htmlFor="new-food-serving">Veličina porcije (g)</Label>
@@ -1172,18 +1577,118 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
               />
             </div>
           </div>
+          )}
 
           <p className="text-xs text-muted-foreground">
-            Namirnica će odmah biti dostupna samo tebi. Postaje globalna (vidljiva svim trenerima) tek kad je admin odobri.
+            {desktop
+              ? "Vidiš je samo ti. Vežbač je vidi tek kad mu je staviš u plan."
+              : "Namirnica će odmah biti dostupna samo tebi. Postaje globalna (vidljiva svim trenerima) tek kad je admin odobri."}
           </p>
         </FullScreenSheetScroll>
         <FullScreenSheetFooter>
           <Button onClick={saveNewFood} disabled={savingNewFood} className="w-full">
             {savingNewFood && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Dodaj namirnicu
+            {desktop ? "Sačuvaj namirnicu" : "Dodaj namirnicu"}
           </Button>
         </FullScreenSheetFooter>
       </FullScreenSheet>
+
+      {/* Preimenovanje dana */}
+      <Dialog open={!!renameDay} onOpenChange={(o) => !o && setRenameDay(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Ime dana</DialogTitle></DialogHeader>
+          <form onSubmit={saveRenameDay} className="space-y-4">
+            <div>
+              <Label htmlFor="rename-day">Ime</Label>
+              <Input
+                id="rename-day"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                className="mt-1.5 h-12 rounded-2xl"
+                autoFocus
+              />
+            </div>
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button type="button" variant="outline" onClick={() => setRenameDay(null)}>Otkaži</Button>
+              <Button type="submit" disabled={renaming || !renameValue.trim()}>
+                {renaming && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Sačuvaj
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Izmena kolicine namirnice na komad */}
+      <Dialog open={!!editItem} onOpenChange={(o) => !o && setEditItem(null)}>
+        <DialogContent className="max-w-md">
+          {editItem?.food_items && (() => {
+            const f = editItem.food_items;
+            const komad = tezinaKomada(f.unit, f.grams_per_unit) ?? 1;
+            const deo = (x: number) => (x * editGrams) / 100;
+            return (
+              <>
+                <DialogHeader>
+                  <div className="flex items-start justify-between gap-3 pr-6">
+                    <div className="min-w-0">
+                      <DialogTitle className="text-left">{f.name}</DialogTitle>
+                      <div className="mt-1 text-[11px] text-muted-foreground tnum">
+                        P {cifra(deo(f.protein_per_100g))} g · U {cifra(deo(f.carbs_per_100g))} g · M {cifra(deo(f.fat_per_100g))} g
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-baseline gap-1">
+                      <span className="fig text-gradient-brand text-[24px] leading-none">{Math.round(deo(f.kcal_per_100g))}</span>
+                      <span className="text-[11px] text-muted-foreground">kcal</span>
+                    </div>
+                  </div>
+                </DialogHeader>
+                <div className="space-y-3.5">
+                  <PrekidacJedinice
+                    naKomad={editNaKomad}
+                    onChange={(komadi) => {
+                      setEditNaKomad(komadi);
+                      if (komadi) setEditGrams(poravnajNaKomad(editGrams, komad));
+                      else setEditText(gramiTekst(editGrams));
+                    }}
+                  />
+                  {editNaKomad ? (
+                    <IzborKomada grami={editGrams} komad={komad} onChange={setEditGrams} />
+                  ) : (
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        aria-label="Količina u gramima"
+                        value={editText}
+                        onChange={(e) => {
+                          setEditText(e.target.value);
+                          const g = parseFloat(e.target.value);
+                          if (g > 0) setEditGrams(g);
+                        }}
+                        className="h-12 rounded-2xl pr-9 text-center text-[17px] font-semibold tnum"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground">g</span>
+                    </div>
+                  )}
+                  <Button onClick={saveEditItem} disabled={editSaving} className="h-11 w-full rounded-2xl bg-gradient-brand text-white shadow-brand">
+                    {editSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
+                    <LockMark className="mr-1.5" />
+                    Sačuvaj
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={removeEditItem}
+                    disabled={editSaving}
+                    className="h-10 w-full text-[13px] font-semibold text-destructive disabled:opacity-50"
+                  >
+                    Ukloni namirnicu
+                  </button>
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* Schedule */}
       <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
@@ -1191,7 +1696,10 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
           <DialogHeader><DialogTitle>Nedeljni raspored</DialogTitle></DialogHeader>
           <p className="text-xs text-muted-foreground -mt-2">Za svaki dan u nedelji izaberi koji dan plana se primenjuje.</p>
           <div className="space-y-2">
-            {schedule.map((s) => (
+            {(desktop
+              ? NEDELJA_OD_PONEDELJKA.map((w) => schedule.find((s) => s.weekday === w) ?? { weekday: w, day_id: null })
+              : schedule
+            ).map((s) => (
               <div key={s.weekday} className="flex items-center gap-2">
                 <div className="w-12 text-sm font-semibold">{WEEKDAYS[s.weekday]}</div>
                 <select
@@ -1199,7 +1707,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
                   onChange={(e) => setScheduleDay(s.weekday, e.target.value || null)}
                   className="flex-1 h-9 rounded-md border border-input bg-background px-3 text-sm"
                 >
-                  <option value="">- bez plana -</option>
+                  <option value="">{desktop ? "Bez plana" : "- bez plana -"}</option>
                   {days.map((d) => (
                     <option key={d.id} value={d.id}>Dan {d.day_number} · {d.name}</option>
                   ))}
@@ -1213,8 +1721,20 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
         </DialogContent>
       </Dialog>
 
+      {/* Racunar: pretraga, izbor, pa potvrda, kao na telefonskoj aplikaciji. */}
+      {mode === "template" && desktop && (
+        <DodelaVezbacu
+          open={assignOpen}
+          onOpenChange={setAssignOpen}
+          naslov={templateName}
+          podnaslov="Dodeli plan ishrane"
+          napomena="Plan zamenjuje vežbačev trenutni plan ishrane."
+          onDodeli={handleAssign}
+        />
+      )}
+
       {/* Assign - samo u template modu (dodeljeni plan je vec dodeljen) */}
-      {mode === "template" && (
+      {mode === "template" && !desktop && (
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
         <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
           <DialogHeader><DialogTitle>Dodeli vežbaču</DialogTitle></DialogHeader>

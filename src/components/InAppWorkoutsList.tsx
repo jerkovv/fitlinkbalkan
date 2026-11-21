@@ -148,6 +148,7 @@ export const InAppWorkoutsList = ({ athleteId, limit = 10 }: Props) => {
         sessionId={openSessionId}
         open={!!openSessionId}
         onOpenChange={(o) => !o && setOpenSessionId(null)}
+        athleteId={athleteId}
       />
     </>
   );

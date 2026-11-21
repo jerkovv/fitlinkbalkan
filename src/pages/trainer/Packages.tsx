@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui-bits";
@@ -34,6 +34,17 @@ type Pkg = {
 const PACKAGE_LIMIT = 20;
 const empty = { name: "", sessions_count: "12", duration_days: "28", price_rsd: "12000" };
 
+// Isti oblici reci i opisi cene kao na iOS-u (Reci, TrenerPaket).
+const treningaTekst = (n: number) => (n % 10 === 1 && n % 100 !== 11 ? `${n} trening` : `${n} treninga`);
+const danaTekst = (n: number) => (n % 10 === 1 && n % 100 !== 11 ? `${n} dan` : `${n} dana`);
+const rsdTekst = (n: number) => Math.round(n).toLocaleString("sr-Latn-RS");
+const opisCene = (p: Pkg) => {
+  const delovi: string[] = [];
+  if (p.sessions_count > 1) delovi.push(`${rsdTekst(p.price_rsd / p.sessions_count)} RSD po treningu`);
+  if (p.duration_days > 1) delovi.push(`${rsdTekst(p.price_rsd / p.duration_days)} po danu`);
+  return delovi.length ? delovi.join(" · ") : "Jednokratno";
+};
+
 const Packages = () => {
   const { locked, openLock } = usePretplataLock();
   const { user } = useAuth();
@@ -45,17 +56,33 @@ const Packages = () => {
   const [editing, setEditing] = useState<Pkg | null>(null);
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
+  // Racunar: da li su paketi bar jednom stigli. Do tada nema ni brojaca ni "nemaš paketa".
+  const [ucitano, setUcitano] = useState(false);
+  const [neuspelo, setNeuspelo] = useState(false);
+  // Potvrda (z-50) bi na racunaru ostala ispod prozora forme (z-100), pa se on sakrije dok se pita.
+  const [pitam, setPitam] = useState(false);
 
   const load = async () => {
     if (!user) return;
-    setLoading(true);
+    // Racunar: osvezavanje posle izmene ne gasi mrezu kartica.
+    if (!desktop || !ucitano) setLoading(true);
     const { data, error } = await supabase
       .from("membership_packages")
       .select("*")
       .eq("trainer_id", user.id)
       .order("created_at", { ascending: false });
-    if (error) toast.error(porukaGreske(error));
+    if (error) {
+      toast.error(porukaGreske(error));
+      // Neuspelo citanje ne sme da izgleda kao da paketa nema.
+      if (desktop) {
+        setNeuspelo(!ucitano);
+        setLoading(false);
+        return;
+      }
+    }
     setPackages((data as any[]) ?? []);
+    setUcitano(true);
+    setNeuspelo(false);
     setLoading(false);
   };
 
@@ -63,11 +90,27 @@ const Packages = () => {
 
   const activeCount = packages.filter((p) => p.is_active).length;
 
+  // Redosled kao na iOS-u: aktivni prvi, pa od najskupljeg.
+  const poredjani = useMemo(
+    () => [...packages].sort((a, b) => Number(b.is_active) - Number(a.is_active) || b.price_rsd - a.price_rsd),
+    [packages],
+  );
+
   const openNew = () => {
     if (locked) return openLock();
     setEditing(null);
     setForm(empty);
     setOpen(true);
+  };
+
+  // Na granici dugme ostaje zivo i kaze zasto ne moze, umesto da bude sivo bez objasnjenja.
+  const openNewDesktop = () => {
+    if (locked) return openLock();
+    if (activeCount >= PACKAGE_LIMIT) {
+      toast.error(`Imaš ${PACKAGE_LIMIT} aktivnih paketa. Isključi neki pa napravi novi.`);
+      return;
+    }
+    openNew();
   };
 
   const openEdit = (p: Pkg) => {
@@ -90,9 +133,9 @@ const Packages = () => {
     const dd = parseInt(form.duration_days, 10);
     const pr = parseInt(form.price_rsd, 10);
 
-    if (!name) return toast.error("Naziv je obavezan");
-    if (!sc || sc < 1 || sc > 200) return toast.error("Broj treninga 1-200");
-    if (!dd || dd < 1 || dd > 365) return toast.error("Trajanje 1-365 dana");
+    if (!name) return toast.error(desktop ? "Upiši naziv paketa." : "Naziv je obavezan");
+    if (!sc || sc < 1 || sc > 200) return toast.error(desktop ? "Broj treninga je od 1 do 200." : "Broj treninga 1-200");
+    if (!dd || dd < 1 || dd > 365) return toast.error(desktop ? "Trajanje je od 1 do 365 dana." : "Trajanje 1-365 dana");
     if (isNaN(pr) || pr < 0) return toast.error("Cena mora biti broj");
 
     setSaving(true);
@@ -113,22 +156,54 @@ const Packages = () => {
 
   const toggleActive = async (p: Pkg) => {
     if (locked) return openLock();
+    if (desktop && !p.is_active && activeCount >= PACKAGE_LIMIT) {
+      return toast.error(`Najviše ${PACKAGE_LIMIT} aktivnih paketa. Isključi neki pre nego što uključiš ovaj.`);
+    }
+    const postavi = (aktivan: boolean) =>
+      setPackages((sve) => sve.map((x) => (x.id === p.id ? { ...x, is_active: aktivan } : x)));
+    if (desktop) postavi(!p.is_active);
     const { error } = await supabase
       .from("membership_packages")
       .update({ is_active: !p.is_active })
       .eq("id", p.id);
-    if (error) return toast.error(porukaGreske(error));
+    if (error) {
+      if (desktop) postavi(p.is_active);
+      return toast.error(porukaGreske(error));
+    }
     load();
   };
 
   const remove = async (p: Pkg) => {
     if (locked) return openLock();
-    if (!(await confirm({ title: `Obriši paket "${p.name}"?`, destructive: true }))) return;
+    setPitam(true);
+    const ok = await confirm(
+      desktop
+        ? {
+            title: "Obrisati paket?",
+            description: "Vežbači ga više neće videti. Postojeće članarine ostaju.",
+            confirmLabel: "Obriši",
+            destructive: true,
+          }
+        : { title: `Obriši paket "${p.name}"?`, destructive: true },
+    );
+    setPitam(false);
+    if (!ok) return;
     const { error } = await supabase.from("membership_packages").delete().eq("id", p.id);
-    if (error) return toast.error(porukaGreske(error));
+    if (error) {
+      return toast.error(
+        desktop && error.code === "23503"
+          ? "Paket nije obrisan. Ako ga je neko već kupio, samo ga isključi."
+          : porukaGreske(error),
+      );
+    }
     toast.success("Paket obrisan");
+    setOpen(false);
     load();
   };
+
+  // Ziv pregled cene po treningu u formi.
+  const brojTreninga = parseInt(form.sessions_count, 10);
+  const iznos = parseInt(form.price_rsd, 10);
 
   return (
     <>
@@ -151,12 +226,13 @@ const Packages = () => {
         action={
           desktop ? (
             <>
-              <span className="text-[12.5px] font-semibold text-muted-foreground tnum">
-                {activeCount} / {PACKAGE_LIMIT} aktivnih
-              </span>
+              {ucitano && (
+                <span className="text-[12.5px] font-semibold text-muted-foreground tnum">
+                  {activeCount} / {PACKAGE_LIMIT} aktivnih
+                </span>
+              )}
               <Button
-                onClick={openNew}
-                disabled={activeCount >= PACKAGE_LIMIT}
+                onClick={openNewDesktop}
                 className="h-10 rounded-full px-4 bg-gradient-brand text-white shadow-brand"
               >
                 <LockMark className="mr-1.5" />
@@ -187,16 +263,23 @@ const Packages = () => {
           <div className="flex justify-center py-16">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
+        ) : desktop && neuspelo ? (
+          <Card className="space-y-3 p-6 py-14 text-center">
+            <p className="text-[14px] font-semibold">Paketi nisu učitani.</p>
+            <Button variant="outline" onClick={load} className="h-10 rounded-full px-4">
+              Pokušaj ponovo
+            </Button>
+          </Card>
         ) : packages.length === 0 ? (
           <Card className={cn("p-6 text-center space-y-3", desktop && "py-14")}>
             <div className="h-12 w-12 mx-auto rounded-2xl bg-muted flex items-center justify-center">
               <Package className="h-5 w-5 text-muted-foreground" />
             </div>
             <div className="font-display text-[18px] font-bold tracking-tight">
-              Još nemaš paketa
+              {desktop ? "Napravi prvi paket" : "Još nemaš paketa"}
             </div>
             <p className="text-[13px] text-muted-foreground">
-              Dodaj paket da vežbači mogu da kupe članarinu.
+              {desktop ? "Vežbači biraju paket i šalju zahtev za uplatu." : "Dodaj paket da vežbači mogu da kupe članarinu."}
             </p>
             {desktop && (
               <Button
@@ -213,10 +296,17 @@ const Packages = () => {
           // Racunar: vrh sa paketom koji je najjeftiniji po treningu i poredjenjem cene
           // po treningu (Ponoc), pa mreza kartica sa cenom, sadrzajem i kontrolama.
           <div className="space-y-4">
-          <VrhPaketa paketi={packages.filter((x) => x.is_active)} />
+          <VrhPaketa paketi={packages.filter((x) => x.is_active)} onOtvori={openEdit} />
           <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
-            {packages.map((p) => (
-              <div key={p.id} className="group card-premium-hover flex min-h-[208px] flex-col p-5">
+            {poredjani.map((p) => (
+              <div key={p.id} className="group card-premium-hover relative flex min-h-[208px] flex-col p-5">
+                {/* Klik na karticu otvara izmenu, kao red na iOS-u; kontrole su iznad njega (z-10). */}
+                <button
+                  type="button"
+                  onClick={() => openEdit(p)}
+                  aria-label={`Izmeni paket ${p.name}`}
+                  className="absolute inset-0 rounded-[inherit]"
+                />
                 <div className="flex items-start justify-between gap-3">
                   <div
                     className={cn(
@@ -226,7 +316,7 @@ const Packages = () => {
                   >
                     <Package className="h-5 w-5 text-primary" strokeWidth={2.25} />
                   </div>
-                  <label className="flex cursor-pointer items-center gap-2">
+                  <label className="relative z-10 flex cursor-pointer items-center gap-2">
                     <span className="text-[11.5px] font-semibold text-muted-foreground">
                       {p.is_active ? "Aktivan" : "Neaktivan"}
                     </span>
@@ -245,23 +335,19 @@ const Packages = () => {
                     </span>
                     <span className="text-[12px] font-semibold text-muted-foreground">RSD</span>
                   </div>
-                  {p.sessions_count > 0 && (
-                    <div className="mt-1 text-[12px] text-muted-foreground tnum">
-                      {Math.round(p.price_rsd / p.sessions_count).toLocaleString("sr-Latn-RS")} RSD po treningu
-                    </div>
-                  )}
+                  <div className="mt-1 text-[12px] text-muted-foreground tnum">{opisCene(p)}</div>
                 </div>
 
                 <div className="mt-auto flex items-center justify-between gap-2 pt-4">
                   <div className={cn("flex flex-wrap items-center gap-1.5", !p.is_active && "opacity-60")}>
                     <span className="inline-flex items-center rounded-full bg-primary-soft px-2.5 py-1 text-[11.5px] font-semibold text-primary tnum">
-                      {p.sessions_count} treninga
+                      {treningaTekst(p.sessions_count)}
                     </span>
                     <span className="inline-flex items-center rounded-full bg-surface-2 px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground tnum">
-                      {p.duration_days} dana
+                      {danaTekst(p.duration_days)}
                     </span>
                   </div>
-                  <div className="flex shrink-0 items-center gap-1">
+                  <div className="relative z-10 flex shrink-0 items-center gap-1">
                     <button
                       onClick={() => openEdit(p)}
                       aria-label="Izmeni"
@@ -341,6 +427,7 @@ const Packages = () => {
         open={open}
         onClose={() => setOpen(false)}
         title={editing ? "Izmeni paket" : "Novi paket"}
+        hidden={pitam}
       >
         <FullScreenSheetScroll className="pt-5 space-y-4">
           <div className="space-y-1.5">
@@ -349,7 +436,7 @@ const Packages = () => {
               id="pname"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="npr. 12 treninga / 4 nedelje"
+              placeholder={desktop ? "Mesečna 12" : "npr. 12 treninga / 4 nedelje"}
               className="h-14 text-base rounded-2xl"
               autoFocus
             />
@@ -391,6 +478,12 @@ const Packages = () => {
               className="h-14 text-base rounded-2xl"
             />
           </div>
+          {desktop && brojTreninga > 0 && iznos > 0 && (
+            <div className="flex items-center justify-between rounded-[14px] bg-primary-soft px-3.5 py-3">
+              <span className="text-[12.5px] text-muted-foreground">Po treningu</span>
+              <span className="text-[13.5px] font-bold text-primary tnum">{rsdTekst(iznos / brojTreninga)} RSD</span>
+            </div>
+          )}
         </FullScreenSheetScroll>
         <FullScreenSheetFooter>
           <Button
@@ -399,8 +492,18 @@ const Packages = () => {
             className="w-full bg-gradient-brand text-white shadow-brand"
           >
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Sačuvaj
+            {desktop && saving ? "Čuvam..." : "Sačuvaj"}
           </Button>
+          {desktop && editing && (
+            <button
+              type="button"
+              onClick={() => remove(editing)}
+              disabled={saving}
+              className="mt-2 h-10 w-full text-[14px] font-semibold text-destructive disabled:opacity-50"
+            >
+              Obriši paket
+            </button>
+          )}
         </FullScreenSheetFooter>
       </FullScreenSheet>
     </>
@@ -412,7 +515,7 @@ export default Packages;
 // ===== Vrh ekrana na racunaru (Ponoc) =====
 // Paket sa najnizom cenom po treningu kao istaknuta kartica, pored poredjenje cene
 // po treningu za sve aktivne pakete. Paketi bez broja treninga se ne porede.
-const VrhPaketa = ({ paketi }: { paketi: Pkg[] }) => {
+const VrhPaketa = ({ paketi, onOtvori }: { paketi: Pkg[]; onOtvori: (p: Pkg) => void }) => {
   const saTreninzima = paketi.filter((x) => x.sessions_count > 0);
   if (saTreninzima.length === 0) return null;
   const poTreningu = (x: Pkg) => Math.round(x.price_rsd / x.sessions_count);
@@ -425,11 +528,20 @@ const VrhPaketa = ({ paketi }: { paketi: Pkg[] }) => {
     <div className="grid grid-cols-[minmax(0,1fr)_400px] gap-4">
       <section className="relative flex min-h-[206px] flex-col justify-between overflow-hidden rounded-[28px] bg-gradient-brand p-6 text-white shadow-[0_30px_60px_-28px_hsl(267_81%_58%/0.9),inset_0_0_0_1px_hsl(0_0%_100%/0.18)]">
         <span aria-hidden className="absolute -right-16 -top-24 h-80 w-80 rounded-full bg-white/15 blur-[50px]" />
+        <button
+          type="button"
+          onClick={() => onOtvori(najbolji)}
+          aria-label={`Izmeni paket ${najbolji.name}`}
+          className="absolute inset-0 z-10 rounded-[inherit]"
+        />
         <div className="relative">
-          <span className="inline-flex rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-semibold">Najbolja cena po treningu</span>
-          <h2 className="mt-2.5 font-display text-[26px] font-bold tracking-[-0.025em]">{najbolji.name}</h2>
+          {/* Sa jednim paketom nema poredjenja, pa ni "najbolje cene". */}
+          {paketi.length > 1 && (
+            <span className="mb-2.5 inline-flex rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-semibold">Najbolja cena</span>
+          )}
+          <h2 className="font-display text-[26px] font-bold tracking-[-0.025em]">{najbolji.name}</h2>
           <p className="mt-1 text-[13px] text-white/90">
-            {najbolji.sessions_count} treninga · {najbolji.duration_days} dana
+            {treningaTekst(najbolji.sessions_count)} · {danaTekst(najbolji.duration_days)}
           </p>
         </div>
         <div className="relative">
@@ -437,10 +549,7 @@ const VrhPaketa = ({ paketi }: { paketi: Pkg[] }) => {
             <span className="fig text-[40px] leading-none">{rsd(najbolji.price_rsd)}</span>
             <span className="text-[11px] font-semibold tracking-[0.14em] text-white/80">RSD</span>
           </div>
-          <p className="mt-1.5 text-[13px] text-white/90">
-            {rsd(poTreningu(najbolji))} RSD po treningu
-            {najbolji.duration_days > 0 && ` · ${rsd(Math.round(najbolji.price_rsd / najbolji.duration_days))} RSD po danu`}
-          </p>
+          <p className="mt-1.5 text-[13px] text-white/90">{opisCene(najbolji)}</p>
         </div>
       </section>
       <section className="card-premium rounded-[26px]">

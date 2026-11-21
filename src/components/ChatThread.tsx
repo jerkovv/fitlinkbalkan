@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
 import { toast } from "sonner";
 import { useChat } from "@/hooks/useChat";
@@ -15,6 +16,7 @@ import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 function useKeyboardHeight() {
   const [height, setHeight] = useState(0);
   useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
     const showPromise = Keyboard.addListener("keyboardWillShow", (info) => {
       setHeight(info.keyboardHeight);
     });
@@ -38,6 +40,8 @@ interface ChatThreadProps {
   /** Gornji header je opcioni; obično ga roditelj već renderuje. */
   showHeader?: boolean;
   className?: string;
+  /** Brzi odgovori iznad polja za unos; prikazuju se samo na racunaru. */
+  brziOdgovori?: string[];
 }
 
 const formatTime = (iso: string) => {
@@ -65,11 +69,13 @@ export const ChatThread = ({
   subtitle,
   showHeader = false,
   className,
+  brziOdgovori,
 }: ChatThreadProps) => {
   const { user } = useAuth();
   const { messages, loading, sending, send, markRead } = useChat({ trainerId, athleteId });
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const poljeRef = useRef<HTMLTextAreaElement | null>(null);
   const keyboardHeight = useKeyboardHeight();
   // Racunar: poruke i polje za unos u koloni srednje sirine na sredini, da
   // mehurici ne beze na dve daleke ivice sirokog prozora.
@@ -133,7 +139,9 @@ export const ChatThread = ({
           </div>
         ) : messages.length === 0 ? (
           <div className="text-center text-[13px] text-muted-foreground py-10 px-6">
-            Još nema poruka. Pošalji prvu, pozdrav, pitanje, šta god.
+            {brziOdgovori?.length
+              ? "Započni razgovor. Vežbač dobija obaveštenje na telefon."
+              : "Još nema poruka. Pošalji prvu, pozdrav, pitanje, šta god."}
           </div>
         ) : (
           messages.map((m, i) => {
@@ -187,8 +195,27 @@ export const ChatThread = ({
           desktop ? "px-8 py-4" : "px-3 pt-2 pb-3",
         )}
       >
+        {desktop && !!brziOdgovori?.length && (
+          <div className="mx-auto mb-3 flex max-w-3xl flex-wrap gap-1.5">
+            {brziOdgovori.map((b) => (
+              <button
+                key={b}
+                type="button"
+                // Dodaje se na vec otkucano i ne salje se, kao u aplikaciji.
+                onClick={() => {
+                  setDraft((d) => (d ? `${d} ${b}` : b));
+                  poljeRef.current?.focus();
+                }}
+                className="rounded-full border border-primary/30 bg-surface px-3 py-1.5 text-[12.5px] font-medium text-primary transition hover:bg-primary-soft"
+              >
+                {b}
+              </button>
+            ))}
+          </div>
+        )}
         <div className={cn("flex items-end gap-2", desktop && "mx-auto max-w-3xl")}>
           <textarea
+            ref={poljeRef}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {

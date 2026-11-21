@@ -1,6 +1,7 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
 
 import { cn } from "@/lib/utils";
@@ -28,6 +29,7 @@ const KeyboardHeightContext = React.createContext(0);
 function useKeyboardHeight() {
   const [height, setHeight] = React.useState(0);
   React.useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
     const showPromise = Keyboard.addListener("keyboardWillShow", (info) => {
       setHeight(info.keyboardHeight);
     });

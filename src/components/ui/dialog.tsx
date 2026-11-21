@@ -1,6 +1,7 @@
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
 
 import { cn } from "@/lib/utils";
@@ -55,15 +56,18 @@ const DialogContent = React.forwardRef<
   //    kad je unutar <form> (rebuild forme da footer ostane u njoj radi submita).
   const [keyboardHeight, setKeyboardHeight] = React.useState(0);
   React.useEffect(() => {
+    // Keyboard plugin postoji samo u nativnoj aplikaciji; na webu poziv puca.
+    if (!Capacitor.isNativePlatform()) return;
     const showPromise = Keyboard.addListener("keyboardWillShow", (info) => {
       setKeyboardHeight(info.keyboardHeight);
     });
     const hidePromise = Keyboard.addListener("keyboardWillHide", () => {
       setKeyboardHeight(0);
     });
+    // Handle stize asinhrono, pa se uklanja i kad se modal zatvori pre nego sto stigne.
     return () => {
-      showPromise.then((h) => h.remove());
-      hidePromise.then((h) => h.remove());
+      void showPromise.then((h) => h.remove()).catch(() => undefined);
+      void hidePromise.then((h) => h.remove()).catch(() => undefined);
     };
   }, []);
 

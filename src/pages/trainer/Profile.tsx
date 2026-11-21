@@ -12,7 +12,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Loader2, Save, Users, Dumbbell, Apple, X, Plus, Landmark, Eye, Ban, Globe, Copy, ExternalLink,
-  ShieldCheck, UserRound, Briefcase, Sparkles, type LucideIcon,
+  ShieldCheck, UserRound, Briefcase, Sparkles, CalendarCheck, Share2, type LucideIcon,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -24,6 +24,9 @@ import { DeleteAccountSheet } from "@/components/DeleteAccountSheet";
 import { SITE_BASE, publicTrainerUrl } from "@/lib/publicUrl";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { PravnoIPodrska } from "@/components/PravnoIPodrska";
+import {
+  ProfilCeline, ProfilMesec, ProfilOdjava, ProfilPretplata, ProfilVrh, pripremiSlikuProfila,
+} from "@/components/trainer/web/pocetna/ProfilDelovi";
 
 const SITE_HOST = new URL(SITE_BASE).host;
 
@@ -135,6 +138,10 @@ const Profile = () => {
   const [publicSlug, setPublicSlug] = useState("");
   const [publicEnabled, setPublicEnabled] = useState(true);
   const [headline, setHeadline] = useState("");
+  // Racunar: slika ceka na "Sacuvaj", a "Otvori stranicu" vodi na vec sacuvan link.
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [novaSlika, setNovaSlika] = useState<File | null>(null);
+  const [sacuvaniSlug, setSacuvaniSlug] = useState("");
   const [slugError, setSlugError] = useState<string | null>(null);
   const [yearsError, setYearsError] = useState<string | null>(null);
 
@@ -164,7 +171,7 @@ const Profile = () => {
       setLoading(true);
 
       const [pRes, tRes, aCount, prCount, nuCount, sRes] = await Promise.all([
-        supabase.from("profiles").select("full_name, phone").eq("id", user.id).maybeSingle(),
+        supabase.from("profiles").select("full_name, phone, avatar_url").eq("id", user.id).maybeSingle(),
         supabase.from("trainers").select("*").eq("id", user.id).maybeSingle(),
         supabase
           .from("athletes")
@@ -207,6 +214,8 @@ const Profile = () => {
       setPublicSlug(t.public_slug ?? "");
       setPublicEnabled(t.public_enabled !== false);
       setHeadline(t.headline ?? "");
+      setAvatarUrl(p.avatar_url ?? t.avatar_url ?? null);
+      setSacuvaniSlug(t.public_slug ?? "");
       
 
       setStats({
@@ -237,7 +246,9 @@ const Profile = () => {
   const validateSlug = (s: string): string | null => {
     if (!s) return null; // null je OK (sakriva landing)
     if (!/^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/.test(s)) {
-      return "Slug: 3-40 znakova, mala slova, brojevi, crtice. Bez razmaka.";
+      return desktop
+        ? "Link: 3-40 znakova, mala slova, brojevi i crtice (ne na početku ni na kraju)."
+        : "Slug: 3-40 znakova, mala slova, brojevi, crtice. Bez razmaka.";
     }
     return null;
   };
@@ -267,11 +278,23 @@ const Profile = () => {
 
     setSaving(true);
     try {
+      let novaAdresa: string | null = null;
+      if (novaSlika) {
+        const podaci = await pripremiSlikuProfila(novaSlika);
+        const putanja = `${user.id}/slika-${Math.floor(Date.now() / 1000)}.jpg`;
+        const { error: slikaErr } = await supabase.storage
+          .from("avatars")
+          .upload(putanja, podaci, { contentType: "image/jpeg" });
+        if (slikaErr) throw slikaErr;
+        novaAdresa = supabase.storage.from("avatars").getPublicUrl(putanja).data.publicUrl;
+      }
+
       const { error: pErr } = await supabase
         .from("profiles")
         .update({
           full_name: fullName.trim() || null,
           phone: phone.trim() || null,
+          ...(novaAdresa ? { avatar_url: novaAdresa } : {}),
         })
         .eq("id", user.id);
       if (pErr) throw pErr;
@@ -299,15 +322,21 @@ const Profile = () => {
           public_slug: slugClean || null,
           public_enabled: publicEnabled,
           headline: headline.trim() || null,
+          ...(novaAdresa ? { avatar_url: novaAdresa } : {}),
         } as any)
         .eq("id", user.id);
       if (tErr) {
         if ((tErr.message || "").toLowerCase().includes("uniq_trainers_public_slug")) {
-          throw new Error("Taj slug je već zauzet, izaberi drugi.");
+          throw new Error(desktop ? "Taj link je već zauzet, izaberi drugi." : "Taj slug je već zauzet, izaberi drugi.");
         }
         throw tErr;
       }
 
+      if (novaAdresa) {
+        setAvatarUrl(novaAdresa);
+        setNovaSlika(null);
+      }
+      setSacuvaniSlug(slugClean);
       toast.success("Profil sačuvan");
     } catch (e: any) {
       toast.error(porukaGreske(e));
@@ -327,6 +356,36 @@ const Profile = () => {
     }
   };
 
+  // Podeli: sistemski prozor gde postoji, inace kopiranje linka.
+  const podeliJavniLink = async () => {
+    const url = publicTrainerUrl(publicSlug.trim().toLowerCase());
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ url });
+      } catch (e) {
+        if ((e as { name?: string })?.name !== "AbortError") toast.error(porukaGreske(e));
+      }
+      return;
+    }
+    await kopirajJavniLink();
+  };
+
+  // Racunar: prekidac radi odmah, kao red javne stranice na profilu u aplikaciji.
+  const prebaciJavnu = async (vidljiva: boolean) => {
+    if (locked) return openLock();
+    if (!user) return;
+    const pre = publicEnabled;
+    setPublicEnabled(vidljiva);
+    const { error } = await supabase
+      .from("trainers")
+      .update({ public_enabled: vidljiva } as any)
+      .eq("id", user.id);
+    if (error) {
+      setPublicEnabled(pre);
+      toast.error(porukaGreske(error));
+    }
+  };
+
   // Polja su izdvojena jer ih telefon i racunar slazu razlicito (jedna kolona
   // naspram mreze u dve kolone), a svako polje sme da postoji na samo jednom mestu.
   const poljeIme = (
@@ -343,7 +402,7 @@ const Profile = () => {
 
   const poljeEmail = (
     <div className="space-y-1.5">
-      <Label>Email</Label>
+      <Label>{desktop ? "Mejl" : "Email"}</Label>
       <Input value={user?.email ?? ""} disabled />
     </div>
   );
@@ -363,7 +422,7 @@ const Profile = () => {
 
   const poljeStudio = (
     <div className="space-y-1.5">
-      <Label htmlFor="studio">Studio / teretana</Label>
+      <Label htmlFor="studio">{desktop ? "Studio" : "Studio / teretana"}</Label>
       <Input
         id="studio"
         value={studio}
@@ -387,7 +446,7 @@ const Profile = () => {
 
   const poljeGodine = (
     <div className="space-y-1.5">
-      <Label htmlFor="years">Godine iskustva</Label>
+      <Label htmlFor="years">{desktop ? "Iskustvo (god.)" : "Godine iskustva"}</Label>
       <Input
         id="years"
         type="number"
@@ -491,18 +550,24 @@ const Profile = () => {
   const javnoVidljivo = (
     <div className="flex items-start justify-between gap-4">
       <div className="flex-1 min-w-0">
-        <div className="text-[14px] font-semibold tracking-tight">Vidljivo javnosti</div>
+        <div className="text-[14px] font-semibold tracking-tight">
+          {desktop ? "Stranica je vidljiva" : "Vidljivo javnosti"}
+        </div>
         <div className="text-[12px] text-muted-foreground mt-0.5">
-          Ako isključiš, niko ne može otvoriti tvoj /t/ link.
+          {desktop ? "Ako isključiš, niko ne može da otvori tvoj /t/ link" : "Ako isključiš, niko ne može otvoriti tvoj /t/ link."}
         </div>
       </div>
-      <Switch checked={publicEnabled} onCheckedChange={setPublicEnabled} />
+      <Switch
+        checked={publicEnabled}
+        onCheckedChange={desktop ? (v) => void prebaciJavnu(v) : setPublicEnabled}
+        aria-label="Stranica je vidljiva"
+      />
     </div>
   );
 
   const javnoSlug = (
     <div className="space-y-1.5">
-      <Label htmlFor="slug">Tvoj slug</Label>
+      <Label htmlFor="slug">{desktop ? "Link" : "Tvoj slug"}</Label>
       <div className="flex items-stretch rounded-md border border-input bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-0">
         <span
           className="flex items-center px-3 text-[12.5px] text-muted-foreground bg-muted/50 border-r border-input max-w-[55%] truncate tnum"
@@ -541,7 +606,7 @@ const Profile = () => {
 
   const javnoHeadline = (
     <div className="space-y-1.5">
-      <Label htmlFor="headline">Slogan / headline</Label>
+      <Label htmlFor="headline">{desktop ? "Kratak opis" : "Slogan / headline"}</Label>
       <Input
         id="headline"
         value={headline}
@@ -602,6 +667,45 @@ const Profile = () => {
           <SelectItem value="48">48 sati pre termina</SelectItem>
         </SelectContent>
       </Select>
+    </div>
+  );
+
+  // Racunar: isti izbor roka i isti tekst kao u aplikaciji.
+  const rezervacijeDesktop = (
+    <div className="space-y-4">
+      <div className="space-y-2.5">
+        <div>
+          <div className="text-[14px] font-semibold tracking-tight">Besplatno otkazivanje</div>
+          <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted-foreground">
+            {cancelCutoff === 0
+              ? "Bez ograničenja, do početka termina"
+              : `Najkasnije ${cancelCutoff} ${cancelCutoff >= 5 ? "sati" : "sata"} pre termina. Kasnije otkazivanje oslobađa mesto, ali se vežbaču računa kao trening.`}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Besplatno otkazivanje">
+          {[0, 2, 4, 6, 12, 24, 48].map((h) => (
+            <button
+              key={h}
+              type="button"
+              aria-pressed={cancelCutoff === h}
+              onClick={() => setCancelCutoff(h)}
+              className={cn(
+                "h-8 rounded-full px-3 text-[12.5px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                cancelCutoff === h ? "bg-gradient-brand text-white" : "bg-surface-2 text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {h === 0 ? "Bez" : `${h}h`}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-4 border-t border-hairline pt-4">
+        <div className="min-w-0">
+          <div className="text-[14px] font-semibold tracking-tight">Vežbači vide ko dolazi</div>
+          <div className="text-[11.5px] text-muted-foreground">Na grupnim terminima</div>
+        </div>
+        <Switch checked={showAttendees} onCheckedChange={setShowAttendees} aria-label="Vežbači vide ko dolazi" />
+      </div>
     </div>
   );
 
@@ -674,7 +778,7 @@ const Profile = () => {
 
   const bankaSvrha = (
     <div className="space-y-1.5">
-      <Label htmlFor="bankPurpose">Svrha uplate</Label>
+      <Label htmlFor="bankPurpose">{desktop ? "Svrha" : "Svrha uplate"}</Label>
       <Input
         id="bankPurpose"
         value={bankPurpose}
@@ -748,31 +852,24 @@ const Profile = () => {
           // Racunar: brojke u redu gore, pa forma levo i kratka podesavanja desno.
           // Jedna kolona kartica je na sirokom ekranu bila dugacak niz uskih polja.
           <>
-            <div
-              className={cn(
-                "grid gap-4",
-                pretplataTekst ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-3",
-              )}
-            >
+            <ProfilVrh
+              ime={fullName}
+              studio={studio}
+              grad={city}
+              specijalnosti={specialties}
+              slika={avatarUrl}
+              nova={novaSlika}
+              onNova={setNovaSlika}
+            />
+
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
               <ProfilStat icon={Users} label="Vežbača" value={stats.athletes} />
               <ProfilStat icon={Dumbbell} label="Programa" value={stats.programs} />
               <ProfilStat icon={Apple} label="Ishrana" value={stats.nutrition} />
-              {pretplataTekst && (
-                <Card className="p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                      FitLink pretplata
-                    </span>
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-soft">
-                      <ShieldCheck className="h-4 w-4 text-primary" />
-                    </div>
-                  </div>
-                  <div className="mt-3 text-[14px] font-semibold leading-snug tracking-tight line-clamp-2">
-                    {pretplataTekst}
-                  </div>
-                </Card>
-              )}
+              <ProfilPretplata />
             </div>
+
+            <ProfilMesec />
 
             <div className="grid grid-cols-[minmax(0,1fr)_340px] items-start gap-6 pt-2">
               <div className="min-w-0 space-y-4">
@@ -814,7 +911,7 @@ const Profile = () => {
                     {javnoSlug}
                     {javnoHeadline}
                   </div>
-                  {javniLinkSpreman && (
+                  {publicSlug.length >= 3 && !slugError && (
                     <div className="flex justify-end gap-2">
                       <Button
                         type="button"
@@ -828,10 +925,20 @@ const Profile = () => {
                         type="button"
                         variant="outline"
                         className="h-10 rounded-full px-4"
-                        onClick={() => window.open(publicTrainerUrl(publicSlug.trim().toLowerCase()), "_blank")}
+                        onClick={() => void podeliJavniLink()}
                       >
-                        <ExternalLink className="h-4 w-4 mr-1.5" /> Otvori stranicu
+                        <Share2 className="h-4 w-4 mr-1.5" /> Podeli
                       </Button>
+                      {publicEnabled && sacuvaniSlug && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-10 rounded-full px-4"
+                          onClick={() => window.open(publicTrainerUrl(sacuvaniSlug), "_blank", "noopener")}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-1.5" /> Otvori stranicu
+                        </Button>
+                      )}
                     </div>
                   )}
                 </Card>
@@ -864,16 +971,15 @@ const Profile = () => {
 
               <div className="space-y-4">
                 <Card className="p-5 space-y-4">
-                  <DeoNaslov icon={Eye} naslov="Privatnost termina" />
-                  {privatnostRed}
+                  <DeoNaslov icon={CalendarCheck} naslov="Rezervacije" />
+                  {rezervacijeDesktop}
                 </Card>
 
-                <Card className="p-5 space-y-4">
-                  <DeoNaslov icon={Ban} naslov="Pravila otkazivanja" />
-                  {otkazivanjeBlok}
-                </Card>
+                <ProfilCeline />
 
-                <PravnoIPodrska />
+                <PravnoIPodrska podrskaTo="/trener/podrska" izdavac />
+
+                <ProfilOdjava />
 
                 {nalogKartica}
               </div>

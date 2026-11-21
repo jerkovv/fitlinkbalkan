@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Dumbbell, Flame, Clock, Heart, Link2, Minus, TrendingUp, TrendingDown } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Dumbbell, Flame, Clock, Heart, Link2, Minus, Share2, TrendingUp, TrendingDown, UserRound } from "lucide-react";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 import {
   Dialog, DialogContent, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -20,6 +22,10 @@ interface Props {
   sessionId: string | null;
   open: boolean;
   onOpenChange: (o: boolean) => void;
+  /** Trener gleda trening svog vezbaca: na racunaru dobija "Podeli". */
+  athleteId?: string;
+  /** Otvoreno iz obavestenja, gde je profil vezbaca sledeci korak. */
+  prikaziProfil?: boolean;
 }
 
 interface InAppSet {
@@ -91,7 +97,8 @@ const fmtTime = (iso: string) => {
   return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
 };
 
-export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange }: Props) => {
+export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange, athleteId, prikaziProfil }: Props) => {
+  const desktop = useDesktopWeb();
   const { data, isLoading } = useQuery({
     queryKey: ["inapp_workout_detail", sessionId],
     enabled: !!sessionId && open,
@@ -180,6 +187,29 @@ export const InAppWorkoutDetailDialog = ({ sessionId, open, onOpenChange }: Prop
                 )}
               </div>
             </div>
+
+            {desktop && athleteId && (
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  to={`/trener/objave?kartica=trening&sesija=${detail.id}&vezbac=${athleteId}`}
+                  onClick={() => onOpenChange(false)}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full bg-gradient-brand px-3.5 text-[12.5px] font-semibold text-white shadow-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  <Share2 className="h-3.5 w-3.5" />
+                  Podeli
+                </Link>
+                {prikaziProfil && (
+                  <Link
+                    to={`/trener/vezbaci/${athleteId}`}
+                    onClick={() => onOpenChange(false)}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-full border border-hairline bg-surface-2 px-3.5 text-[12.5px] font-semibold transition hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  >
+                    <UserRound className="h-3.5 w-3.5" />
+                    Otvori profil vežbača
+                  </Link>
+                )}
+              </div>
+            )}
 
             {/* Stats 2x2 */}
             <Card className="p-4">

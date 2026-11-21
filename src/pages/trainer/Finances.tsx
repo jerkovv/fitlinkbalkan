@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { useConfirm } from "@/hooks/useConfirm";
 import { SendMessageToAthlete } from "@/components/SendMessageToAthlete";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { LockMark } from "@/components/pretplata/LockMark";
@@ -17,6 +18,7 @@ import { toast } from "sonner";
 import {
   FullScreenSheet,
   FullScreenSheetScroll,
+  FullScreenSheetFooter,
 } from "@/components/ui/full-screen-sheet";
 
 type Purchase = {
@@ -223,6 +225,7 @@ const Finances = () => {
   const { user } = useAuth();
   const desktop = useDesktopWeb();
   const { locked, openLock } = usePretplataLock();
+  const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   // Potvrdjene clanarine za koje novac jos nije stigao
@@ -234,8 +237,11 @@ const Finances = () => {
   const [pendingAmount, setPendingAmount] = useState<number>(0);
   const [expiring, setExpiring] = useState<Expiring[]>([]);
   const [runRate, setRunRate] = useState<number>(0);
+  const [aktivnihClanarina, setAktivnihClanarina] = useState<number>(0);
   const [period, setPeriod] = useState<Period>(6);
   const [selected, setSelected] = useState<Purchase | null>(null);
+  // Potvrda (z-50) bi na racunaru ostala ispod prozora detalja (z-100), pa se on sakrije dok se pita.
+  const [pitam, setPitam] = useState(false);
 
   // Brojac za tiho osvezavanje posle oznake "placeno".
   const [reloadKey, setReloadKey] = useState(0);
@@ -311,6 +317,8 @@ const Finances = () => {
       // Preskoci ako trajanje nije validno (0/null) da ne delimo nulom.
       const activeMems = (activeMemRes.data as any[]) ?? [];
       let rr = 0;
+      // Broj kao na iOS-u: i clanarina bez cene ili roka je aktivna, samo ne ulazi u iznos.
+      setAktivnihClanarina(activeMems.filter((m) => !m.ends_on || m.ends_on >= todayISO).length);
       for (const m of activeMems) {
         if (!m.price || !m.starts_on || !m.ends_on) continue;
         // Status "active" se ne prebacuje sam kad rok prodje; istekla ne ulazi u mesecni prihod.
@@ -345,26 +353,50 @@ const Finances = () => {
     })();
   }, [user, reloadKey]);
 
-  const markPaid = async (p: Purchase) => {
+  const setPaid = async (p: Purchase, paid: boolean) => {
     if (locked) return openLock();
     if (payingId) return;
+    // Racunar pita pre promene, isto kao Uplate. Skidanje oznake brise datum uplate:
+    // ponovna oznaka upisuje novi datum, pa prihod prelazi u taj mesec.
+    if (desktop) {
+      const ime = athleteNames.get(p.athlete_id) ?? "Vežbač";
+      setPitam(true);
+      const ok = await confirm(
+        paid
+          ? {
+              title: "Označiti kao plaćeno?",
+              description: `${ime} · ${p.package_name}`,
+              confirmLabel: "Plaćeno",
+            }
+          : {
+              title: "Označiti kao neplaćeno?",
+              description: `${ime} · ${p.package_name}. Uplata izlazi iz prihoda, a datum uplate se briše.`,
+              confirmLabel: "Neplaćeno",
+              destructive: true,
+            },
+      );
+      setPitam(false);
+      if (!ok) return;
+    }
     setPayingId(p.id);
     const { error } = await supabase.rpc("trainer_set_purchase_paid", {
       p_purchase_id: p.id,
-      p_paid: true,
+      p_paid: paid,
     });
     setPayingId(null);
     if (error) return toast.error(porukaGreske(error));
-    toast.success("Označeno kao plaćeno");
+    toast.success(paid ? "Označeno kao plaćeno" : "Označeno kao neplaćeno");
+    setSelected(null);
     setReloadKey((k) => k + 1);
   };
+  const markPaid = (p: Purchase) => setPaid(p, true);
 
   const unpaidTotal = useMemo(() => unpaid.reduce((s, p) => s + (p.price_rsd ?? 0), 0), [unpaid]);
 
   const markPaidButton = (p: Purchase, className?: string) => (
     <button
       type="button"
-      onClick={() => markPaid(p)}
+      onClick={(e) => { e.stopPropagation(); markPaid(p); }}
       disabled={payingId === p.id}
       className={cn(
         "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full bg-gradient-brand px-3.5 text-[12.5px] font-semibold text-white shadow-brand transition active:scale-[0.98] disabled:opacity-60",
@@ -408,7 +440,22 @@ const Finances = () => {
   );
 
   const thisMonth = byMonth[byMonth.length - 1] ?? 0;
-  const prevMonth = byMonth[byMonth.length - 2] ?? 0;
+  const punProsli = byMonth[byMonth.length - 2] ?? 0;
+  // Racunar kao iOS: prosli mesec samo do istog dana kao danas. Zapocet mesec se ne
+  // poredi sa celim, inace bi svaki mesec do kraja izgledao kao pad.
+  const prosliDoDanas = useMemo(() => {
+    const sad = new Date();
+    const od = new Date(sad.getFullYear(), sad.getMonth() - 1, 1);
+    const danaUProslom = new Date(sad.getFullYear(), sad.getMonth(), 0).getDate();
+    const doDana = new Date(od);
+    doDana.setDate(Math.min(sad.getDate(), danaUProslom));
+    doDana.setHours(sad.getHours(), sad.getMinutes(), sad.getSeconds(), sad.getMilliseconds());
+    return purchases.reduce((s, p) => {
+      const d = new Date(paidDate(p));
+      return d >= od && d <= doDana ? s + (p.price_rsd ?? 0) : s;
+    }, 0);
+  }, [purchases]);
+  const prevMonth = desktop ? prosliDoDanas : punProsli;
   const trend = prevMonth > 0 ? Math.round(((thisMonth - prevMonth) / prevMonth) * 100) : (thisMonth > 0 ? 100 : 0);
   const trendUp = trend >= 0;
 
@@ -459,13 +506,21 @@ const Finances = () => {
 
   // Raspodela po paketima u periodu
   const byPackage = useMemo(() => {
-    const m = new Map<string, number>();
+    const m = new Map<string, { total: number; broj: number }>();
     for (const p of periodPurchases) {
-      m.set(p.package_name, (m.get(p.package_name) ?? 0) + (p.price_rsd ?? 0));
+      const x = m.get(p.package_name) ?? { total: 0, broj: 0 };
+      m.set(p.package_name, { total: x.total + (p.price_rsd ?? 0), broj: x.broj + 1 });
     }
     return Array.from(m.entries())
-      .map(([name, total]) => ({ name, total }))
+      .map(([name, x]) => ({ name, total: x.total, broj: x.broj }))
       .sort((a, b) => b.total - a.total);
+  }, [periodPurchases]);
+
+  // Koliko uplata ima svaki klijent u periodu (red "Top klijenti" na iOS-u).
+  const uplataPoKlijentu = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const p of periodPurchases) m.set(p.athlete_id, (m.get(p.athlete_id) ?? 0) + 1);
+    return m;
   }, [periodPurchases]);
 
   const recent = purchases.slice(0, 8);
@@ -530,11 +585,11 @@ const Finances = () => {
                 hint={`Prosek ${avgMonthly.toLocaleString("sr-Latn-RS")} RSD po aktivnom mesecu`}
               />
               <DesktopKpi
-                label="Aktivni prihod / mes"
+                label="Aktivne članarine mesečno"
                 tone="brand"
                 value={runRate.toLocaleString("sr-Latn-RS")}
                 unit="RSD"
-                hint="Mesečna vrednost aktivnih članarina"
+                hint={`${aktivnihClanarina} aktivnih · cena preračunata na 30 dana`}
               />
               <Link to="/trener/uplate" className="block rounded-xl">
                 <DesktopKpi
@@ -587,7 +642,20 @@ const Finances = () => {
                 </div>
                 <div className="divide-y divide-hairline">
                   {unpaid.map((p) => (
-                    <div key={p.id} className={cn(UNPAID_GRID, "py-3")}>
+                    <div
+                      key={p.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSelected(p)}
+                      onKeyDown={(e) => {
+                        if (e.target !== e.currentTarget) return;
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelected(p);
+                        }
+                      }}
+                      className={cn(UNPAID_GRID, "cursor-pointer py-3 transition hover:bg-surface-2")}
+                    >
                       <span className="truncate text-[14px] font-semibold tracking-tight">
                         {athleteNames.get(p.athlete_id) ?? "Vežbač"}
                       </span>
@@ -620,15 +688,26 @@ const Finances = () => {
                       </span>
                     </div>
                   </div>
-                  <span className={cn(
-                    "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-semibold tnum",
-                    trendUp
-                      ? "bg-success-soft text-success-soft-foreground"
-                      : "bg-destructive-soft text-destructive-soft-foreground",
-                  )}>
-                    {trendUp ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                    {trendUp ? "+" : ""}{trend}% ovaj mesec
-                  </span>
+                  <div className="shrink-0 text-right">
+                    {prevMonth > 0 ? (
+                      <span className={cn(
+                        "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-semibold tnum",
+                        trendUp
+                          ? "bg-success-soft text-success-soft-foreground"
+                          : "bg-destructive-soft text-destructive-soft-foreground",
+                      )}>
+                        {trendUp ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                        {trendUp ? "+" : ""}{trend}% ovaj mesec
+                      </span>
+                    ) : thisMonth > 0 ? (
+                      <span className="inline-flex items-center rounded-full bg-success-soft px-2.5 py-1 text-[12px] font-semibold text-success-soft-foreground">
+                        novo
+                      </span>
+                    ) : null}
+                    <div className="mt-1 text-[11px] text-muted-foreground">
+                      do danas, prema istom delu prošlog meseca
+                    </div>
+                  </div>
                 </div>
 
                 <div className="h-64 -mx-2">
@@ -665,7 +744,7 @@ const Finances = () => {
                         <div key={pk.name}>
                           <div className="flex items-baseline justify-between gap-3 mb-1.5">
                             <span className="text-[13px] font-semibold tracking-tight truncate">{pk.name}</span>
-                            <span className="text-[12px] font-semibold text-muted-foreground tnum shrink-0">{pct}%</span>
+                            <span className="text-[12px] font-semibold text-muted-foreground tnum shrink-0">{pk.broj}× · {pct}%</span>
                           </div>
                           <div className="h-2 rounded-full bg-surface-2 overflow-hidden">
                             <div
@@ -695,8 +774,14 @@ const Finances = () => {
                   <p className="px-5 pb-5 text-[13px] text-muted-foreground">Nema uplata u ovom periodu.</p>
                 ) : (
                   <ul className="divide-y divide-hairline border-t border-hairline">
-                    {topPayers.map((t, i) => (
-                      <li key={t.id} className="flex items-center gap-3 px-5 py-3">
+                    {topPayers.map((t, i) => {
+                      const broj = uplataPoKlijentu.get(t.id) ?? 0;
+                      return (
+                      <li key={t.id}>
+                        <Link
+                          to={`/trener/vezbaci/${t.id}`}
+                          className="flex items-center gap-3 px-5 py-3 transition hover:bg-surface-2"
+                        >
                         <div className={cn(
                           "h-8 w-8 rounded-full flex items-center justify-center shrink-0 font-display font-bold text-[12.5px]",
                           i === 0
@@ -705,15 +790,23 @@ const Finances = () => {
                         )}>
                           {i === 0 ? <Trophy className="h-[15px] w-[15px]" /> : i + 1}
                         </div>
-                        <div className="flex-1 min-w-0 text-[14px] font-semibold tracking-tight truncate">
-                          {athleteNames.get(t.id) ?? "Vežbač"}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[14px] font-semibold tracking-tight truncate">
+                            {athleteNames.get(t.id) ?? "Vežbač"}
+                          </div>
+                          <div className="text-[11.5px] text-muted-foreground tnum">
+                            {broj} {broj === 1 ? "uplata" : "uplate"}
+                          </div>
                         </div>
                         <div className="text-[14px] font-bold tracking-tight tnum shrink-0">
                           {t.total.toLocaleString("sr-Latn-RS")}{" "}
                           <span className="text-[11px] text-muted-foreground font-semibold">RSD</span>
                         </div>
+                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+                        </Link>
                       </li>
-                    ))}
+                      );
+                    })}
                   </ul>
                 )}
               </Card>
@@ -750,7 +843,6 @@ const Finances = () => {
                           <SendMessageToAthlete
                             athleteId={e.athlete_id}
                             athleteName={athleteNames.get(e.athlete_id)}
-                            variant="icon"
                           />
                         </li>
                       );
@@ -1112,6 +1204,7 @@ const Finances = () => {
         open={!!selected}
         onClose={() => setSelected(null)}
         title="Detalj uplate"
+        hidden={pitam}
       >
         <FullScreenSheetScroll className="pt-5">
           {selected && (
@@ -1122,7 +1215,7 @@ const Finances = () => {
                     ? <Banknote className="h-5 w-5" />
                     : <Landmark className="h-5 w-5" />}
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="font-display text-[18px] font-bold tracking-tight truncate">
                     {athleteNames.get(selected.athlete_id) ?? "Vežbač"}
                   </div>
@@ -1130,6 +1223,18 @@ const Finances = () => {
                     {selected.price_rsd.toLocaleString("sr-Latn-RS")} RSD
                   </div>
                 </div>
+                {desktop && (
+                  <span
+                    className={cn(
+                      "shrink-0 rounded-full px-2.5 py-1 text-[11.5px] font-semibold",
+                      selected.paid_at
+                        ? "bg-success-soft text-success-soft-foreground"
+                        : "bg-warning-soft text-warning-soft-foreground",
+                    )}
+                  >
+                    {selected.paid_at ? "Plaćena" : "Nije plaćena"}
+                  </span>
+                )}
               </div>
 
               <Card className="px-4 py-1">
@@ -1140,27 +1245,51 @@ const Finances = () => {
                   value={`${selected.price_rsd.toLocaleString("sr-Latn-RS")} RSD`}
                 />
                 {selected.sessions_count != null && (
-                  <DetailRow label="Broj sesija" value={String(selected.sessions_count)} />
+                  <DetailRow label={desktop ? "Treninga u paketu" : "Broj sesija"} value={String(selected.sessions_count)} />
                 )}
                 {selected.duration_days != null && (
                   <DetailRow label="Trajanje" value={`${selected.duration_days} dana`} />
                 )}
                 <DetailRow label="Status" value={statusLabel(selected.status)} />
                 <DetailRow label="Način plaćanja" value={selected.payment_method === "cash" ? "Keš" : "Račun"} />
-                <DetailRow label="Datum uplate" value={fmtFull(paidDate(selected))} />
+                {/* Neplacena nema datum uplate; decided_at je tada samo datum potvrde. */}
+                {selected.paid_at ? (
+                  <DetailRow label="Datum uplate" value={fmtFull(selected.paid_at)} />
+                ) : (
+                  <DetailRow label="Potvrđeno" value={fmtFull(selected.decided_at)} />
+                )}
                 {selected.paid_at && selected.decided_at && fmtFull(selected.paid_at) !== fmtFull(selected.decided_at) && (
                   <DetailRow label="Potvrđeno" value={fmtFull(selected.decided_at)} />
                 )}
                 {selected.payment_marked_at && (
-                  <DetailRow label="Označeno plaćeno" value={fmtFull(selected.payment_marked_at)} />
+                  <DetailRow label={desktop ? "Vežbač označio uplatu" : "Označeno plaćeno"} value={fmtFull(selected.payment_marked_at)} />
                 )}
                 {selected.notes && (
-                  <DetailRow label="Napomena" value={selected.notes} />
+                  <DetailRow label={desktop ? "Beleška" : "Napomena"} value={selected.notes} />
                 )}
               </Card>
             </>
           )}
         </FullScreenSheetScroll>
+        {desktop && selected && (
+          <FullScreenSheetFooter>
+            <button
+              type="button"
+              onClick={() => setPaid(selected, !selected.paid_at)}
+              disabled={payingId === selected.id}
+              className={cn(
+                "inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[14px] font-semibold transition hover:opacity-85 disabled:opacity-60",
+                selected.paid_at
+                  ? "bg-warning-soft text-warning-soft-foreground"
+                  : "bg-success-soft text-success-soft-foreground",
+              )}
+            >
+              {payingId === selected.id && <Loader2 className="h-4 w-4 animate-spin" />}
+              <LockMark />
+              {selected.paid_at ? "Označi kao neplaćeno" : "Označi kao plaćeno"}
+            </button>
+          </FullScreenSheetFooter>
+        )}
       </FullScreenSheet>
     </>
   );

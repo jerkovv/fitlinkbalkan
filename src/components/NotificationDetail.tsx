@@ -11,8 +11,10 @@ import { Button } from "@/components/ui/button";
 import {
   Bell, CalendarPlus, CalendarX, Dumbbell, MessageSquare, Check,
   IdCard, Apple, ClipboardList, AlertTriangle, Megaphone, ArrowRight,
-  CalendarClock, Clock,
+  CalendarClock, Clock, Share2,
 } from "lucide-react";
+import { InAppWorkoutDetailDialog } from "@/components/InAppWorkoutDetailDialog";
+import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 import type { AppNotification, NotificationKind } from "@/hooks/useNotifications";
 import { getActionTarget } from "@/lib/notificationTarget";
 import { cn } from "@/lib/utils";
@@ -82,7 +84,25 @@ interface Props {
 
 export const NotificationDetail = ({ notification, open, onOpenChange }: Props) => {
   const navigate = useNavigate();
+  const desktop = useDesktopWeb();
   if (!notification) return null;
+
+  // Racunar, kao na telefonu: zavrsen trening se otvara pravo, a u njemu je "Podeli".
+  const zaTrenera = desktop && notification.recipient_role === "trainer";
+  const sesijaTreninga = notification.meta?.session_log_id;
+  if (zaTrenera && notification.kind === "workout_completed" && typeof sesijaTreninga === "string" && sesijaTreninga) {
+    return (
+      <InAppWorkoutDetailDialog
+        sessionId={sesijaTreninga}
+        open={open}
+        onOpenChange={onOpenChange}
+        athleteId={notification.athlete_id || undefined}
+        prikaziProfil
+      />
+    );
+  }
+  const podeliRekord = zaTrenera && notification.kind === "pr_set";
+
   const meta = KIND_META[notification.kind] ?? FALLBACK_META;
   const Icon = meta.icon;
   const action = getActionTarget(notification);
@@ -178,13 +198,25 @@ export const NotificationDetail = ({ notification, open, onOpenChange }: Props) 
         )}
 
         <DialogFooter className="gap-2">
-          <Button
-            variant="ghost"
-            onClick={() => onOpenChange(false)}
-            className="text-muted-foreground hover:text-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
-          >
-            Zatvori
-          </Button>
+          {podeliRekord ? (
+            <Button
+              variant="outline"
+              onClick={() => {
+                onOpenChange(false);
+                navigate(`/trener/objave?kartica=rekord&obavestenje=${notification.id}`);
+              }}
+            >
+              <Share2 className="h-4 w-4 mr-1.5" /> Podeli rekord
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              className="text-muted-foreground hover:text-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+            >
+              Zatvori
+            </Button>
+          )}
           {action && (
             <Button
               onClick={() => {

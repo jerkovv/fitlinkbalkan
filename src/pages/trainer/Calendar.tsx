@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ChevronLeft, ChevronRight, Loader2, Users, Clock, Settings, X, Ban, Plus, Calendar as CalIcon,
+  ChevronLeft, ChevronRight, Loader2, Users, Clock, Settings, X, Ban, Plus, Calendar as CalIcon, RotateCcw, Share2,
 } from "lucide-react";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
@@ -57,6 +57,8 @@ type Booking = {
   added_by: string | null;
   // da li je trening skinut sa clanarine
   charged: boolean | null;
+  // otkazano posle roka: racuna se kao odradjen trening
+  late_cancel: boolean | null;
   date: string;
   start_time: string;
   session_type_id: string;
@@ -156,7 +158,7 @@ const Calendar = () => {
       }),
       supabase
         .from("session_bookings")
-        .select("id, athlete_id, guest_name, added_by, charged, date, start_time, session_type_id, status")
+        .select("id, athlete_id, guest_name, added_by, charged, late_cancel, date, start_time, session_type_id, status")
         .eq("trainer_id", user.id)
         .eq("date", dateISO),
       supabase.from("athletes").select("id").eq("trainer_id", user.id),
@@ -249,10 +251,17 @@ const Calendar = () => {
         && b.status === "booked",
     );
 
+  const kasnoOtkazali = (s: Slot) =>
+    bookings.filter(
+      (b) => b.status === "cancelled" && b.late_cancel === true
+        && formatTime(b.start_time) === formatTime(s.start_time)
+        && b.session_type_id === s.session_type_id,
+    );
+
   const cancelSlot = async (s: Slot) => {
     if (locked) return openLock();
     if (!user || !s.template_id || cancelingSlot) return;
-    if (!(await confirm({ title: `Otkazati ${s.type_name} u ${formatTime(s.start_time)}?`, description: "Termin se otkazuje samo za ovaj dan.", destructive: true }))) return;
+    if (!(await confirm({ title: `Otkazati ${s.type_name} u ${formatTime(s.start_time)}?`, description: "Termin se otkazuje samo za ovaj dan.", confirmLabel: "Otkaži termin", cancelLabel: "Nazad", destructive: true }))) return;
     setCancelingSlot(true);
     const { error } = await supabase.from("session_slot_overrides").insert({
       trainer_id: user.id,
@@ -263,6 +272,42 @@ const Calendar = () => {
     setCancelingSlot(false);
     if (error) { toast.error(porukaGreske(error)); return; }
     toast.success("Termin otkazan za ovaj dan");
+    setOpenSlot(null);
+    load();
+  };
+
+  // Otkazan termin se vraca brisanjem izuzetka za taj dan, kao u aplikaciji.
+  const [restoringSlot, setRestoringSlot] = useState(false);
+  const restoreSlot = async (s: Slot) => {
+    if (locked) return openLock();
+    if (!user || !s.template_id || restoringSlot) return;
+    setRestoringSlot(true);
+    const dateISO = toIsoDate(selectedDate);
+    const { error } = await supabase
+      .from("session_slot_overrides")
+      .delete()
+      .eq("trainer_id", user.id)
+      .eq("date", dateISO)
+      .eq("template_id", s.template_id)
+      .eq("is_canceled", true);
+    if (error) {
+      setRestoringSlot(false);
+      toast.error(porukaGreske(error));
+      return;
+    }
+    // Brisanje koje baza odbije bez greske ne menja nista, pa se stanje proverava.
+    const { data: posle, error: citanje } = await supabase.rpc("get_day_slots", {
+      p_trainer_id: user.id,
+      p_date: dateISO,
+    });
+    setRestoringSlot(false);
+    if (citanje) { toast.error(porukaGreske(citanje)); load(); return; }
+    if (((posle as Slot[] | null) ?? []).some((x) => x.template_id === s.template_id && x.is_canceled)) {
+      toast.error("Termin nije vraćen.");
+      load();
+      return;
+    }
+    toast.success("Termin vraćen za ovaj dan");
     setOpenSlot(null);
     load();
   };
@@ -381,12 +426,20 @@ const Calendar = () => {
         desktopWidth="wide"
         action={
           desktop ? (
-            <Button asChild variant="outline" className="h-10 rounded-full px-4">
-              <Link to="/trener/termini">
-                <Settings className="h-4 w-4 mr-1.5" strokeWidth={2} />
-                Podešavanja termina
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button asChild variant="outline" className="h-10 rounded-full px-4">
+                <Link to={`/trener/objave?kartica=termini&datum=${toIsoDate(selectedDate)}`}>
+                  <Share2 className="h-4 w-4 mr-1.5" strokeWidth={2} />
+                  Podeli slobodne termine
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="h-10 rounded-full px-4">
+                <Link to="/trener/termini">
+                  <Settings className="h-4 w-4 mr-1.5" strokeWidth={2} />
+                  Podešavanja termina
+                </Link>
+              </Button>
+            </div>
           ) : (
             <Link
               to="/trener/termini"
@@ -621,6 +674,9 @@ const Calendar = () => {
                               )}
                               {!s.is_canceled && s.waitlist_count > 0 && (
                                 <Chip tone="brand">{s.waitlist_count} na čekanju</Chip>
+                              )}
+                              {kasnoOtkazali(s).length > 0 && (
+                                <Chip tone="danger">{kasnoOtkazali(s).length} kasno</Chip>
                               )}
                             </div>
                           </div>
@@ -887,7 +943,7 @@ const Calendar = () => {
                 </div>
 
                 <div>
-                  <div className="eyebrow text-muted-foreground mb-2">Ko vežba</div>
+                  <div className="eyebrow text-muted-foreground mb-2">{desktop ? "Dolaze" : "Ko vežba"}</div>
                   {slotBookings.length === 0 ? (
                     <div className="text-[13px] text-muted-foreground bg-surface-2 rounded-xl p-4 text-center">
                       Još niko nije rezervisao.
@@ -900,8 +956,13 @@ const Calendar = () => {
                             <div className={cn("h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0", colors.bg, colors.fg)}>
                               {(bookingName(b)[0] ?? "?").toUpperCase()}
                             </div>
-                            <span className="font-semibold text-[13px] truncate">
-                              {bookingName(b)}
+                            <span className="min-w-0">
+                              <span className="block font-semibold text-[13px] truncate">
+                                {bookingName(b)}
+                              </span>
+                              {desktop && b.athlete_id && b.charged === false && (
+                                <span className="block text-[11px] font-normal text-muted-foreground">Trening nije skinut</span>
+                              )}
                             </span>
                             {!b.athlete_id && (
                               <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-[10.5px] font-semibold text-muted-foreground">
@@ -931,6 +992,7 @@ const Calendar = () => {
                             disabled={removingBookingId === b.id}
                             className="h-7 w-7 rounded-full hover:bg-destructive-soft flex items-center justify-center text-destructive disabled:opacity-50"
                             title="Ukloni"
+                            aria-label={`Ukloni: ${b.athlete_id ? "vežbač" : "gost"}`}
                           >
                             {removingBookingId === b.id ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -990,7 +1052,7 @@ const Calendar = () => {
                               <Input
                                 value={addQuery}
                                 onChange={(e) => setAddQuery(e.target.value)}
-                                placeholder="Pretraži klijente"
+                                placeholder={desktop ? "Pronađi klijenta..." : "Pretraži klijente"}
                                 className="h-10 rounded-xl"
                               />
                             )}
@@ -1028,15 +1090,22 @@ const Calendar = () => {
                             </label>
                           </>
                         ) : (
-                          <Input
-                            value={addGuest}
-                            onChange={(e) => setAddGuest(e.target.value)}
-                            placeholder="Ime gosta"
-                            maxLength={80}
-                            autoFocus
-                            className="h-10 rounded-xl"
-                            onKeyDown={(e) => { if (e.key === "Enter") addToSlot(openSlot); }}
-                          />
+                          <>
+                            <Input
+                              value={addGuest}
+                              onChange={(e) => setAddGuest(e.target.value)}
+                              placeholder={desktop ? "Ime i prezime gosta" : "Ime gosta"}
+                              maxLength={80}
+                              autoFocus
+                              className="h-10 rounded-xl"
+                              onKeyDown={(e) => { if (e.key === "Enter") addToSlot(openSlot); }}
+                            />
+                            {desktop && (
+                              <p className="text-[12px] text-muted-foreground">
+                                Gost nema nalog. Zauzima mesto u terminu, a članarina se ne dira.
+                              </p>
+                            )}
+                          </>
                         )}
 
                         <Button
@@ -1062,9 +1131,30 @@ const Calendar = () => {
                     >
                       <Plus className="h-3.5 w-3.5 mr-1.5" />
                       <LockMark className="mr-1.5" />
-                      Dodaj
+                      {desktop ? "Upiši u termin" : "Dodaj"}
                     </Button>
                   )
+                )}
+
+                {desktop && kasnoOtkazali(openSlot).length > 0 && (
+                  <div>
+                    <div className="eyebrow text-muted-foreground mb-2">Kasno otkazali</div>
+                    <ul className="space-y-1.5">
+                      {kasnoOtkazali(openSlot).map((b) => (
+                        <li key={b.id} className="flex items-center gap-2.5 rounded-xl border border-warning/25 bg-warning-soft/40 px-3 py-2">
+                          <div className={cn("h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 opacity-70", colors.bg, colors.fg)}>
+                            {(bookingName(b)[0] ?? "?").toUpperCase()}
+                          </div>
+                          <span className="min-w-0">
+                            <span className="block truncate text-[13px] font-semibold">{bookingName(b)}</span>
+                            <span className="block text-[11.5px] text-warning-soft-foreground">
+                              Kasno otkazivanje, računa se kao trening
+                            </span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
 
                 {/* Lista cekanja (samo citanje, po redu prijave) */}
@@ -1096,6 +1186,30 @@ const Calendar = () => {
                         ))}
                       </ul>
                     )}
+                    {desktop && waitlist.length > 0 && (
+                      <p className="mt-2 text-[11.5px] text-muted-foreground">
+                        Kad se mesto oslobodi, prvi sa liste automatski dobija termin.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {desktop && openSlot.is_canceled && openSlot.template_id && (
+                  <div className="pt-3 border-t border-hairline">
+                    <Button
+                      variant="outline"
+                      className="w-full border-success/30 bg-success-soft text-success-soft-foreground hover:bg-success-soft/80 hover:text-success-soft-foreground"
+                      onClick={() => restoreSlot(openSlot)}
+                      disabled={restoringSlot}
+                    >
+                      {restoringSlot ? (
+                        <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                      ) : (
+                        <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                      )}
+                      <LockMark className="mr-1.5" />
+                      Vrati termin za ovaj dan
+                    </Button>
                   </div>
                 )}
 

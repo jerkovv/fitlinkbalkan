@@ -23,22 +23,25 @@ export const getActionTarget = (
   n: Pick<AppNotification, "kind" | "recipient_role" | "athlete_id" | "meta">,
 ): NotificationActionTarget | null => {
   if (n.recipient_role === "trainer") {
-    if (n.kind === "booking_created" || n.kind === "booking_canceled") {
-      const slotDate = n.meta?.slot_date as string | undefined;
-      const path = slotDate
-        ? `/trener/kalendar?date=${slotDate}`
-        : "/trener/kalendar";
-      return { path, label: "Otvori kalendar" };
-    }
-    if (n.kind === "payment_request" || n.kind === "payment_marked")
-      return { path: "/trener/uplate", label: "Otvori uplate" };
-    if (n.kind === "workout_completed" || n.kind === "message" || n.kind === "pr_set")
-      return { path: `/trener/vezbaci/${n.athlete_id}`, label: "Otvori profil vežbača" };
-    if (n.kind === "waitlist_joined") {
+    // Isti ciljevi kao `radnja` u TrenerNotifikacije.swift. Podsetnici i pretplata
+    // stizu iz baze, ali nisu u NotificationKind, pa se porede kao tekst.
+    const kind: string = n.kind;
+    if (
+      kind === "booking_created" || kind === "booking_canceled" || kind === "waitlist_joined"
+      || kind === "session_reminder" || kind === "day_digest" || kind === "tomorrow_digest"
+    ) {
       const slotDate = n.meta?.slot_date as string | undefined;
       return { path: slotDate ? `/trener/kalendar?date=${slotDate}` : "/trener/kalendar", label: "Otvori kalendar" };
     }
-    return null;
+    if (kind === "payment_request" || kind === "payment_marked")
+      return { path: "/trener/uplate", label: "Otvori uplate" };
+    if (kind === "fitlink_sub_expiring" || kind === "fitlink_sub_expired")
+      return { path: "/trener/profil", label: "Otvori pretplatu" };
+    // Bez vezbaca nema cilja: push tada ide na getPushFallbackPath.
+    if (!n.athlete_id) return null;
+    if (kind === "message")
+      return { path: `/trener/chat/${n.athlete_id}`, label: "Otvori poruke" };
+    return { path: `/trener/vezbaci/${n.athlete_id}`, label: "Otvori profil vežbača" };
   }
   // athlete
   // Podsetnik "Jos treniras?": vodi pravo na trening, da moze odmah da ga ugasi.

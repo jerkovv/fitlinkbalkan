@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
+import { Capacitor } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
 import { supabase } from "@/lib/supabase";
 import { porukaGreske } from "@/lib/errorMessage";
@@ -59,7 +60,7 @@ export const IspraviSerijeSheet = ({ open, onOpenChange, sessionId, vezba, serij
   // pristup kao FullScreenSheet i Drawer.
   const [tastatura, setTastatura] = useState(0);
   useEffect(() => {
-    if (!open) return;
+    if (!open || !Capacitor.isNativePlatform()) return;
     const show = Keyboard.addListener("keyboardWillShow", (info) => setTastatura(info.keyboardHeight));
     const hide = Keyboard.addListener("keyboardWillHide", () => setTastatura(0));
     return () => {

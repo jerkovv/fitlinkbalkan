@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import {
   Apple, ClipboardList, Wallet, Phone, Loader2, Plus, X, Check,
   Dumbbell, Scale, UserMinus, Flame, Sparkles, Mail, Copy, Pencil,
-  ChevronLeft, Clock, Trophy, BarChart3,
+  ChevronLeft, Clock, Trophy, BarChart3, Calendar, Heart, MessageSquare, StickyNote, Trash2,
 } from "lucide-react";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
@@ -43,6 +43,16 @@ import { AktivanTreningBaner, useAktivnaSesija, ZaustaviTreningDugme, ZABORAVLJE
 import { formatDuration } from "@/lib/workout/hrZone";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
+import { UrediVezbacaSheet } from "@/components/trainer/web/vezbaci/UrediVezbacaSheet";
+import { MerenjaVezbaca } from "@/components/trainer/web/vezbaci/MerenjaVezbaca";
+import { ZdravljeVezbaca } from "@/components/trainer/web/vezbaci/ZdravljeVezbaca";
+import { FotografijeVezbaca } from "@/components/trainer/web/vezbaci/FotografijeVezbaca";
+import { PodeliMesec, TreninziNapredak, useVolumeniTreninga } from "@/components/trainer/web/vezbaci/TreninziNapredak";
+import { NacrtPlana } from "@/components/trainer/web/vezbaci/NacrtPlana";
+import { ClanarinaVezbaca, type ClanarinaRed } from "@/components/trainer/web/vezbaci/ClanarinaVezbaca";
+import { ID_DELOVA, NapredakPrecice } from "@/components/trainer/web/vezbaci/NapredakPrecice";
+import { usePulsUzivo } from "@/components/trainer/web/vezbaci/usePulsUzivo";
+import { ciljNaziv } from "@/components/trainer/web/vezbaci/aktivnost";
 
 type AthleteData = {
   id: string;
@@ -53,6 +63,7 @@ type AthleteData = {
   full_name: string | null;
   phone: string | null;
   avatar_url?: string | null;
+  notes?: string | null;
 };
 
 type NutritionTemplate = {
@@ -213,6 +224,13 @@ const AthleteProfile = () => {
   const [upisKey, setUpisKey] = useState(0);
   const [removeOpen, setRemoveOpen] = useState(false);
   const [removing, setRemoving] = useState(false);
+  // Racunar: izmena podataka, nova clanarina pored postojece i duzina istorije treninga.
+  const [urediOpen, setUrediOpen] = useState(false);
+  const [novaClanarina, setNovaClanarina] = useState(false);
+  const [clanarinaPoznata, setClanarinaPoznata] = useState(false);
+  const [nacrtKljuc, setNacrtKljuc] = useState(0);
+  const [treningaLimit, setTreningaLimit] = useState(10);
+  const volumeni = useVolumeniTreninga(desktop ? id : undefined, upisKey);
 
   const confirmRemoveAthlete = async () => {
     if (locked) return openLock();
@@ -258,16 +276,7 @@ const AthleteProfile = () => {
   const [activeProgram, setActiveProgram] = useState<AssignedProgram | null>(null);
   const [latestMetric, setLatestMetric] = useState<BodyMetric | null>(null);
   const [metricsHistory, setMetricsHistory] = useState<BodyMetric[]>([]);
-  const [activeMembership, setActiveMembership] = useState<{
-    id: string;
-    plan_name: string;
-    price: number | null;
-    status: string;
-    starts_on: string | null;
-    ends_on: string | null;
-    sessions_total: number | null;
-    sessions_used: number;
-  } | null>(null);
+  const [activeMembership, setActiveMembership] = useState<ClanarinaRed | null>(null);
   const [bonusOpen, setBonusOpen] = useState(false);
   const [bonusCount, setBonusCount] = useState("1");
   const [bonusSaving, setBonusSaving] = useState(false);
@@ -300,9 +309,9 @@ const AthleteProfile = () => {
 
   // Workout session detail
 
-  const load = async () => {
+  const load = async (tiho = false) => {
     if (!id) return;
-    setLoading(true);
+    if (!tiho) setLoading(true);
 
     // Email (RPC, paralelno; vraca null ako nije ovog trenera klijent) - ne blokira ostatak.
     supabase
@@ -369,10 +378,13 @@ const AthleteProfile = () => {
     // Clanarina - uzimamo SVE redove (ne samo status='active') da trener vidi
     // i istekle/otkazane umesto prazne kartice. Sortiranje aktivna prvo, pa
     // ends_on opadajuce (nema ga u supabase-js .order() kao izraz, radimo u JS-u).
-    const { data: memRows } = await supabase
+    let clanarineUpit = supabase
       .from("memberships")
-      .select("id, plan_name, price, status, starts_on, ends_on, sessions_total, sessions_used")
+      .select("id, plan_name, price, status, starts_on, ends_on, sessions_total, sessions_used, purchase_id, membership_purchases(paid_at)")
       .eq("athlete_id", id);
+    // Racunar: samo clanarine kod ovog trenera, isto kao na telefonu.
+    if (desktop && user) clanarineUpit = clanarineUpit.eq("trainer_id", user.id);
+    const { data: memRows, error: memErr } = await clanarineUpit;
     const sortedMem = ((memRows as any[]) ?? []).slice().sort((a, b) => {
       const aActive = a.status === "active" ? 0 : 1;
       const bActive = b.status === "active" ? 0 : 1;
@@ -384,7 +396,13 @@ const AthleteProfile = () => {
       if (!bEnds) return -1;
       return aEnds < bEnds ? 1 : aEnds > bEnds ? -1 : 0;
     });
-    setActiveMembership(sortedMem[0] ?? null);
+    // Neuspeo upit ne sme da izgleda kao "nema clanarinu".
+    if (memErr) {
+      toast.error(porukaGreske(memErr));
+    } else {
+      setActiveMembership(sortedMem[0] ?? null);
+      setClanarinaPoznata(true);
+    }
 
     setLoading(false);
   };
@@ -404,7 +422,7 @@ const AthleteProfile = () => {
     toast.success(`Dodato ${n} treninga`);
     setBonusOpen(false);
     setBonusCount("1");
-    load();
+    load(desktop);
   };
 
   useEffect(() => { load(); }, [id]);
@@ -546,7 +564,7 @@ const AthleteProfile = () => {
       await assignProgramToAthlete(templateId, id);
       toast.success("Program dodeljen vežbaču");
       setProgOpen(false);
-      await load();
+      await load(desktop);
     } catch (error: any) {
       toast.error(porukaGreske(error));
     } finally {
@@ -644,6 +662,7 @@ const AthleteProfile = () => {
     const table = kind === "program" ? "assigned_programs" : "assigned_nutrition_plans";
     const { error } = await supabase.from(table).delete().eq("id", draftId);
     if (error) { toast.error(porukaGreske(error)); return; }
+    setNacrtKljuc((n) => n + 1);
     setDraftResume(null);
     if (kind === "program") setCustomOpen(true);
     else setCustomNutOpen(true);
@@ -676,7 +695,7 @@ const AthleteProfile = () => {
       if (error) throw error;
       toast.success("Plan dodeljen vežbaču");
       setAssignOpen(false);
-      load();
+      load(desktop);
     } catch (e: any) {
       toast.error(porukaGreske(e));
     } finally {
@@ -687,16 +706,21 @@ const AthleteProfile = () => {
   const unassignPlan = async () => {
     if (locked) return openLock();
     if (!activePlan || !id) return;
-    if (!(await confirm({ title: "Otkazati aktivni plan ishrane?", destructive: true }))) return;
+    if (!(await confirm(desktop
+      ? {
+          title: "Ukloniti plan ishrane?",
+          description: `${athlete?.full_name ?? "Vežbač"} više neće videti plan ishrane.`,
+          confirmLabel: "Ukloni plan",
+          destructive: true,
+        }
+      : { title: "Otkazati aktivni plan ishrane?", destructive: true }))) return;
     // Obrisi SVE planove ishrane ovog vezbaca odjednom (jedan klik = prazno).
     // Ishrana nema istoriju; CASCADE brise dane/obroke/stavke/raspored.
-    const { error } = await supabase
-      .from("assigned_nutrition_plans")
-      .delete()
-      .eq("athlete_id", id);
+    const brisanje = supabase.from("assigned_nutrition_plans").delete();
+    const { error } = await (desktop ? brisanje.eq("id", activePlan.id) : brisanje.eq("athlete_id", id));
     if (error) { toast.error(porukaGreske(error)); return; }
-    toast.success("Plan otkazan");
-    load();
+    toast.success(desktop ? "Plan ishrane je uklonjen." : "Plan otkazan");
+    load(desktop);
   };
 
   const callAthlete = () => {
@@ -757,10 +781,6 @@ const AthleteProfile = () => {
     if (h < 24) return `Sinhronizovano pre ${h} h`;
     return `Sinhronizovano pre ${Math.floor(h / 24)} d`;
   })();
-  const weightDiff =
-    metricsHistory.length >= 2 && metricsHistory[0].weight_kg && metricsHistory[metricsHistory.length - 1].weight_kg
-      ? metricsHistory[0].weight_kg - metricsHistory[metricsHistory.length - 1].weight_kg
-      : null;
 
   return (
     <PhoneShell
@@ -800,11 +820,22 @@ const AthleteProfile = () => {
             }
             akcije={
               <>
-                {/* Deljena komponenta ne prima className, pa se oblik dugmeta podesava
-                    preko omotaca (samo direktno dugme, sheet ide kroz portal). */}
-                <span className="[&>button]:h-10 [&>button]:rounded-full [&>button]:px-4">
-                  <SendMessageToAthlete athleteId={athlete.id} athleteName={athlete.full_name ?? undefined} />
-                </span>
+                <Link
+                  to={`/trener/chat/${athlete.id}`}
+                  className="inline-flex h-10 items-center rounded-full border border-hairline bg-surface-2 px-4 text-[13px] font-semibold transition hover:bg-surface"
+                >
+                  <MessageSquare className="mr-1.5 h-4 w-4" />
+                  Poruke
+                </Link>
+                <Button
+                  variant="outline"
+                  onClick={guard(() => setUrediOpen(true))}
+                  title="Uredi podatke vežbača"
+                  className="h-10 rounded-full px-4"
+                >
+                  <Pencil className="mr-1.5 h-4 w-4" />
+                  Uredi podatke
+                </Button>
                 <Button
                   onClick={guard(() => setUpisujem(true))}
                   className="h-10 rounded-full px-4 bg-gradient-brand text-white shadow-brand"
@@ -864,6 +895,25 @@ const AthleteProfile = () => {
               )}
             </div>
           ) : null}
+
+          {athlete.notes?.trim() && (
+            <button
+              type="button"
+              onClick={guard(() => setUrediOpen(true))}
+              className="card-premium flex w-full items-start gap-3 p-4 text-left transition hover:bg-surface-2"
+            >
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-warning/15 text-warning">
+                <StickyNote className="h-4 w-4" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[10.5px] font-semibold uppercase tracking-[0.13em] text-muted-foreground">Beleška</span>
+                <span className="mt-0.5 block whitespace-pre-wrap text-[13.5px] leading-relaxed">{athlete.notes.trim()}</span>
+              </span>
+              <Pencil className="mt-1 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            </button>
+          )}
+
+          <NapredakPrecice stats={stats} />
 
           <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
             <div className="min-w-0 space-y-8">
@@ -939,11 +989,9 @@ const AthleteProfile = () => {
                       activePlan ? (
                         <button
                           onClick={unassignPlan}
-                          className="h-8 w-8 shrink-0 rounded-full flex items-center justify-center text-muted-foreground transition hover:bg-destructive-soft hover:text-destructive"
-                          title="Otkaži plan"
-                          aria-label="Otkaži plan"
+                          className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full px-2.5 text-[12px] font-semibold text-muted-foreground transition hover:bg-destructive-soft hover:text-destructive"
                         >
-                          <X className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" /> Ukloni plan
                         </button>
                       ) : undefined
                     }
@@ -1008,9 +1056,23 @@ const AthleteProfile = () => {
                 </div>
               </div>
 
+              {id && (
+                <div className="space-y-2 empty:hidden">
+                  <NacrtPlana vrsta="program" athleteId={id} kljuc={nacrtKljuc} />
+                  <NacrtPlana vrsta="ishrana" athleteId={id} kljuc={nacrtKljuc} />
+                </div>
+              )}
+
+              {/* Merenja imaju svoj deo sa naslovom, odmah ispod planova. */}
+              {id && (
+                <div id={ID_DELOVA.merenja} className="scroll-mt-6">
+                  <MerenjaVezbaca athleteId={id} onPromena={() => void load(true)} />
+                </div>
+              )}
+
               {/* Treninzi: tabovi stoje u redu sa naslovom; upis treninga je dugme u
                   zaglavlju stranice, pa ga ovde nema. */}
-              <section>
+              <section id={ID_DELOVA.treninzi} className="scroll-mt-6">
                 <Tabs defaultValue="app" className="w-full">
                   <SectionHead
                     eyebrow="Aktivnost"
@@ -1032,49 +1094,64 @@ const AthleteProfile = () => {
                       </TabsList>
                     }
                   />
+                  <div className="mt-3">
+                    <TreninziNapredak volumeni={volumeni} stats={stats} />
+                  </div>
                   <TabsContent value="app" className="mt-3">
                     <p className="text-xs text-muted-foreground mb-3">
                       Treninzi koje je vežbač radio kroz FitLink. Ako je nosio sat, puls i kalorije su već ovde.
                     </p>
-                    {id && <InAppWorkoutsList key={upisKey} athleteId={id} limit={10} />}
+                    {id && <InAppWorkoutsList key={upisKey} athleteId={id} limit={treningaLimit} />}
+                    {Number(stats?.total_workouts ?? 0) > treningaLimit && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setTreningaLimit((n) => n + 20)}
+                        className="mt-3 h-10 w-full rounded-full"
+                      >
+                        Prikaži još
+                      </Button>
+                    )}
                   </TabsContent>
                   <TabsContent value="watch" className="mt-3">
                     <p className="text-xs text-muted-foreground mb-3">
                       Aktivnosti koje je vežbač radio bez FitLink-a, direktno na satu.
                     </p>
-                    {hasWearable && id ? (
-                      <WorkoutsList userId={id} limit={10} />
-                    ) : (
-                      <Card className="p-4 text-center text-[13px] text-muted-foreground">
-                        Vežbač nije povezao sat
-                      </Card>
+                    {/* Bez provere veze: treninzi ostaju i kad vezbac iskljuci sat. */}
+                    {id && (
+                      <WorkoutsList
+                        userId={id}
+                        limit={30}
+                        stranicenje
+                        prazno="Vežbač nema treninge sa sata ni iz aplikacije Zdravlje."
+                      />
                     )}
                   </TabsContent>
                 </Tabs>
               </section>
 
-              <section className="space-y-3">
+              {id && volumeni != null && volumeni.length > 0 && (
+                <section className="space-y-2">
+                  <h2 className="px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Podeli</h2>
+                  <PodeliMesec athleteId={id} />
+                </section>
+              )}
+
+              <section id={ID_DELOVA.zdravlje} className="scroll-mt-6 space-y-3">
                 <SectionHead
-                  eyebrow="Wearable"
-                  title="Zdravstveni podaci"
+                  eyebrow="Sat i traka"
+                  title="Zdravlje"
                   right={
-                    hasWearable && wearableSyncText ? (
+                    wearableSyncText ? (
                       <div className="shrink-0 text-[11px] text-muted-foreground">{wearableSyncText}</div>
                     ) : undefined
                   }
                 />
-                {hasWearable && id ? (
-                  <>
-                    <HealthMetricsCard userId={id} showConnectCta={false} />
-                    <div className="grid grid-cols-2 gap-4">
-                      <WearableTrendChart userId={id} dataType="heart_rate_avg" days={30} title="Prosečan puls, poslednjih 30 dana" />
-                      <WearableTrendChart userId={id} dataType="workout_duration" days={30} title="Trajanje treninga, poslednjih 30 dana" />
-                    </div>
-                  </>
-                ) : (
-                  <Card className="p-6 text-center text-[13px] text-muted-foreground">
-                    Vežbač još nije povezao uređaj
-                  </Card>
+                {id && <ZdravljeVezbaca athleteId={id} povezan={hasWearable} />}
+                {hasWearable && id && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <WearableTrendChart userId={id} dataType="heart_rate_avg" days={30} title="Prosečan puls, poslednjih 30 dana" />
+                    <WearableTrendChart userId={id} dataType="workout_duration" days={30} title="Trajanje treninga, poslednjih 30 dana" />
+                  </div>
                 )}
               </section>
             </div>
@@ -1089,7 +1166,7 @@ const AthleteProfile = () => {
                         <Mail className="h-4 w-4" strokeWidth={2} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-[11px] text-muted-foreground">Email</div>
+                        <div className="text-[11px] text-muted-foreground">Mejl</div>
                         {/* Dug email se prelama, nikad "..."; kopiranje uvek uzima ceo. */}
                         <div className="text-[13.5px] font-medium leading-snug [overflow-wrap:anywhere]">{athleteEmail}</div>
                       </div>
@@ -1118,167 +1195,35 @@ const AthleteProfile = () => {
                       </Button>
                     )}
                   </div>
+                  <div className="flex items-center gap-3 py-3">
+                    <div className="h-9 w-9 rounded-xl bg-surface-2 text-foreground flex items-center justify-center shrink-0">
+                      <Calendar className="h-4 w-4" strokeWidth={2} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[11px] text-muted-foreground">Pridružen</div>
+                      <div className="text-[13.5px] font-medium tnum">
+                        {new Date(athlete.joined_at).toLocaleDateString("sr-Latn-RS", { day: "numeric", month: "long", year: "numeric" })}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="card-premium p-5">
-                <SectionHead
-                  eyebrow="Paket"
-                  title="Članarina"
-                  right={
-                    activeMembership ? (
-                      <Button
-                        variant="outline"
-                        onClick={guard(() => setMembershipEditOpen(true))}
-                        className="h-8 shrink-0 rounded-full px-3 text-[12.5px]"
-                      >
-                        <Pencil className="mr-1" /> Izmeni
-                      </Button>
-                    ) : undefined
-                  }
+              {clanarinaPoznata && (
+                <ClanarinaVezbaca
+                  clanarina={activeMembership}
+                  onIzmeni={() => { setNovaClanarina(false); setMembershipEditOpen(true); }}
+                  onBonus={() => { setBonusCount("1"); setBonusOpen(true); }}
+                  onNova={() => { setNovaClanarina(true); setMembershipEditOpen(true); }}
+                  onPromena={() => void load(true)}
                 />
-                {activeMembership ? (
-                  <div className="mt-4 space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-11 w-11 rounded-xl bg-success-soft text-success-soft-foreground flex items-center justify-center shrink-0">
-                        <Wallet className="h-[18px] w-[18px]" strokeWidth={2} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate font-display text-[16px] font-bold tracking-tight">
-                          {activeMembership.plan_name}
-                        </div>
-                        <div className="text-[12px] text-muted-foreground tnum">{membershipPeriodText}</div>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      <Chip tone={STATUS_TONE[activeMembership.status] ?? "muted"}>
-                        {STATUS_LABEL[activeMembership.status] ?? activeMembership.status}
-                      </Chip>
-                      <Chip tone={membershipDaysLeftInfo.tone}>{membershipDaysLeftInfo.label}</Chip>
-                    </div>
-                    {activeMembership.sessions_total != null ? (
-                      <div>
-                        <div className="flex items-baseline justify-between text-[12px]">
-                          <span className="text-muted-foreground">Iskorišćeno</span>
-                          <span className="font-semibold tnum">
-                            {activeMembership.sessions_used} / {activeMembership.sessions_total}
-                          </span>
-                        </div>
-                        <div className="mt-1.5 h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-brand rounded-full"
-                            style={{
-                              width: `${Math.min(100, (activeMembership.sessions_used / activeMembership.sessions_total) * 100)}%`,
-                            }}
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-[12px] text-muted-foreground">Bez limita treninga</div>
-                    )}
-                    {activeMembership.price != null && (
-                      <div className="flex items-center justify-between border-t border-hairline pt-3">
-                        <span className="text-[12px] text-muted-foreground">Cena</span>
-                        <span className="font-display text-[15px] font-bold tracking-tight tnum">
-                          {activeMembership.price.toLocaleString("sr-Latn-RS")} RSD
-                        </span>
-                      </div>
-                    )}
-                    <Button
-                      variant="outline"
-                      onClick={guard(() => setBonusOpen(true))}
-                      className="h-10 w-full rounded-full"
-                    >
-                      <Plus className="h-4 w-4 mr-1.5" /> Dodaj bonus treninge
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="mt-3 space-y-4">
-                    <p className="text-[13px] text-muted-foreground">
-                      Vežbač nema članarinu. Kad izabere paket, pojaviće se u{" "}
-                      <Link to="/trener/uplate" className="text-primary font-semibold">
-                        Zahtevima za uplatu
-                      </Link>
-                      .
-                    </p>
-                    <Button
-                      variant="outline"
-                      onClick={guard(() => setMembershipEditOpen(true))}
-                      className="h-10 w-full rounded-full"
-                    >
-                      <Plus className="h-4 w-4 mr-1.5" /> Dodaj članarinu
-                    </Button>
-                  </div>
-                )}
-              </div>
+              )}
 
-              <div className="card-premium p-5">
-                <SectionHead
-                  eyebrow="Telo"
-                  title="Merenja"
-                  right={
-                    weightDiff != null ? (
-                      <Chip tone={weightDiff < 0 ? "success" : "info"} className="tnum">
-                        {`${weightDiff >= 0 ? "+" : ""}${weightDiff.toFixed(1)} kg`}
-                      </Chip>
-                    ) : undefined
-                  }
-                />
-                {latestMetric ? (
-                  <>
-                    <div className="mt-4 flex items-center gap-3">
-                      <div className="h-11 w-11 rounded-xl bg-info-soft flex items-center justify-center shrink-0">
-                        <Scale className="h-5 w-5 text-info-soft-foreground" strokeWidth={2.25} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline gap-1">
-                          <span className="font-display text-[24px] font-bold leading-none tracking-tightest tnum">
-                            {latestMetric.weight_kg ?? "-"}
-                          </span>
-                          {latestMetric.weight_kg ? <span className="text-[12px] text-muted-foreground">kg</span> : null}
-                          {latestMetric.body_fat_pct ? (
-                            <span className="ml-2 text-[12px] text-muted-foreground tnum">
-                              {latestMetric.body_fat_pct}% masti
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="mt-1 text-[12px] text-muted-foreground tnum">
-                          {new Date(latestMetric.recorded_on).toLocaleDateString("sr-Latn-RS")}
-                        </div>
-                      </div>
-                    </div>
-                    {metricsHistory.length > 1 && (
-                      <div className="mt-4 border-t border-hairline pt-3">
-                        <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                          Ranije
-                        </div>
-                        <div className="divide-y divide-hairline">
-                          {metricsHistory.slice(1, 6).map((m) => (
-                            <div key={m.id} className="grid grid-cols-[minmax(0,1fr)_72px_56px] items-center py-2 text-[12.5px]">
-                              <span className="text-muted-foreground tnum">
-                                {new Date(m.recorded_on).toLocaleDateString("sr-Latn-RS")}
-                              </span>
-                              <span className="text-right font-semibold tnum">
-                                {m.weight_kg != null ? `${m.weight_kg} kg` : "-"}
-                              </span>
-                              <span className="text-right text-muted-foreground tnum">
-                                {m.body_fat_pct != null ? `${m.body_fat_pct}%` : "-"}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <p className="mt-3 text-[13px] text-muted-foreground">
-                    Vežbač još nije unosio merenja.
-                  </p>
-                )}
-              </div>
-
-              {/* Progress fotke (samo deljene) - uska kolona drzi mrezu kompaktnom */}
-              {id && <ProgressPhotos athleteId={id} canManage={false} sharedOnly />}
+              {id && (
+                <div id={ID_DELOVA.fotografije} className="scroll-mt-6">
+                  <FotografijeVezbaca athleteId={id} />
+                </div>
+              )}
 
               <button
                 onClick={guard(() => setRemoveOpen(true))}
@@ -1798,19 +1743,31 @@ const AthleteProfile = () => {
         />
       )}
 
+      {desktop && id && (
+        <UrediVezbacaSheet
+          open={urediOpen}
+          onClose={() => setUrediOpen(false)}
+          vezbacId={id}
+          ime={athlete?.full_name ?? "Vežbač"}
+          onSacuvano={() => void load(true)}
+        />
+      )}
+
       <MembershipEditSheet
         open={membershipEditOpen}
-        onClose={() => setMembershipEditOpen(false)}
-        membershipId={activeMembership?.id ?? null}
+        onClose={() => { setMembershipEditOpen(false); setNovaClanarina(false); }}
+        membershipId={novaClanarina ? null : activeMembership?.id ?? null}
         athleteId={id}
-        onSaved={load}
+        onSaved={() => load(desktop)}
       />
 
       {/* Bonus sheet */}
       <FullScreenSheet open={bonusOpen} onClose={() => setBonusOpen(false)} title="Dodaj bonus treninge">
         <FullScreenSheetScroll className="pt-5 space-y-3">
           <p className="text-[13px] text-muted-foreground">
-            Dodato će se na trenutnu članarinu, bez plaćanja.
+            {desktop
+              ? "Dodaje treninge na aktivnu članarinu, bez promene datuma."
+              : "Dodato će se na trenutnu članarinu, bez plaćanja."}
           </p>
           <input
             type="number"
@@ -1895,6 +1852,9 @@ const AthleteProfile = () => {
         <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Dodeli plan ishrane</DialogTitle>
+            {desktop && (
+              <p className="text-[13px] text-muted-foreground">Novi plan zamenjuje trenutni plan ishrane.</p>
+            )}
           </DialogHeader>
           {templates.length === 0 ? (
             <div className="text-center py-8">
@@ -2000,9 +1960,13 @@ const AthleteProfile = () => {
       <AlertDialog open={removeOpen} onOpenChange={setRemoveOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Ukloniti vežbača?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {desktop ? `Ukloniti ${athlete?.full_name ?? "vežbača"} iz tvojih vežbača?` : "Ukloniti vežbača?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              {athlete?.full_name ?? "Vežbač"} će biti uklonjen sa tvog spiska. Njegov nalog i istorija treninga se čuvaju. Možeš ga ponovo dodati pozivnicom kasnije.
+              {desktop
+                ? "Nalog vežbača ostaje, samo više nije povezan sa tobom. Zakazani termini se otkazuju."
+                : `${athlete?.full_name ?? "Vežbač"} će biti uklonjen sa tvog spiska. Njegov nalog i istorija treninga se čuvaju. Možeš ga ponovo dodati pozivnicom kasnije.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -2104,6 +2068,7 @@ const VrhProfila = ({
   tezina: number | null;
 }) => {
   const { sesija, now, ocisti } = useAktivnaSesija(athlete.id);
+  const puls = usePulsUzivo(athlete.id, !!sesija);
   const traje = sesija ? now - new Date(sesija.started_at).getTime() : 0;
   const zaboravljen = traje >= ZABORAVLJEN_POSLE_MS;
   const imaStat = stats && stats.success !== false;
@@ -2123,7 +2088,7 @@ const VrhProfila = ({
     >
       <div className="flex flex-col justify-between gap-5 px-7 py-6">
         <div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
             <Link
               to="/trener/vezbaci"
               aria-label="Nazad"
@@ -2135,15 +2100,17 @@ const VrhProfila = ({
               Profil vežbača
             </span>
             <span className="flex-1" />
-            <div className="flex shrink-0 items-center gap-2">{akcije}</div>
+            <div className="flex flex-wrap items-center gap-2">{akcije}</div>
           </div>
           <h1 className="mt-3 font-display text-[32px] font-bold leading-[1.05] tracking-[-0.03em]">
             {athlete.full_name ?? "Bez imena"}
           </h1>
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-            <span className="rounded-full bg-primary-soft px-2.5 py-1 text-[11px] font-semibold text-primary-soft-foreground">
-              {goalLabel[athlete.goal ?? "general"] ?? "Opšte"}
-            </span>
+            {ciljNaziv(athlete.goal) && (
+              <span className="rounded-full bg-primary-soft px-2.5 py-1 text-[11px] font-semibold text-primary-soft-foreground">
+                {ciljNaziv(athlete.goal)}
+              </span>
+            )}
             {tezina ? (
               <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-muted-foreground tnum">
                 {String(tezina).replace(".", ",")} kg
@@ -2208,6 +2175,12 @@ const VrhProfila = ({
                   {zaboravljen && ", možda nije ugašen"}
                 </small>
               </div>
+              {puls != null && (
+                <span className="ml-auto inline-flex items-center gap-1 text-success">
+                  <Heart className="h-3.5 w-3.5 fill-current" />
+                  <b className="fig text-[16px] leading-none">{puls}</b>
+                </span>
+              )}
             </div>
             <div className="mt-2.5 flex gap-2">
               <Link

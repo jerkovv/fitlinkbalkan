@@ -50,10 +50,13 @@ const sheetVariants = cva(
 
 interface SheetContentProps
   extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
-    VariantProps<typeof sheetVariants> {}
+    VariantProps<typeof sheetVariants> {
+  /** Racunar: z-index pozadine i omotaca, kad se prozor otvara iznad viseg sloja. */
+  slojClassName?: string;
+}
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
-  ({ side = "right", className, children, ...props }, ref) => {
+  ({ side = "right", className, slojClassName, children, ...props }, ref) => {
     const desktop = useDesktopWeb();
 
     // Racunar (fitlink.rs/dashboard): donja fioka od 440px zalepljena za dno monitora
@@ -62,8 +65,8 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
     if (desktop && side === "bottom") {
       return (
         <SheetPortal>
-          <SheetOverlay className="bg-black/40 backdrop-blur-[2px]" />
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 pointer-events-none">
+          <SheetOverlay className={cn("bg-black/40 backdrop-blur-[2px]", slojClassName)} />
+          <div className={cn("fixed inset-0 z-50 flex items-center justify-center p-6 pointer-events-none", slojClassName)}>
             <SheetPrimitive.Content
               ref={ref}
               className={cn(

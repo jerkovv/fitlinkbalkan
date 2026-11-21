@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { PhoneShell } from "@/components/PhoneShell";
@@ -24,6 +24,24 @@ import { Label } from "@/components/ui/label";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { LockMark } from "@/components/pretplata/LockMark";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
+import { LiceVezbaca } from "@/components/trainer/web/vezbaci/LiceVezbaca";
+import { useVezbaciPregled } from "@/components/trainer/web/vezbaci/useVezbaciPregled";
+import {
+  RITMOVI,
+  ciljNaziv,
+  danIzTeksta,
+  filterIzAdrese,
+  imenaPodsetnika,
+  kadJeTrenirao,
+  ritamVezbaca,
+  stanjeClanarine,
+  uFilteru,
+  zaPodsetnik,
+  type FilterVezbaca,
+  type Ritam,
+  type StanjeClanarine,
+  type Vezbac,
+} from "@/components/trainer/web/vezbaci/aktivnost";
 
 type AthleteRow = {
   id: string;
@@ -83,7 +101,15 @@ const recencyText = (days: number | null) => {
   return `Trenirao pre ${days} dana`;
 };
 
-const filters: { key: "all" | "active" | "expiring" | "expired"; label: string }[] = [
+// Racunar: oznake stanja clanarine, iste kao na telefonu.
+const STANJE_TON: Record<StanjeClanarine, "success" | "warning" | "danger" | "muted"> = {
+  Aktivan: "success",
+  Uskoro: "warning",
+  Istekla: "danger",
+  "Bez članarine": "muted",
+};
+
+const filters: { key: FilterVezbaca; label: string }[] = [
   { key: "all", label: "Svi" },
   { key: "active", label: "Aktivni" },
   { key: "expiring", label: "Uskoro" },
@@ -103,7 +129,14 @@ const AthletesList = () => {
   const { locked, openLock, guard } = usePretplataLock();
   const { user } = useAuth();
   const desktop = useDesktopWeb();
-  const [filter, setFilter] = useState<"all" | "active" | "expiring" | "expired">("all");
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const filterIzUrl = searchParams.get("filter");
+  const [filter, setFilter] = useState<FilterVezbaca>(() => filterIzAdrese(filterIzUrl));
+  useEffect(() => { setFilter(filterIzAdrese(filterIzUrl)); }, [filterIzUrl]);
+  // Racunar: spisak po pravilima sa telefona i izabran deo kruga (redovno, usporilo, nestalo).
+  const pregled = useVezbaciPregled(desktop);
+  const [ritam, setRitam] = useState<Ritam | null>(null);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<AthleteRow[]>([]);
@@ -174,7 +207,7 @@ const AthletesList = () => {
 
   // Signal rizika/aktivnosti po vezbacu (backend racuna sve).
   useEffect(() => {
-    if (!user) return;
+    if (!user || desktop) return;
     (async () => {
       const { data } = await supabase.rpc("get_athletes_overview");
       const res = data as any;
@@ -185,7 +218,7 @@ const AthletesList = () => {
       );
       setOverview(m);
     })();
-  }, [user]);
+  }, [user, desktop]);
 
   const enriched = useMemo(
     () =>
@@ -205,13 +238,13 @@ const AthletesList = () => {
       (a.profile?.full_name ?? "").toLowerCase().includes(q.toLowerCase()),
   );
 
-  // Racunar: broj po filteru stoji u samom dugmetu, da trener odmah vidi raspodelu.
-  const countByFilter: Record<(typeof filters)[number]["key"], number> = {
-    all: enriched.length,
-    active: enriched.filter((a) => a.status === "active").length,
-    expiring: enriched.filter((a) => a.status === "expiring").length,
-    expired: enriched.filter((a) => a.status === "expired").length,
-  };
+  const trazenoIme = q.trim().toLowerCase();
+  const vezbaciRacunar = pregled.vezbaci.filter(
+    (v) =>
+      uFilteru(v, filter) &&
+      (!ritam || ritamVezbaca(v) === ritam) &&
+      (!trazenoIme || v.ime.toLowerCase().includes(trazenoIme)),
+  );
 
   // Invite dialog
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -319,7 +352,7 @@ const AthletesList = () => {
       <PhoneShell
         hasBottomNav
         title="Vežbači"
-        eyebrow={`${rows.length} ukupno`}
+        eyebrow={desktop ? (pregled.ucitano ? `${pregled.vezbaci.length} ukupno` : undefined) : `${rows.length} ukupno`}
         desktopWidth="wide"
         // Racunar: poziv je dugme u zaglavlju. Na telefonu je siroko dugme ispod
         // liste, koje bi na sirokom ekranu zavrsilo daleko od pogleda.
@@ -340,8 +373,22 @@ const AthletesList = () => {
           // Racunar: vrh sa krugom aktivnosti, kome da se javis i pozivnicama, pa
           // pretraga i filteri u jednom redu i vezbaci kao tabela sa kolonama.
           <div className="space-y-5">
-            {!loading && rows.length > 0 && (
-              <VrhVezbaca rows={rows} overview={overview} pending={pending} />
+            {pregled.greska && !pregled.ucitano && (
+              <div className="card-premium px-6 py-10 text-center">
+                <p className="text-[13.5px] text-muted-foreground">{pregled.greska}</p>
+                <Button variant="outline" onClick={() => void pregled.ucitaj()} className="mt-4 h-10 rounded-full px-4">
+                  Pokušaj ponovo
+                </Button>
+              </div>
+            )}
+            {pregled.ucitano && pregled.vezbaci.length > 0 && (
+              <VrhVezbaca
+                vezbaci={pregled.vezbaci}
+                pending={pending}
+                ritam={ritam}
+                onRitam={(r) => setRitam((pre) => (pre === r ? null : r))}
+                onJaviSe={guard(() => navigate("/trener/javi-se"))}
+              />
             )}
             <div className="flex items-center justify-between gap-4">
               <div className="flex h-10 w-full max-w-sm items-center gap-2 rounded-full border border-hairline bg-surface px-4 transition focus-within:ring-2 focus-within:ring-primary/40">
@@ -367,34 +414,42 @@ const AthletesList = () => {
                       )}
                     >
                       {f.label}
-                      <span className={cn("tnum text-[11.5px] font-bold", aktivan ? "text-primary-soft-foreground" : "text-muted-foreground/70")}>
-                        {countByFilter[f.key]}
-                      </span>
+                      {pregled.ucitano && (
+                        <span className={cn("tnum text-[11.5px] font-bold", aktivan ? "text-primary-soft-foreground" : "text-muted-foreground/70")}>
+                          {pregled.vezbaci.filter((v) => uFilteru(v, f.key)).length}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {loading ? (
-              <div className="flex justify-center py-10">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-              </div>
+            {!pregled.ucitano ? (
+              pregled.greska ? null : (
+                <div className="flex justify-center py-10">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              )
             ) : (
               <>
                 <div className="card-premium overflow-hidden">
-                  {filtered.length === 0 ? (
+                  {vezbaciRacunar.length === 0 ? (
                     <div className="flex flex-col items-center px-6 py-14 text-center">
                       <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-brand-soft">
                         <Users className="h-5 w-5 text-primary" strokeWidth={2.25} />
                       </div>
                       <div className="font-display text-[17px] font-bold tracking-tight">
-                        {rows.length === 0 ? "Još nemaš vežbača" : "Nema rezultata"}
+                        {pregled.vezbaci.length === 0 ? "Još nemaš vežbača" : "Nema rezultata"}
                       </div>
                       <p className="mt-1 text-[13px] text-muted-foreground">
-                        {rows.length === 0
+                        {pregled.vezbaci.length === 0
                           ? "Pozovi prvog vežbača emailom i pojaviće se ovde."
-                          : "Probaj drugi filter ili drugo ime."}
+                          : trazenoIme
+                            ? `Nema vežbača za "${q.trim()}".`
+                            : ritam
+                              ? "Nema vežbača u ovoj grupi. Klikni oznaku ponovo za sve."
+                              : "Nema vežbača u ovoj grupi."}
                       </p>
                     </div>
                   ) : (
@@ -407,53 +462,44 @@ const AthletesList = () => {
                         <div />
                       </div>
                       <ul className="divide-y divide-hairline">
-                        {filtered.map((a) => {
-                          const ov = overview.get(a.id);
+                        {vezbaciRacunar.map((v) => {
+                          const r = RITMOVI.find((x) => x.kljuc === ritamVezbaca(v))!;
+                          const stanje = stanjeClanarine(v);
                           return (
-                            <li key={a.id}>
+                            <li key={v.id}>
                               <Link
-                                to={`/trener/vezbaci/${a.id}`}
+                                to={`/trener/vezbaci/${v.id}`}
                                 className={cn(ATHLETE_COLS, "px-5 py-3.5 transition hover:bg-surface-2")}
                               >
                                 <div className="flex min-w-0 items-center gap-3">
-                                  <Avatar
-                                    initials={initialsOf(a.profile?.full_name ?? null)}
-                                    tone={a.status === "expiring" ? "athlete" : "brand"}
-                                    size="sm"
-                                    className="ring-0"
-                                  />
+                                  <LiceVezbaca ime={v.ime} slika={v.avatarUrl} velicina={36} />
                                   <div className="min-w-0">
-                                    <div className="text-[14px] font-semibold leading-tight tracking-tight">
-                                      {a.profile?.full_name ?? "Bez imena"}
-                                    </div>
-                                    <div className="truncate text-[12px] text-muted-foreground">
-                                      {goalLabel[a.goal ?? "general"] ?? "Opšte"}
-                                    </div>
+                                    <div className="text-[14px] font-semibold leading-tight tracking-tight">{v.ime}</div>
+                                    {ciljNaziv(v.cilj) && (
+                                      <div className="truncate text-[12px] text-muted-foreground">{ciljNaziv(v.cilj)}</div>
+                                    )}
                                   </div>
                                 </div>
                                 <div className="min-w-0">
                                   <div className="text-[13.5px] font-medium leading-tight">
-                                    {a.membership?.plan_name ?? "Bez članarine"}
+                                    {v.imaClanarinu ? v.paket ?? "Članarina" : "Bez članarine"}
                                   </div>
-                                  {a.membership && (
+                                  {v.imaClanarinu && (
                                     <div className="truncate text-[12px] text-muted-foreground tnum">
-                                      {a.membership.ends_on ? a.expiresLabel : "Bez roka"}
+                                      {v.clanarinaDo
+                                        ? `do ${danIzTeksta(v.clanarinaDo).toLocaleDateString("sr-Latn-RS", { day: "numeric", month: "short" })}`
+                                        : "Bez roka"}
                                     </div>
                                   )}
                                 </div>
                                 <div className="flex min-w-0 items-center gap-2">
-                                  {ov ? (
-                                    <>
-                                      <span className={cn("h-2 w-2 shrink-0 rounded-full", RISK_DOT[ov.risk] ?? "bg-muted")} />
-                                      <span className="truncate text-[13px] text-muted-foreground">
-                                        {recencyText(ov.days_since_last)}
-                                      </span>
-                                    </>
-                                  ) : (
-                                    <span className="text-[13px] text-muted-foreground/60">-</span>
-                                  )}
+                                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: r.boja }} />
+                                  <span className="min-w-0">
+                                    <span className="block text-[13px] font-semibold capitalize leading-tight">{r.naziv}</span>
+                                    <span className="block truncate text-[12px] text-muted-foreground">{kadJeTrenirao(v)}</span>
+                                  </span>
                                 </div>
-                                <div>{statusChip[a.status]}</div>
+                                <div><Chip tone={STANJE_TON[stanje]}>{stanje}</Chip></div>
                                 <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
                               </Link>
                             </li>
@@ -764,62 +810,52 @@ const AthletesList = () => {
 export default AthletesList;
 
 // ===== Vrh ekrana na racunaru (Ponoc) =====
-type Pregled = Map<string, { risk: string; days_since_last: number | null }>;
-
 const PRSTEN = 2 * Math.PI * 46;
 
-const VrhVezbaca = ({ rows, overview, pending }: { rows: AthleteRow[]; overview: Pregled; pending: PendingInvite[] }) => {
-  const vrednosti = Array.from(overview.values());
-  const redovno = vrednosti.filter((v) => v.risk === "low").length;
-  const usporilo = vrednosti.filter((v) => v.risk === "medium").length;
-  const nestalo = vrednosti.filter((v) => v.risk === "high").length;
-  const ukupno = Math.max(1, redovno + usporilo + nestalo);
-  const delovi = [
-    { n: redovno, boja: "hsl(var(--success))", ime: "trenira redovno" },
-    { n: usporilo, boja: "hsl(var(--warning))", ime: "usporilo" },
-    { n: nestalo, boja: "hsl(var(--destructive))", ime: "nestalo" },
-  ];
+const VrhVezbaca = ({
+  vezbaci,
+  pending,
+  ritam,
+  onRitam,
+  onJaviSe,
+}: {
+  vezbaci: Vezbac[];
+  pending: PendingInvite[];
+  ritam: Ritam | null;
+  onRitam: (r: Ritam) => void;
+  onJaviSe: () => void;
+}) => {
+  const delovi = RITMOVI.map((r) => ({
+    ...r,
+    n: vezbaci.filter((v) => ritamVezbaca(v) === r.kljuc).length,
+  }));
+  const ukupno = Math.max(1, vezbaci.length);
   let pomak = 0;
-
-  // Kome treba da se javis: ko 14 dana i vise nije trenirao, pa oni koji nikad nisu
-  // (isto merilo kao prsten, gde su oboje "nestalo"); najvise dvoje u naslovu.
-  const imena = new Map(rows.map((r) => [r.id, r.profile?.full_name ?? "Bez imena"]));
-  const zaboravili = Array.from(overview.entries())
-    .filter(([, v]) => v.days_since_last == null || v.days_since_last >= 14)
-    .sort((a, b) => (b[1].days_since_last ?? -1) - (a[1].days_since_last ?? -1));
-  const prvaImena = zaboravili.slice(0, 2).map(([id]) => (imena.get(id) ?? "").split(" ")[0]);
-  const naslovJavi =
-    zaboravili.length === 0
-      ? "Svi su trenirali u poslednje dve nedelje"
-      : zaboravili.length === 1
-        ? `${prvaImena[0]} nije trenirao u poslednje dve nedelje`
-        : zaboravili.length === 2
-          ? `${prvaImena[0]} i ${prvaImena[1]} nisu trenirali u poslednje dve nedelje`
-          : `${prvaImena[0]}, ${prvaImena[1]} i još ${zaboravili.length - 2} nisu trenirali u poslednje dve nedelje`;
+  const podsetnik = zaPodsetnik(vezbaci);
 
   return (
     // Uzi ekran (do 1279 px): pozivnice idu u svoj red ispod, da "Javi se" ne ostane bez mesta.
-    <div className="grid grid-cols-2 gap-4 xl:grid-cols-[330px_minmax(0,1fr)_300px]">
-      <section className="card-premium flex items-center gap-5 rounded-[26px] px-[22px] py-5">
+    <div className="grid grid-cols-2 gap-4 xl:grid-cols-[380px_minmax(0,1fr)_280px]">
+      <section className="card-premium flex items-center gap-4 rounded-[26px] px-[18px] py-4">
         <div className="relative shrink-0">
-          <svg width="120" height="120" viewBox="0 0 120 120" aria-hidden>
+          <svg width="112" height="112" viewBox="0 0 120 120" aria-hidden>
             <circle cx="60" cy="60" r="46" fill="none" stroke="hsl(0 0% 100% / 0.06)" strokeWidth="11" />
             {delovi.map((d) => {
               if (d.n === 0) return null;
               const duzina = (PRSTEN * d.n) / ukupno;
               const el = (
                 <circle
-                  key={d.ime}
+                  key={d.kljuc}
                   cx="60"
                   cy="60"
                   r="46"
                   fill="none"
                   stroke={d.boja}
                   strokeWidth="11"
-                  strokeLinecap="round"
-                  strokeDasharray={`${Math.max(duzina - 5, 1)} ${PRSTEN}`}
+                  strokeDasharray={`${Math.max(duzina - 3, 1)} ${PRSTEN}`}
                   strokeDashoffset={-pomak}
                   transform="rotate(-90 60 60)"
+                  opacity={!ritam || ritam === d.kljuc ? 1 : 0.25}
                 />
               );
               pomak += duzina;
@@ -827,49 +863,72 @@ const VrhVezbaca = ({ rows, overview, pending }: { rows: AthleteRow[]; overview:
             })}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="fig text-[38px] leading-none">{rows.length}</span>
+            <span className="fig text-[32px] leading-none">{vezbaci.length}</span>
             <span className="text-[10.5px] text-muted-foreground">vežbača</span>
           </div>
         </div>
-        <div className="flex flex-col gap-2 text-[12.5px] text-muted-foreground">
-          {delovi.map((d) => (
-            <span key={d.ime} className="flex items-baseline">
-              <i className="mr-2 inline-block h-2 w-2 rounded-full" style={{ background: d.boja }} />
-              <b className="fig mr-1.5 text-[17px] text-foreground">{d.n}</b>
-              {d.ime}
-            </span>
-          ))}
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          {delovi.map((d) => {
+            const izabran = ritam === d.kljuc;
+            return (
+              <button
+                key={d.kljuc}
+                type="button"
+                aria-pressed={izabran}
+                aria-label={`${d.n} ${d.naziv}, ${d.raspon}`}
+                onClick={() => onRitam(d.kljuc)}
+                className={cn(
+                  "flex h-[34px] items-center gap-2 rounded-[11px] border px-2 text-left transition",
+                  izabran ? "border-white/20 bg-white/[0.07]" : "border-transparent hover:bg-surface-2",
+                )}
+              >
+                <i className="h-2 w-2 shrink-0 rounded-full" style={{ background: d.boja }} />
+                <b className="fig text-[15px] text-foreground">{d.n}</b>
+                <span className="text-[12.5px] font-semibold">{d.naziv}</span>
+                <span className="ml-auto whitespace-nowrap text-[10.5px] text-muted-foreground">{d.raspon}</span>
+              </button>
+            );
+          })}
         </div>
       </section>
 
-      <section
-        className="card-premium flex flex-col justify-between rounded-[26px] px-[22px] py-5"
-        style={{ background: zaboravili.length ? "linear-gradient(135deg, hsl(36 100% 64% / 0.12), hsl(var(--card)) 60%)" : undefined }}
-      >
-        <div>
-          <span className={cn("text-[10px] font-semibold uppercase tracking-[0.13em]", zaboravili.length ? "text-warning" : "text-success")}>
-            {zaboravili.length ? "Javi se" : "Sve je u redu"}
+      {podsetnik.length > 0 ? (
+        <button
+          type="button"
+          onClick={onJaviSe}
+          aria-label={`Javi se vežbačima: ${imenaPodsetnika(podsetnik)}`}
+          className="card-premium flex flex-col justify-between rounded-[26px] px-[22px] py-5 text-left transition hover:brightness-110"
+          style={{ background: "linear-gradient(135deg, hsl(36 100% 64% / 0.12), hsl(var(--card)) 60%)" }}
+        >
+          <span>
+            <span className="block text-[10px] font-semibold uppercase tracking-[0.13em] text-warning">Javi se</span>
+            <span className="mt-1.5 block font-display text-[19px] font-semibold leading-tight tracking-tight">
+              Javi se vežbačima
+            </span>
+            <span className="mt-1 block text-[12.5px] text-muted-foreground">{imenaPodsetnika(podsetnik)}</span>
           </span>
-          <h3 className="mt-1.5 font-display text-[19px] font-semibold leading-tight tracking-tight">{naslovJavi}</h3>
-        </div>
-        {zaboravili.length > 0 && (
-          <div className="mt-3 flex items-center justify-between">
-            <div className="flex">
-              {zaboravili.slice(0, 4).map(([id], i) => (
-                <span key={id} className={cn("grid h-[38px] w-[38px] place-items-center rounded-full bg-gradient-brand text-[12px] font-bold text-white shadow-[0_0_0_3px_hsl(var(--card))]", i > 0 && "-ml-2")}>
-                  {initialsOf(imena.get(id) ?? null)}
-                </span>
+          <span className="mt-3 flex items-center justify-between">
+            <span className="flex">
+              {podsetnik.slice(0, 3).map((v, i) => (
+                <LiceVezbaca
+                  key={v.id}
+                  ime={v.ime}
+                  slika={v.avatarUrl}
+                  className={cn("shadow-[0_0_0_3px_hsl(var(--card))]", i > 0 && "-ml-2")}
+                />
               ))}
-            </div>
-            <Link
-              to={`/trener/chat/${zaboravili[0][0]}`}
-              className="inline-flex h-[34px] items-center gap-1.5 rounded-full bg-white px-3.5 text-[12px] font-semibold text-background"
-            >
-              Poruka
-            </Link>
-          </div>
-        )}
-      </section>
+            </span>
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-gradient-brand text-white">
+              <ChevronRight className="h-4 w-4" />
+            </span>
+          </span>
+        </button>
+      ) : (
+        <section className="card-premium flex flex-col justify-center rounded-[26px] px-[22px] py-5">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.13em] text-success">Sve je u redu</span>
+          <h3 className="mt-1.5 font-display text-[19px] font-semibold leading-tight tracking-tight">Niko nije usporio</h3>
+        </section>
+      )}
 
       <section className="card-premium col-span-2 rounded-[26px] px-[18px] py-4 xl:col-span-1">
         <div className="mb-1 flex items-center justify-between">

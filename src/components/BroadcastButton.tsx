@@ -58,11 +58,16 @@ export const BroadcastButton = ({ pill = false, className, label = "Obaveštenje
       return;
     }
     const count = typeof data === "number" ? data : 0;
+    // Niko nije primio poruku: tekst i prozor ostaju, da trener promeni uslov.
     if (count === 0) {
-      toast.warning("Nema vežbača koji ispunjavaju uslov");
-    } else {
-      toast.success(`Poslato ${count} ${count === 1 ? "vežbaču" : "vežbača"}`);
+      toast.warning("Nema vežbača koji ispunjavaju uslov.");
+      return;
     }
+    toast.success(
+      count === 1
+        ? "Poslato jednom vežbaču, u aplikaciju i na mejl."
+        : `Poslato vežbačima: ${count}. Stiže u aplikaciju i na mejl.`,
+    );
     setTitle("");
     setBody("");
     setOpen(false);
@@ -95,7 +100,7 @@ export const BroadcastButton = ({ pill = false, className, label = "Obaveštenje
       <FullScreenSheet open={open} onClose={() => setOpen(false)} title="Pošalji obaveštenje">
         <FullScreenSheetScroll className="pt-5 space-y-3">
           <p className="text-sm text-muted-foreground">
-            Stiže kao notifikacija u app-u svim odabranim vežbačima.
+            Stiže u aplikaciju i na mejl.
           </p>
           <div className="space-y-1.5">
             <label className="text-[12px] font-semibold text-muted-foreground">Naslov (opciono)</label>
