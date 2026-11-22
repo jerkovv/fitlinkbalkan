@@ -1,3 +1,5 @@
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { useZakljucanaZona } from "@/components/pretplata/useZakljucanaZona";
 import type { ReactNode } from "react";
 import { CheckCircle2, Circle, Eye, Loader2, RotateCw, type LucideIcon } from "lucide-react";
 import { BrandGlyph } from "@/components/BrandMark";
@@ -41,6 +43,7 @@ export function RedPrekidaca({
   ugaseno?: boolean;
   promeni: () => void;
 }) {
+  const { locked } = usePretplataLock();
   return (
     <div className="flex items-center gap-3 px-4 py-3.5">
       <Znak ikona={ikona} />
@@ -50,7 +53,7 @@ export function RedPrekidaca({
       </div>
       <Switch
         checked={ukljucen}
-        disabled={ugaseno}
+        disabled={!locked && ugaseno}
         onCheckedChange={promeni}
         aria-label={naslov}
         className="shrink-0"
@@ -96,11 +99,12 @@ export function Cipovi<K extends string | number>({
   ugaseno?: K[];
   izaberi: (k: K) => void;
 }) {
+  const { locked } = usePretplataLock();
   return (
     <div className="flex flex-wrap gap-2">
       {stavke.map(([k, t]) => {
         const da = izabrano.includes(k);
-        const ne = !!ugaseno?.includes(k);
+        const ne = !locked && !!ugaseno?.includes(k);
         return (
           <button
             key={k}
@@ -198,9 +202,10 @@ export const OkvirPregleda = ({ naslov, children }: { naslov: string; children: 
 /** Racunar: podesavanja levo, pregled desno i stalno na oku. Telefon: jedna kolona, pregled prvi. */
 export function Raspored({ pregled, children }: { pregled: ReactNode; children: ReactNode }) {
   const desktop = useDesktopWeb();
+  const zona = useZakljucanaZona();
   if (!desktop) {
     return (
-      <div className="space-y-4 pb-24">
+      <div {...zona} className="space-y-4 pb-24">
         {pregled}
         {children}
       </div>
@@ -211,7 +216,7 @@ export function Raspored({ pregled, children }: { pregled: ReactNode; children: 
       <div className="xl:sticky xl:top-[88px] xl:col-start-2 xl:row-start-1 xl:max-h-[calc(100vh-112px)] xl:overflow-y-auto">
         {pregled}
       </div>
-      <div className="min-w-0 space-y-4 xl:col-start-1 xl:row-start-1">{children}</div>
+      <div {...zona} className="min-w-0 space-y-4 xl:col-start-1 xl:row-start-1">{children}</div>
     </div>
   );
 }

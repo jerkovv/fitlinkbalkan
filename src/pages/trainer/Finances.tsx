@@ -674,12 +674,12 @@ const Finances = () => {
 
             <div className="grid grid-cols-[minmax(0,1fr)_340px] items-stretch gap-6">
               <Card className="p-6">
-                <div className="mb-5 flex items-start justify-between gap-4">
-                  <div>
+                <div className="mb-5 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+                  <div className="min-w-0">
                     <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                       Prihod po mesecima
                     </div>
-                    <div className="mt-1 flex items-baseline gap-1.5">
+                    <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
                       <span className="font-display text-[26px] font-bold tracking-tighter tnum">
                         {periodTotal.toLocaleString("sr-Latn-RS")}
                       </span>

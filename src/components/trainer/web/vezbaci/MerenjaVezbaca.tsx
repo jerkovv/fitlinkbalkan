@@ -15,6 +15,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { LockMark } from "@/components/pretplata/LockMark";
 import { useAuth } from "@/hooks/useAuth";
 import { useConfirm } from "@/hooks/useConfirm";
 import { porukaGreske } from "@/lib/errorMessage";
@@ -165,7 +166,7 @@ export const MerenjaVezbaca = ({ athleteId, onPromena }: { athleteId: string; on
           onClick={guard(() => setForma({ postojeci: null }))}
           className="h-9 shrink-0 rounded-full bg-gradient-brand px-3.5 text-[12.5px] text-white shadow-brand"
         >
-          <Plus className="mr-1 h-3.5 w-3.5" /> Novo merenje
+          <LockMark className="mr-1" /><Plus className="mr-1 h-3.5 w-3.5" /> Novo merenje
         </Button>
       </div>
 

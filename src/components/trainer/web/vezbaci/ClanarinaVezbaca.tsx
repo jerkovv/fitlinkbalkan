@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui-bits";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { LockMark } from "@/components/pretplata/LockMark";
+import { OBLASTI } from "@/components/pretplata/oblastiZakljucanja";
 import { porukaGreske } from "@/lib/errorMessage";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
@@ -68,8 +70,8 @@ export const ClanarinaVezbaca = ({
         {zaglavlje}
         <div className="mt-3 text-[14px] font-semibold">Nema članarinu</div>
         <p className="mt-0.5 text-[12.5px] text-muted-foreground">Dodaj ručno ili sačekaj zahtev vežbača</p>
-        <Button variant="outline" onClick={guard(onNova)} className="mt-3 h-10 w-full rounded-full">
-          <Plus className="mr-1.5 h-4 w-4" /> Dodaj
+        <Button variant="outline" onClick={guard(onNova, OBLASTI.naplata)} className="mt-3 h-10 w-full rounded-full">
+          <LockMark className="mr-1.5" /><Plus className="mr-1.5 h-4 w-4" /> Dodaj
         </Button>
       </section>
     );
@@ -99,7 +101,7 @@ export const ClanarinaVezbaca = ({
   const iskorisceno = ukupno ? Math.min(c.sessions_used ?? 0, ukupno) : 0;
 
   const oznaci = async (p: boolean) => {
-    if (locked) return openLock();
+    if (locked) return openLock(OBLASTI.naplata);
     setMenja(p);
     const { error } = await supabase.rpc("trainer_set_membership_paid", {
       p_membership_id: c.id,
@@ -120,9 +122,10 @@ export const ClanarinaVezbaca = ({
       variant="outline"
       disabled={menja != null}
       onClick={() => void oznaci(p)}
-      className="h-9 min-w-0 flex-1 rounded-full px-2 text-[12px]"
+      className="h-9 flex-auto rounded-full px-4 text-[12px]"
     >
       {menja === p && <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />}
+      <LockMark className="mr-1" />
       {p ? "Označi kao plaćeno" : "Označi kao neplaćeno"}
     </Button>
   );
@@ -131,8 +134,8 @@ export const ClanarinaVezbaca = ({
     <section className="card-premium space-y-3.5 p-5">
       <div className="flex items-end justify-between gap-3">
         {zaglavlje}
-        <Button variant="outline" onClick={guard(onIzmeni)} className="h-8 shrink-0 rounded-full px-3 text-[12.5px]">
-          <Pencil className="mr-1 h-3.5 w-3.5" /> Izmeni članarinu
+        <Button variant="outline" onClick={guard(onIzmeni, OBLASTI.naplata)} className="h-8 shrink-0 rounded-full px-3 text-[12.5px]">
+          <LockMark className="mr-1" /><Pencil className="mr-1 h-3.5 w-3.5" /> Izmeni članarinu
         </Button>
       </div>
 
@@ -180,17 +183,18 @@ export const ClanarinaVezbaca = ({
       </div>
 
       <div className="space-y-2 border-t border-hairline pt-3">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {placeno == null ? [dugmePlaceno(true), dugmePlaceno(false)] : dugmePlaceno(!placeno)}
         </div>
-        <div className="flex gap-2">
+        {/* Natpisi su uvek celi: kad dva dugmeta ne staju, drugo prelazi u novi red. */}
+        <div className="flex flex-wrap gap-2">
           {aktivna && (
-            <Button variant="outline" onClick={guard(onBonus)} className="h-9 min-w-0 flex-1 rounded-full px-2 text-[12px]">
-              <Plus className="mr-1 h-3.5 w-3.5" /> Bonus treninzi
+            <Button variant="outline" onClick={guard(onBonus, OBLASTI.naplata)} className="h-9 flex-auto rounded-full px-4 text-[12px]">
+              <LockMark className="mr-1" /><Plus className="mr-1 h-3.5 w-3.5" /> Bonus treninzi
             </Button>
           )}
-          <Button variant="outline" onClick={guard(onNova)} className="h-9 min-w-0 flex-1 rounded-full px-2 text-[12px]">
-            <Plus className="mr-1 h-3.5 w-3.5" /> Dodaj novu članarinu
+          <Button variant="outline" onClick={guard(onNova, OBLASTI.naplata)} className="h-9 flex-auto rounded-full px-4 text-[12px]">
+            <LockMark className="mr-1" /><Plus className="mr-1 h-3.5 w-3.5" /> Dodaj novu članarinu
           </Button>
         </div>
       </div>

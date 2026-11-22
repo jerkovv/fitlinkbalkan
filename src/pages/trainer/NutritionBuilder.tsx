@@ -29,6 +29,7 @@ import {
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { useZakljucanaZona } from "@/components/pretplata/useZakljucanaZona";
 import { DodelaVezbacu } from "@/components/trainer/web/vezbaci/DodelaVezbacu";
 import { LockMark } from "@/components/pretplata/LockMark";
 import { useAuth } from "@/hooks/useAuth";
@@ -249,6 +250,7 @@ function SortableFoodItemRow({
 
 const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }) => {
   const { locked, openLock, guard } = usePretplataLock();
+  const zona = useZakljucanaZona();
   const params = useParams<{ id?: string; assignedId?: string; athleteId?: string }>();
   // parentId = template_id (sablon) ili assigned_plan_id (dodeljeni plan).
   const parentId = mode === "assigned" ? params.assignedId : params.id;
@@ -430,8 +432,8 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   }, [foods]);
 
   const handleAddDay = async (e: React.FormEvent) => {
-    if (locked) return openLock();
     e.preventDefault();
+    if (locked) return openLock();
     if (!parentId) return;
     const nextNum = (days[days.length - 1]?.day_number ?? 0) + 1;
     const { error } = await supabase.from(cfg.daysTable).insert({
@@ -485,8 +487,8 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   };
 
   const handleAddMeal = async (e: React.FormEvent) => {
-    if (locked) return openLock();
     e.preventDefault();
+    if (locked) return openLock();
     if (!addMealForDayId) return;
     const currMeals = mealsByDay[addMealForDayId] ?? [];
     const { error } = await supabase.from(cfg.mealsTable).insert({
@@ -581,6 +583,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   };
 
   const openAddFood = () => {
+    if (locked) return openLock();
     setNewFoodName(foodQuery.trim());
     setNewFoodCategory(activeCategory ?? availableCategories[0] ?? "");
     setNewFoodKcal("");
@@ -759,6 +762,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   };
 
   const openAssign = async () => {
+    if (locked) return openLock();
     setAssignOpen(true);
     // Racunar: DodelaVezbacu sama ucitava spisak.
     if (desktop) return;
@@ -830,7 +834,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
   // Sadrzaj jednog dana (obroci, namirnice, dodavanje obroka, brisanje dana). Isti je
   // na telefonu (harmonika ispod zaglavlja dana) i na racunaru (desna kolona).
   const renderDayBody = (d: Day, meals: Meal[]) => (
-    <div className="border-t border-hairline px-4 py-3 space-y-3 bg-surface-2/50">
+    <div {...zona} className="border-t border-hairline px-4 py-3 space-y-3 bg-surface-2/50">
       {meals.length === 0 && (
         <p className="text-xs text-muted-foreground text-center py-3">Nema obroka u ovom danu</p>
       )}
@@ -930,7 +934,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
               onClick={() => openFoodPicker(m.id)}
               className="w-full py-2 rounded-md border border-dashed border-hairline text-xs text-muted-foreground hover:border-primary hover:text-primary transition flex items-center justify-center gap-1"
             >
-              <Plus className="h-3 w-3" /> Dodaj namirnicu
+              <LockMark /><Plus className="h-3 w-3" /> Dodaj namirnicu
             </button>
           </div>
         );
@@ -940,7 +944,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
         onClick={() => setAddMealForDayId(d.id)}
         className="w-full py-2.5 rounded-lg border-2 border-dashed border-hairline text-sm text-muted-foreground hover:border-primary hover:text-primary transition flex items-center justify-center gap-1.5"
       >
-        <Plus className="h-4 w-4" /> Dodaj obrok
+        <LockMark /><Plus className="h-4 w-4" /> Dodaj obrok
       </button>
 
       <button
@@ -964,6 +968,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
         desktop && days.length > 0 ? (
           mode === "template" ? (
             <Button onClick={openAssign} className="h-10 rounded-full px-4 shadow-brand">
+              <LockMark className="mr-1.5" />
               <UserPlus className="h-4 w-4 mr-1.5" />
               Dodeli vežbaču
             </Button>
@@ -995,7 +1000,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
             Plan ima dane (Dan 1, Dan 2…). U nedeljnom rasporedu biraš koji dan ide kog dana.
           </p>
           <Button onClick={guard(() => setAddDayOpen(true))}>
-            <Plus className="h-4 w-4 mr-1.5" /> Novi dan
+            <LockMark className="mr-1.5" /><Plus className="h-4 w-4 mr-1.5" /> Novi dan
           </Button>
         </div>
       ) : desktop ? (
@@ -1056,7 +1061,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
               onClick={guard(() => setAddDayOpen(true))}
               className="flex w-full items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-hairline py-2.5 text-sm font-semibold text-muted-foreground transition hover:border-primary hover:text-primary"
             >
-              <Plus className="h-4 w-4" /> Dodaj dan
+              <LockMark /><Plus className="h-4 w-4" /> Dodaj dan
             </button>
             {mode === "assigned" && (
               <p className="px-1 pt-2 text-[12px] text-muted-foreground">
@@ -1155,7 +1160,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
             onClick={guard(() => setAddDayOpen(true))}
             className="w-full py-3 rounded-xl border-2 border-dashed border-hairline text-sm font-semibold text-muted-foreground hover:border-primary hover:text-primary transition flex items-center justify-center gap-1.5"
           >
-            <Plus className="h-4 w-4" /> Dodaj dan
+            <LockMark /><Plus className="h-4 w-4" /> Dodaj dan
           </button>
         </div>
       )}
@@ -1775,7 +1780,7 @@ const NutritionBuilder = ({ mode = "template" }: { mode?: NutritionBuilderMode }
       {mode === "template" && days.length > 0 && !desktop && (
         <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[440px] px-6 pb-6 pt-3 bg-gradient-to-t from-background via-background to-transparent">
           <Button onClick={openAssign} className="w-full shadow-brand">
-            <UserPlus className="h-4 w-4 mr-2" /> Dodeli vežbaču
+            <LockMark className="mr-1.5" /><UserPlus className="h-4 w-4 mr-2" /> Dodeli vežbaču
           </Button>
         </div>
       )}

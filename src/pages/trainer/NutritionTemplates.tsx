@@ -76,8 +76,8 @@ const NutritionTemplates = () => {
   useEffect(() => { load(); }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
-    if (locked) return openLock();
     e.preventDefault();
+    if (locked) return openLock();
     if (!user) return;
     setSubmitting(true);
     const { error } = await supabase.from("nutrition_plan_templates").insert({
@@ -236,7 +236,10 @@ const NutritionTemplates = () => {
             onClick={guard(() => setOpen(true))}
             className="flex min-h-[176px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-hairline text-muted-foreground transition hover:border-primary hover:text-primary"
           >
-            <Plus className="h-5 w-5" />
+            <span className="flex items-center gap-1.5">
+              <LockMark />
+              <Plus className="h-5 w-5" />
+            </span>
             <span className="text-sm font-semibold">Novi plan</span>
           </button>
         </div>

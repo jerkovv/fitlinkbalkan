@@ -1226,6 +1226,7 @@ const Calendar = () => {
                       ) : (
                         <Ban className="h-3.5 w-3.5 mr-1.5" />
                       )}
+                      <LockMark className="mr-1.5" />
                       Otkaži termin za ovaj dan
                     </Button>
                   </div>

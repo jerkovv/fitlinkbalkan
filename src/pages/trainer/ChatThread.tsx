@@ -1,3 +1,4 @@
+import { ZakljucanaZona } from "@/components/pretplata/ZakljucanaZona";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
@@ -81,7 +82,9 @@ const TrainerChatThreadMobile = () => {
           </button>
         </div>
       </header>
-      <ChatThread trainerId={user.id} athleteId={athleteId} className="flex-1 min-h-0" />
+      <ZakljucanaZona>
+        <ChatThread trainerId={user.id} athleteId={athleteId} className="flex-1 min-h-0" />
+      </ZakljucanaZona>
     </div>
   );
 };

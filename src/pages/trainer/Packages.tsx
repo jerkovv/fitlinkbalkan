@@ -250,7 +250,7 @@ const Packages = () => {
           </p>
           <Button
             onClick={openNew}
-            disabled={activeCount >= PACKAGE_LIMIT}
+            disabled={!locked && activeCount >= PACKAGE_LIMIT}
             size="sm"
             className="bg-gradient-brand text-white shadow-brand"
           >
@@ -371,7 +371,10 @@ const Packages = () => {
                 onClick={openNew}
                 className="flex min-h-[208px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-hairline text-muted-foreground transition hover:border-primary hover:text-primary"
               >
-                <Plus className="h-5 w-5" />
+                <span className="flex items-center gap-1.5">
+                  <LockMark />
+                  <Plus className="h-5 w-5" />
+                </span>
                 <span className="text-sm font-semibold">Novi paket</span>
               </button>
             )}

@@ -11,6 +11,7 @@ import { useConfirm } from "@/hooks/useConfirm";
  *
  * Deljeno izmedju stranice uzivo, lista aktivnih vezbaca i profila vezbaca -
  * dok je dugme bilo samo na stranici uzivo, trener na racunaru ga nije nalazio.
+ * Radi i bez pretplate, da vezbac ne ostane zaglavljen u treningu.
  */
 export const useZaustaviTrening = () => {
   const confirm = useConfirm();

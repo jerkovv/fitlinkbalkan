@@ -564,10 +564,11 @@ const AthletesList = () => {
                                   ) : (
                                     <RefreshCw />
                                   )}
+                                  <LockMark />
                                   Pošalji ponovo
                                 </Button>
                                 <button
-                                  onClick={() => setInviteToDelete(p)}
+                                  onClick={guard(() => setInviteToDelete(p))}
                                   className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-destructive-soft hover:text-destructive"
                                   title="Obriši pozivnicu"
                                   aria-label="Obriši pozivnicu"
@@ -714,7 +715,7 @@ const AthletesList = () => {
                               )}
                             </button>
                             <button
-                              onClick={() => setInviteToDelete(p)}
+                              onClick={guard(() => setInviteToDelete(p))}
                               className="h-9 w-9 rounded-full bg-destructive/10 hover:bg-destructive/20 text-destructive flex items-center justify-center transition"
                               title="Obriši pozivnicu"
                               aria-label="Obriši pozivnicu"

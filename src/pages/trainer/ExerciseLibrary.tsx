@@ -25,6 +25,7 @@ import { VideoModal } from "@/components/VideoModal";
 import { MediaReportButton } from "@/components/workout/MediaReportButton";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { LockMark } from "@/components/pretplata/LockMark";
+import { ZakljucanSnimak } from "@/components/exercises/ZakljucanSnimak";
 import { useExerciseBookmarks } from "@/hooks/useExerciseBookmarks";
 import { toEmbedUrl } from "@/lib/videoEmbed";
 import { cn } from "@/lib/utils";
@@ -269,8 +270,8 @@ const ExerciseLibrary = () => {
   const filtered = items;
 
   const handleCreate = async (e: React.FormEvent) => {
-    if (locked) return openLock();
     e.preventDefault();
+    if (locked) return openLock();
     if (!user) return;
     setSubmitting(true);
     const vUrl = videoUrl.trim();
@@ -324,6 +325,7 @@ const ExerciseLibrary = () => {
             onClick={guard(() => setOpen(true))}
             className="h-10 shrink-0 rounded-full px-4 bg-gradient-brand text-white shadow-brand"
           >
+            <LockMark className="mr-1.5" />
             <Plus className="h-4 w-4 mr-1.5" strokeWidth={2.5} />
             Nova vežba
           </Button>
@@ -790,7 +792,11 @@ const ExerciseLibrary = () => {
                   return (
                     <>
                       <div className="relative">
-                      {spoljni ? (
+                      {locked && !slika ? (
+                        <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-surface-2">
+                          <ZakljucanSnimak slika={selected.thumbnail_url} naziv={selected.name} />
+                        </div>
+                      ) : spoljni ? (
                         <button
                           type="button"
                           onClick={() => setVideoOpenFor(selected)}
@@ -823,14 +829,14 @@ const ExerciseLibrary = () => {
                       )}
                       {desktop && <MediaReportButton exerciseId={selected.id} />}
                       </div>
-                      {desktop && !slika && (
+                      {desktop && !slika && !locked && (
                         <Button
                           type="button"
                           variant="outline"
                           onClick={() => setVideoOpenFor(selected)}
-                          className="h-11 w-full rounded-2xl"
+                          className="h-11 w-full rounded-2xl gap-2"
                         >
-                          <PlayCircle className="h-4 w-4 mr-2" />
+                          <PlayCircle className="h-4 w-4" />
                           Pogledaj video
                         </Button>
                       )}

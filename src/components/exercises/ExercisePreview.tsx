@@ -11,6 +11,8 @@ import { exerciseVideoSrc, warmVideo } from "@/lib/videoWarmup";
 import { MUSCLE_LABELS } from "@/lib/muscleGroups";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 import { cn } from "@/lib/utils";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { ZakljucanSnimak } from "./ZakljucanSnimak";
 import type { PickerExercise } from "./ExerciseCard";
 
 type Props = {
@@ -33,6 +35,7 @@ type Props = {
  * poster (telefon): slicica popuni okvir samo dok ne stigne prvi frejm, kao ranije.
  */
 const PregledMedija = ({ exercise, poster }: { exercise: PickerExercise; poster: boolean }) => {
+  const { locked } = usePretplataLock();
   const [videoFailed, setVideoFailed] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
   const boxRef = useRef<HTMLDivElement | null>(null);
@@ -40,8 +43,11 @@ const PregledMedija = ({ exercise, poster }: { exercise: PickerExercise; poster:
   const url = exercise.video_url;
   const videoSrc = exerciseVideoSrc(url);
   const embed = url && !videoSrc && !isImageUrl(url) ? toEmbedUrl(url) : null;
-  const useVideo = !!videoSrc && !videoFailed;
-  const useEmbed = embed?.type === "youtube" || embed?.type === "vimeo";
+  const spoljni = embed?.type === "youtube" || embed?.type === "vimeo";
+  // Bez pretplate snimak se ni ne ucitava.
+  const zakljucan = locked && (!!videoSrc || spoljni);
+  const useVideo = !!videoSrc && !videoFailed && !zakljucan;
+  const useEmbed = spoljni && !zakljucan;
   // Slika: vezba bez snimka, ili snimak koji nije ucitao (nikad prazan prozor).
   const imageSrc = url && isImageUrl(url) ? url : exercise.thumbnail_url;
 
@@ -86,7 +92,9 @@ const PregledMedija = ({ exercise, poster }: { exercise: PickerExercise; poster:
     // 16:9 = format snimka (960x540), pa video ispunjava okvir bez traka.
     // Video element ubacuje efekat iznad (ne React), zato ovde nema <video>.
     <div ref={boxRef} className="relative w-full aspect-video bg-white">
-      {useVideo ? null : useEmbed ? (
+      {zakljucan ? (
+        <ZakljucanSnimak slika={exercise.thumbnail_url} naziv={exercise.name} />
+      ) : useVideo ? null : useEmbed ? (
         <iframe
           src={embed!.src}
           title={exercise.name}

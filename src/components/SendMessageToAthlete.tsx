@@ -12,6 +12,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { LockMark } from "@/components/pretplata/LockMark";
+import { OBLASTI } from "@/components/pretplata/oblastiZakljucanja";
 
 const MAX = 1000;
 
@@ -31,7 +33,7 @@ export const SendMessageToAthlete = ({ athleteId, athleteName, variant = "defaul
   // Direktan insert u messages (isti thread koji koriste useChat.ts/ChatThread.tsx)
   // umesto send_message_to_athlete RPC-a koji je pisao samo u notifications.
   const handleSend = async () => {
-    if (locked) return openLock();
+    if (locked) return openLock(OBLASTI.poruke);
     const text = body.trim();
     if (!text || !user) return;
     setSending(true);
@@ -56,7 +58,7 @@ export const SendMessageToAthlete = ({ athleteId, athleteName, variant = "defaul
       {variant === "icon" ? (
         <button
           aria-label="Pošalji poruku"
-          onClick={guard(() => setOpen(true))}
+          onClick={guard(() => setOpen(true), OBLASTI.poruke)}
           className="h-10 w-10 rounded-full bg-surface-2 hover:bg-surface-3 flex items-center justify-center transition active:scale-95"
         >
           <MessageSquare className="h-[18px] w-[18px]" strokeWidth={2.25} />
@@ -64,15 +66,15 @@ export const SendMessageToAthlete = ({ athleteId, athleteName, variant = "defaul
       ) : variant === "stacked" ? (
         <button
           type="button"
-          onClick={guard(() => setOpen(true))}
+          onClick={guard(() => setOpen(true), OBLASTI.poruke)}
           className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-surface/80 backdrop-blur hover:bg-surface transition"
         >
           <MessageSquare className="h-4 w-4 text-foreground" strokeWidth={2} />
           <span className="text-[11px] font-semibold">Poruka</span>
         </button>
       ) : (
-        <Button variant="outline" className="gap-2" onClick={guard(() => setOpen(true))}>
-          <MessageSquare className="h-4 w-4" /> Poruka
+        <Button variant="outline" className="gap-2" onClick={guard(() => setOpen(true), OBLASTI.poruke)}>
+          <LockMark /><MessageSquare className="h-4 w-4" /> Poruka
         </Button>
       )}
 

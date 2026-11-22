@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { ExercisePickerSheet } from "@/components/exercises/ExercisePickerSheet";
 import { DodelaVezbacu } from "@/components/trainer/web/vezbaci/DodelaVezbacu";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { useZakljucanaZona } from "@/components/pretplata/useZakljucanaZona";
 import { LockMark } from "@/components/pretplata/LockMark";
 import { useLastPerformance } from "@/hooks/useLastPerformance";
 import { LastPerformanceHint } from "@/components/trainer/LastPerformanceHint";
@@ -118,6 +119,7 @@ const ALAT_VEZBE =
 
 const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) => {
   const { locked, openLock, guard } = usePretplataLock();
+  const zona = useZakljucanaZona();
   const params = useParams<{ id?: string; assignedId?: string; athleteId?: string }>();
   // parentId = template_id (sablon) ili assigned_program_id (dodeljeni plan).
   const parentId = mode === "assigned" ? params.assignedId : params.id;
@@ -267,8 +269,8 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
   useEffect(() => { load(); }, [parentId]);
 
   const handleAddDay = async (e: React.FormEvent) => {
-    if (locked) return openLock();
     e.preventDefault();
+    if (locked) return openLock();
     if (!parentId) return;
     const nextNum = (days[days.length - 1]?.day_number ?? 0) + 1;
     const { error } = await supabase.from(cfg.daysTable).insert({
@@ -568,6 +570,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
 
 
   const openAssign = async () => {
+    if (locked) return openLock();
     setAssignOpen(true);
     // Racunar: DodelaVezbacu sama ucitava spisak.
     if (desktop) return;
@@ -643,7 +646,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
   // Sadrzaj jednog dana (superset, vezbe, dodavanje, brisanje dana). Isti je na
   // telefonu (harmonika ispod zaglavlja dana) i na racunaru (desna kolona).
   const renderDayBody = (d: Day, exList: Exercise[]) => (
-    <div className="border-t border-hairline px-4 py-3 space-y-2 bg-surface-2/50">
+    <div {...zona} className="border-t border-hairline px-4 py-3 space-y-2 bg-surface-2/50">
       {desktop && exList.length > 0 && (
         <StatistikaDana
           vezbe={exList.map((e) => ({
@@ -694,6 +697,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
               onClick={guard(() => { setOpenExId(null); setSpajam({ dayId: d.id, ids: new Set() }); })}
               className="h-8 rounded-lg border border-hairline bg-surface-2 px-3 text-[12px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 transition"
             >
+              <LockMark />
               <Link2 className="h-3.5 w-3.5" strokeWidth={2.2} />
               {desktop ? "Spoji više vežbi" : "Napravi superset"}
             </button>
@@ -793,6 +797,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
               </button>
               )}
               <button
+                data-slobodno
                 onClick={() =>
                   uSpajanju
                     ? oznaciZaSpajanje(ex.id, isDuration)
@@ -808,8 +813,8 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <div className="font-display font-semibold text-sm truncate">{name}</div>
-                  <div className="text-[12px] text-muted-foreground truncate">{summary}</div>
+                  <div className={cn("font-display font-semibold text-sm", desktop ? "leading-snug [overflow-wrap:anywhere]" : "truncate")}>{name}</div>
+                  <div className={cn("text-[12px] text-muted-foreground", desktop ? "[overflow-wrap:anywhere]" : "truncate")}>{summary}</div>
                 </div>
                 {desktop && uSpajanju && isDuration && (
                   <span className="shrink-0 text-[11px] text-muted-foreground">Kardio</span>
@@ -923,7 +928,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                         )}
                         <button
                           onClick={() => { if (rows.length > 1) applySets(ex.id, rows.filter((_, i) => i !== idx)); }}
-                          disabled={rows.length <= 1}
+                          disabled={!locked && rows.length <= 1}
                           aria-label="Ukloni set"
                           className="h-7 w-7 mx-auto rounded-md hover:bg-destructive-soft flex items-center justify-center transition disabled:opacity-30"
                         >
@@ -941,6 +946,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                         <Plus className="h-4 w-4" /> Dodaj set
                       </button>
                       <button
+                        data-slobodno
                         onClick={() => setAdvancedByEx((p) => ({ ...p, [ex.id]: !advanced }))}
                         className={`inline-flex items-center gap-1.5 text-[12px] font-medium ${advanced ? "text-primary" : "text-muted-foreground"}`}
                       >
@@ -986,6 +992,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                           </button>
                           <button
                             type="button"
+                            data-slobodno
                             aria-pressed={advanced}
                             onClick={() => setAdvancedByEx((p) => ({ ...p, [ex.id]: !advanced }))}
                             className={cn(ALAT_VEZBE, advanced && "border-primary/50 text-primary-soft-foreground")}
@@ -998,7 +1005,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                       <span className="flex-1" />
                       <button
                         type="button"
-                        disabled={exIdx === 0}
+                        disabled={!locked && exIdx === 0}
                         onClick={() => void premestiVezbu(d.id, exIdx, exIdx - 1)}
                         aria-label={`Pomeri gore: ${name}`}
                         title="Pomeri gore"
@@ -1008,7 +1015,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                       </button>
                       <button
                         type="button"
-                        disabled={exIdx >= exList.length - 1}
+                        disabled={!locked && exIdx >= exList.length - 1}
                         onClick={() => void premestiVezbu(d.id, exIdx, exIdx + 1)}
                         aria-label={`Pomeri dole: ${name}`}
                         title="Pomeri dole"
@@ -1070,7 +1077,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
         onClick={() => openExercisePicker(d.id)}
         className="w-full py-2.5 rounded-lg border-2 border-dashed border-hairline text-sm text-muted-foreground hover:border-primary hover:text-primary transition flex items-center justify-center gap-1.5"
       >
-        <Plus className="h-4 w-4" /> {desktop ? "Dodaj vežbe" : "Dodaj vežbu"}
+        <LockMark /><Plus className="h-4 w-4" /> {desktop ? "Dodaj vežbe" : "Dodaj vežbu"}
       </button>
 
       {/* Racunar: "Obriši dan" je u zaglavlju dana, pored "Preimenuj". */}
@@ -1102,12 +1109,14 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                 onClick={handleDeleteProgram}
                 className="h-10 rounded-full px-3.5 text-destructive hover:bg-destructive-soft hover:text-destructive"
               >
+                <LockMark className="mr-1.5" />
                 <Trash2 className="h-4 w-4 mr-1.5" />
                 Obriši
               </Button>
             )}
             {days.length > 0 && mode === "template" && (
               <Button onClick={openAssign} className="h-10 rounded-full px-4 shadow-brand">
+                <LockMark className="mr-1.5" />
                 <UserPlus className="h-4 w-4 mr-1.5" />
                 Dodeli vežbaču
               </Button>
@@ -1163,7 +1172,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
             Program se sastoji iz dana koji se rotiraju.
           </p>
           <Button onClick={guard(() => setAddDayOpen(true))}>
-            <Plus className="h-4 w-4 mr-1.5" /> Novi dan
+            <LockMark className="mr-1.5" /><Plus className="h-4 w-4 mr-1.5" /> Novi dan
           </Button>
         </div>
       ) : desktop ? (
@@ -1205,7 +1214,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
               onClick={guard(() => setAddDayOpen(true))}
               className="flex w-full items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-hairline py-2.5 text-sm font-semibold text-muted-foreground transition hover:border-primary hover:text-primary"
             >
-              <Plus className="h-4 w-4" /> Dodaj dan
+              <LockMark /><Plus className="h-4 w-4" /> Dodaj dan
             </button>
           </div>
 
@@ -1223,6 +1232,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                   onClick={guard(() => otvoriPreimenovanje("day", aktivniDan.id, aktivniDan.name))}
                   className="h-9 rounded-full px-3.5"
                 >
+                  <LockMark className="mr-1.5" />
                   <Pencil className="h-3.5 w-3.5 mr-1.5" />
                   Preimenuj
                 </Button>
@@ -1231,6 +1241,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
                   onClick={() => handleDeleteDay(aktivniDan.id)}
                   className="h-9 rounded-full px-3.5 text-destructive hover:bg-destructive-soft hover:text-destructive"
                 >
+                  <LockMark className="mr-1.5" />
                   <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                   Obriši dan
                 </Button>
@@ -1291,7 +1302,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
             onClick={guard(() => setAddDayOpen(true))}
             className="w-full py-3 rounded-xl border-2 border-dashed border-hairline text-sm font-semibold text-muted-foreground hover:border-primary hover:text-primary transition flex items-center justify-center gap-1.5"
           >
-            <Plus className="h-4 w-4" /> Dodaj dan
+            <LockMark /><Plus className="h-4 w-4" /> Dodaj dan
           </button>
         </div>
       )}
@@ -1454,6 +1465,7 @@ const ProgramBuilder = ({ mode = "template" }: { mode?: ProgramBuilderMode }) =>
         <div className="fixed bottom-0 left-0 right-0 px-6 pb-6 pt-3 bg-gradient-to-t from-background via-background to-transparent pointer-events-none">
           <div className="max-w-[440px] mx-auto pointer-events-auto">
             <Button onClick={openAssign} className="w-full h-12 shadow-brand">
+              <LockMark className="mr-1.5" />
               <UserPlus className="h-4 w-4 mr-2" />
               Dodeli vežbaču
             </Button>

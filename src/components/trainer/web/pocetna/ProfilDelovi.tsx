@@ -1,3 +1,4 @@
+import { useZakljucanaZona } from "@/components/pretplata/useZakljucanaZona";
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -96,6 +97,7 @@ export function ProfilVrh({
   nova: File | null;
   onNova: (f: File) => void;
 }) {
+  const zona = useZakljucanaZona();
   const unos = useRef<HTMLInputElement>(null);
   const [pregled, setPregled] = useState<string | null>(null);
 
@@ -124,7 +126,7 @@ export function ProfilVrh({
   const mesto = [studio.trim(), grad.trim()].filter(Boolean).join(" · ");
 
   return (
-    <Card className="flex items-center gap-5 p-5">
+    <Card {...zona} className="flex items-center gap-5 p-5">
       <input ref={unos} type="file" accept="image/*" className="hidden" onChange={izabrana} />
       <button
         type="button"

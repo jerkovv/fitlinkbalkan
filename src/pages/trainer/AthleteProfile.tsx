@@ -42,6 +42,8 @@ import { MembershipEditSheet } from "@/components/trainer/MembershipEditSheet";
 import { AktivanTreningBaner, useAktivnaSesija, ZaustaviTreningDugme, ZABORAVLJEN_POSLE_MS } from "@/components/trainer/ZaustaviTrening";
 import { formatDuration } from "@/lib/workout/hrZone";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { OBLASTI } from "@/components/pretplata/oblastiZakljucanja";
+import { LockMark } from "@/components/pretplata/LockMark";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 import { UrediVezbacaSheet } from "@/components/trainer/web/vezbaci/UrediVezbacaSheet";
 import { MerenjaVezbaca } from "@/components/trainer/web/vezbaci/MerenjaVezbaca";
@@ -408,7 +410,7 @@ const AthleteProfile = () => {
   };
 
   const addBonus = async () => {
-    if (locked) return openLock();
+    if (locked) return openLock(OBLASTI.naplata);
     if (!activeMembership) return;
     const n = parseInt(bonusCount, 10);
     if (!n || n < 1) return toast.error("Unesi broj treninga");
@@ -438,6 +440,7 @@ const AthleteProfile = () => {
   }, [id, upisKey]);
 
   const openProgramAssign = async () => {
+    if (locked) return openLock(OBLASTI.programi);
     setProgOpen(true);
     if (progTemplates.length === 0 && user) {
       const { data } = await supabase
@@ -557,7 +560,7 @@ const AthleteProfile = () => {
   };
 
   const assignProgram = async (templateId: string) => {
-    if (locked) return openLock();
+    if (locked) return openLock(OBLASTI.programi);
     if (!user || !id) return;
     setProgAssigning(templateId);
     try {
@@ -575,8 +578,8 @@ const AthleteProfile = () => {
   // Plan od nule: RPC kreira prazan assigned_programs (source_template_id NULL),
   // postaje tekuci jer je najnoviji assigned_at, pa otvaramo isti editor (mode assigned).
   const createCustomProgram = async (e: React.FormEvent) => {
-    if (locked) return openLock();
     e.preventDefault();
+    if (locked) return openLock(OBLASTI.programi);
     if (!id) return;
     setCustomCreating(true);
     const { data, error } = await supabase.rpc("create_custom_assigned_program", {
@@ -594,8 +597,8 @@ const AthleteProfile = () => {
   // Plan ishrane od nule: RPC kreira prazan assigned_nutrition_plans (tiho, bez
   // notifikacije), trener gradi pa eksplicitno "Obavesti vezbaca" iz editora.
   const createCustomNutrition = async (e: React.FormEvent) => {
-    if (locked) return openLock();
     e.preventDefault();
+    if (locked) return openLock(OBLASTI.ishrana);
     if (!id) return;
     setCustomNutCreating(true);
     const { data, error } = await supabase.rpc("create_custom_assigned_nutrition_plan", {
@@ -613,6 +616,7 @@ const AthleteProfile = () => {
   // "Nov plan" klik: ako postoji zapocet draft (custom, jos neposlat) ponudi
   // Nastavi/Napravi nov; inace odmah otvori naziv dijalog za nov plan.
   const startCustomProgram = async () => {
+    if (locked) return openLock(OBLASTI.programi);
     if (!id) return;
     // limit(1) + niz (BEZ maybeSingle): vise drafta -> uzmi najnoviji jedan.
     // Hvatamo error da ne padne tiho u "nema drafta" pa da gomila nove.
@@ -631,6 +635,7 @@ const AthleteProfile = () => {
   };
 
   const startCustomNutrition = async () => {
+    if (locked) return openLock(OBLASTI.ishrana);
     if (!id) return;
     const { data, error } = await supabase
       .from("assigned_nutrition_plans")
@@ -655,7 +660,7 @@ const AthleteProfile = () => {
   };
 
   const makeNewFromDraft = async () => {
-    if (locked) return openLock();
+    if (locked) return openLock(draftResume?.kind === "nutrition" ? OBLASTI.ishrana : OBLASTI.programi);
     if (!draftResume) return;
     const { kind, draftId } = draftResume;
     // Draft nije poslat -> nema istorije, pravi DELETE je bezbedan (CASCADE brise dane/obroke).
@@ -669,6 +674,7 @@ const AthleteProfile = () => {
   };
 
   const openAssign = async () => {
+    if (locked) return openLock(OBLASTI.ishrana);
     setAssignOpen(true);
     if (templates.length === 0 && user) {
       const { data } = await supabase
@@ -681,7 +687,7 @@ const AthleteProfile = () => {
   };
 
   const assignTemplate = async (templateId: string) => {
-    if (locked) return openLock();
+    if (locked) return openLock(OBLASTI.ishrana);
     if (!user || !id) return;
     setAssigning(templateId);
     try {
@@ -704,7 +710,7 @@ const AthleteProfile = () => {
   };
 
   const unassignPlan = async () => {
-    if (locked) return openLock();
+    if (locked) return openLock(OBLASTI.ishrana);
     if (!activePlan || !id) return;
     if (!(await confirm(desktop
       ? {
@@ -833,6 +839,7 @@ const AthleteProfile = () => {
                   title="Uredi podatke vežbača"
                   className="h-10 rounded-full px-4"
                 >
+                  <LockMark className="mr-1.5" />
                   <Pencil className="mr-1.5 h-4 w-4" />
                   Uredi podatke
                 </Button>
@@ -840,6 +847,7 @@ const AthleteProfile = () => {
                   onClick={guard(() => setUpisujem(true))}
                   className="h-10 rounded-full px-4 bg-gradient-brand text-white shadow-brand"
                 >
+                  <LockMark className="mr-1.5" />
                   <Plus className="h-4 w-4 mr-1.5" />
                   Upiši trening
                 </Button>
@@ -947,12 +955,12 @@ const AthleteProfile = () => {
                         >
                           Izmeni plan
                         </Button>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Button variant="outline" className="h-10 w-full rounded-full px-2 text-[13px]" onClick={openProgramAssign}>
-                            Promeni program
+                        <div className="flex flex-wrap gap-2">
+                          <Button variant="outline" className="h-10 flex-auto rounded-full px-3 text-[13px]" onClick={openProgramAssign}>
+                            <LockMark className="mr-1.5" />Promeni program
                           </Button>
-                          <Button variant="outline" className="h-10 w-full rounded-full px-2 text-[13px]" onClick={startCustomProgram}>
-                            <Sparkles className="h-4 w-4 mr-1" /> Nov plan
+                          <Button variant="outline" className="h-10 flex-auto rounded-full px-3 text-[13px]" onClick={startCustomProgram}>
+                            <LockMark className="mr-1.5" /><Sparkles className="h-4 w-4 mr-1" /> Nov plan
                           </Button>
                         </div>
                       </div>
@@ -967,14 +975,14 @@ const AthleteProfile = () => {
                           className="h-10 w-full rounded-full bg-gradient-brand text-white shadow-brand"
                           onClick={startCustomProgram}
                         >
-                          <Sparkles className="h-4 w-4 mr-1.5" /> Napravi plan od nule
+                          <LockMark className="mr-1.5" /><Sparkles className="h-4 w-4 mr-1.5" /> Napravi plan od nule
                         </Button>
                         <Button
                           variant="outline"
                           className="h-10 w-full rounded-full border-dashed"
                           onClick={openProgramAssign}
                         >
-                          <Plus className="h-4 w-4 mr-1.5" /> Dodeli gotov program
+                          <LockMark className="mr-1.5" /><Plus className="h-4 w-4 mr-1.5" /> Dodeli gotov program
                         </Button>
                       </div>
                     </>
@@ -991,7 +999,7 @@ const AthleteProfile = () => {
                           onClick={unassignPlan}
                           className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full px-2.5 text-[12px] font-semibold text-muted-foreground transition hover:bg-destructive-soft hover:text-destructive"
                         >
-                          <Trash2 className="h-3.5 w-3.5" /> Ukloni plan
+                          <LockMark /><Trash2 className="h-3.5 w-3.5" /> Ukloni plan
                         </button>
                       ) : undefined
                     }
@@ -1021,12 +1029,12 @@ const AthleteProfile = () => {
                         >
                           Izmeni plan ishrane
                         </Button>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Button variant="outline" className="h-10 w-full rounded-full px-2 text-[13px]" onClick={openAssign}>
-                            Promeni plan
+                        <div className="flex flex-wrap gap-2">
+                          <Button variant="outline" className="h-10 flex-auto rounded-full px-3 text-[13px]" onClick={openAssign}>
+                            <LockMark className="mr-1.5" />Promeni plan
                           </Button>
-                          <Button variant="outline" className="h-10 w-full rounded-full px-2 text-[13px]" onClick={startCustomNutrition}>
-                            <Sparkles className="h-4 w-4 mr-1" /> Nov plan
+                          <Button variant="outline" className="h-10 flex-auto rounded-full px-3 text-[13px]" onClick={startCustomNutrition}>
+                            <LockMark className="mr-1.5" /><Sparkles className="h-4 w-4 mr-1" /> Nov plan
                           </Button>
                         </div>
                       </div>
@@ -1041,14 +1049,14 @@ const AthleteProfile = () => {
                           className="h-10 w-full rounded-full bg-gradient-brand text-white shadow-brand"
                           onClick={startCustomNutrition}
                         >
-                          <Sparkles className="h-4 w-4 mr-1.5" /> Napravi plan od nule
+                          <LockMark className="mr-1.5" /><Sparkles className="h-4 w-4 mr-1.5" /> Napravi plan od nule
                         </Button>
                         <Button
                           variant="outline"
                           className="h-10 w-full rounded-full border-dashed"
                           onClick={openAssign}
                         >
-                          <Plus className="h-4 w-4 mr-1.5" /> Dodeli gotov plan
+                          <LockMark className="mr-1.5" /><Plus className="h-4 w-4 mr-1.5" /> Dodeli gotov plan
                         </Button>
                       </div>
                     </>
@@ -1229,6 +1237,7 @@ const AthleteProfile = () => {
                 onClick={guard(() => setRemoveOpen(true))}
                 className="w-full flex items-center justify-center gap-2 rounded-full border border-destructive/30 bg-destructive/5 hover:bg-destructive/10 text-destructive py-2.5 text-[13px] font-semibold transition"
               >
+                <LockMark />
                 <UserMinus className="h-4 w-4" />
                 Ukloni vežbača
               </button>
@@ -1410,10 +1419,10 @@ const AthleteProfile = () => {
                   </Button>
                   <div className="grid grid-cols-2 gap-2">
                     <Button variant="outline" className="w-full" onClick={openProgramAssign}>
-                      Promeni program
+                      <LockMark className="mr-1.5" />Promeni program
                     </Button>
                     <Button variant="outline" className="w-full" onClick={startCustomProgram}>
-                      <Sparkles className="h-4 w-4 mr-1.5" /> Nov plan
+                      <LockMark className="mr-1.5" /><Sparkles className="h-4 w-4 mr-1.5" /> Nov plan
                     </Button>
                   </div>
                 </div>
@@ -1424,13 +1433,13 @@ const AthleteProfile = () => {
                   className="w-full h-12 bg-gradient-brand text-white shadow-brand"
                   onClick={startCustomProgram}
                 >
-                  <Sparkles className="h-4 w-4 mr-1.5" /> Napravi plan od nule
+                  <LockMark className="mr-1.5" /><Sparkles className="h-4 w-4 mr-1.5" /> Napravi plan od nule
                 </Button>
                 <button
                   onClick={openProgramAssign}
                   className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-hairline hover:border-primary/40 hover:bg-primary-soft/40 py-4 text-[14px] font-semibold text-muted-foreground hover:text-primary-soft-foreground transition"
                 >
-                  <Plus className="h-4 w-4" /> Dodeli gotov program
+                  <LockMark /><Plus className="h-4 w-4" /> Dodeli gotov program
                 </button>
               </div>
             )}
@@ -1475,10 +1484,10 @@ const AthleteProfile = () => {
                   </Button>
                   <div className="grid grid-cols-2 gap-2">
                     <Button variant="outline" className="w-full" onClick={openAssign}>
-                      Promeni plan
+                      <LockMark className="mr-1.5" />Promeni plan
                     </Button>
                     <Button variant="outline" className="w-full" onClick={startCustomNutrition}>
-                      <Sparkles className="h-4 w-4 mr-1.5" /> Nov plan
+                      <LockMark className="mr-1.5" /><Sparkles className="h-4 w-4 mr-1.5" /> Nov plan
                     </Button>
                   </div>
                 </div>
@@ -1489,13 +1498,13 @@ const AthleteProfile = () => {
                   className="w-full h-12 bg-gradient-brand text-white shadow-brand"
                   onClick={startCustomNutrition}
                 >
-                  <Sparkles className="h-4 w-4 mr-1.5" /> Napravi plan ishrane od nule
+                  <LockMark className="mr-1.5" /><Sparkles className="h-4 w-4 mr-1.5" /> Napravi plan ishrane od nule
                 </Button>
                 <button
                   onClick={openAssign}
                   className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-hairline hover:border-primary/40 hover:bg-primary-soft/40 py-4 text-[14px] font-semibold text-muted-foreground hover:text-primary-soft-foreground transition"
                 >
-                  <Plus className="h-4 w-4" /> Dodeli gotov plan
+                  <LockMark /><Plus className="h-4 w-4" /> Dodeli gotov plan
                 </button>
               </div>
             )}
@@ -1623,6 +1632,7 @@ const AthleteProfile = () => {
                   onClick={guard(() => setUpisujem(true))}
                   className="mb-3 h-10 w-full rounded-xl border border-hairline bg-surface-2 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 transition"
                 >
+                  <LockMark />
                   <Plus className="h-3.5 w-3.5" strokeWidth={2.4} />
                   Upiši trening bez telefona
                 </button>
@@ -1694,18 +1704,18 @@ const AthleteProfile = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={guard(() => setBonusOpen(true))}
+                  onClick={guard(() => setBonusOpen(true), OBLASTI.naplata)}
                   className="w-full"
                 >
-                  <Plus className="h-4 w-4 mr-1.5" /> Dodaj bonus
+                  <LockMark className="mr-1.5" /><Plus className="h-4 w-4 mr-1.5" /> Dodaj bonus
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={guard(() => setMembershipEditOpen(true))}
+                  onClick={guard(() => setMembershipEditOpen(true), OBLASTI.naplata)}
                   className="w-full"
                 >
-                  <Pencil className="h-4 w-4 mr-1.5" /> Izmeni
+                  <LockMark className="mr-1.5" /><Pencil className="h-4 w-4 mr-1.5" /> Izmeni
                 </Button>
               </div>
             </Card>
@@ -1721,10 +1731,10 @@ const AthleteProfile = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={guard(() => setMembershipEditOpen(true))}
+                onClick={guard(() => setMembershipEditOpen(true), OBLASTI.naplata)}
                 className="w-full"
               >
-                <Plus className="h-4 w-4 mr-1.5" /> Dodaj članarinu
+                <LockMark className="mr-1.5" /><Plus className="h-4 w-4 mr-1.5" /> Dodaj članarinu
               </Button>
             </Card>
           )}
@@ -1951,6 +1961,7 @@ const AthleteProfile = () => {
             onClick={guard(() => setRemoveOpen(true))}
             className="w-full flex items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 hover:bg-destructive/10 text-destructive py-3.5 text-[13.5px] font-semibold transition"
           >
+            <LockMark />
             <UserMinus className="h-4 w-4" />
             Ukloni vežbača
           </button>
@@ -2155,7 +2166,8 @@ const VrhProfila = ({
         }
       >
         {!athlete.avatar_url && (
-          <span className="absolute inset-0 flex items-center justify-center font-display text-[84px] font-bold tracking-[-0.04em] text-white/85">
+          // Donji deo zauzima kartica stanja, pa inicijali uvek stoje iznad nje.
+          <span className="absolute inset-0 flex items-start justify-center pt-5 font-display text-[84px] font-bold leading-none tracking-[-0.04em] text-white/85">
             {initialsOf(athlete.full_name)}
           </span>
         )}

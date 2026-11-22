@@ -5,6 +5,7 @@ import { MUSCLE_LABELS, type MuscleGroupId } from "@/lib/muscleGroups";
 import { hasExerciseVideo } from "@/lib/exerciseMedia";
 import { warmExerciseVideo } from "@/lib/videoWarmup";
 import { MuscleGroupIcon } from "./MuscleGroupIcon";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 
 export type PickerExercise = {
   id: string;
@@ -67,7 +68,10 @@ export const ExerciseCard = ({
   const pregledLabel = video ? "Pogledaj snimak vežbe" : "Uvećaj sliku vežbe";
   // Snimak krece da se ucitava cim mis stigne na dugme (ili prst dodirne), da u
   // pregledu pocne odmah - vidi videoWarmup.
-  const zagrej = () => warmExerciseVideo(exercise.video_url);
+  const { locked } = usePretplataLock();
+  const zagrej = () => {
+    if (!locked) warmExerciseVideo(exercise.video_url);
+  };
   const primaryName = exercise.name_en?.trim() || exercise.name;
   const subtitle =
     exercise.description?.trim() ||

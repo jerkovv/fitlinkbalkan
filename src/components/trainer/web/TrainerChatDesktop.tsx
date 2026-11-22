@@ -1,3 +1,6 @@
+import { ZakljucanaZona } from "@/components/pretplata/ZakljucanaZona";
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { useZakljucanaZona } from "@/components/pretplata/useZakljucanaZona";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarDays, CreditCard, Loader2, MessagesSquare, Search, Send, UserRound } from "lucide-react";
@@ -78,6 +81,8 @@ const IstaknutRazgovor = ({
   onPoslato: () => void;
 }) => {
   const { sending, send, markRead } = useChat({ trainerId, athleteId: nit.athlete_id });
+  const { locked } = usePretplataLock();
+  const zona = useZakljucanaZona();
   const [odgovor, setOdgovor] = useState("");
 
   const posalji = async (e: React.FormEvent) => {
@@ -110,7 +115,7 @@ const IstaknutRazgovor = ({
         </span>
         <span className="mt-3 line-clamp-3 block text-[16px] font-semibold leading-snug">„{nit.last_body}“</span>
       </button>
-      <form onSubmit={posalji} className="mt-3 flex items-center gap-2">
+      <form {...zona} onSubmit={posalji} className="mt-3 flex items-center gap-2">
         <input
           value={odgovor}
           onChange={(e) => setOdgovor(e.target.value)}
@@ -121,7 +126,7 @@ const IstaknutRazgovor = ({
         <button
           type="submit"
           aria-label="Pošalji"
-          disabled={!odgovor.trim() || sending}
+          disabled={(!locked && !odgovor.trim()) || sending}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-gradient-brand text-white transition disabled:opacity-50"
         >
           {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
@@ -362,13 +367,15 @@ export const TrainerChatDesktop = ({ athleteId }: { athleteId?: string }) => {
               </button>
             </header>
             {/* key: drugi vezbac = cist useChat, bez poruka prethodnog razgovora */}
-            <ChatThread
-              key={athleteId}
-              trainerId={user.id}
-              athleteId={athleteId}
-              brziOdgovori={BRZI_ODGOVORI}
-              className="flex-1 min-h-0"
-            />
+            <ZakljucanaZona>
+              <ChatThread
+                key={athleteId}
+                trainerId={user.id}
+                athleteId={athleteId}
+                brziOdgovori={BRZI_ODGOVORI}
+                className="flex-1 min-h-0"
+              />
+            </ZakljucanaZona>
           </>
         ) : !athleteId && istaknuta && user?.id ? (
           <div className="flex flex-1 items-center justify-center px-8">

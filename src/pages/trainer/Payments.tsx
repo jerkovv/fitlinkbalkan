@@ -152,7 +152,8 @@ const StatTile = ({
 
 // ---- Racunar ----
 // Kolone tabele clanarina; zaglavlje i redovi dele isti sablon da se poravnaju.
-const OV_GRID = "grid grid-cols-[minmax(0,1fr)_128px_132px_150px_132px_32px] items-center gap-4 px-5";
+// Uzi ekran: uze kolone, da ime vezbaca i natpisi u zaglavlju ostanu celi.
+const OV_GRID = "grid grid-cols-[minmax(130px,1fr)_92px_104px_112px_104px_32px] items-center gap-2.5 px-4 xl:grid-cols-[minmax(0,1fr)_128px_132px_150px_132px_32px] xl:gap-4 xl:px-5";
 
 const OV_DOT: Record<OverviewCategory, string> = {
   active: "bg-success-soft-foreground",
@@ -679,7 +680,7 @@ const Payments = () => {
                           </span>
                         )}
                       </div>
-                      <div className="mt-5 grid grid-cols-2 gap-2">
+                      <div className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(128px,1fr))] gap-2">
                         <Button
                           variant="outline"
                           onClick={() => rejectPurchase(p)}

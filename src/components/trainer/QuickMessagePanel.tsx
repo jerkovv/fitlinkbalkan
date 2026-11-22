@@ -5,6 +5,7 @@ import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { useZakljucanaZona } from "@/components/pretplata/useZakljucanaZona";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 
 type MessageType = "text" | "encouragement" | "warning";
@@ -38,6 +39,7 @@ const fmtTime = (iso: string) => {
 
 export const QuickMessagePanel = ({ sessionId }: QuickMessagePanelProps) => {
   const { locked, openLock } = usePretplataLock();
+  const zona = useZakljucanaZona();
   const desktop = useDesktopWeb();
   const [sending, setSending] = useState(false);
   const [text, setText] = useState("");
@@ -128,7 +130,7 @@ export const QuickMessagePanel = ({ sessionId }: QuickMessagePanelProps) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div {...zona} className="space-y-4">
       <div className="grid grid-cols-2 gap-2">
         {PRESETS.map(({ label, type, Icon }) => (
           <button
@@ -180,7 +182,7 @@ export const QuickMessagePanel = ({ sessionId }: QuickMessagePanelProps) => {
         </div>
         <button
           type="submit"
-          disabled={sending || !text.trim()}
+          disabled={sending || (!locked && !text.trim())}
           aria-label="Pošalji poruku"
           className="h-12 w-12 rounded-2xl bg-gradient-brand text-white inline-flex items-center justify-center shadow-brand transition active:scale-95 disabled:opacity-50"
         >

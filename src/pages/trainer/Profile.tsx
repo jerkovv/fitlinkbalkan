@@ -23,6 +23,8 @@ import { toast } from "sonner";
 import { DeleteAccountSheet } from "@/components/DeleteAccountSheet";
 import { SITE_BASE, publicTrainerUrl } from "@/lib/publicUrl";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { useZakljucanaZona } from "@/components/pretplata/useZakljucanaZona";
+import { LockMark } from "@/components/pretplata/LockMark";
 import { PravnoIPodrska } from "@/components/PravnoIPodrska";
 import {
   ProfilCeline, ProfilMesec, ProfilOdjava, ProfilPretplata, ProfilVrh, pripremiSlikuProfila,
@@ -105,6 +107,7 @@ const ProfilStat = ({ icon: Icon, label, value }: { icon: LucideIcon; label: str
 
 const Profile = () => {
   const { locked, openLock } = usePretplataLock();
+  const zona = useZakljucanaZona();
   const { user } = useAuth();
   const desktop = useDesktopWeb();
   const [loading, setLoading] = useState(true);
@@ -589,6 +592,7 @@ const Profile = () => {
         />
         <button
           type="button"
+          data-slobodno
           disabled={!publicSlug || !!slugError}
           onClick={kopirajJavniLink}
           className="flex items-center justify-center px-3 border-l border-input text-muted-foreground hover:text-primary hover:bg-primary-soft/40 transition disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
@@ -813,6 +817,7 @@ const Profile = () => {
       disabled={saving}
       className="h-10 rounded-full px-4 bg-gradient-brand text-white shadow-brand hover:opacity-95"
     >
+      <LockMark className="mr-1.5" />
       {saving ? (
         <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
       ) : (
@@ -873,7 +878,7 @@ const Profile = () => {
 
             <div className="grid grid-cols-[minmax(0,1fr)_340px] items-start gap-6 pt-2">
               <div className="min-w-0 space-y-4">
-                <Card className="p-6 space-y-5">
+                <Card {...zona} className="p-6 space-y-5">
                   <DeoNaslov icon={UserRound} naslov="Osnovno" />
                   <div className="grid grid-cols-2 gap-4">
                     <div className="col-span-2">{poljeIme}</div>
@@ -882,7 +887,7 @@ const Profile = () => {
                   </div>
                 </Card>
 
-                <Card className="p-6 space-y-5">
+                <Card {...zona} className="p-6 space-y-5">
                   <DeoNaslov icon={Briefcase} naslov="Tvoj rad" />
                   <div className="grid grid-cols-2 gap-4">
                     {poljeStudio}
@@ -893,14 +898,14 @@ const Profile = () => {
                   </div>
                 </Card>
 
-                <Card className="p-6 space-y-5">
+                <Card {...zona} className="p-6 space-y-5">
                   <DeoNaslov icon={Sparkles} naslov="Specijalnosti" />
                   {specCipovi}
                   <div className="max-w-md">{specUnos}</div>
                   {specPredlozi}
                 </Card>
 
-                <Card className="p-6 space-y-5">
+                <Card {...zona} className="p-6 space-y-5">
                   <DeoNaslov
                     icon={Globe}
                     naslov="Javna stranica"
@@ -915,6 +920,7 @@ const Profile = () => {
                     <div className="flex justify-end gap-2">
                       <Button
                         type="button"
+                        data-slobodno
                         variant="outline"
                         className="h-10 rounded-full px-4"
                         onClick={kopirajJavniLink}
@@ -923,6 +929,7 @@ const Profile = () => {
                       </Button>
                       <Button
                         type="button"
+                        data-slobodno
                         variant="outline"
                         className="h-10 rounded-full px-4"
                         onClick={() => void podeliJavniLink()}
@@ -932,6 +939,7 @@ const Profile = () => {
                       {publicEnabled && sacuvaniSlug && (
                         <Button
                           type="button"
+                          data-slobodno
                           variant="outline"
                           className="h-10 rounded-full px-4"
                           onClick={() => window.open(publicTrainerUrl(sacuvaniSlug), "_blank", "noopener")}
@@ -943,7 +951,7 @@ const Profile = () => {
                   )}
                 </Card>
 
-                <Card className="p-6 space-y-5">
+                <Card {...zona} className="p-6 space-y-5">
                   <DeoNaslov
                     icon={Landmark}
                     naslov="Uplata na račun"
@@ -970,7 +978,7 @@ const Profile = () => {
               </div>
 
               <div className="space-y-4">
-                <Card className="p-5 space-y-4">
+                <Card {...zona} className="p-5 space-y-4">
                   <DeoNaslov icon={CalendarCheck} naslov="Rezervacije" />
                   {rezervacijeDesktop}
                 </Card>
@@ -1032,7 +1040,7 @@ const Profile = () => {
             )}
 
             {/* Osnovno */}
-            <Card className="p-5 space-y-4">
+            <Card {...zona} className="p-5 space-y-4">
               <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 Osnovno
               </div>
@@ -1042,7 +1050,7 @@ const Profile = () => {
             </Card>
 
             {/* Posao */}
-            <Card className="p-5 space-y-4">
+            <Card {...zona} className="p-5 space-y-4">
               <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 Tvoj rad
               </div>
@@ -1056,7 +1064,7 @@ const Profile = () => {
             </Card>
 
             {/* Specijalnosti */}
-            <Card className="p-5 space-y-4">
+            <Card {...zona} className="p-5 space-y-4">
               <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 Specijalnosti
               </div>
@@ -1066,7 +1074,7 @@ const Profile = () => {
             </Card>
 
             {/* Public landing */}
-            <Card className="p-5 space-y-4">
+            <Card {...zona} className="p-5 space-y-4">
               <div className="flex items-center gap-2">
                 <Globe className="h-4 w-4 text-primary" />
                 <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
@@ -1085,6 +1093,7 @@ const Profile = () => {
                 <div className="flex gap-2">
                   <Button
                     type="button"
+                    data-slobodno
                     variant="outline"
                     className="flex-1"
                     onClick={kopirajJavniLink}
@@ -1093,6 +1102,7 @@ const Profile = () => {
                   </Button>
                   <Button
                     type="button"
+                    data-slobodno
                     variant="outline"
                     onClick={() => window.open(publicTrainerUrl(publicSlug.trim().toLowerCase()), "_blank")}
                   >
@@ -1103,7 +1113,7 @@ const Profile = () => {
             </Card>
 
             {/* Privatnost grupnih termina */}
-            <Card className="p-5 space-y-4">
+            <Card {...zona} className="p-5 space-y-4">
               <div className="flex items-center gap-2">
                 <Eye className="h-4 w-4 text-primary" />
                 <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
@@ -1114,7 +1124,7 @@ const Profile = () => {
             </Card>
 
             {/* Pravila otkazivanja */}
-            <Card className="p-5 space-y-4">
+            <Card {...zona} className="p-5 space-y-4">
               <div className="flex items-center gap-2">
                 <Ban className="h-4 w-4 text-primary" />
                 <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
@@ -1125,7 +1135,7 @@ const Profile = () => {
             </Card>
 
             {/* Podaci za uplatu na račun */}
-            <Card className="p-5 space-y-4">
+            <Card {...zona} className="p-5 space-y-4">
               <div className="flex items-center gap-2">
                 <Landmark className="h-4 w-4 text-primary" />
                 <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
@@ -1152,6 +1162,7 @@ const Profile = () => {
               size="lg"
               className="w-full bg-gradient-brand text-white shadow-brand hover:opacity-95"
             >
+              <LockMark className="mr-1.5" />
               {saving ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (

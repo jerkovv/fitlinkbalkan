@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { PenLine } from "lucide-react";
 import { toast } from "sonner";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { LockMark } from "@/components/pretplata/LockMark";
+import { OBLASTI } from "@/components/pretplata/oblastiZakljucanja";
 import { useConfirm } from "@/hooks/useConfirm";
 import { porukaGreske } from "@/lib/errorMessage";
 import { supabase } from "@/lib/supabase";
@@ -46,7 +48,7 @@ export const NacrtPlana = ({
   const naziv = nacrt.name ?? (vrsta === "program" ? "Novi plan" : "Novi plan ishrane");
 
   const odbaci = async () => {
-    if (locked) return openLock();
+    if (locked) return openLock(vrsta === "program" ? OBLASTI.programi : OBLASTI.ishrana);
     const da = await confirm({
       title: "Odbaciti započet plan?",
       description: `Plan ${naziv} se briše i ne može da se vrati.`,
@@ -76,8 +78,9 @@ export const NacrtPlana = ({
         type="button"
         onClick={() => void odbaci()}
         disabled={brise}
-        className="h-8 shrink-0 rounded-full px-3 text-[12.5px] font-semibold text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+        className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full px-3 text-[12.5px] font-semibold text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
       >
+        <LockMark />
         Odbaci
       </button>
       <Link

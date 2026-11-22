@@ -6,6 +6,7 @@ import { PhoneShell } from "@/components/PhoneShell";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { useZakljucanaZona } from "@/components/pretplata/useZakljucanaZona";
 import { LockMark } from "@/components/pretplata/LockMark";
 import { LiceVezbaca } from "@/components/trainer/web/vezbaci/LiceVezbaca";
 import { useVezbaciPregled } from "@/components/trainer/web/vezbaci/useVezbaciPregled";
@@ -34,6 +35,7 @@ export default function TrainerJaviSe() {
   const navigate = useNavigate();
   const confirm = useConfirm();
   const { locked, openLock } = usePretplataLock();
+  const zona = useZakljucanaZona();
   const { vezbaci, ucitano, greska, ucitaj } = useVezbaciPregled();
 
   const usporili = useMemo(() => usporiliRedom(vezbaci), [vezbaci]);
@@ -230,7 +232,7 @@ export default function TrainerJaviSe() {
           </p>
         </div>
       ) : (
-        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div {...zona} className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="min-w-0 space-y-5">
             <p className="px-1 text-[13px] text-muted-foreground">
               Označi kome šalješ, ili otvori čet sa jednom osobom.
@@ -264,7 +266,7 @@ export default function TrainerJaviSe() {
             )}
             <Button
               onClick={gotovo ? () => navigate("/trener/vezbaci") : () => void posalji()}
-              disabled={salje || (!gotovo && nemaSlanja)}
+              disabled={salje || (!locked && !gotovo && nemaSlanja)}
               className="h-12 w-full rounded-2xl bg-gradient-brand text-[15px] font-semibold text-white shadow-brand"
             >
               {salje ? (

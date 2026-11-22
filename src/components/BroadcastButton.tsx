@@ -14,6 +14,7 @@ import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { OBLASTI } from "@/components/pretplata/oblastiZakljucanja";
 import { LockMark } from "@/components/pretplata/LockMark";
 
 const MAX = 1000;
@@ -43,7 +44,7 @@ export const BroadcastButton = ({ pill = false, className, label = "Obaveštenje
   const [sending, setSending] = useState(false);
 
   const handleSend = async () => {
-    if (locked) return openLock();
+    if (locked) return openLock(OBLASTI.poruke);
     const text = body.trim();
     if (!text) return;
     setSending(true);
@@ -78,7 +79,7 @@ export const BroadcastButton = ({ pill = false, className, label = "Obaveštenje
       {pill && (
         <button
           type="button"
-          onClick={guard(() => setOpen(true))}
+          onClick={guard(() => setOpen(true), OBLASTI.poruke)}
           aria-label="Pošalji obaveštenje svima"
           className={cn(
             "h-9 pl-3 pr-4 rounded-full shrink-0",
@@ -92,7 +93,7 @@ export const BroadcastButton = ({ pill = false, className, label = "Obaveštenje
       )}
 
       {!pill && (
-        <Button className={cn("gap-2", className)} onClick={guard(() => setOpen(true))}>
+        <Button className={cn("gap-2", className)} onClick={guard(() => setOpen(true), OBLASTI.poruke)}>
           <LockMark /><Megaphone className="h-4 w-4" /> {label}
         </Button>
       )}

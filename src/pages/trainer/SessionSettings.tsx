@@ -31,6 +31,8 @@ import {
   sessionColors, sessionColorClasses, weekdayLabelsLong, weekdayLabelsShort, formatTime,
 } from "@/lib/session";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { ZakljucanaZona } from "@/components/pretplata/ZakljucanaZona";
+import { LockMark } from "@/components/pretplata/LockMark";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 
 type SessionType = {
@@ -366,14 +368,16 @@ const SessionSettings = () => {
         desktop ? (
           <>
             <Button variant="outline" onClick={openNewType} className="h-10 rounded-full px-4">
+              <LockMark className="mr-1.5" />
               <Plus className="h-4 w-4 mr-1.5" />
               Nova vrsta sesije
             </Button>
             <Button
               onClick={() => openNewSlot()}
-              disabled={types.length === 0}
+              disabled={!locked && types.length === 0}
               className="h-10 rounded-full px-4 bg-gradient-brand text-white shadow-brand"
             >
+              <LockMark className="mr-1.5" />
               <Plus className="h-4 w-4 mr-1.5" strokeWidth={2.5} />
               Dodaj termin
             </Button>
@@ -487,7 +491,10 @@ const SessionSettings = () => {
                   types.length === 0 && "col-span-2 xl:col-span-3",
                 )}
               >
-                <Plus className="h-5 w-5" />
+                <span className="flex items-center gap-1.5">
+                  <LockMark />
+                  <Plus className="h-5 w-5" />
+                </span>
                 <span className="text-sm font-semibold">Nova vrsta sesije</span>
                 {types.length === 0 && (
                   <span className="text-[13px] font-normal text-muted-foreground">
@@ -508,7 +515,7 @@ const SessionSettings = () => {
                 Klikni na polje da dodaš ili ukloniš vrstu u tom terminu.
               </p>
             </div>
-            <div className="card-premium p-3">
+            <ZakljucanaZona className="card-premium p-3">
               <div className="grid grid-cols-[52px_repeat(7,minmax(0,1fr))] gap-1.5">
                 <span aria-hidden />
                 {weekdayLabelsShort.map((dan, wd) => (
@@ -516,7 +523,7 @@ const SessionSettings = () => {
                     key={dan}
                     type="button"
                     onClick={() => openNewSlot(wd)}
-                    disabled={types.length === 0}
+                    disabled={!locked && types.length === 0}
                     aria-label={`Novi termin: ${weekdayLabelsLong[wd]}`}
                     title={`Novi termin: ${weekdayLabelsLong[wd]}`}
                     className="flex h-9 items-center justify-center gap-1 rounded-lg text-[11px] font-semibold tracking-[0.08em] text-muted-foreground transition hover:bg-surface-2 hover:text-primary disabled:pointer-events-none disabled:opacity-40"
@@ -597,7 +604,7 @@ const SessionSettings = () => {
                   </Fragment>
                 ))}
               </div>
-            </div>
+            </ZakljucanaZona>
           </section>
         </div>
       ) : (
@@ -610,7 +617,7 @@ const SessionSettings = () => {
                 <div className="font-display text-lg font-bold">Vrste sesija</div>
               </div>
               <Button size="sm" variant="outline" onClick={openNewType}>
-                <Plus className="h-3.5 w-3.5 mr-1" /> Nov
+                <LockMark className="mr-1" /><Plus className="h-3.5 w-3.5 mr-1" /> Nov
               </Button>
             </div>
 
@@ -662,8 +669,8 @@ const SessionSettings = () => {
                 <div className="eyebrow text-muted-foreground">Raspored</div>
                 <div className="font-display text-lg font-bold">Nedeljni šablon</div>
               </div>
-              <Button size="sm" onClick={() => openNewSlot()} disabled={types.length === 0}>
-                <Plus className="h-3.5 w-3.5 mr-1" /> Termin
+              <Button size="sm" onClick={() => openNewSlot()} disabled={!locked && types.length === 0}>
+                <LockMark className="mr-1" /><Plus className="h-3.5 w-3.5 mr-1" /> Termin
               </Button>
             </div>
 
@@ -681,7 +688,7 @@ const SessionSettings = () => {
                       </div>
                       <button
                         onClick={() => openNewSlot(wd)}
-                        disabled={types.length === 0}
+                        disabled={!locked && types.length === 0}
                         className="h-7 w-7 rounded-full hover:bg-surface-2 flex items-center justify-center text-muted-foreground disabled:opacity-30"
                       >
                         <Plus className="h-3.5 w-3.5" />

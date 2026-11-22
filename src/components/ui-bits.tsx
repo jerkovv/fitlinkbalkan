@@ -1,17 +1,17 @@
-import { ReactNode } from "react";
+import { HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /* ============== Card (premium) ============== */
 
-interface CardProps {
+interface CardProps extends HTMLAttributes<HTMLElement> {
   children: ReactNode;
   className?: string;
   hover?: boolean;
   as?: "div" | "section" | "article";
 }
 
-export const Card = ({ children, className, hover = false, as: Tag = "div" }: CardProps) => (
-  <Tag className={cn(hover ? "card-premium-hover" : "card-premium", className)}>{children}</Tag>
+export const Card = ({ children, className, hover = false, as: Tag = "div", ...rest }: CardProps) => (
+  <Tag {...rest} className={cn(hover ? "card-premium-hover" : "card-premium", className)}>{children}</Tag>
 );
 
 /* ============== StatCard ============== */

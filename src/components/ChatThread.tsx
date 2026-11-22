@@ -1,3 +1,4 @@
+import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { useEffect, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
@@ -73,6 +74,8 @@ export const ChatThread = ({
 }: ChatThreadProps) => {
   const { user } = useAuth();
   const { messages, loading, sending, send, markRead } = useChat({ trainerId, athleteId });
+  // Van trenerskog dela context je uvek otkljucan, pa vezbacu nista ne menja.
+  const { locked } = usePretplataLock();
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const poljeRef = useRef<HTMLTextAreaElement | null>(null);
@@ -101,7 +104,7 @@ export const ChatThread = ({
     const r = await send(text);
     if (r.error) {
       setDraft(text); // restore na grešci
-      toast.error(porukaGreske(r.error));
+      if (r.error !== "locked") toast.error(porukaGreske(r.error));
     }
   };
 
@@ -232,7 +235,7 @@ export const ChatThread = ({
           <Button
             type="submit"
             size="icon"
-            disabled={sending || !draft.trim()}
+            disabled={sending || (!locked && !draft.trim())}
             className="h-[42px] w-[42px] rounded-2xl shrink-0"
           >
             {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

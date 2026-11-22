@@ -9,6 +9,8 @@ import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 import { useLastPerformance } from "@/hooks/useLastPerformance";
 import { ExercisePickerSheet } from "@/components/exercises/ExercisePickerSheet";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
+import { useZakljucanaZona } from "@/components/pretplata/useZakljucanaZona";
+import { LockMark } from "@/components/pretplata/LockMark";
 import { Input } from "@/components/ui/input";
 import { GdeIdeNova } from "@/components/trainer/web/serije/GdeIdeNova";
 import { IzborTipaSerije } from "@/components/trainer/web/serije/IzborTipaSerije";
@@ -154,6 +156,7 @@ export const LiveWorkoutPlan = ({
   onPlanPromenjen?: () => void;
 }) => {
   const { locked, openLock } = usePretplataLock();
+  const zona = useZakljucanaZona();
   const confirm = useConfirm();
   // Komponenta je zajednicka sa telefonskim vebom: sve nove kontrole su samo na racunaru.
   const desktop = useDesktopWeb();
@@ -731,11 +734,11 @@ export const LiveWorkoutPlan = ({
     .filter(Boolean)
     .join(" · ");
   const prisutneNove = vezbe.filter((x) => noveVezbe.includes(x.id));
-  const alatTreninga = "h-9 min-w-[132px] flex-1 whitespace-nowrap rounded-lg border border-hairline bg-surface-2 px-2.5 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground hover:border-primary/40 inline-flex items-center justify-center gap-1.5 transition";
+  const alatTreninga = "h-9 min-w-fit flex-1 whitespace-nowrap rounded-lg border border-hairline bg-surface-2 px-2.5 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground hover:border-primary/40 inline-flex items-center justify-center gap-1.5 transition";
   const izabranaVezba = izborSerije ? vezbe.find((x) => x.id === izborSerije.apeId) : undefined;
 
   return (
-    <div className="space-y-1.5">
+    <div {...zona} className="space-y-1.5">
       {desktop && (
         <div className="pb-1">
           <div className="text-[12.5px] font-medium text-foreground tnum">{opisPlana}</div>
@@ -781,22 +784,26 @@ export const LiveWorkoutPlan = ({
           // u meniju "Izmeni" na telefonu.
           <>
             <button type="button" onClick={() => (locked ? openLock() : setDodajem(true))} className={alatTreninga}>
+              <LockMark />
               <Plus className="h-3.5 w-3.5" strokeWidth={2.4} />
               Dodaj vežbe
             </button>
             {brojBlokova >= 2 && (
               <button type="button" disabled={salje} onClick={() => (locked ? openLock() : setRedosled(true))} className={cn(alatTreninga, "disabled:opacity-50")}>
+                <LockMark />
                 <ArrowUpDown className="h-3.5 w-3.5" strokeWidth={2.2} />
                 Promeni redosled
               </button>
             )}
             {vezbe.length >= 2 && (
               <button type="button" onClick={() => (locked ? openLock() : setIzbor({ svrha: "superset", ids: new Set() }))} className={alatTreninga}>
+                <LockMark />
                 <Link2 className="h-3.5 w-3.5" strokeWidth={2.2} />
                 Spoji u superset
               </button>
             )}
             <button type="button" onClick={() => (locked ? openLock() : setIzbor({ svrha: "brisanje", ids: new Set() }))} className={alatTreninga}>
+              <LockMark />
               <Trash2 className="h-3.5 w-3.5" strokeWidth={2.2} />
               Obriši vežbe
             </button>
@@ -921,7 +928,8 @@ export const LiveWorkoutPlan = ({
               odradjena && "opacity-55",
             )}
           >
-            <div className="flex items-center gap-2.5">
+            {/* Racunar: kad kolona nije dovoljno siroka, dugmad prelaze ispod naziva. */}
+            <div className={cn("flex items-center gap-2.5", desktop && "flex-wrap")}>
               {izbor ? (
                 // Vezba sa vec upisanom serijom se ne moze ni obrisati ni ubaciti
                 // u krug (server je u oba slucaja odbija), pa se ne nudi.
@@ -976,10 +984,11 @@ export const LiveWorkoutPlan = ({
                   pa cilj ide kroz polja u mrezi. */}
               <button
                 type="button"
+                data-slobodno
                 disabled={uOznacavanju}
                 onClick={() => setOtvorena(razvijena ? "" : ex.id)}
                 aria-expanded={razvijena}
-                className="flex-1 min-w-0 flex items-center gap-2.5 text-left disabled:cursor-default"
+                className={cn("flex-1 min-w-0 flex items-center gap-2.5 text-left disabled:cursor-default", desktop && "basis-[230px]")}
               >
                 {ex.exercise.thumbnail_url ? (
                   <img
@@ -997,13 +1006,14 @@ export const LiveWorkoutPlan = ({
                 <span className="flex-1 min-w-0">
                 <div
                   className={cn(
-                    "text-[13.5px] font-semibold truncate",
+                    "text-[13.5px] font-semibold",
+                    desktop ? "leading-snug [overflow-wrap:anywhere]" : "truncate",
                     trenutna && "text-primary-soft-foreground",
                   )}
                 >
                   {ime}
                 </div>
-                <div className="text-[11.5px] text-muted-foreground truncate tnum">
+                <div className={cn("text-[11.5px] text-muted-foreground tnum", desktop ? "[overflow-wrap:anywhere]" : "truncate")}>
                   {ciljTekst(ex)}
                   {/* Samo kad je sklopljena - otvorena vezba brojac ima u mrezi,
                       a ovde bi samo odsekao cilj sa tri tackice. */}
@@ -1180,7 +1190,7 @@ export const LiveWorkoutPlan = ({
                           brojeve). */}
                       <button
                         type="button"
-                        disabled={salje || (!!upisana && !(desktop ? upisana.created_by_trainer === true : upisana.logged_by_trainer))}
+                        disabled={salje || (!locked && !!upisana && !(desktop ? upisana.created_by_trainer === true : upisana.logged_by_trainer))}
                         onClick={() => void potvrdiOdradjeno(ex, sn, !upisana)}
                         aria-label={
                           upisana
@@ -1205,7 +1215,7 @@ export const LiveWorkoutPlan = ({
                       {desktop && (
                         <button
                           type="button"
-                          disabled={salje || brojSerija <= 1}
+                          disabled={salje || (!locked && brojSerija <= 1)}
                           onClick={() => void ukloniSeriju(ex.id, sn)}
                           aria-label={`Ukloni seriju ${sn}`}
                           title="Ukloni seriju"
@@ -1236,7 +1246,7 @@ export const LiveWorkoutPlan = ({
                     return (
                       <button
                         type="button"
-                        disabled={salje || (sveUpisane && trenerove.length === 0)}
+                        disabled={salje || (!locked && sveUpisane && trenerove.length === 0)}
                         onClick={() => void potvrdiOdradjeno(ex, null, !sveUpisane)}
                         className={cn(
                           "mt-2 h-9 w-full rounded-lg text-[12.5px] font-semibold inline-flex items-center justify-center gap-1.5 transition disabled:opacity-60",
@@ -1245,6 +1255,7 @@ export const LiveWorkoutPlan = ({
                             : "bg-success-soft text-success-soft-foreground hover:opacity-90",
                         )}
                       >
+                        <LockMark />
                         <Check className="h-3.5 w-3.5" strokeWidth={2.8} />
                         {sveUpisane
                           ? trenerove.length === 0 ? "Vežbač je uradio sve serije" : "Skini tvoje potvrde"
@@ -1280,6 +1291,7 @@ export const LiveWorkoutPlan = ({
                     onClick={() => void dodajSeriju(ex, brojSerija + 1)}
                     className="h-9 flex-1 rounded-lg bg-surface-2 text-[12px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 transition disabled:opacity-50"
                   >
+                    <LockMark />
                     <Plus className="h-3.5 w-3.5" strokeWidth={2.6} />
                     Dodaj seriju
                   </button>

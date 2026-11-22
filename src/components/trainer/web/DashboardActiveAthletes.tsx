@@ -20,7 +20,8 @@ const MAX_ON_HOME = 5;
 // Uzi ekran (do 1279 px): bez kolone uredjaja, da "Trenutno" ne padne na nulu.
 const COLS = "grid-cols-[156px_minmax(0,1fr)_60px_64px] xl:grid-cols-[168px_minmax(0,1fr)_64px_70px_124px]";
 const KOL_UREDJAJ = "hidden xl:block";
-const AKCIJA_KOL = "flex w-[108px] shrink-0 justify-end pr-5";
+// Sirina prima "Zaustavi" i sa katancem, isto u zaglavlju i u redovima.
+const AKCIJA_KOL = "flex w-[152px] shrink-0 justify-end pr-5";
 const KCAL = "#FF8A4C";
 
 export type PodaciUzivo = {
