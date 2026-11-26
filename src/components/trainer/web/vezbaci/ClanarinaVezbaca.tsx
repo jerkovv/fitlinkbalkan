@@ -1,15 +1,12 @@
-import { useState } from "react";
-import { Banknote, CreditCard, Hourglass, Infinity as BezRoka, Loader2, Pencil, Plus } from "lucide-react";
-import { toast } from "sonner";
+import { Banknote, CreditCard, Hourglass, Infinity as BezRoka, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui-bits";
 import { usePretplataLock } from "@/components/pretplata/usePretplataLock";
 import { LockMark } from "@/components/pretplata/LockMark";
 import { OBLASTI } from "@/components/pretplata/oblastiZakljucanja";
-import { porukaGreske } from "@/lib/errorMessage";
-import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { danIzTeksta } from "./aktivnost";
+import { ClanarinePoMesecima } from "@/components/trainer/ClanarinePoMesecima";
 
 export type ClanarinaRed = {
   id: string;
@@ -43,19 +40,22 @@ const Info = ({ children, className }: { children: React.ReactNode; className?: 
 /** Kartica clanarine sa svim radnjama iz menija na telefonu, ovde odmah vidljivim. */
 export const ClanarinaVezbaca = ({
   clanarina: c,
+  athleteId,
+  imeVezbaca,
   onIzmeni,
   onBonus,
   onNova,
   onPromena,
 }: {
   clanarina: ClanarinaRed | null;
+  athleteId: string;
+  imeVezbaca?: string | null;
   onIzmeni: () => void;
   onBonus: () => void;
   onNova: () => void;
   onPromena: () => void;
 }) => {
-  const { locked, openLock, guard } = usePretplataLock();
-  const [menja, setMenja] = useState<boolean | null>(null);
+  const { guard } = usePretplataLock();
 
   const zaglavlje = (
     <div>
@@ -99,36 +99,6 @@ export const ClanarinaVezbaca = ({
   const placeno = c.purchase_id ? c.membership_purchases?.paid_at != null : null;
   const ukupno = c.sessions_total && c.sessions_total > 0 ? c.sessions_total : null;
   const iskorisceno = ukupno ? Math.min(c.sessions_used ?? 0, ukupno) : 0;
-
-  const oznaci = async (p: boolean) => {
-    if (locked) return openLock(OBLASTI.naplata);
-    setMenja(p);
-    const { error } = await supabase.rpc("trainer_set_membership_paid", {
-      p_membership_id: c.id,
-      p_paid: p,
-    });
-    setMenja(null);
-    if (error) {
-      toast.error(porukaGreske(error));
-      return;
-    }
-    toast.success(p ? "Članarina je označena kao plaćena." : "Članarina se vodi kao neplaćena.");
-    onPromena();
-  };
-
-  const dugmePlaceno = (p: boolean) => (
-    <Button
-      key={String(p)}
-      variant="outline"
-      disabled={menja != null}
-      onClick={() => void oznaci(p)}
-      className="h-9 flex-auto rounded-full px-4 text-[12px]"
-    >
-      {menja === p && <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />}
-      <LockMark className="mr-1" />
-      {p ? "Označi kao plaćeno" : "Označi kao neplaćeno"}
-    </Button>
-  );
 
   return (
     <section className="card-premium space-y-3.5 p-5">
@@ -183,9 +153,6 @@ export const ClanarinaVezbaca = ({
       </div>
 
       <div className="space-y-2 border-t border-hairline pt-3">
-        <div className="flex flex-wrap gap-2">
-          {placeno == null ? [dugmePlaceno(true), dugmePlaceno(false)] : dugmePlaceno(!placeno)}
-        </div>
         {/* Natpisi su uvek celi: kad dva dugmeta ne staju, drugo prelazi u novi red. */}
         <div className="flex flex-wrap gap-2">
           {aktivna && (
@@ -198,6 +165,15 @@ export const ClanarinaVezbaca = ({
           </Button>
         </div>
       </div>
+
+      {/* Sve clanarine po mesecima, svaka sa kvadraticem placeno (i ova trenutna). */}
+      <ClanarinePoMesecima
+        athleteId={athleteId}
+        imeVezbaca={imeVezbaca}
+        osvezi={c}
+        onPromena={onPromena}
+        className="border-t border-hairline pt-3.5"
+      />
     </section>
   );
 };

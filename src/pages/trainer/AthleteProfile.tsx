@@ -1220,6 +1220,8 @@ const AthleteProfile = () => {
               {clanarinaPoznata && (
                 <ClanarinaVezbaca
                   clanarina={activeMembership}
+                  athleteId={id!}
+                  imeVezbaca={athlete?.full_name ?? null}
                   onIzmeni={() => { setNovaClanarina(false); setMembershipEditOpen(true); }}
                   onBonus={() => { setBonusCount("1"); setBonusOpen(true); }}
                   onNova={() => { setNovaClanarina(true); setMembershipEditOpen(true); }}

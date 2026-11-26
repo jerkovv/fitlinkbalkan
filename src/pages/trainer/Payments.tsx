@@ -34,6 +34,7 @@ import {
 import { porukaGreske } from "@/lib/errorMessage";
 import { toast } from "sonner";
 import { MembershipEditSheet } from "@/components/trainer/MembershipEditSheet";
+import { PlacanjaPoMesecima } from "@/components/trainer/web/PlacanjaPoMesecima";
 import { LockMark } from "@/components/pretplata/LockMark";
 import { useDesktopWeb } from "@/hooks/useDesktopWeb";
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
@@ -919,6 +920,12 @@ const Payments = () => {
                 </div>
               )}
             </section>
+
+            <PlacanjaPoMesecima
+              klijenti={overview.map((m) => ({ athlete_id: m.athlete_id, athlete_name: m.athlete_name }))}
+              onPromena={loadOverview}
+              osvezi={overview}
+            />
           </div>
         ) : (
         <Tabs defaultValue="zahtevi" className="w-full">
